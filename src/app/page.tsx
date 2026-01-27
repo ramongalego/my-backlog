@@ -42,7 +42,10 @@ function HomeContent() {
   const shortGamesRef = useRef<HTMLDivElement>(null);
   const weekendGamesRef = useRef<HTMLDivElement>(null);
 
-  const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+  const scroll = (
+    ref: React.RefObject<HTMLDivElement | null>,
+    direction: 'left' | 'right',
+  ) => {
     if (ref.current) {
       const scrollAmount = 280; // card width + gap
       ref.current.scrollBy({
@@ -249,7 +252,9 @@ function HomeContent() {
                     </div>
                   ) : (
                     <div>
-                      <Button size='lg'>Pick My Game</Button>
+                      <Button className='mt-4' size='lg'>
+                        Pick My Game
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -267,7 +272,7 @@ function HomeContent() {
 
           {isSteamConnected &&
           (shortGames.length > 0 || weekendGames.length > 0) ? (
-            <div className='mt-24 space-y-12'>
+            <div className='mt-28 space-y-24'>
               {shortGames.length > 0 && (
                 <div>
                   <div className='flex items-center justify-between mb-6'>
