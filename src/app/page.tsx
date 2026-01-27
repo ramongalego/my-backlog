@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -38,6 +39,18 @@ function HomeContent() {
   const [shortGames, setShortGames] = useState<ShortGame[]>([]);
   const [weekendGames, setWeekendGames] = useState<ShortGame[]>([]);
   const syncingRef = useRef(false);
+  const shortGamesRef = useRef<HTMLDivElement>(null);
+  const weekendGamesRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+    if (ref.current) {
+      const scrollAmount = 280; // card width + gap
+      ref.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -113,29 +126,34 @@ function HomeContent() {
             syncingRef.current = false;
           }
 
-          // Fetch short games (under 5 hours, single-player only)
+          // Fetch short games (1-5 hours, single-player only, <4h played, sorted by metacritic)
           const { data: shortGamesData } = await supabase
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
             .eq('user_id', user.id)
             .not('main_story_hours', 'is', null)
+            .not('metacritic', 'is', null)
+            .gte('main_story_hours', 1)
             .lte('main_story_hours', 5)
+            .lte('playtime_forever', 240)
             .contains('categories', ['Single-player'])
-            .order('main_story_hours', { ascending: true })
+            .order('metacritic', { ascending: false })
             .limit(10);
 
           setShortGames(shortGamesData || []);
 
-          // Fetch weekend games (5-12 hours, single-player only)
+          // Fetch weekend games (5-12 hours, single-player only, <4h played, sorted by metacritic)
           const { data: weekendGamesData } = await supabase
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
             .eq('user_id', user.id)
             .not('main_story_hours', 'is', null)
+            .not('metacritic', 'is', null)
             .gt('main_story_hours', 5)
             .lte('main_story_hours', 12)
+            .lte('playtime_forever', 240)
             .contains('categories', ['Single-player'])
-            .order('main_story_hours', { ascending: true })
+            .order('metacritic', { ascending: false })
             .limit(10);
 
           setWeekendGames(weekendGamesData || []);
@@ -168,10 +186,10 @@ function HomeContent() {
   const isSteamConnected = profile?.steam_id != null;
 
   return (
-    <div className='min-h-screen bg-zinc-950'>
+    <div className='min-h-screen bg-zinc-950 flex flex-col'>
       <Header />
 
-      <main className='pt-16'>
+      <main className='pt-16 flex-1'>
         <section className='max-w-4xl mx-auto px-6 py-24 md:py-32'>
           <div className='text-center'>
             <h1 className='text-4xl md:text-5xl font-bold text-zinc-100 leading-tight mb-6'>
@@ -231,7 +249,7 @@ function HomeContent() {
                     </div>
                   ) : (
                     <div>
-                      <Button size='lg'>Pick a Game</Button>
+                      <Button size='lg'>Pick My Game</Button>
                     </div>
                   )}
                 </div>
@@ -247,15 +265,36 @@ function HomeContent() {
             )}
           </div>
 
-          {isSteamConnected && (shortGames.length > 0 || weekendGames.length > 0) ? (
+          {isSteamConnected &&
+          (shortGames.length > 0 || weekendGames.length > 0) ? (
             <div className='mt-24 space-y-12'>
               {shortGames.length > 0 && (
                 <div>
-                  <h2 className='text-2xl font-bold text-zinc-100 mb-6'>
-                    Games Under 5 Hours
-                  </h2>
-                  <div className='flex gap-4 overflow-x-auto pb-4 -mx-6 px-6' style={{ scrollbarWidth: 'none' }}>
-                    {shortGames.map((game) => (
+                  <div className='flex items-center justify-between mb-6'>
+                    <h2 className='text-2xl font-bold text-zinc-100'>
+                      Games Under 5 Hours
+                    </h2>
+                    <div className='flex gap-2'>
+                      <button
+                        onClick={() => scroll(shortGamesRef, 'left')}
+                        className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors'
+                      >
+                        <ChevronLeft className='w-5 h-5 text-zinc-300' />
+                      </button>
+                      <button
+                        onClick={() => scroll(shortGamesRef, 'right')}
+                        className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors'
+                      >
+                        <ChevronRight className='w-5 h-5 text-zinc-300' />
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={shortGamesRef}
+                    className='flex gap-4 overflow-x-auto pb-4 -mx-6 px-6'
+                    style={{ scrollbarWidth: 'none' }}
+                  >
+                    {shortGames.map(game => (
                       <div
                         key={game.app_id}
                         className='flex-shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors'
@@ -285,11 +324,31 @@ function HomeContent() {
 
               {weekendGames.length > 0 && (
                 <div>
-                  <h2 className='text-2xl font-bold text-zinc-100 mb-6'>
-                    Games You Can Finish This Weekend
-                  </h2>
-                  <div className='flex gap-4 overflow-x-auto pb-4 -mx-6 px-6' style={{ scrollbarWidth: 'none' }}>
-                    {weekendGames.map((game) => (
+                  <div className='flex items-center justify-between mb-6'>
+                    <h2 className='text-2xl font-bold text-zinc-100'>
+                      Games You Can Finish This Weekend
+                    </h2>
+                    <div className='flex gap-2'>
+                      <button
+                        onClick={() => scroll(weekendGamesRef, 'left')}
+                        className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors'
+                      >
+                        <ChevronLeft className='w-5 h-5 text-zinc-300' />
+                      </button>
+                      <button
+                        onClick={() => scroll(weekendGamesRef, 'right')}
+                        className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors'
+                      >
+                        <ChevronRight className='w-5 h-5 text-zinc-300' />
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={weekendGamesRef}
+                    className='flex gap-4 overflow-x-auto pb-4 -mx-6 px-6'
+                    style={{ scrollbarWidth: 'none' }}
+                  >
+                    {weekendGames.map(game => (
                       <div
                         key={game.app_id}
                         className='flex-shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors'
@@ -336,13 +395,13 @@ function HomeContent() {
             </div>
           ) : null}
         </section>
-
-        <footer className='py-6 border-t border-zinc-800'>
-          <div className='max-w-4xl mx-auto px-6 text-center'>
-            <p className='text-sm text-zinc-500'>MyBacklog</p>
-          </div>
-        </footer>
       </main>
+
+      <footer className='py-6 border-t border-zinc-800'>
+        <div className='max-w-4xl mx-auto px-6 text-center'>
+          <p className='text-sm text-zinc-500'>MyBacklog</p>
+        </div>
+      </footer>
 
       <AuthModal
         isOpen={isAuthModalOpen}
