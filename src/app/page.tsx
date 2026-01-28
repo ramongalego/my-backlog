@@ -357,21 +357,7 @@ function HomeContent() {
             )}
           </div>
 
-          {isSteamConnected &&
-          (shortGames.length > 0 || weekendGames.length > 0) ? (
-            <div className='mt-28 space-y-24'>
-              <GameCarousel
-                title='Games Under 5 Hours'
-                games={shortGames}
-                onPickGame={handlePickGame}
-              />
-              <GameCarousel
-                title='Games You Can Finish This Weekend'
-                games={weekendGames}
-                onPickGame={handlePickGame}
-              />
-            </div>
-          ) : !isSteamConnected ? (
+          {!isSteamConnected && (
             <div className='mt-24 grid md:grid-cols-3 gap-6 text-center'>
               <div className='p-6'>
                 <div className='text-3xl font-bold text-zinc-100 mb-2'>1</div>
@@ -388,8 +374,23 @@ function HomeContent() {
                 <p className='text-zinc-400'>Get your pick</p>
               </div>
             </div>
-          ) : null}
+          )}
         </section>
+
+        {isSteamConnected && (shortGames.length > 0 || weekendGames.length > 0) && (
+          <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
+            <GameCarousel
+              title='Games Under 5 Hours'
+              games={shortGames}
+              onPickGame={handlePickGame}
+            />
+            <GameCarousel
+              title='Games You Can Finish This Weekend'
+              games={weekendGames}
+              onPickGame={handlePickGame}
+            />
+          </section>
+        )}
       </main>
 
       <footer className='py-6 border-t border-zinc-800'>
