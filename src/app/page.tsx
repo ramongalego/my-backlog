@@ -71,7 +71,6 @@ function HomeContent() {
         body: JSON.stringify({ appId: game.app_id, status: 'playing' }),
       });
       setCurrentlyPlaying(game);
-      // Remove from carousels
       setShortGames(prev => prev.filter(g => g.app_id !== game.app_id));
       setWeekendGames(prev => prev.filter(g => g.app_id !== game.app_id));
     } catch (err) {
@@ -121,7 +120,6 @@ function HomeContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId: currentlyPlaying.app_id, status: 'backlog' }),
       });
-      // Add game back to appropriate carousel based on hours
       if (currentlyPlaying.main_story_hours <= 5) {
         setShortGames(prev => [...prev, currentlyPlaying]);
       } else if (currentlyPlaying.main_story_hours <= 12) {
@@ -165,11 +163,8 @@ function HomeContent() {
             .eq('user_id', user.id);
 
           setGameCount(totalGames || 0);
-
-          // Show UI immediately, then check for unsynced games
           setIsLoading(false);
 
-          // Check for unsynced games
           const { data: unsyncedGames } = await supabase
             .from('games')
             .select('app_id, name')
@@ -189,7 +184,6 @@ function HomeContent() {
             syncingRef.current = false;
           }
 
-          // Fetch currently playing game
           const { data: playingGame } = await supabase
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
@@ -201,8 +195,6 @@ function HomeContent() {
             setCurrentlyPlaying(playingGame);
           }
 
-          // Fetch short games (1-5 hours, single-player only, <4h played, sorted by metacritic)
-          // Exclude finished, dropped, and currently playing games
           const { data: shortGamesData } = await supabase
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
@@ -219,8 +211,6 @@ function HomeContent() {
 
           setShortGames(shortGamesData || []);
 
-          // Fetch weekend games (5-12 hours, single-player only, <4h played, sorted by metacritic)
-          // Exclude finished, dropped, and currently playing games
           const { data: weekendGamesData } = await supabase
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
@@ -264,7 +254,110 @@ function HomeContent() {
   };
 
   const isSteamConnected = profile?.steam_id != null;
+  const showDashboard = user && isSteamConnected;
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className='min-h-screen bg-zinc-950 flex flex-col'>
+        <Header />
+        <main className='pt-16 flex-1 flex items-center justify-center'>
+          <div className='space-y-6 text-center'>
+            <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg'>
+              <div className='w-8 h-8 bg-zinc-700 rounded animate-pulse' />
+              <div className='w-24 h-4 bg-zinc-700 rounded animate-pulse' />
+              <span className='text-zinc-700'>·</span>
+              <div className='w-16 h-4 bg-zinc-700 rounded animate-pulse' />
+            </div>
+            <div className='h-12 w-40 mx-auto bg-zinc-800 rounded-lg animate-pulse' />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Dashboard view - logged in with Steam connected
+  if (showDashboard) {
+    return (
+      <div className='min-h-screen bg-zinc-950 flex flex-col'>
+        <Header />
+
+        <main className='pt-16 flex-1'>
+          <section className='max-w-6xl mx-auto px-6 py-12'>
+            <div className='flex flex-col items-center text-center'>
+              <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg mb-8'>
+                {profile?.steam_avatar && (
+                  <Image
+                    src={profile.steam_avatar}
+                    alt=''
+                    width={32}
+                    height={32}
+                    className='rounded'
+                  />
+                )}
+                <span className='text-zinc-100'>{profile?.steam_username}</span>
+                <span className='text-zinc-500'>·</span>
+                <span className='text-zinc-400'>{gameCount} games</span>
+              </div>
+
+              {isSyncing ? (
+                <div className='w-full max-w-sm space-y-3'>
+                  <div className='h-2 bg-zinc-800 rounded-full overflow-hidden'>
+                    <div
+                      className='h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
+                      style={{
+                        width: `${(syncProgress.current / syncProgress.total) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className='text-zinc-400 text-sm'>
+                    Analyzing games... {syncProgress.current} of {syncProgress.total}
+                  </p>
+                </div>
+              ) : currentlyPlaying ? (
+                <CurrentlyPlaying
+                  game={currentlyPlaying}
+                  onFinish={handleFinishGame}
+                  onDrop={handleDropGame}
+                  onCancel={handleCancelGame}
+                  isLoading={isStatusLoading}
+                />
+              ) : (
+                <Button size='lg'>Pick My Game</Button>
+              )}
+            </div>
+          </section>
+
+          {(shortGames.length > 0 || weekendGames.length > 0) && (
+            <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
+              {shortGames.length > 0 && (
+                <GameCarousel
+                  title='Games Under 5 Hours'
+                  games={shortGames}
+                  onPickGame={handlePickGame}
+                />
+              )}
+              {weekendGames.length > 0 && (
+                <GameCarousel
+                  title='Games You Can Finish This Weekend'
+                  games={weekendGames}
+                  onPickGame={handlePickGame}
+                />
+              )}
+            </section>
+          )}
+        </main>
+
+        <footer className='py-6 border-t border-zinc-800'>
+          <div className='max-w-6xl mx-auto px-6 text-center'>
+            <p className='text-sm text-zinc-500'>MyBacklog</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Landing view - not logged in or no Steam connected
   return (
     <div className='min-h-screen bg-zinc-950 flex flex-col'>
       <Header />
@@ -283,73 +376,10 @@ function HomeContent() {
               your mood and available time.
             </p>
 
-            {isLoading ? (
-              <div className='space-y-6'>
-                <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg'>
-                  <div className='w-8 h-8 bg-zinc-700 rounded animate-pulse' />
-                  <div className='w-24 h-4 bg-zinc-700 rounded animate-pulse' />
-                  <span className='text-zinc-700'>·</span>
-                  <div className='w-16 h-4 bg-zinc-700 rounded animate-pulse' />
-                </div>
-                <div className='h-12 w-40 mx-auto bg-zinc-800 rounded-lg animate-pulse' />
-              </div>
-            ) : user ? (
-              isSteamConnected ? (
-                <div className='space-y-6'>
-                  <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg'>
-                    {profile?.steam_avatar && (
-                      <Image
-                        src={profile.steam_avatar}
-                        alt=''
-                        width={32}
-                        height={32}
-                        className='rounded'
-                      />
-                    )}
-                    <span className='text-zinc-100'>
-                      {profile?.steam_username}
-                    </span>
-                    <span className='text-zinc-500'>·</span>
-                    <span className='text-zinc-400'>{gameCount} games</span>
-                  </div>
-                  {isSyncing ? (
-                    <div className='w-full max-w-sm mx-auto space-y-3'>
-                      <div className='h-2 bg-zinc-800 rounded-full overflow-hidden'>
-                        <div
-                          className='h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
-                          style={{
-                            width: `${(syncProgress.current / syncProgress.total) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <p className='text-zinc-400 text-sm'>
-                        Analyzing games... {syncProgress.current} of{' '}
-                        {syncProgress.total}
-                      </p>
-                    </div>
-                  ) : currentlyPlaying ? (
-                    <div className='mt-6'>
-                      <CurrentlyPlaying
-                        game={currentlyPlaying}
-                        onFinish={handleFinishGame}
-                        onDrop={handleDropGame}
-                        onCancel={handleCancelGame}
-                        isLoading={isStatusLoading}
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <Button className='mt-4' size='lg'>
-                        Pick My Game
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Button size='lg' onClick={handleConnectSteam}>
-                  Connect Your Steam
-                </Button>
-              )
+            {user ? (
+              <Button size='lg' onClick={handleConnectSteam}>
+                Connect Your Steam
+              </Button>
             ) : (
               <Button size='lg' onClick={() => setIsAuthModalOpen(true)}>
                 Get Started
@@ -357,40 +387,23 @@ function HomeContent() {
             )}
           </div>
 
-          {!isSteamConnected && (
-            <div className='mt-24 grid md:grid-cols-3 gap-6 text-center'>
-              <div className='p-6'>
-                <div className='text-3xl font-bold text-zinc-100 mb-2'>1</div>
-                <p className='text-zinc-400'>Connect Steam</p>
-              </div>
-              <div className='p-6'>
-                <div className='text-3xl font-bold text-zinc-100 mb-2'>2</div>
-                <p className='text-zinc-400'>
-                  Answer a couple of high-impact questions
-                </p>
-              </div>
-              <div className='p-6'>
-                <div className='text-3xl font-bold text-zinc-100 mb-2'>3</div>
-                <p className='text-zinc-400'>Get your pick</p>
-              </div>
+          <div className='mt-24 grid md:grid-cols-3 gap-6 text-center'>
+            <div className='p-6'>
+              <div className='text-3xl font-bold text-zinc-100 mb-2'>1</div>
+              <p className='text-zinc-400'>Connect Steam</p>
             </div>
-          )}
+            <div className='p-6'>
+              <div className='text-3xl font-bold text-zinc-100 mb-2'>2</div>
+              <p className='text-zinc-400'>
+                Answer a couple of high-impact questions
+              </p>
+            </div>
+            <div className='p-6'>
+              <div className='text-3xl font-bold text-zinc-100 mb-2'>3</div>
+              <p className='text-zinc-400'>Get your pick</p>
+            </div>
+          </div>
         </section>
-
-        {isSteamConnected && (shortGames.length > 0 || weekendGames.length > 0) && (
-          <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
-            <GameCarousel
-              title='Games Under 5 Hours'
-              games={shortGames}
-              onPickGame={handlePickGame}
-            />
-            <GameCarousel
-              title='Games You Can Finish This Weekend'
-              games={weekendGames}
-              onPickGame={handlePickGame}
-            />
-          </section>
-        )}
       </main>
 
       <footer className='py-6 border-t border-zinc-800'>
