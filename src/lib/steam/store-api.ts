@@ -39,6 +39,7 @@ export function extractGameMetadata(details: SteamGameDetails) {
   const { data } = details;
 
   return {
+    type: data.type || null,
     genres: data.genres?.map((g) => g.description) || [],
     categories: data.categories?.map((c) => c.description) || [],
     description: data.short_description || null,

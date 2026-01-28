@@ -9,6 +9,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { createClient } from '@/lib/supabase/client';
+import { RefreshCw } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface Profile {
@@ -20,6 +21,8 @@ interface Profile {
 interface Game {
   app_id: number;
   name: string;
+  type?: string | null;
+  categories?: string[] | null;
 }
 
 interface ShortGame {
@@ -37,6 +40,9 @@ function HomeContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+  const [syncingGames, setSyncingGames] = useState<Game[]>([]);
+  const [carouselsLoading, setCarouselsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [shortGames, setShortGames] = useState<ShortGame[]>([]);
   const [weekendGames, setWeekendGames] = useState<ShortGame[]>([]);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<ShortGame | null>(null);
@@ -132,6 +138,22 @@ function HomeContent() {
     setIsStatusLoading(false);
   };
 
+  const handleRefreshLibrary = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/steam/refresh', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.newGames > 0) {
+        // Reload the page to trigger sync for new games
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Failed to refresh library:', err);
+    }
+    setIsRefreshing(false);
+  };
+
   useEffect(() => {
     if (searchParams.has('error')) {
       router.replace('/', { scroll: false });
@@ -165,11 +187,20 @@ function HomeContent() {
           setGameCount(totalGames || 0);
           setIsLoading(false);
 
-          const { data: unsyncedGames } = await supabase
+          const { data: allUnsyncedGames } = await supabase
             .from('games')
-            .select('app_id, name')
+            .select('app_id, name, type, categories')
             .eq('user_id', user.id)
             .or('metadata_synced.is.null,metadata_synced.eq.false');
+
+          // Filter out items we already know aren't games or aren't single-player
+          const unsyncedGames = allUnsyncedGames?.filter((g) => {
+            // Exclude non-games (DLC, software, etc.)
+            if (g.type && g.type !== 'game') return false;
+            // Exclude games we know aren't single-player
+            if (g.categories && !g.categories.includes('Single-player')) return false;
+            return true;
+          });
 
           if (
             unsyncedGames &&
@@ -178,9 +209,11 @@ function HomeContent() {
           ) {
             syncingRef.current = true;
             setIsSyncing(true);
+            setSyncingGames(unsyncedGames);
             setSyncProgress({ current: 0, total: unsyncedGames.length });
             await syncGames(unsyncedGames);
             setIsSyncing(false);
+            setSyncingGames([]);
             syncingRef.current = false;
           }
 
@@ -199,6 +232,7 @@ function HomeContent() {
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
             .eq('user_id', user.id)
+            .eq('type', 'game')
             .not('main_story_hours', 'is', null)
             .not('metacritic', 'is', null)
             .gte('main_story_hours', 1)
@@ -215,6 +249,7 @@ function HomeContent() {
             .from('games')
             .select('app_id, name, header_image, main_story_hours')
             .eq('user_id', user.id)
+            .eq('type', 'game')
             .not('main_story_hours', 'is', null)
             .not('metacritic', 'is', null)
             .gt('main_story_hours', 5)
@@ -226,6 +261,7 @@ function HomeContent() {
             .limit(10);
 
           setWeekendGames(weekendGamesData || []);
+          setCarouselsLoading(false);
           return;
         }
       }
@@ -280,7 +316,7 @@ function HomeContent() {
   if (showDashboard) {
     return (
       <div className='min-h-screen bg-zinc-950 flex flex-col'>
-        <Header />
+        <Header hideGamesLink={isSyncing || carouselsLoading} />
 
         <main className='pt-16 flex-1'>
           <section className='max-w-6xl mx-auto px-6 py-12'>
@@ -298,21 +334,76 @@ function HomeContent() {
                 <span className='text-zinc-100'>{profile?.steam_username}</span>
                 <span className='text-zinc-500'>·</span>
                 <span className='text-zinc-400'>{gameCount} games</span>
+                <button
+                  onClick={handleRefreshLibrary}
+                  disabled={isRefreshing || isSyncing}
+                  className='ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50'
+                  title='Check for new games'
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
               </div>
 
               {isSyncing ? (
-                <div className='w-full max-w-sm space-y-3'>
-                  <div className='h-2 bg-zinc-800 rounded-full overflow-hidden'>
-                    <div
-                      className='h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
-                      style={{
-                        width: `${(syncProgress.current / syncProgress.total) * 100}%`,
-                      }}
-                    />
+                <div className='w-full max-w-md space-y-6'>
+                  <div className='space-y-3'>
+                    <div className='h-2 bg-zinc-800 rounded-full overflow-hidden'>
+                      <div
+                        className='h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
+                        style={{
+                          width: `${(syncProgress.current / syncProgress.total) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <p className='text-zinc-400 text-sm'>
+                      Analyzing {syncProgress.current} of {syncProgress.total} games
+                    </p>
                   </div>
-                  <p className='text-zinc-400 text-sm'>
-                    Analyzing games... {syncProgress.current} of {syncProgress.total}
-                  </p>
+
+                  {syncingGames[syncProgress.current - 1] && (
+                    <div className='relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900'>
+                      <div className='relative aspect-[460/215]'>
+                        <Image
+                          src={`https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${syncingGames[syncProgress.current - 1].app_id}/header.jpg`}
+                          alt={syncingGames[syncProgress.current - 1].name}
+                          fill
+                          className='object-cover'
+                          sizes='448px'
+                        />
+                        {/* Scan line animation */}
+                        <div className='absolute inset-0 overflow-hidden'>
+                          <div
+                            className='absolute left-0 right-0 h-1 bg-gradient-to-b from-violet-500/80 via-violet-400/40 to-transparent'
+                            style={{
+                              animation: 'scan 1.5s ease-in-out infinite',
+                            }}
+                          />
+                        </div>
+                        {/* Grid overlay */}
+                        <div
+                          className='absolute inset-0 opacity-20'
+                          style={{
+                            backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent)',
+                            backgroundSize: '20px 20px',
+                          }}
+                        />
+                        {/* Corner brackets */}
+                        <div className='absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-violet-500' />
+                        <div className='absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-violet-500' />
+                        <div className='absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-violet-500' />
+                        <div className='absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-violet-500' />
+                      </div>
+                    </div>
+                  )}
+
+                  <style jsx>{`
+                    @keyframes scan {
+                      0% { top: 0%; }
+                      50% { top: 100%; }
+                      50.1% { top: 0%; }
+                      100% { top: 100%; }
+                    }
+                  `}</style>
                 </div>
               ) : currentlyPlaying ? (
                 <CurrentlyPlaying
@@ -328,7 +419,28 @@ function HomeContent() {
             </div>
           </section>
 
-          {(shortGames.length > 0 || weekendGames.length > 0) && (
+          {!isSyncing && carouselsLoading && (
+            <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
+              {[1, 2].map((i) => (
+                <div key={i} className='space-y-6'>
+                  <div className='h-8 w-64 bg-zinc-800 rounded animate-pulse' />
+                  <div className='flex gap-4'>
+                    {[1, 2, 3, 4].map((j) => (
+                      <div key={j} className='flex-shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden'>
+                        <div className='h-32 bg-zinc-800 animate-pulse' />
+                        <div className='p-4 space-y-2'>
+                          <div className='h-4 bg-zinc-800 rounded w-3/4 animate-pulse' />
+                          <div className='h-3 bg-zinc-800 rounded w-1/2 animate-pulse' />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {!isSyncing && !carouselsLoading && (shortGames.length > 0 || weekendGames.length > 0) && (
             <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
               {shortGames.length > 0 && (
                 <GameCarousel

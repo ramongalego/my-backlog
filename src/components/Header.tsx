@@ -8,7 +8,11 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
-export function Header() {
+interface HeaderProps {
+  hideGamesLink?: boolean;
+}
+
+export function Header({ hideGamesLink }: HeaderProps = {}) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -51,7 +55,7 @@ export function Header() {
               <div className='w-8 h-8 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-lg' />
               <span className='text-xl font-bold text-zinc-100'>MyBacklog</span>
             </Link>
-            {user && (
+            {user && !hideGamesLink && (
               <Link
                 href='/games'
                 className='text-sm text-zinc-400 hover:text-zinc-100 transition-colors'

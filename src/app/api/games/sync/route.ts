@@ -20,16 +20,20 @@ export async function POST(request: NextRequest) {
   // Fetch game details from Steam Store API
   const details = await getGameDetails(appId);
   const metadata = details ? extractGameMetadata(details) : null;
-  const gameName = details?.data?.name;
-
-  // Fetch game length from HLTB
-  const mainStoryHours = gameName ? await getMainStoryHours(gameName) : null;
 
   if (metadata) {
+    const isGame = metadata.type === 'game';
+
+    // Only fetch HLTB for actual games
+    const mainStoryHours = isGame && details?.data?.name
+      ? await getMainStoryHours(details.data.name)
+      : null;
+
     // Update game with metadata
     await supabase
       .from("games")
       .update({
+        type: metadata.type,
         genres: metadata.genres,
         categories: metadata.categories,
         description: metadata.description,
@@ -47,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Mark as synced even if no data (game might be removed from store)
     await supabase
       .from("games")
-      .update({ metadata_synced: true, main_story_hours: mainStoryHours })
+      .update({ metadata_synced: true })
       .eq("user_id", user.id)
       .eq("app_id", appId);
 

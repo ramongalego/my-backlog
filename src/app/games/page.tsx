@@ -35,6 +35,7 @@ export default function GamesPage() {
         .from('games')
         .select('app_id, name, playtime_forever, metacritic, header_image, main_story_hours, status')
         .eq('user_id', user.id)
+        .eq('type', 'game')
         .order('playtime_forever', { ascending: false });
 
       setGames(data || []);
