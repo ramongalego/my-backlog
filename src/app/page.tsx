@@ -45,7 +45,9 @@ function HomeContent() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shortGames, setShortGames] = useState<ShortGame[]>([]);
   const [weekendGames, setWeekendGames] = useState<ShortGame[]>([]);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<ShortGame | null>(null);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<ShortGame | null>(
+    null,
+  );
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const syncingRef = useRef(false);
 
@@ -69,6 +71,7 @@ function HomeContent() {
   }, []);
 
   const handlePickGame = async (game: ShortGame) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setIsStatusLoading(true);
     try {
       await fetch('/api/games/status', {
@@ -92,7 +95,10 @@ function HomeContent() {
       await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: currentlyPlaying.app_id, status: 'finished' }),
+        body: JSON.stringify({
+          appId: currentlyPlaying.app_id,
+          status: 'finished',
+        }),
       });
       setCurrentlyPlaying(null);
     } catch (err) {
@@ -108,7 +114,10 @@ function HomeContent() {
       await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: currentlyPlaying.app_id, status: 'dropped' }),
+        body: JSON.stringify({
+          appId: currentlyPlaying.app_id,
+          status: 'dropped',
+        }),
       });
       setCurrentlyPlaying(null);
     } catch (err) {
@@ -124,7 +133,10 @@ function HomeContent() {
       await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: currentlyPlaying.app_id, status: 'backlog' }),
+        body: JSON.stringify({
+          appId: currentlyPlaying.app_id,
+          status: 'backlog',
+        }),
       });
       if (currentlyPlaying.main_story_hours <= 5) {
         setShortGames(prev => [...prev, currentlyPlaying]);
@@ -194,11 +206,12 @@ function HomeContent() {
             .or('metadata_synced.is.null,metadata_synced.eq.false');
 
           // Filter out items we already know aren't games or aren't single-player
-          const unsyncedGames = allUnsyncedGames?.filter((g) => {
+          const unsyncedGames = allUnsyncedGames?.filter(g => {
             // Exclude non-games (DLC, software, etc.)
             if (g.type && g.type !== 'game') return false;
             // Exclude games we know aren't single-player
-            if (g.categories && !g.categories.includes('Single-player')) return false;
+            if (g.categories && !g.categories.includes('Single-player'))
+              return false;
             return true;
           });
 
@@ -337,10 +350,12 @@ function HomeContent() {
                 <button
                   onClick={handleRefreshLibrary}
                   disabled={isRefreshing || isSyncing}
-                  className='ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50'
+                  className='cursor-pointer ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50'
                   title='Check for new games'
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                  />
                 </button>
               </div>
 
@@ -349,20 +364,21 @@ function HomeContent() {
                   <div className='space-y-3'>
                     <div className='h-2 bg-zinc-800 rounded-full overflow-hidden'>
                       <div
-                        className='h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
+                        className='h-full bg-linear-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
                         style={{
                           width: `${(syncProgress.current / syncProgress.total) * 100}%`,
                         }}
                       />
                     </div>
                     <p className='text-zinc-400 text-sm'>
-                      Analyzing {syncProgress.current} of {syncProgress.total} games
+                      Analyzing {syncProgress.current} of {syncProgress.total}{' '}
+                      games
                     </p>
                   </div>
 
                   {syncingGames[syncProgress.current - 1] && (
                     <div className='relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900'>
-                      <div className='relative aspect-[460/215]'>
+                      <div className='relative aspect-460/215'>
                         <Image
                           src={`https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${syncingGames[syncProgress.current - 1].app_id}/header.jpg`}
                           alt={syncingGames[syncProgress.current - 1].name}
@@ -373,7 +389,7 @@ function HomeContent() {
                         {/* Scan line animation */}
                         <div className='absolute inset-0 overflow-hidden'>
                           <div
-                            className='absolute left-0 right-0 h-1 bg-gradient-to-b from-violet-500/80 via-violet-400/40 to-transparent'
+                            className='absolute left-0 right-0 h-1 bg-linear-to-b from-violet-500/80 via-violet-400/40 to-transparent'
                             style={{
                               animation: 'scan 1.5s ease-in-out infinite',
                             }}
@@ -383,7 +399,8 @@ function HomeContent() {
                         <div
                           className='absolute inset-0 opacity-20'
                           style={{
-                            backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent)',
+                            backgroundImage:
+                              'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent)',
                             backgroundSize: '20px 20px',
                           }}
                         />
@@ -398,10 +415,18 @@ function HomeContent() {
 
                   <style jsx>{`
                     @keyframes scan {
-                      0% { top: 0%; }
-                      50% { top: 100%; }
-                      50.1% { top: 0%; }
-                      100% { top: 100%; }
+                      0% {
+                        top: 0%;
+                      }
+                      50% {
+                        top: 100%;
+                      }
+                      50.1% {
+                        top: 0%;
+                      }
+                      100% {
+                        top: 100%;
+                      }
                     }
                   `}</style>
                 </div>
@@ -413,20 +438,40 @@ function HomeContent() {
                   onCancel={handleCancelGame}
                   isLoading={isStatusLoading}
                 />
+              ) : isStatusLoading ? (
+                <div className='w-full max-w-md mx-auto'>
+                  <div className='h-4 w-32 bg-zinc-800 rounded animate-pulse mx-auto mb-3' />
+                  <div className='bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800'>
+                    <div className='h-48 bg-zinc-800 animate-pulse' />
+                    <div className='p-5 space-y-4'>
+                      <div className='h-6 w-3/4 bg-zinc-800 rounded animate-pulse' />
+                      <div className='h-4 w-1/3 bg-zinc-800 rounded animate-pulse' />
+                      <div className='flex gap-3 pt-2'>
+                        <div className='flex-1 h-10 bg-zinc-800 rounded-lg animate-pulse' />
+                        <div className='flex-1 h-10 bg-zinc-800 rounded-lg animate-pulse' />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <Button size='lg'>Pick My Game</Button>
+                <Button size='lg' className='cursor-pointer'>
+                  Pick My Game
+                </Button>
               )}
             </div>
           </section>
 
           {!isSyncing && carouselsLoading && (
             <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
-              {[1, 2].map((i) => (
+              {[1, 2].map(i => (
                 <div key={i} className='space-y-6'>
                   <div className='h-8 w-64 bg-zinc-800 rounded animate-pulse' />
                   <div className='flex gap-4'>
-                    {[1, 2, 3, 4].map((j) => (
-                      <div key={j} className='flex-shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden'>
+                    {[1, 2, 3, 4].map(j => (
+                      <div
+                        key={j}
+                        className='shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden'
+                      >
                         <div className='h-32 bg-zinc-800 animate-pulse' />
                         <div className='p-4 space-y-2'>
                           <div className='h-4 bg-zinc-800 rounded w-3/4 animate-pulse' />
@@ -440,24 +485,26 @@ function HomeContent() {
             </section>
           )}
 
-          {!isSyncing && !carouselsLoading && (shortGames.length > 0 || weekendGames.length > 0) && (
-            <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
-              {shortGames.length > 0 && (
-                <GameCarousel
-                  title='Games Under 5 Hours'
-                  games={shortGames}
-                  onPickGame={handlePickGame}
-                />
-              )}
-              {weekendGames.length > 0 && (
-                <GameCarousel
-                  title='Games You Can Finish This Weekend'
-                  games={weekendGames}
-                  onPickGame={handlePickGame}
-                />
-              )}
-            </section>
-          )}
+          {!isSyncing &&
+            !carouselsLoading &&
+            (shortGames.length > 0 || weekendGames.length > 0) && (
+              <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
+                {shortGames.length > 0 && (
+                  <GameCarousel
+                    title='Games Under 5 Hours'
+                    games={shortGames}
+                    onPickGame={handlePickGame}
+                  />
+                )}
+                {weekendGames.length > 0 && (
+                  <GameCarousel
+                    title='Games You Can Finish This Weekend'
+                    games={weekendGames}
+                    onPickGame={handlePickGame}
+                  />
+                )}
+              </section>
+            )}
         </main>
 
         <footer className='py-6 border-t border-zinc-800'>
@@ -479,7 +526,7 @@ function HomeContent() {
           <div className='text-center'>
             <h1 className='text-4xl md:text-5xl font-bold text-zinc-100 leading-tight mb-6'>
               Stop scrolling.{' '}
-              <span className='text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400'>
+              <span className='text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400'>
                 Start playing.
               </span>
             </h1>

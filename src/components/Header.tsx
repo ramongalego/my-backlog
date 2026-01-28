@@ -52,7 +52,7 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
         <div className='max-w-6xl mx-auto px-6 h-16 flex items-center justify-between'>
           <div className='flex items-center gap-6'>
             <Link href='/' className='flex items-center gap-2'>
-              <div className='w-8 h-8 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-lg' />
+              <div className='w-8 h-8 bg-linear-to-br from-violet-500 to-fuchsia-500 rounded-lg' />
               <span className='text-xl font-bold text-zinc-100'>MyBacklog</span>
             </Link>
             {user && !hideGamesLink && (
@@ -73,7 +73,12 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
                 <span className='text-sm text-zinc-400 hidden sm:block'>
                   {user.email}
                 </span>
-                <Button variant='ghost' size='sm' onClick={handleSignOut}>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={handleSignOut}
+                  className='cursor-pointer'
+                >
                   Sign Out
                 </Button>
               </div>

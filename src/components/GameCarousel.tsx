@@ -98,14 +98,14 @@ export function GameCarousel({ title, games, onPickGame }: GameCarouselProps) {
         <div className='flex gap-2'>
           <button
             onClick={() => scroll('left')}
-            className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors'
+            className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors cursor-pointer'
             aria-label='Scroll left'
           >
             <ChevronLeft className='w-5 h-5 text-zinc-300' />
           </button>
           <button
             onClick={() => scroll('right')}
-            className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors'
+            className='p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors cursor-pointer'
             aria-label='Scroll right'
           >
             <ChevronRight className='w-5 h-5 text-zinc-300' />
@@ -130,7 +130,7 @@ export function GameCarousel({ title, games, onPickGame }: GameCarouselProps) {
           {tripleGames.map((game, index) => (
             <div
               key={`${game.app_id}-${index}`}
-              className='group flex-shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors relative'
+              className='group shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors relative'
             >
               <div className='relative h-32'>
                 {game.header_image ? (
