@@ -69,7 +69,7 @@ export default function GamesPage() {
   });
 
   const counts = {
-    all: games.filter(g => g.status !== 'hidden').length,
+    all: games.length,
     backlog: games.filter(g => !g.status || g.status === 'backlog').length,
     finished: games.filter(g => g.status === 'finished').length,
     dropped: games.filter(g => g.status === 'dropped').length,

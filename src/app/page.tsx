@@ -244,7 +244,8 @@ function HomeContent() {
           const { count: totalGames } = await supabase
             .from('games')
             .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .eq('type', 'game');
 
           setGameCount(totalGames || 0);
           setIsLoading(false);
