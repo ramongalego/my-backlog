@@ -21,7 +21,7 @@ interface Game {
 export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'backlog' | 'finished' | 'dropped'>('all');
+  const [filter, setFilter] = useState<'all' | 'backlog' | 'finished' | 'dropped' | 'hidden'>('all');
 
   useEffect(() => {
     async function loadGames() {
@@ -48,16 +48,17 @@ export default function GamesPage() {
   }, []);
 
   const filteredGames = games.filter(game => {
-    if (filter === 'all') return true;
+    if (filter === 'all') return game.status !== 'hidden';
     if (filter === 'backlog') return !game.status || game.status === 'backlog';
     return game.status === filter;
   });
 
   const counts = {
-    all: games.length,
+    all: games.filter(g => g.status !== 'hidden').length,
     backlog: games.filter(g => !g.status || g.status === 'backlog').length,
     finished: games.filter(g => g.status === 'finished').length,
     dropped: games.filter(g => g.status === 'dropped').length,
+    hidden: games.filter(g => g.status === 'hidden').length,
   };
 
   if (loading) {
@@ -96,7 +97,7 @@ export default function GamesPage() {
             </div>
 
             <div className="flex gap-2">
-              {(['all', 'backlog', 'finished', 'dropped'] as const).map((f) => (
+              {(['all', 'backlog', 'finished', 'dropped', 'hidden'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}

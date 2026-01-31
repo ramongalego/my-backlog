@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, EyeOff } from 'lucide-react';
 
 interface Game {
   app_id: number;
@@ -15,9 +15,10 @@ interface GameCarouselProps {
   title: string;
   games: Game[];
   onPickGame?: (game: Game) => void;
+  onHideGame?: (game: Game) => void;
 }
 
-export function GameCarousel({ title, games, onPickGame }: GameCarouselProps) {
+export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -110,14 +111,27 @@ export function GameCarousel({ title, games, onPickGame }: GameCarouselProps) {
                 ) : (
                   <div className='w-full h-full bg-zinc-800' />
                 )}
-                {onPickGame && (
-                  <button
-                    onClick={() => onPickGame(game)}
-                    className='cursor-pointer absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'
-                  >
-                    <Play className='w-5 h-5 text-white fill-white' />
-                    <span className='text-white font-medium'>Pick Game</span>
-                  </button>
+                {(onPickGame || onHideGame) && (
+                  <div className='absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'>
+                    {onPickGame && (
+                      <button
+                        onClick={() => onPickGame(game)}
+                        className='cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors'
+                      >
+                        <Play className='w-4 h-4 text-white fill-white' />
+                        <span className='text-white font-medium text-sm'>Pick</span>
+                      </button>
+                    )}
+                    {onHideGame && (
+                      <button
+                        onClick={() => onHideGame(game)}
+                        className='cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors'
+                      >
+                        <EyeOff className='w-4 h-4 text-zinc-300' />
+                        <span className='text-zinc-300 font-medium text-sm'>Hide</span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
               <div className='p-4'>

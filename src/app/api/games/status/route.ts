@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing appId or status" }, { status: 400 });
   }
 
-  const validStatuses = ['backlog', 'playing', 'finished', 'dropped'];
+  const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'hidden'];
   if (!validStatuses.includes(status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }

@@ -138,6 +138,20 @@ function HomeContent() {
     setIsStatusLoading(false);
   };
 
+  const handleHideGame = async (game: ShortGame) => {
+    try {
+      await fetch('/api/games/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId: game.app_id, status: 'hidden' }),
+      });
+      setShortGamesPool(prev => prev.filter(g => g.app_id !== game.app_id));
+      setWeekendGamesPool(prev => prev.filter(g => g.app_id !== game.app_id));
+    } catch (err) {
+      console.error('Failed to hide game:', err);
+    }
+  };
+
   const handleCancelGame = async () => {
     if (!currentlyPlaying) return;
     setIsStatusLoading(true);
@@ -556,6 +570,7 @@ function HomeContent() {
                     title='Games Under 5 Hours'
                     games={shortGames}
                     onPickGame={!currentlyPlaying ? handlePickGame : undefined}
+                    onHideGame={handleHideGame}
                   />
                 )}
                 {weekendGames.length > 0 && (
@@ -563,6 +578,7 @@ function HomeContent() {
                     title='Games You Can Finish This Weekend'
                     games={weekendGames}
                     onPickGame={!currentlyPlaying ? handlePickGame : undefined}
+                    onHideGame={handleHideGame}
                   />
                 )}
               </section>
