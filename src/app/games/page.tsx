@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Clock, Gamepad2, Star } from 'lucide-react';
+import { Clock, Gamepad2, Star, Undo2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/Header';
 
@@ -46,6 +46,21 @@ export default function GamesPage() {
 
     loadGames();
   }, []);
+
+  const handleMoveToBacklog = async (appId: number) => {
+    try {
+      await fetch('/api/games/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId, status: 'backlog' }),
+      });
+      setGames(prev => prev.map(g =>
+        g.app_id === appId ? { ...g, status: 'backlog' } : g
+      ));
+    } catch (err) {
+      console.error('Failed to move game to backlog:', err);
+    }
+  };
 
   const filteredGames = games.filter(game => {
     if (filter === 'all') return game.status !== 'hidden';
@@ -149,6 +164,22 @@ export default function GamesPage() {
                       <div className="absolute top-2 right-2 px-2 py-0.5 bg-zinc-600/90 text-white text-xs font-medium rounded">
                         Dropped
                       </div>
+                    )}
+                    {game.status === 'hidden' && (
+                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-zinc-700/90 text-white text-xs font-medium rounded">
+                        Hidden
+                      </div>
+                    )}
+                    {(game.status === 'finished' || game.status === 'dropped' || game.status === 'hidden') && (
+                      <button
+                        onClick={() => handleMoveToBacklog(game.app_id)}
+                        className="cursor-pointer absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                      >
+                        <Undo2 className="w-4 h-4 text-white" />
+                        <span className="text-white font-medium text-sm">
+                          {game.status === 'hidden' ? 'Unhide' : 'Move to Backlog'}
+                        </span>
+                      </button>
                     )}
                   </div>
                   <div className="p-3">
