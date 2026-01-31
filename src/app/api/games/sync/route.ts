@@ -36,10 +36,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { appId } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-  if (!appId) {
-    return NextResponse.json({ error: "Missing appId" }, { status: 400 });
+  const { appId } = body;
+
+  if (!appId || typeof appId !== "number" || !Number.isInteger(appId) || appId <= 0) {
+    return NextResponse.json({ error: "Invalid appId" }, { status: 400 });
   }
 
   // Check for existing fresh metadata in shared table

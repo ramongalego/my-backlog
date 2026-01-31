@@ -49,11 +49,11 @@ export async function GET(request: NextRequest) {
           getOwnedGames(steamId, apiKey),
         ]);
 
-        console.log("=== STEAM CONNECTION SUCCESSFUL ===");
-        console.log("User ID:", user.id);
-        console.log("Steam ID:", steamId);
-        console.log("Player:", playerSummary?.personaname);
-        console.log("Total games:", games.length);
+        if (process.env.NODE_ENV === "development") {
+          console.log("=== STEAM CONNECTION SUCCESSFUL ===");
+          console.log("Player:", playerSummary?.personaname);
+          console.log("Total games:", games.length);
+        }
 
         // Update profile with Steam data
         const { error: profileError } = await supabase
@@ -96,7 +96,9 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        console.log("Steam data saved successfully");
+        if (process.env.NODE_ENV === "development") {
+          console.log("Steam data saved successfully");
+        }
         resolve(NextResponse.redirect(baseUrl));
       } catch (apiError) {
         console.error("Steam API error:", apiError);
