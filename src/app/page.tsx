@@ -526,14 +526,14 @@ function HomeContent() {
                   <GameCarousel
                     title='Games Under 5 Hours'
                     games={shortGames}
-                    onPickGame={handlePickGame}
+                    onPickGame={!currentlyPlaying ? handlePickGame : undefined}
                   />
                 )}
                 {weekendGames.length > 0 && (
                   <GameCarousel
                     title='Games You Can Finish This Weekend'
                     games={weekendGames}
-                    onPickGame={handlePickGame}
+                    onPickGame={!currentlyPlaying ? handlePickGame : undefined}
                   />
                 )}
               </section>
