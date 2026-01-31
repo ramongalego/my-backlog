@@ -63,18 +63,28 @@ function HomeContent() {
   const router = useRouter();
 
   const syncGames = useCallback(async (games: Game[]) => {
-    for (let i = 0; i < games.length; i++) {
-      setSyncProgress({ current: i + 1, total: games.length });
+    const BATCH_SIZE = 3; // Conservative limit to avoid rate limiting
+    let completed = 0;
 
-      try {
-        await fetch('/api/games/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ appId: games[i].app_id }),
-        });
-      } catch (err) {
-        console.error(`Failed to sync ${games[i].name}:`, err);
-      }
+    for (let i = 0; i < games.length; i += BATCH_SIZE) {
+      const batch = games.slice(i, i + BATCH_SIZE);
+
+      await Promise.all(
+        batch.map(async game => {
+          try {
+            await fetch('/api/games/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ appId: game.app_id }),
+            });
+          } catch (err) {
+            console.error(`Failed to sync ${game.name}:`, err);
+          } finally {
+            completed++;
+            setSyncProgress({ current: completed, total: games.length });
+          }
+        }),
+      );
     }
   }, []);
 
@@ -241,15 +251,6 @@ function HomeContent() {
         setProfile(profileData);
 
         if (profileData?.steam_id) {
-          const { count: totalGames } = await supabase
-            .from('games')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('type', 'game');
-
-          setGameCount(totalGames || 0);
-          setIsLoading(false);
-
           const { data: allUnsyncedGames } = await supabase
             .from('games')
             .select('app_id, name, type, categories')
@@ -271,6 +272,8 @@ function HomeContent() {
             unsyncedGames.length > 0 &&
             !syncingRef.current
           ) {
+            setIsLoading(false);
+
             syncingRef.current = true;
             setIsSyncing(true);
             setSyncingGames(unsyncedGames);
@@ -280,6 +283,16 @@ function HomeContent() {
             setSyncingGames([]);
             syncingRef.current = false;
           }
+
+          // Fetch game count after sync (or immediately if no sync needed)
+          const { count: totalGames } = await supabase
+            .from('games')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('type', 'game');
+
+          setGameCount(totalGames || 0);
+          setIsLoading(false);
 
           const { data: playingGame } = await supabase
             .from('games')
@@ -393,9 +406,17 @@ function HomeContent() {
                     className='rounded'
                   />
                 )}
-                <span className='text-zinc-100 text-sm sm:text-base'>{profile?.steam_username}</span>
-                <span className='text-zinc-500 hidden sm:inline'>·</span>
-                <span className='text-zinc-400 text-sm sm:text-base'>{gameCount} games</span>
+                <span className='text-zinc-100 text-sm sm:text-base'>
+                  {profile?.steam_username}
+                </span>
+                {!isSyncing && (
+                  <>
+                    <span className='text-zinc-500 hidden sm:inline'>·</span>
+                    <span className='text-zinc-400 text-sm sm:text-base'>
+                      {gameCount} games
+                    </span>
+                  </>
+                )}
                 <button
                   onClick={handleRefreshLibrary}
                   disabled={isRefreshing || isSyncing}
@@ -515,7 +536,7 @@ function HomeContent() {
                   </div>
                   <p className='text-lg text-zinc-100 animate-celebration'>
                     You finished{' '}
-                    <span className='font-semibold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400'>
+                    <span className='font-semibold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400'>
                       {celebrationMessage}
                     </span>
                     !

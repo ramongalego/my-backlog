@@ -3,6 +3,31 @@ import { createClient } from "@/lib/supabase/server";
 import { getGameDetails, extractGameMetadata, getSteamReviewData } from "@/lib/steam/store-api";
 import { getMainStoryHours } from "@/lib/hltb/api";
 
+const METADATA_FRESHNESS_DAYS = 7;
+
+interface GameMetadata {
+  app_id: number;
+  type: string | null;
+  name: string | null;
+  genres: string[] | null;
+  categories: string[] | null;
+  description: string | null;
+  release_date: string | null;
+  header_image: string | null;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
+  steam_review_weighted: number | null;
+  main_story_hours: number | null;
+  synced_at: string;
+}
+
+function isMetadataFresh(syncedAt: string): boolean {
+  const syncedDate = new Date(syncedAt);
+  const now = new Date();
+  const diffDays = (now.getTime() - syncedDate.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays < METADATA_FRESHNESS_DAYS;
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -17,32 +42,69 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing appId" }, { status: 400 });
   }
 
-  // Fetch game details from Steam Store API
-  const details = await getGameDetails(appId);
-  const metadata = details ? extractGameMetadata(details) : null;
+  // Check for existing fresh metadata in shared table
+  const { data: existingMetadata } = await supabase
+    .from("game_metadata")
+    .select("*")
+    .eq("app_id", appId)
+    .single();
+
+  let metadata: GameMetadata | null = null;
+  let fromCache = false;
+
+  if (existingMetadata && isMetadataFresh(existingMetadata.synced_at)) {
+    // Use cached metadata
+    metadata = existingMetadata as GameMetadata;
+    fromCache = true;
+  } else {
+    // Fetch from APIs
+    const details = await getGameDetails(appId);
+    const extractedMetadata = details ? extractGameMetadata(details) : null;
+
+    if (extractedMetadata) {
+      const isGame = extractedMetadata.type === 'game';
+
+      // Only fetch HLTB and Steam reviews for actual games
+      const [mainStoryHours, steamReviewData] = isGame
+        ? await Promise.all([
+            details?.data?.name ? getMainStoryHours(details.data.name) : null,
+            getSteamReviewData(appId),
+          ])
+        : [null, null];
+
+      // Calculate weighted score using Bayesian average
+      const weightedScore = steamReviewData
+        ? Math.round(
+            (steamReviewData.count / (steamReviewData.count + 100)) * steamReviewData.score +
+            (100 / (steamReviewData.count + 100)) * 70
+          )
+        : null;
+
+      metadata = {
+        app_id: appId,
+        type: extractedMetadata.type,
+        name: details?.data?.name ?? null,
+        genres: extractedMetadata.genres,
+        categories: extractedMetadata.categories,
+        description: extractedMetadata.description,
+        release_date: extractedMetadata.release_date,
+        header_image: extractedMetadata.header_image,
+        steam_review_score: steamReviewData?.score ?? null,
+        steam_review_count: steamReviewData?.count ?? null,
+        steam_review_weighted: weightedScore,
+        main_story_hours: mainStoryHours,
+        synced_at: new Date().toISOString(),
+      };
+
+      // Upsert into shared game_metadata table
+      await supabase
+        .from("game_metadata")
+        .upsert(metadata, { onConflict: "app_id" });
+    }
+  }
 
   if (metadata) {
-    const isGame = metadata.type === 'game';
-
-    // Only fetch HLTB and Steam reviews for actual games
-    const [mainStoryHours, steamReviewData] = isGame
-      ? await Promise.all([
-          details?.data?.name ? getMainStoryHours(details.data.name) : null,
-          getSteamReviewData(appId),
-        ])
-      : [null, null];
-
-    // Calculate weighted score using Bayesian average
-    // Formula: (count / (count + m)) * score + (m / (count + m)) * average
-    // Where m = 100 (threshold) and average = 70 (assumed average score)
-    const weightedScore = steamReviewData
-      ? Math.round(
-          (steamReviewData.count / (steamReviewData.count + 100)) * steamReviewData.score +
-          (100 / (steamReviewData.count + 100)) * 70
-        )
-      : null;
-
-    // Update game with metadata
+    // Update user's game with metadata from shared table
     await supabase
       .from("games")
       .update({
@@ -51,11 +113,11 @@ export async function POST(request: NextRequest) {
         categories: metadata.categories,
         description: metadata.description,
         release_date: metadata.release_date,
-        steam_review_score: steamReviewData?.score ?? null,
-        steam_review_count: steamReviewData?.count ?? null,
-        steam_review_weighted: weightedScore,
+        steam_review_score: metadata.steam_review_score,
+        steam_review_count: metadata.steam_review_count,
+        steam_review_weighted: metadata.steam_review_weighted,
         header_image: metadata.header_image,
-        main_story_hours: mainStoryHours,
+        main_story_hours: metadata.main_story_hours,
         metadata_synced: true,
       })
       .eq("user_id", user.id)
@@ -63,12 +125,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      fromCache,
       metadata: {
-        ...metadata,
-        main_story_hours: mainStoryHours,
-        steam_review_score: steamReviewData?.score ?? null,
-        steam_review_count: steamReviewData?.count ?? null,
-        steam_review_weighted: weightedScore,
+        type: metadata.type,
+        genres: metadata.genres,
+        categories: metadata.categories,
+        description: metadata.description,
+        release_date: metadata.release_date,
+        header_image: metadata.header_image,
+        main_story_hours: metadata.main_story_hours,
+        steam_review_score: metadata.steam_review_score,
+        steam_review_count: metadata.steam_review_count,
+        steam_review_weighted: metadata.steam_review_weighted,
       }
     });
   } else {
@@ -79,6 +147,6 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .eq("app_id", appId);
 
-    return NextResponse.json({ success: true, metadata: null });
+    return NextResponse.json({ success: true, fromCache: false, metadata: null });
   }
 }
