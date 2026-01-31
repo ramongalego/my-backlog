@@ -88,13 +88,13 @@ export default function GamesPage() {
         <Header />
         <div className='pt-24 px-6'>
           <div className='max-w-6xl mx-auto'>
-            <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'>
               {[...Array(10)].map((_, i) => (
                 <div
                   key={i}
                   className='bg-zinc-900 rounded-lg overflow-hidden animate-pulse'
                 >
-                  <div className='h-28 bg-zinc-800' />
+                  <div className='h-40 sm:h-28 bg-zinc-800' />
                   <div className='p-3 space-y-2'>
                     <div className='h-4 bg-zinc-800 rounded w-3/4' />
                     <div className='h-3 bg-zinc-800 rounded w-1/2' />
@@ -122,14 +122,14 @@ export default function GamesPage() {
               </p>
             </div>
 
-            <div className='flex gap-2'>
+            <div className='flex gap-2 overflow-x-auto pb-2 -mb-2'>
               {(
                 ['all', 'backlog', 'finished', 'dropped', 'hidden'] as const
               ).map(f => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  className={`shrink-0 px-3 py-1.5 text-sm rounded-lg transition-colors ${
                     filter === f
                       ? 'bg-zinc-100 text-zinc-900'
                       : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100'
@@ -148,20 +148,20 @@ export default function GamesPage() {
               <p className='text-zinc-500'>No games found</p>
             </div>
           ) : (
-            <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'>
               {filteredGames.map(game => (
                 <div
                   key={game.app_id}
-                  className='group bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all hover:scale-[1.02]'
+                  className='group bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all sm:hover:scale-[1.02]'
                 >
-                  <div className='relative h-28'>
+                  <div className='relative h-40 sm:h-28'>
                     {game.header_image ? (
                       <Image
                         src={game.header_image}
                         alt={game.name}
                         fill
                         className='object-cover'
-                        sizes='(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw'
+                        sizes='(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'
                       />
                     ) : (
                       <div className='w-full h-full bg-zinc-800 flex items-center justify-center'>
@@ -190,7 +190,7 @@ export default function GamesPage() {
                         onClick={() =>
                           handleStatusChange(game.app_id, 'backlog')
                         }
-                        className='cursor-pointer absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'
+                        className='cursor-pointer absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'
                       >
                         <Undo2 className='w-4 h-4 text-white' />
                         <span className='text-white font-medium text-sm'>
@@ -201,16 +201,16 @@ export default function GamesPage() {
                       </button>
                     )}
                     {(!game.status || game.status === 'backlog') && (
-                      <div className='absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'>
+                      <div className='absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 sm:gap-2'>
                         <button
                           onClick={() =>
                             handleStatusChange(game.app_id, 'finished')
                           }
-                          className='cursor-pointer flex items-center gap-1 px-2 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 rounded transition-colors'
+                          className='cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-emerald-600/80 hover:bg-emerald-600 rounded-lg sm:rounded transition-colors'
                           title='Mark as finished'
                         >
-                          <Check className='w-3.5 h-3.5 text-white' />
-                          <span className='text-white text-xs font-medium'>
+                          <Check className='w-5 sm:w-3.5 h-5 sm:h-3.5 text-white' />
+                          <span className='text-white text-sm sm:text-xs font-medium'>
                             Finish
                           </span>
                         </button>
@@ -218,11 +218,11 @@ export default function GamesPage() {
                           onClick={() =>
                             handleStatusChange(game.app_id, 'dropped')
                           }
-                          className='cursor-pointer flex items-center gap-1 px-2 py-1.5 bg-zinc-600/80 hover:bg-zinc-600 rounded transition-colors'
+                          className='cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-zinc-600/80 hover:bg-zinc-600 rounded-lg sm:rounded transition-colors'
                           title='Mark as dropped'
                         >
-                          <X className='w-3.5 h-3.5 text-white' />
-                          <span className='text-white text-xs font-medium'>
+                          <X className='w-5 sm:w-3.5 h-5 sm:h-3.5 text-white' />
+                          <span className='text-white text-sm sm:text-xs font-medium'>
                             Drop
                           </span>
                         </button>
@@ -230,11 +230,11 @@ export default function GamesPage() {
                           onClick={() =>
                             handleStatusChange(game.app_id, 'hidden')
                           }
-                          className='cursor-pointer flex items-center gap-1 px-2 py-1.5 bg-zinc-700/80 hover:bg-zinc-700 rounded transition-colors'
+                          className='cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-zinc-700/80 hover:bg-zinc-700 rounded-lg sm:rounded transition-colors'
                           title='Hide game'
                         >
-                          <EyeOff className='w-3.5 h-3.5 text-zinc-300' />
-                          <span className='text-zinc-300 text-xs font-medium'>
+                          <EyeOff className='w-5 sm:w-3.5 h-5 sm:h-3.5 text-zinc-300' />
+                          <span className='text-zinc-300 text-sm sm:text-xs font-medium'>
                             Hide
                           </span>
                         </button>

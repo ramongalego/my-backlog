@@ -60,7 +60,7 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
   return (
     <div>
       <div className='flex items-center justify-between mb-6'>
-        <h2 className='text-2xl font-bold text-zinc-100'>{title}</h2>
+        <h2 className='text-lg sm:text-2xl font-bold text-zinc-100'>{title}</h2>
         <div className='flex gap-2'>
           <button
             onClick={() => scroll('left')}
@@ -112,7 +112,7 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
                   <div className='w-full h-full bg-zinc-800' />
                 )}
                 {(onPickGame || onHideGame) && (
-                  <div className='absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'>
+                  <div className='absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'>
                     {onPickGame && (
                       <button
                         onClick={() => onPickGame(game)}

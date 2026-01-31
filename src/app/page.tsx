@@ -383,7 +383,7 @@ function HomeContent() {
         <main className='pt-16 flex-1'>
           <section className='max-w-6xl mx-auto px-6 py-12'>
             <div className='flex flex-col items-center text-center'>
-              <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg mb-8'>
+              <div className='inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-zinc-800 rounded-lg mb-8'>
                 {profile?.steam_avatar && (
                   <Image
                     src={profile.steam_avatar}
@@ -393,9 +393,9 @@ function HomeContent() {
                     className='rounded'
                   />
                 )}
-                <span className='text-zinc-100'>{profile?.steam_username}</span>
-                <span className='text-zinc-500'>·</span>
-                <span className='text-zinc-400'>{gameCount} games</span>
+                <span className='text-zinc-100 text-sm sm:text-base'>{profile?.steam_username}</span>
+                <span className='text-zinc-500 hidden sm:inline'>·</span>
+                <span className='text-zinc-400 text-sm sm:text-base'>{gameCount} games</span>
                 <button
                   onClick={handleRefreshLibrary}
                   disabled={isRefreshing || isSyncing}
