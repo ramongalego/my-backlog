@@ -10,6 +10,7 @@ import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { createClient } from '@/lib/supabase/client';
 import { RefreshCw, Dices } from 'lucide-react';
+import { celebrateGameFinished } from '@/lib/confetti';
 import type { User } from '@supabase/supabase-js';
 
 interface Profile {
@@ -49,6 +50,9 @@ function HomeContent() {
     null,
   );
   const [isStatusLoading, setIsStatusLoading] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(
+    null,
+  );
   const syncingRef = useRef(false);
 
   const searchParams = useSearchParams();
@@ -90,6 +94,7 @@ function HomeContent() {
 
   const handleFinishGame = async () => {
     if (!currentlyPlaying) return;
+    const finishedGameName = currentlyPlaying.name;
     setIsStatusLoading(true);
     try {
       await fetch('/api/games/status', {
@@ -101,6 +106,9 @@ function HomeContent() {
         }),
       });
       setCurrentlyPlaying(null);
+      celebrateGameFinished();
+      setCelebrationMessage(finishedGameName);
+      setTimeout(() => setCelebrationMessage(null), 3000);
     } catch (err) {
       console.error('Failed to finish game:', err);
     }
@@ -477,6 +485,20 @@ function HomeContent() {
                     </div>
                   </div>
                 </div>
+              ) : celebrationMessage ? (
+                <div className='flex flex-col items-center gap-4'>
+                  <div className='flex items-center gap-2'>
+                    <div className='h-12 w-36 bg-zinc-800 rounded-lg animate-pulse' />
+                    <div className='h-12 w-12 bg-zinc-800 rounded-lg animate-pulse' />
+                  </div>
+                  <p className='text-lg text-zinc-100 animate-celebration'>
+                    You finished{' '}
+                    <span className='font-semibold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400'>
+                      {celebrationMessage}
+                    </span>
+                    !
+                  </p>
+                </div>
               ) : (
                 <div className='flex items-center gap-2'>
                   <Button size='lg' className='cursor-pointer'>
@@ -485,7 +507,7 @@ function HomeContent() {
                   <button
                     onClick={handleRandomPick}
                     className='cursor-pointer p-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors'
-                    title='Pick a random game (2h or less playtime)'
+                    title='Pick a random game'
                   >
                     <Dices className='w-5 h-5 text-zinc-100' />
                   </button>
