@@ -1,3 +1,5 @@
+import { secondsToHours } from "./time-utils";
+
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 const BASE_URL = "https://howlongtobeat.com";
@@ -120,7 +122,7 @@ export async function getMainStoryHours(
     if (!game?.comp_main) return null;
 
     // comp_main is in seconds, convert to hours (1 decimal place)
-    return Math.round((game.comp_main / 3600) * 10) / 10;
+    return secondsToHours(game.comp_main);
   } catch (error) {
     console.error(`HLTB search failed for "${gameName}":`, error);
     return null;

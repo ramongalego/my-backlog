@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getGameDetails, extractGameMetadata, getSteamReviewData } from "@/lib/steam/store-api";
 import { getMainStoryHours } from "@/lib/hltb/api";
-
-const METADATA_FRESHNESS_DAYS = 7;
+import { isMetadataFresh, calculateBayesianScore } from "@/lib/games/scoring";
 
 interface GameMetadata {
   app_id: number;
@@ -19,13 +18,6 @@ interface GameMetadata {
   steam_review_weighted: number | null;
   main_story_hours: number | null;
   synced_at: string;
-}
-
-function isMetadataFresh(syncedAt: string): boolean {
-  const syncedDate = new Date(syncedAt);
-  const now = new Date();
-  const diffDays = (now.getTime() - syncedDate.getTime()) / (1000 * 60 * 60 * 24);
-  return diffDays < METADATA_FRESHNESS_DAYS;
 }
 
 export async function POST(request: NextRequest) {
@@ -81,10 +73,7 @@ export async function POST(request: NextRequest) {
 
       // Calculate weighted score using Bayesian average
       const weightedScore = steamReviewData
-        ? Math.round(
-            (steamReviewData.count / (steamReviewData.count + 100)) * steamReviewData.score +
-            (100 / (steamReviewData.count + 100)) * 70
-          )
+        ? calculateBayesianScore(steamReviewData.score, steamReviewData.count)
         : null;
 
       metadata = {

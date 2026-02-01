@@ -1,230 +1,127 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
-import { AuthModal } from '@/components/auth/AuthModal';
 import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
-import { createClient } from '@/lib/supabase/client';
+import { SyncProgress } from '@/components/SyncProgress';
+import { LandingPage } from '@/components/LandingPage';
+import { useGameLibrary } from '@/hooks/useGameLibrary';
 import { RefreshCw, Dices } from 'lucide-react';
-import { celebrateGameFinished } from '@/lib/confetti';
-import type { User } from '@supabase/supabase-js';
 
-interface Profile {
-  steam_id: string | null;
-  steam_username: string | null;
-  steam_avatar: string | null;
+function LoadingState() {
+  return (
+    <div className='min-h-screen bg-zinc-950 flex flex-col'>
+      <Header />
+      <main className='pt-16 flex-1 flex items-center justify-center'>
+        <div className='space-y-6 text-center'>
+          <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg'>
+            <div className='w-8 h-8 bg-zinc-700 rounded animate-pulse' />
+            <div className='w-24 h-4 bg-zinc-700 rounded animate-pulse' />
+            <span className='text-zinc-700'>·</span>
+            <div className='w-16 h-4 bg-zinc-700 rounded animate-pulse' />
+          </div>
+          <div className='h-12 w-40 mx-auto bg-zinc-800 rounded-lg animate-pulse' />
+        </div>
+      </main>
+    </div>
+  );
 }
 
-interface Game {
-  app_id: number;
-  name: string;
-  type?: string | null;
-  categories?: string[] | null;
+function CarouselsLoadingState() {
+  return (
+    <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
+      {[1, 2].map(i => (
+        <div key={i} className='space-y-6'>
+          <div className='h-8 w-64 bg-zinc-800 rounded animate-pulse' />
+          <div className='flex gap-4'>
+            {[1, 2, 3, 4].map(j => (
+              <div
+                key={j}
+                className='shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden'
+              >
+                <div className='h-32 bg-zinc-800 animate-pulse' />
+                <div className='p-4 space-y-2'>
+                  <div className='h-4 bg-zinc-800 rounded w-3/4 animate-pulse' />
+                  <div className='h-3 bg-zinc-800 rounded w-1/2 animate-pulse' />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
 }
 
-interface ShortGame {
-  app_id: number;
-  name: string;
-  header_image: string | null;
-  main_story_hours: number;
+function StatusLoadingState() {
+  return (
+    <div className='w-full max-w-md mx-auto'>
+      <div className='h-4 w-32 bg-zinc-800 rounded animate-pulse mx-auto mb-3' />
+      <div className='bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800'>
+        <div className='h-48 bg-zinc-800 animate-pulse' />
+        <div className='p-5 space-y-4'>
+          <div className='h-6 w-3/4 bg-zinc-800 rounded animate-pulse' />
+          <div className='h-4 w-1/3 bg-zinc-800 rounded animate-pulse' />
+          <div className='flex gap-3 pt-2'>
+            <div className='flex-1 h-10 bg-zinc-800 rounded-lg animate-pulse' />
+            <div className='flex-1 h-10 bg-zinc-800 rounded-lg animate-pulse' />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CelebrationMessage({ gameName }: { gameName: string }) {
+  return (
+    <div className='flex flex-col items-center gap-4'>
+      <div className='flex items-center gap-2'>
+        <div className='h-12 w-36 bg-zinc-800 rounded-lg animate-pulse' />
+        <div className='h-12 w-12 bg-zinc-800 rounded-lg animate-pulse' />
+      </div>
+      <p className='text-lg text-zinc-100 animate-celebration'>
+        You finished{' '}
+        <span className='font-semibold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400'>
+          {gameName}
+        </span>
+        !
+      </p>
+    </div>
+  );
 }
 
 function HomeContent() {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [gameCount, setGameCount] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
-  const [syncingGames, setSyncingGames] = useState<Game[]>([]);
-  const [carouselsLoading, setCarouselsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [shortGamesPool, setShortGamesPool] = useState<ShortGame[]>([]);
-  const [weekendGamesPool, setWeekendGamesPool] = useState<ShortGame[]>([]);
-
-  // Display only first 10 games from each pool
-  const shortGames = shortGamesPool.slice(0, 10);
-  const weekendGames = weekendGamesPool.slice(0, 10);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<ShortGame | null>(
-    null,
-  );
-  const [isStatusLoading, setIsStatusLoading] = useState(false);
-  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(
-    null,
-  );
-  const syncingRef = useRef(false);
-
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const syncGames = useCallback(async (games: Game[]) => {
-    const BATCH_SIZE = 3; // Conservative limit to avoid rate limiting
-    let completed = 0;
-
-    for (let i = 0; i < games.length; i += BATCH_SIZE) {
-      const batch = games.slice(i, i + BATCH_SIZE);
-
-      await Promise.all(
-        batch.map(async game => {
-          try {
-            await fetch('/api/games/sync', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ appId: game.app_id }),
-            });
-          } catch (err) {
-            console.error(`Failed to sync ${game.name}:`, err);
-          } finally {
-            completed++;
-            setSyncProgress({ current: completed, total: games.length });
-          }
-        }),
-      );
-    }
-  }, []);
-
-  const handlePickGame = async (game: ShortGame) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setIsStatusLoading(true);
-    try {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: game.app_id, status: 'playing' }),
-      });
-      setCurrentlyPlaying(game);
-      setShortGamesPool(prev => prev.filter(g => g.app_id !== game.app_id));
-      setWeekendGamesPool(prev => prev.filter(g => g.app_id !== game.app_id));
-    } catch (err) {
-      console.error('Failed to pick game:', err);
-    }
-    setIsStatusLoading(false);
-  };
-
-  const handleFinishGame = async () => {
-    if (!currentlyPlaying) return;
-    const finishedGameName = currentlyPlaying.name;
-    setIsStatusLoading(true);
-    try {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: currentlyPlaying.app_id,
-          status: 'finished',
-        }),
-      });
-      setCurrentlyPlaying(null);
-      celebrateGameFinished();
-      setCelebrationMessage(finishedGameName);
-      setTimeout(() => setCelebrationMessage(null), 3000);
-    } catch (err) {
-      console.error('Failed to finish game:', err);
-    }
-    setIsStatusLoading(false);
-  };
-
-  const handleDropGame = async () => {
-    if (!currentlyPlaying) return;
-    setIsStatusLoading(true);
-    try {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: currentlyPlaying.app_id,
-          status: 'dropped',
-        }),
-      });
-      setCurrentlyPlaying(null);
-    } catch (err) {
-      console.error('Failed to drop game:', err);
-    }
-    setIsStatusLoading(false);
-  };
-
-  const handleHideGame = async (game: ShortGame) => {
-    try {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: game.app_id, status: 'hidden' }),
-      });
-      setShortGamesPool(prev => prev.filter(g => g.app_id !== game.app_id));
-      setWeekendGamesPool(prev => prev.filter(g => g.app_id !== game.app_id));
-    } catch (err) {
-      console.error('Failed to hide game:', err);
-    }
-  };
-
-  const handleCancelGame = async () => {
-    if (!currentlyPlaying) return;
-    setIsStatusLoading(true);
-    try {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: currentlyPlaying.app_id,
-          status: 'backlog',
-        }),
-      });
-      if (currentlyPlaying.main_story_hours <= 5) {
-        setShortGamesPool(prev => [...prev, currentlyPlaying]);
-      } else if (currentlyPlaying.main_story_hours <= 12) {
-        setWeekendGamesPool(prev => [...prev, currentlyPlaying]);
-      }
-      setCurrentlyPlaying(null);
-    } catch (err) {
-      console.error('Failed to cancel game:', err);
-    }
-    setIsStatusLoading(false);
-  };
-
-  const handleRefreshLibrary = async () => {
-    setIsRefreshing(true);
-    try {
-      const res = await fetch('/api/steam/refresh', { method: 'POST' });
-      const data = await res.json();
-
-      if (data.newGames > 0) {
-        // Reload the page to trigger sync for new games
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Failed to refresh library:', err);
-    }
-    setIsRefreshing(false);
-  };
-
-  const handleRandomPick = async () => {
-    const supabase = createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-    if (!currentUser) return;
-
-    const { data: eligibleGames } = await supabase
-      .from('games')
-      .select('app_id, name, header_image, main_story_hours')
-      .eq('user_id', currentUser.id)
-      .eq('type', 'game')
-      .not('main_story_hours', 'is', null)
-      .lte('playtime_forever', 120) // 2 hours or less
-      .contains('categories', ['Single-player'])
-      .or('status.is.null,status.eq.backlog');
-
-    if (!eligibleGames || eligibleGames.length === 0) return;
-
-    const randomIndex = Math.floor(Math.random() * eligibleGames.length);
-    const randomGame = eligibleGames[randomIndex];
-    await handlePickGame(randomGame);
-  };
+  const {
+    user,
+    profile,
+    isLoading,
+    gameCount,
+    shortGames,
+    weekendGames,
+    currentlyPlaying,
+    isSyncing,
+    syncProgress,
+    syncingGames,
+    carouselsLoading,
+    isRefreshing,
+    isStatusLoading,
+    celebrationMessage,
+    handlePickGame,
+    handleFinishGame,
+    handleDropGame,
+    handleHideGame,
+    handleCancelGame,
+    handleRefreshLibrary,
+    handleRandomPick,
+    handleConnectSteam,
+  } = useGameLibrary();
 
   useEffect(() => {
     if (searchParams.has('error')) {
@@ -232,454 +129,122 @@ function HomeContent() {
     }
   }, [searchParams, router]);
 
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function loadUserData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('steam_id, steam_username, steam_avatar')
-          .eq('id', user.id)
-          .single();
-
-        setProfile(profileData);
-
-        if (profileData?.steam_id) {
-          const { data: allUnsyncedGames } = await supabase
-            .from('games')
-            .select('app_id, name, type, categories')
-            .eq('user_id', user.id)
-            .or('metadata_synced.is.null,metadata_synced.eq.false');
-
-          // Filter out items we already know aren't games or aren't single-player
-          const unsyncedGames = allUnsyncedGames?.filter(g => {
-            // Exclude non-games (DLC, software, etc.)
-            if (g.type && g.type !== 'game') return false;
-            // Exclude games we know aren't single-player
-            if (g.categories && !g.categories.includes('Single-player'))
-              return false;
-            return true;
-          });
-
-          if (
-            unsyncedGames &&
-            unsyncedGames.length > 0 &&
-            !syncingRef.current
-          ) {
-            setIsLoading(false);
-
-            syncingRef.current = true;
-            setIsSyncing(true);
-            setSyncingGames(unsyncedGames);
-            setSyncProgress({ current: 0, total: unsyncedGames.length });
-            await syncGames(unsyncedGames);
-            setIsSyncing(false);
-            setSyncingGames([]);
-            syncingRef.current = false;
-          }
-
-          // Fetch game count after sync (or immediately if no sync needed)
-          const { count: totalGames } = await supabase
-            .from('games')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('type', 'game');
-
-          setGameCount(totalGames || 0);
-          setIsLoading(false);
-
-          const { data: playingGame } = await supabase
-            .from('games')
-            .select('app_id, name, header_image, main_story_hours')
-            .eq('user_id', user.id)
-            .eq('status', 'playing')
-            .single();
-
-          if (playingGame) {
-            setCurrentlyPlaying(playingGame);
-          }
-
-          const { data: shortGamesData } = await supabase
-            .from('games')
-            .select('app_id, name, header_image, main_story_hours')
-            .eq('user_id', user.id)
-            .eq('type', 'game')
-            .not('main_story_hours', 'is', null)
-            .not('steam_review_weighted', 'is', null)
-            .gte('main_story_hours', 1)
-            .lte('main_story_hours', 5)
-            .lte('playtime_forever', 240)
-            .contains('categories', ['Single-player'])
-            .or('status.is.null,status.eq.backlog')
-            .order('steam_review_weighted', { ascending: false });
-
-          setShortGamesPool(shortGamesData || []);
-
-          const { data: weekendGamesData } = await supabase
-            .from('games')
-            .select('app_id, name, header_image, main_story_hours')
-            .eq('user_id', user.id)
-            .eq('type', 'game')
-            .not('main_story_hours', 'is', null)
-            .not('steam_review_weighted', 'is', null)
-            .gt('main_story_hours', 5)
-            .lte('main_story_hours', 12)
-            .lte('playtime_forever', 240)
-            .contains('categories', ['Single-player'])
-            .or('status.is.null,status.eq.backlog')
-            .order('steam_review_weighted', { ascending: false });
-
-          setWeekendGamesPool(weekendGamesData || []);
-          setCarouselsLoading(false);
-          return;
-        }
-      }
-
-      setIsLoading(false);
-    }
-
-    loadUserData();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        setProfile(null);
-        setGameCount(0);
-        setCurrentlyPlaying(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [syncGames]);
-
-  const handleConnectSteam = () => {
-    window.location.href = '/api/steam/auth';
-  };
-
   const isSteamConnected = profile?.steam_id != null;
   const showDashboard = user && isSteamConnected;
 
-  // Loading state
   if (isLoading) {
-    return (
-      <div className='min-h-screen bg-zinc-950 flex flex-col'>
-        <Header />
-        <main className='pt-16 flex-1 flex items-center justify-center'>
-          <div className='space-y-6 text-center'>
-            <div className='inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg'>
-              <div className='w-8 h-8 bg-zinc-700 rounded animate-pulse' />
-              <div className='w-24 h-4 bg-zinc-700 rounded animate-pulse' />
-              <span className='text-zinc-700'>·</span>
-              <div className='w-16 h-4 bg-zinc-700 rounded animate-pulse' />
-            </div>
-            <div className='h-12 w-40 mx-auto bg-zinc-800 rounded-lg animate-pulse' />
-          </div>
-        </main>
-      </div>
-    );
+    return <LoadingState />;
   }
 
-  // Dashboard view - logged in with Steam connected
-  if (showDashboard) {
-    return (
-      <div className='min-h-screen bg-zinc-950 flex flex-col'>
-        <Header hideGamesLink={isSyncing || carouselsLoading} />
-
-        <main className='pt-16 flex-1'>
-          <section className='max-w-6xl mx-auto px-6 py-12'>
-            <div className='flex flex-col items-center text-center'>
-              <div className='inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-zinc-800 rounded-lg mb-8'>
-                {profile?.steam_avatar && (
-                  <Image
-                    src={profile.steam_avatar}
-                    alt=''
-                    width={32}
-                    height={32}
-                    className='rounded'
-                  />
-                )}
-                <span className='text-zinc-100 text-sm sm:text-base'>
-                  {profile?.steam_username}
-                </span>
-                {!isSyncing && (
-                  <>
-                    <span className='text-zinc-500 hidden sm:inline'>·</span>
-                    <span className='text-zinc-400 text-sm sm:text-base'>
-                      {gameCount} games
-                    </span>
-                  </>
-                )}
-                <button
-                  onClick={handleRefreshLibrary}
-                  disabled={isRefreshing || isSyncing}
-                  className='cursor-pointer ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50'
-                  title='Check for new games'
-                >
-                  <RefreshCw
-                    className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                  />
-                </button>
-              </div>
-
-              {isSyncing ? (
-                <div className='w-full max-w-md space-y-6'>
-                  <div className='space-y-3'>
-                    <div className='h-2 bg-zinc-800 rounded-full overflow-hidden'>
-                      <div
-                        className='h-full bg-linear-to-r from-violet-500 to-fuchsia-500 transition-all duration-200'
-                        style={{
-                          width: `${(syncProgress.current / syncProgress.total) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <p className='text-zinc-400 text-sm'>
-                      Analyzing game {syncProgress.current} of{' '}
-                      {syncProgress.total}...
-                    </p>
-                  </div>
-
-                  {syncingGames[syncProgress.current - 1] && (
-                    <div className='relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900'>
-                      <div className='relative aspect-460/215 bg-zinc-800'>
-                        <div className='absolute inset-0 flex items-center justify-center p-4'>
-                          <p className='text-zinc-400 text-center font-medium truncate max-w-full'>
-                            {syncingGames[syncProgress.current - 1].name}
-                          </p>
-                        </div>
-                        <Image
-                          src={`https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${syncingGames[syncProgress.current - 1].app_id}/header.jpg`}
-                          alt={syncingGames[syncProgress.current - 1].name}
-                          fill
-                          className='object-cover'
-                          sizes='448px'
-                        />
-                        {/* Scan line animation */}
-                        <div className='absolute inset-0 overflow-hidden'>
-                          <div
-                            className='absolute left-0 right-0 h-1 bg-linear-to-b from-violet-500/80 via-violet-400/40 to-transparent'
-                            style={{
-                              animation: 'scan 1.5s ease-in-out infinite',
-                            }}
-                          />
-                        </div>
-                        {/* Grid overlay */}
-                        <div
-                          className='absolute inset-0 opacity-20'
-                          style={{
-                            backgroundImage:
-                              'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, 0.3) 25%, rgba(139, 92, 246, 0.3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, 0.3) 75%, rgba(139, 92, 246, 0.3) 76%, transparent 77%, transparent)',
-                            backgroundSize: '20px 20px',
-                          }}
-                        />
-                        {/* Corner brackets */}
-                        <div className='absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-violet-500' />
-                        <div className='absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-violet-500' />
-                        <div className='absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-violet-500' />
-                        <div className='absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-violet-500' />
-                      </div>
-                    </div>
-                  )}
-
-                  <style jsx>{`
-                    @keyframes scan {
-                      0% {
-                        top: 0%;
-                      }
-                      50% {
-                        top: 100%;
-                      }
-                      50.1% {
-                        top: 0%;
-                      }
-                      100% {
-                        top: 100%;
-                      }
-                    }
-                  `}</style>
-                </div>
-              ) : currentlyPlaying ? (
-                <CurrentlyPlaying
-                  game={currentlyPlaying}
-                  onFinish={handleFinishGame}
-                  onDrop={handleDropGame}
-                  onCancel={handleCancelGame}
-                  isLoading={isStatusLoading}
-                />
-              ) : isStatusLoading ? (
-                <div className='w-full max-w-md mx-auto'>
-                  <div className='h-4 w-32 bg-zinc-800 rounded animate-pulse mx-auto mb-3' />
-                  <div className='bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800'>
-                    <div className='h-48 bg-zinc-800 animate-pulse' />
-                    <div className='p-5 space-y-4'>
-                      <div className='h-6 w-3/4 bg-zinc-800 rounded animate-pulse' />
-                      <div className='h-4 w-1/3 bg-zinc-800 rounded animate-pulse' />
-                      <div className='flex gap-3 pt-2'>
-                        <div className='flex-1 h-10 bg-zinc-800 rounded-lg animate-pulse' />
-                        <div className='flex-1 h-10 bg-zinc-800 rounded-lg animate-pulse' />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : celebrationMessage ? (
-                <div className='flex flex-col items-center gap-4'>
-                  <div className='flex items-center gap-2'>
-                    <div className='h-12 w-36 bg-zinc-800 rounded-lg animate-pulse' />
-                    <div className='h-12 w-12 bg-zinc-800 rounded-lg animate-pulse' />
-                  </div>
-                  <p className='text-lg text-zinc-100 animate-celebration'>
-                    You finished{' '}
-                    <span className='font-semibold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400'>
-                      {celebrationMessage}
-                    </span>
-                    !
-                  </p>
-                </div>
-              ) : (
-                <div className='flex items-center gap-2'>
-                  <Button size='lg' className='cursor-pointer'>
-                    Pick My Game
-                  </Button>
-                  <button
-                    onClick={handleRandomPick}
-                    className='cursor-pointer p-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors'
-                    title='Pick a random game'
-                  >
-                    <Dices className='w-5 h-5 text-zinc-100' />
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {!isSyncing && carouselsLoading && (
-            <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
-              {[1, 2].map(i => (
-                <div key={i} className='space-y-6'>
-                  <div className='h-8 w-64 bg-zinc-800 rounded animate-pulse' />
-                  <div className='flex gap-4'>
-                    {[1, 2, 3, 4].map(j => (
-                      <div
-                        key={j}
-                        className='shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden'
-                      >
-                        <div className='h-32 bg-zinc-800 animate-pulse' />
-                        <div className='p-4 space-y-2'>
-                          <div className='h-4 bg-zinc-800 rounded w-3/4 animate-pulse' />
-                          <div className='h-3 bg-zinc-800 rounded w-1/2 animate-pulse' />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {!isSyncing &&
-            !carouselsLoading &&
-            (shortGames.length > 0 || weekendGames.length > 0) && (
-              <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
-                {shortGames.length > 0 && (
-                  <GameCarousel
-                    title='Games Under 5 Hours'
-                    games={shortGames}
-                    onPickGame={!currentlyPlaying ? handlePickGame : undefined}
-                    onHideGame={handleHideGame}
-                  />
-                )}
-                {weekendGames.length > 0 && (
-                  <GameCarousel
-                    title='Games You Can Finish This Weekend'
-                    games={weekendGames}
-                    onPickGame={!currentlyPlaying ? handlePickGame : undefined}
-                    onHideGame={handleHideGame}
-                  />
-                )}
-              </section>
-            )}
-        </main>
-
-        <footer className='py-6 border-t border-zinc-800'>
-          <div className='max-w-6xl mx-auto px-6 text-center'>
-            <p className='text-sm text-zinc-500'>MyBacklog</p>
-          </div>
-        </footer>
-      </div>
-    );
+  if (!showDashboard) {
+    return <LandingPage user={user} onConnectSteam={handleConnectSteam} />;
   }
 
-  // Landing view - not logged in or no Steam connected
   return (
     <div className='min-h-screen bg-zinc-950 flex flex-col'>
-      <Header />
+      <Header hideGamesLink={isSyncing || carouselsLoading} />
 
       <main className='pt-16 flex-1'>
-        <section className='max-w-4xl mx-auto px-6 py-24 md:py-32'>
-          <div className='text-center'>
-            <h1 className='text-4xl md:text-5xl font-bold text-zinc-100 leading-tight mb-6'>
-              Stop scrolling.{' '}
-              <span className='text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400'>
-                Start playing.
+        <section className='max-w-6xl mx-auto px-6 py-12'>
+          <div className='flex flex-col items-center text-center'>
+            {/* Profile bar */}
+            <div className='inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-zinc-800 rounded-lg mb-8'>
+              {profile?.steam_avatar && (
+                <Image
+                  src={profile.steam_avatar}
+                  alt=''
+                  width={32}
+                  height={32}
+                  className='rounded'
+                />
+              )}
+              <span className='text-zinc-100 text-sm sm:text-base'>
+                {profile?.steam_username}
               </span>
-            </h1>
-            <p className='text-lg text-zinc-400 mb-10 max-w-xl mx-auto'>
-              Connect your Steam library and let us pick your next game based on
-              your mood and available time.
-            </p>
+              {!isSyncing && (
+                <>
+                  <span className='text-zinc-500 hidden sm:inline'>·</span>
+                  <span className='text-zinc-400 text-sm sm:text-base'>
+                    {gameCount} games
+                  </span>
+                </>
+              )}
+              <button
+                onClick={handleRefreshLibrary}
+                disabled={isRefreshing || isSyncing}
+                className='cursor-pointer ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50'
+                title='Check for new games'
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                />
+              </button>
+            </div>
 
-            {user ? (
-              <Button size='lg' onClick={handleConnectSteam}>
-                Connect Your Steam
-              </Button>
+            {/* Main content area */}
+            {isSyncing ? (
+              <SyncProgress progress={syncProgress} games={syncingGames} />
+            ) : currentlyPlaying ? (
+              <CurrentlyPlaying
+                game={currentlyPlaying}
+                onFinish={handleFinishGame}
+                onDrop={handleDropGame}
+                onCancel={handleCancelGame}
+                isLoading={isStatusLoading}
+              />
+            ) : isStatusLoading ? (
+              <StatusLoadingState />
+            ) : celebrationMessage ? (
+              <CelebrationMessage gameName={celebrationMessage} />
             ) : (
-              <Button size='lg' onClick={() => setIsAuthModalOpen(true)}>
-                Get Started
-              </Button>
+              <div className='flex items-center gap-2'>
+                <Button size='lg' className='cursor-pointer'>
+                  Pick My Game
+                </Button>
+                <button
+                  onClick={handleRandomPick}
+                  className='cursor-pointer p-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors'
+                  title='Pick a random game'
+                >
+                  <Dices className='w-5 h-5 text-zinc-100' />
+                </button>
+              </div>
             )}
           </div>
-
-          <div className='mt-32 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16'>
-            <div className='flex items-center gap-4'>
-              <span className='text-4xl font-light text-violet-400'>1</span>
-              <span className='text-zinc-400'>Connect Steam</span>
-            </div>
-
-            <div className='hidden md:block w-12 h-px bg-zinc-800' />
-
-            <div className='flex items-center gap-4'>
-              <span className='text-4xl font-light text-violet-400'>2</span>
-              <span className='text-zinc-400'>Set your mood</span>
-            </div>
-
-            <div className='hidden md:block w-12 h-px bg-zinc-800' />
-
-            <div className='flex items-center gap-4'>
-              <span className='text-4xl font-light text-violet-400'>3</span>
-              <span className='text-zinc-400'>Play</span>
-            </div>
-          </div>
         </section>
+
+        {/* Game carousels */}
+        {!isSyncing && carouselsLoading && <CarouselsLoadingState />}
+
+        {!isSyncing &&
+          !carouselsLoading &&
+          (shortGames.length > 0 || weekendGames.length > 0) && (
+            <section className='max-w-6xl mx-auto px-6 pb-24 space-y-24'>
+              {shortGames.length > 0 && (
+                <GameCarousel
+                  title='Games Under 5 Hours'
+                  games={shortGames}
+                  onPickGame={!currentlyPlaying ? handlePickGame : undefined}
+                  onHideGame={handleHideGame}
+                />
+              )}
+              {weekendGames.length > 0 && (
+                <GameCarousel
+                  title='Games You Can Finish This Weekend'
+                  games={weekendGames}
+                  onPickGame={!currentlyPlaying ? handlePickGame : undefined}
+                  onHideGame={handleHideGame}
+                />
+              )}
+            </section>
+          )}
       </main>
 
       <footer className='py-6 border-t border-zinc-800'>
-        <div className='max-w-4xl mx-auto px-6 text-center'>
+        <div className='max-w-6xl mx-auto px-6 text-center'>
           <p className='text-sm text-zinc-500'>MyBacklog</p>
         </div>
       </footer>
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode='signup'
-      />
     </div>
   );
 }
