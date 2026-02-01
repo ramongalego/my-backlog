@@ -2,26 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createSteamRelyingParty, extractSteamId } from "@/lib/steam/auth";
 import { getOwnedGames, getPlayerSummary } from "@/lib/steam/api";
+import { timingSafeEqual } from "crypto";
+
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
   const returnUrl = `${baseUrl}/api/steam/callback`;
+
+  // Validate CSRF state
+  const cookieState = request.cookies.get("steam_auth_state")?.value;
+  const urlState = request.nextUrl.searchParams.get("state");
+
+  if (!cookieState || !urlState || !constantTimeCompare(cookieState, urlState)) {
+    const response = NextResponse.redirect(`${baseUrl}/?error=invalid_state`);
+    response.cookies.delete("steam_auth_state");
+    return response;
+  }
 
   const relyingParty = createSteamRelyingParty(returnUrl);
 
   return new Promise<NextResponse>((resolve) => {
     relyingParty.verifyAssertion(request.url, async (error, result) => {
       if (error || !result?.authenticated || !result.claimedIdentifier) {
-        console.error("Steam auth verification failed:", error);
-        resolve(NextResponse.redirect(`${baseUrl}/?error=steam_auth_failed`));
+        const response = NextResponse.redirect(`${baseUrl}/?error=steam_auth_failed`);
+        response.cookies.delete("steam_auth_state");
+        resolve(response);
         return;
       }
 
       const steamId = extractSteamId(result.claimedIdentifier);
 
+      // Helper to create redirect with cleared state cookie
+      const redirectWithClearedState = (url: string) => {
+        const response = NextResponse.redirect(url);
+        response.cookies.delete("steam_auth_state");
+        return response;
+      };
+
       if (!steamId) {
-        console.error("Could not extract Steam ID from:", result.claimedIdentifier);
-        resolve(NextResponse.redirect(`${baseUrl}/?error=invalid_steam_id`));
+        console.error("Could not extract Steam ID");
+        resolve(redirectWithClearedState(`${baseUrl}/?error=invalid_steam_id`));
         return;
       }
 
@@ -29,7 +55,7 @@ export async function GET(request: NextRequest) {
 
       if (!apiKey) {
         console.error("STEAM_API_KEY not configured");
-        resolve(NextResponse.redirect(`${baseUrl}/?error=server_config`));
+        resolve(redirectWithClearedState(`${baseUrl}/?error=server_config`));
         return;
       }
 
@@ -39,7 +65,7 @@ export async function GET(request: NextRequest) {
 
       if (!user) {
         console.error("No authenticated user found");
-        resolve(NextResponse.redirect(`${baseUrl}/?error=not_authenticated`));
+        resolve(redirectWithClearedState(`${baseUrl}/?error=not_authenticated`));
         return;
       }
 
@@ -48,12 +74,6 @@ export async function GET(request: NextRequest) {
           getPlayerSummary(steamId, apiKey),
           getOwnedGames(steamId, apiKey),
         ]);
-
-        if (process.env.NODE_ENV === "development") {
-          console.log("=== STEAM CONNECTION SUCCESSFUL ===");
-          console.log("Player:", playerSummary?.personaname);
-          console.log("Total games:", games.length);
-        }
 
         // Update profile with Steam data
         const { error: profileError } = await supabase
@@ -67,8 +87,8 @@ export async function GET(request: NextRequest) {
           .eq("id", user.id);
 
         if (profileError) {
-          console.error("Error updating profile:", profileError);
-          resolve(NextResponse.redirect(`${baseUrl}/?error=profile_update_failed`));
+          console.error("Profile update failed");
+          resolve(redirectWithClearedState(`${baseUrl}/?error=profile_update_failed`));
           return;
         }
 
@@ -91,18 +111,15 @@ export async function GET(request: NextRequest) {
             const { error: gamesError } = await supabase.from("games").insert(batch);
 
             if (gamesError) {
-              console.error("Error inserting games batch:", gamesError);
+              console.error("Games batch insert failed");
             }
           }
         }
 
-        if (process.env.NODE_ENV === "development") {
-          console.log("Steam data saved successfully");
-        }
-        resolve(NextResponse.redirect(baseUrl));
-      } catch (apiError) {
-        console.error("Steam API error:", apiError);
-        resolve(NextResponse.redirect(`${baseUrl}/?error=steam_api_failed`));
+        resolve(redirectWithClearedState(baseUrl));
+      } catch {
+        console.error("Steam API request failed");
+        resolve(redirectWithClearedState(`${baseUrl}/?error=steam_api_failed`));
       }
     });
   });

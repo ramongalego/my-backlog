@@ -1,4 +1,5 @@
 import { secondsToHours } from "./time-utils";
+import { fetchWithTimeout, TIMEOUTS } from "@/lib/fetch-with-timeout";
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -17,9 +18,11 @@ async function getSearchEndpoint(): Promise<string | null> {
 
   try {
     // Fetch homepage to find script URLs
-    const homeRes = await fetch(BASE_URL, {
-      headers: { "User-Agent": USER_AGENT, Referer: BASE_URL },
-    });
+    const homeRes = await fetchWithTimeout(
+      BASE_URL,
+      { headers: { "User-Agent": USER_AGENT, Referer: BASE_URL } },
+      TIMEOUTS.HLTB
+    );
     const html = await homeRes.text();
 
     // Find all _next scripts
@@ -30,9 +33,11 @@ async function getSearchEndpoint(): Promise<string | null> {
     // Search through scripts to find the one with the search endpoint
     for (const match of scriptMatches) {
       const scriptUrl = BASE_URL + match[1];
-      const scriptRes = await fetch(scriptUrl, {
-        headers: { "User-Agent": USER_AGENT, Referer: BASE_URL },
-      });
+      const scriptRes = await fetchWithTimeout(
+        scriptUrl,
+        { headers: { "User-Agent": USER_AGENT, Referer: BASE_URL } },
+        TIMEOUTS.HLTB
+      );
       const scriptContent = await scriptRes.text();
 
       // Look for fetch POST to /api/
@@ -55,9 +60,11 @@ async function getSearchEndpoint(): Promise<string | null> {
 
 async function getAuthToken(): Promise<string | null> {
   try {
-    const res = await fetch(`${BASE_URL}/api/search/init?t=${Date.now()}`, {
-      headers: { "User-Agent": USER_AGENT, Referer: BASE_URL },
-    });
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/api/search/init?t=${Date.now()}`,
+      { headers: { "User-Agent": USER_AGENT, Referer: BASE_URL } },
+      TIMEOUTS.HLTB
+    );
     const data = await res.json();
     return data.token || null;
   } catch {
@@ -103,16 +110,20 @@ export async function getMainStoryHours(
       useCache: true,
     };
 
-    const res = await fetch(BASE_URL + searchEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": USER_AGENT,
-        Referer: BASE_URL,
-        "x-auth-token": authToken,
+    const res = await fetchWithTimeout(
+      BASE_URL + searchEndpoint,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": USER_AGENT,
+          Referer: BASE_URL,
+          "x-auth-token": authToken,
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+      TIMEOUTS.HLTB
+    );
 
     if (!res.ok) return null;
 

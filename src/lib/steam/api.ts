@@ -1,3 +1,5 @@
+import { fetchWithTimeout, TIMEOUTS } from "@/lib/fetch-with-timeout";
+
 export interface SteamGame {
   appid: number;
   name: string;
@@ -22,7 +24,7 @@ export async function getOwnedGames(steamId: string, apiKey: string): Promise<St
   url.searchParams.set("include_appinfo", "true");
   url.searchParams.set("include_played_free_games", "true");
 
-  const response = await fetch(url.toString());
+  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
 
   if (!response.ok) {
     throw new Error(`Steam API error: ${response.status}`);
@@ -37,7 +39,7 @@ export async function getPlayerSummary(steamId: string, apiKey: string): Promise
   url.searchParams.set("key", apiKey);
   url.searchParams.set("steamids", steamId);
 
-  const response = await fetch(url.toString());
+  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
 
   if (!response.ok) {
     throw new Error(`Steam API error: ${response.status}`);

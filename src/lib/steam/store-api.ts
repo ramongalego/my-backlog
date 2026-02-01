@@ -1,3 +1,5 @@
+import { fetchWithTimeout, TIMEOUTS } from "@/lib/fetch-with-timeout";
+
 export interface SteamGameDetails {
   success: boolean;
   data?: {
@@ -25,9 +27,10 @@ export interface SteamReviewsResponse {
 
 export async function getGameDetails(appId: number): Promise<SteamGameDetails | null> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://store.steampowered.com/api/appdetails?appids=${appId}`,
-      { next: { revalidate: 86400 } } // Cache for 24 hours
+      { next: { revalidate: 86400 } } as RequestInit, // Cache for 24 hours
+      TIMEOUTS.STEAM_STORE
     );
 
     if (!response.ok) {
@@ -65,9 +68,10 @@ export interface SteamReviewData {
 
 export async function getSteamReviewData(appId: number): Promise<SteamReviewData | null> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://store.steampowered.com/appreviews/${appId}?json=1&language=all&purchase_type=all`,
-      { next: { revalidate: 86400 } }
+      { next: { revalidate: 86400 } } as RequestInit,
+      TIMEOUTS.STEAM_STORE
     );
 
     if (!response.ok) {

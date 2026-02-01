@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getGameDetails, extractGameMetadata, getSteamReviewData } from "@/lib/steam/store-api";
 import { getMainStoryHours } from "@/lib/hltb/api";
 import { isMetadataFresh, calculateBayesianScore } from "@/lib/games/scoring";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 interface GameMetadata {
   app_id: number;
@@ -21,6 +22,24 @@ interface GameMetadata {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const ip = getClientIp(request);
+  const rateLimitResult = checkRateLimit(`game-sync:${ip}`, RATE_LIMITS.gameSync);
+
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
+          "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+          "X-RateLimit-Remaining": "0",
+        },
+      }
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
