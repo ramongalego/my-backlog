@@ -18,7 +18,13 @@ interface CurrentlyPlayingProps {
   isLoading?: boolean;
 }
 
-export function CurrentlyPlaying({ game, onFinish, onDrop, onCancel, isLoading }: CurrentlyPlayingProps) {
+export function CurrentlyPlaying({
+  game,
+  onFinish,
+  onDrop,
+  onCancel,
+  isLoading,
+}: CurrentlyPlayingProps) {
   return (
     <div className='w-full max-w-md mx-auto'>
       <p className='text-sm text-zinc-500 uppercase tracking-wide mb-3 text-center'>
@@ -49,7 +55,8 @@ export function CurrentlyPlaying({ game, onFinish, onDrop, onCancel, isLoading }
             <Button
               onClick={onFinish}
               disabled={isLoading}
-              className='flex-1 bg-emerald-600 hover:bg-emerald-500'
+              variant='success'
+              className='flex-1 cursor-pointer'
             >
               Finish
             </Button>
@@ -57,7 +64,7 @@ export function CurrentlyPlaying({ game, onFinish, onDrop, onCancel, isLoading }
               onClick={onDrop}
               disabled={isLoading}
               variant='secondary'
-              className='flex-1'
+              className='flex-1 cursor-pointer'
             >
               Drop
             </Button>
@@ -65,7 +72,7 @@ export function CurrentlyPlaying({ game, onFinish, onDrop, onCancel, isLoading }
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className='mt-3 w-full text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50'
+            className='mt-3 w-full text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer'
           >
             Cancel
           </button>

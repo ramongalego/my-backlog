@@ -14,6 +14,7 @@ interface HeaderProps {
 
 export function Header({ hideGamesLink }: HeaderProps = {}) {
   const [user, setUser] = useState<User | null>(null);
+  const [steamUsername, setSteamUsername] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(true);
@@ -21,15 +22,32 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    async function loadUserData() {
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('steam_username')
+          .eq('id', user.id)
+          .single();
+
+        setSteamUsername(profile?.steam_username ?? null);
+      }
+
       setIsLoading(false);
-    });
+    }
+
+    loadUserData();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (!session?.user) {
+        setSteamUsername(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -71,7 +89,7 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
             ) : user ? (
               <div className='flex items-center gap-4'>
                 <span className='text-sm text-zinc-400 hidden sm:block'>
-                  {user.email}
+                  {steamUsername ?? user.email}
                 </span>
                 <Button
                   variant='ghost'
