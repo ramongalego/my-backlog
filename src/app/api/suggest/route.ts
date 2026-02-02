@@ -12,7 +12,7 @@ import type {
   TimeCommitment,
 } from '@/lib/suggest/types';
 
-const VALID_MOODS: MoodType[] = ['adrenaline', 'engaged', 'chill', 'power', 'emotional', 'curious'];
+const VALID_MOODS: MoodType[] = ['adrenaline', 'relaxed', 'engaged', 'emotional'];
 const VALID_ENERGY: EnergyLevel[] = ['high', 'medium', 'low'];
 const VALID_TIME: TimeCommitment[] = ['short', 'medium', 'long'];
 

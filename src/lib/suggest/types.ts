@@ -1,10 +1,4 @@
-export type MoodType =
-  | 'adrenaline'
-  | 'engaged'
-  | 'chill'
-  | 'power'
-  | 'emotional'
-  | 'curious';
+export type MoodType = 'adrenaline' | 'relaxed' | 'engaged' | 'emotional';
 
 export type EnergyLevel = 'high' | 'medium' | 'low';
 

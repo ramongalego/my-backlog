@@ -33,7 +33,7 @@ describe('buildSuggestionPrompt', () => {
   it('should include user preferences in prompt', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
-    expect(prompt).toContain('fast-paced, intense, skill-based');
+    expect(prompt).toContain('fast, demanding, focus-heavy');
     expect(prompt).toContain('complex systems to learn');
     expect(prompt).toContain('5-12 hours total');
   });
@@ -124,7 +124,7 @@ describe('buildSuggestionPrompt', () => {
   });
 
   it('should handle all mood types', () => {
-    const moods = ['adrenaline', 'engaged', 'chill', 'power', 'emotional', 'curious'] as const;
+    const moods = ['adrenaline', 'relaxed', 'engaged', 'emotional'] as const;
 
     moods.forEach(mood => {
       const context: SuggestionContext = {

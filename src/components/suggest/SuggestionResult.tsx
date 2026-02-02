@@ -67,9 +67,7 @@ export function SuggestionResult({
 
           {/* AI reasoning */}
           <div className='bg-zinc-800/50 rounded-lg p-3 mb-5'>
-            <p className='text-sm text-zinc-300 leading-relaxed'>
-              {reasoning}
-            </p>
+            <p className='text-sm text-zinc-300 leading-relaxed'>{reasoning}</p>
           </div>
 
           {/* Action buttons */}
@@ -89,9 +87,15 @@ export function SuggestionResult({
                   ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed'
                   : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
               }`}
-              title={isOnCooldown ? `Wait ${cooldownRemaining}s` : 'Get another suggestion'}
+              title={
+                isOnCooldown
+                  ? `Wait ${cooldownRemaining}s`
+                  : 'Get another suggestion'
+              }
             >
-              <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RotateCcw
+                className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
               {isOnCooldown ? `${cooldownRemaining}s` : 'Reroll'}
             </button>
           </div>

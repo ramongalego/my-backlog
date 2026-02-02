@@ -7,19 +7,17 @@ import {
 
 describe('questions configuration', () => {
   describe('MOOD_QUESTION', () => {
-    it('should have 6 mood options', () => {
-      expect(MOOD_QUESTION.options).toHaveLength(6);
+    it('should have 4 mood options', () => {
+      expect(MOOD_QUESTION.options).toHaveLength(4);
     });
 
     it('should have all expected mood values', () => {
       const values = MOOD_QUESTION.options.map(o => o.value);
 
       expect(values).toContain('adrenaline');
+      expect(values).toContain('relaxed');
       expect(values).toContain('engaged');
-      expect(values).toContain('chill');
-      expect(values).toContain('power');
       expect(values).toContain('emotional');
-      expect(values).toContain('curious');
     });
 
     it('should have emoji for each option', () => {

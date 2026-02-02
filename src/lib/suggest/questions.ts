@@ -20,38 +20,26 @@ export const MOOD_QUESTION: Question<MoodType> = {
     {
       value: 'adrenaline',
       emoji: '🔥',
-      label: 'Adrenaline / Focus',
-      description: 'Fast, intense, skill-based',
+      label: 'Adrenaline',
+      description: 'Fast, demanding, focus-heavy, skill based',
+    },
+    {
+      value: 'relaxed',
+      emoji: '😌',
+      label: 'Relaxed',
+      description: 'Low pressure, cozy, forgiving, no stress',
     },
     {
       value: 'engaged',
       emoji: '🧠',
-      label: 'Engaged / Thoughtful',
-      description: 'Strategy, puzzles, choices',
-    },
-    {
-      value: 'chill',
-      emoji: '😌',
-      label: 'Chill / Cozy',
-      description: 'Low pressure, vibes',
-    },
-    {
-      value: 'power',
-      emoji: '😈',
-      label: 'Power Fantasy',
-      description: 'Destroy everything, feel strong',
+      label: 'Engaged',
+      description: 'Thinking, planning, problem-solving',
     },
     {
       value: 'emotional',
-      emoji: '😭',
-      label: 'Emotional / Story-driven',
-      description: 'Narrative, characters, feels',
-    },
-    {
-      value: 'curious',
-      emoji: '🧪',
-      label: 'Curious / Experimental',
-      description: 'Weird, unique mechanics',
+      emoji: '🎭',
+      label: 'Emotional',
+      description: 'Story-first, atmosphere, character-driven',
     },
   ],
 };
@@ -83,18 +71,18 @@ export const ENERGY_QUESTION: Question<EnergyLevel> = {
 
 export const TIME_QUESTION: Question<TimeCommitment> = {
   id: 'time',
-  title: 'Time commitment you\'re willing to make?',
+  title: "Time commitment you're willing to make?",
   options: [
     {
       value: 'short',
       emoji: '⏱',
-      label: 'One session (1–3h)',
+      label: 'One session (1–5h)',
       description: 'Quick wins, roguelikes, short games',
     },
     {
       value: 'medium',
       emoji: '📅',
-      label: 'A few nights (5–10h)',
+      label: 'A few nights (5–12h)',
       description: 'Weekend-sized adventures',
     },
     {
@@ -106,4 +94,8 @@ export const TIME_QUESTION: Question<TimeCommitment> = {
   ],
 };
 
-export const QUESTIONS = [MOOD_QUESTION, ENERGY_QUESTION, TIME_QUESTION] as const;
+export const QUESTIONS = [
+  MOOD_QUESTION,
+  ENERGY_QUESTION,
+  TIME_QUESTION,
+] as const;

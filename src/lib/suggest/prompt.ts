@@ -1,12 +1,10 @@
 import type { SuggestionContext, GameForSuggestion } from './types';
 
 const MOOD_DESCRIPTIONS = {
-  adrenaline: 'fast-paced, intense, skill-based gameplay that gets the heart pumping',
-  engaged: 'strategic depth, puzzles, meaningful choices that require thinking',
-  chill: 'relaxing, low-pressure, cozy vibes with no stress',
-  power: 'feeling powerful, destroying enemies, power fantasy fulfillment',
-  emotional: 'emotional narrative, compelling story, memorable characters',
-  curious: 'unique mechanics, experimental gameplay, something different',
+  adrenaline: 'fast, demanding, focus-heavy, skill or reaction based gameplay',
+  relaxed: 'low pressure, cozy, forgiving gameplay with no stress',
+  engaged: 'thinking, planning, problem-solving, meaningful choices',
+  emotional: 'story-first, atmospheric, character-driven, memorable moments',
 };
 
 const ENERGY_DESCRIPTIONS = {
