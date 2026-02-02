@@ -91,6 +91,9 @@ export async function POST(request: NextRequest) {
   }
 
   const excludeAppIds = validateExcludeAppIds((body as Record<string, unknown>).excludeAppIds);
+  const previousReasonings = Array.isArray((body as Record<string, unknown>).previousReasonings)
+    ? ((body as Record<string, unknown>).previousReasonings as string[]).filter(r => typeof r === 'string')
+    : [];
 
   // Fetch user's games
   const { data: backlogGames, error: backlogError } = await supabase
@@ -149,6 +152,7 @@ export async function POST(request: NextRequest) {
     finishedGames: finishedGames?.map(g => g.name) ?? [],
     droppedGames: droppedGames?.map(g => g.name) ?? [],
     excludeAppIds,
+    previousReasonings,
   };
 
   // Check if there are any eligible games after exclusions

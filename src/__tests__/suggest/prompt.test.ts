@@ -27,6 +27,7 @@ describe('buildSuggestionPrompt', () => {
     finishedGames: ['Completed Game'],
     droppedGames: ['Dropped Game'],
     excludeAppIds: [],
+    previousReasonings: [],
   };
 
   it('should include user preferences in prompt', () => {
@@ -141,6 +142,24 @@ describe('buildSuggestionPrompt', () => {
     expect(prompt).toContain('app_id');
     expect(prompt).toContain('reasoning');
     expect(prompt).toContain('JSON');
+  });
+
+  it('should include previous reasonings when provided', () => {
+    const context: SuggestionContext = {
+      ...baseContext,
+      previousReasonings: ['Since you loved Dark Souls, this game fits perfectly.'],
+    };
+
+    const prompt = buildSuggestionPrompt(context);
+
+    expect(prompt).toContain('AVOID REPETITION');
+    expect(prompt).toContain('Since you loved Dark Souls');
+  });
+
+  it('should not include repetition warning when no previous reasonings', () => {
+    const prompt = buildSuggestionPrompt(baseContext);
+
+    expect(prompt).not.toContain('AVOID REPETITION');
   });
 });
 

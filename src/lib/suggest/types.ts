@@ -33,6 +33,7 @@ export interface SuggestionContext {
   finishedGames: string[];
   droppedGames: string[];
   excludeAppIds: number[];
+  previousReasonings: string[];
 }
 
 export interface SuggestionResult {

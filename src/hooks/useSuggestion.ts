@@ -46,8 +46,9 @@ export function useSuggestion(): UseSuggestionReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  // Track excluded games (for rerolls within the same session)
+  // Track excluded games and previous reasonings (for rerolls within the same session)
   const excludedAppIdsRef = useRef<number[]>([]);
+  const previousReasoningsRef = useRef<string[]>([]);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup cooldown interval on unmount
@@ -92,6 +93,7 @@ export function useSuggestion(): UseSuggestionReturn {
         body: JSON.stringify({
           ...preferences,
           excludeAppIds: excludedAppIdsRef.current,
+          previousReasonings: previousReasoningsRef.current,
         }),
       });
 
@@ -99,6 +101,11 @@ export function useSuggestion(): UseSuggestionReturn {
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to get suggestion');
+      }
+
+      // Track this reasoning for future rerolls
+      if (data.data?.reasoning) {
+        previousReasoningsRef.current = [...previousReasoningsRef.current, data.data.reasoning];
       }
 
       setSuggestion(data.data);
@@ -171,6 +178,7 @@ export function useSuggestion(): UseSuggestionReturn {
     setIsLoading(false);
     setCooldownRemaining(0);
     excludedAppIdsRef.current = [];
+    previousReasoningsRef.current = [];
 
     if (cooldownIntervalRef.current) {
       clearInterval(cooldownIntervalRef.current);
