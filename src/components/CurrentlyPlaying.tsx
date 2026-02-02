@@ -48,9 +48,11 @@ export function CurrentlyPlaying({
           <h3 className='text-xl font-semibold text-zinc-100 mb-1'>
             {game.name}
           </h3>
-          <p className='text-zinc-500 text-sm mb-5'>
-            {game.main_story_hours}h to complete
-          </p>
+          {game.main_story_hours && (
+            <p className='text-zinc-500 text-sm mb-5'>
+              {game.main_story_hours}h to complete
+            </p>
+          )}
           <div className='flex gap-3'>
             <Button
               onClick={onFinish}

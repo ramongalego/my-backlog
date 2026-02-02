@@ -18,7 +18,12 @@ interface GameCarouselProps {
   onHideGame?: (game: Game) => void;
 }
 
-export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarouselProps) {
+export function GameCarousel({
+  title,
+  games,
+  onPickGame,
+  onHideGame,
+}: GameCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -119,7 +124,9 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
                         className='cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors'
                       >
                         <Play className='w-4 h-4 text-white fill-white' />
-                        <span className='text-white font-medium text-sm'>Pick</span>
+                        <span className='text-white font-medium text-sm'>
+                          Pick
+                        </span>
                       </button>
                     )}
                     {onHideGame && (
@@ -128,7 +135,9 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
                         className='cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors'
                       >
                         <EyeOff className='w-4 h-4 text-zinc-300' />
-                        <span className='text-zinc-300 font-medium text-sm'>Hide</span>
+                        <span className='text-zinc-300 font-medium text-sm'>
+                          Hide
+                        </span>
                       </button>
                     )}
                   </div>
@@ -138,9 +147,11 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
                 <h3 className='text-zinc-100 font-medium truncate'>
                   {game.name}
                 </h3>
-                <p className='text-zinc-500 text-sm mt-1'>
-                  {game.main_story_hours}h to complete
-                </p>
+                {game.main_story_hours && (
+                  <p className='text-zinc-500 text-sm mt-1'>
+                    {game.main_story_hours}h to complete
+                  </p>
+                )}
               </div>
             </div>
           ))}

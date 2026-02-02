@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import Image from 'next/image';
 import { Clock, Gamepad2, Star, Undo2, Check, X, EyeOff } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
@@ -70,7 +71,7 @@ function RestoreAction({ game, onStatusChange }: GameCardProps) {
   );
 }
 
-export function GameCard({ game, onStatusChange }: GameCardProps) {
+export const GameCard = memo(function GameCard({ game, onStatusChange }: GameCardProps) {
   const isBacklog = !game.status || game.status === 'backlog';
   const hasCompletedStatus = game.status === 'finished' || game.status === 'dropped' || game.status === 'hidden';
 
@@ -131,4 +132,4 @@ export function GameCard({ game, onStatusChange }: GameCardProps) {
       </div>
     </div>
   );
-}
+});

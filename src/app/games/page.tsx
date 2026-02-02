@@ -4,6 +4,8 @@ import { Gamepad2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameCard } from '@/components/games/GameCard';
 import { GamesFilter } from '@/components/games/GamesFilter';
+import { GamesSearch } from '@/components/games/GamesSearch';
+import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage } from '@/hooks/useGamesPage';
 
 function GamesLoadingSkeleton() {
@@ -40,9 +42,13 @@ export default function GamesPage() {
     loading,
     filter,
     setFilter,
+    sort,
+    setSort,
     filteredGames,
     counts,
     handleStatusChange,
+    searchQuery,
+    setSearchQuery,
   } = useGamesPage();
 
   if (loading) {
@@ -64,19 +70,29 @@ export default function GamesPage() {
 
       <main className='pt-24 pb-12 px-6'>
         <div className='max-w-6xl mx-auto'>
-          <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8'>
-            <div>
-              <h1 className='text-2xl font-bold text-zinc-100'>My Games</h1>
-              <p className='text-zinc-500 text-sm mt-1'>
-                {games.length} games in library
-              </p>
+          <div className='flex flex-col gap-4 mb-8'>
+            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
+              <div className='shrink-0'>
+                <h1 className='text-2xl font-bold text-zinc-100'>My Games</h1>
+                <p className='text-zinc-500 text-sm mt-1'>
+                  {games.length} games in library
+                </p>
+              </div>
+
+              <GamesFilter
+                filter={filter}
+                counts={counts}
+                onFilterChange={setFilter}
+              />
             </div>
 
-            <GamesFilter
-              filter={filter}
-              counts={counts}
-              onFilterChange={setFilter}
-            />
+            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+              <GamesSearch
+                value={searchQuery}
+                onSearchChange={setSearchQuery}
+              />
+              <GamesSort value={sort} onChange={setSort} />
+            </div>
           </div>
 
           {filteredGames.length === 0 ? (

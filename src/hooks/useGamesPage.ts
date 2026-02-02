@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export interface GameItem {
@@ -16,6 +16,7 @@ export interface GameItem {
 }
 
 export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'hidden';
+export type GameSort = 'playtime' | 'score' | 'recent';
 
 export interface FilterCounts {
   all: number;
@@ -30,15 +31,26 @@ interface UseGamesPageReturn {
   loading: boolean;
   filter: GameFilter;
   setFilter: (filter: GameFilter) => void;
+  sort: GameSort;
+  setSort: (sort: GameSort) => void;
   filteredGames: GameItem[];
   counts: FilterCounts;
   handleStatusChange: (appId: number, status: string) => Promise<void>;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  isSearching: boolean;
 }
 
 export function useGamesPage(): UseGamesPageReturn {
   const [games, setGames] = useState<GameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<GameFilter>('all');
+  const [sort, setSort] = useState<GameSort>('playtime');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Defer the search value to keep input responsive during filtering
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const isSearching = searchQuery !== deferredSearchQuery;
 
   useEffect(() => {
     async function loadGames() {
@@ -83,11 +95,38 @@ export function useGamesPage(): UseGamesPageReturn {
     }
   }, []);
 
-  const filteredGames = games.filter(game => {
-    if (filter === 'all') return game.status !== 'hidden';
-    if (filter === 'backlog') return !game.status || game.status === 'backlog';
-    return game.status === filter;
-  });
+  // Memoize filtered and sorted games to avoid recalculation on unrelated state changes
+  // Uses deferredSearchQuery so input stays responsive during large list filtering
+  const filteredGames = useMemo(() => {
+    const searchLower = deferredSearchQuery.toLowerCase();
+
+    const filtered = games.filter(game => {
+      // Status filter
+      if (filter === 'all' && game.status === 'hidden') return false;
+      if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
+      if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
+
+      // Search filter
+      if (searchLower && !game.name.toLowerCase().includes(searchLower)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Sort the filtered results
+    return filtered.sort((a, b) => {
+      switch (sort) {
+        case 'score':
+          return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
+        case 'recent':
+          return (b.app_id) - (a.app_id);
+        case 'playtime':
+        default:
+          return b.playtime_forever - a.playtime_forever;
+      }
+    });
+  }, [games, filter, sort, deferredSearchQuery]);
 
   const counts: FilterCounts = {
     all: games.length,
@@ -102,8 +141,13 @@ export function useGamesPage(): UseGamesPageReturn {
     loading,
     filter,
     setFilter,
+    sort,
+    setSort,
     filteredGames,
     counts,
     handleStatusChange,
+    searchQuery,
+    setSearchQuery,
+    isSearching,
   };
 }
