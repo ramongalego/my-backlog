@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Gamepad2, Check, X, EyeOff, Archive } from 'lucide-react';
+import { Gamepad2, Check, X, EyeOff, Archive, Play } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 
 type GameStatus = 'backlog' | 'finished' | 'dropped' | 'hidden';
@@ -68,13 +68,19 @@ export function GameDetailModal({
   const [date, setDate] = useState(initialDate ?? today);
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
+  const [isPicked, setIsPicked] = useState(false);
 
   const showDateField = status === 'finished' || status === 'dropped';
   const dateLabel = status === 'finished' ? 'Finished on' : 'Dropped on';
 
+  function handleStatusChange(next: GameStatus) {
+    setStatus(next);
+    if (next !== 'backlog') setIsPicked(false);
+  }
+
   function handleConfirm() {
     const parsedRating = rating !== '' ? parseInt(rating, 10) : null;
-    onConfirm(status, date, notes, parsedRating);
+    onConfirm(isPicked ? 'playing' : status, date, notes, parsedRating);
   }
 
   return (
@@ -109,7 +115,7 @@ export function GameDetailModal({
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setStatus(opt.value)}
+                onClick={() => handleStatusChange(opt.value)}
                 className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
                   status === opt.value
                     ? opt.activeClass
@@ -121,6 +127,20 @@ export function GameDetailModal({
               </button>
             ))}
           </div>
+
+          {status === 'backlog' && (
+            <button
+              onClick={() => setIsPicked((prev) => !prev)}
+              className={`cursor-pointer mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                isPicked
+                  ? 'bg-violet-600 border-violet-600 text-white'
+                  : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5" />
+              Start Playing
+            </button>
+          )}
         </div>
 
         {/* Date — only for finished/dropped */}

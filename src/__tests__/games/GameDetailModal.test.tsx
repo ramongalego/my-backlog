@@ -225,6 +225,69 @@ describe('GameDetailModal', () => {
     });
   });
 
+  describe('pick this game', () => {
+    it('should show start playing button only for backlog status', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      expect(screen.getByRole('button', { name: /start playing/i })).toBeInTheDocument();
+    });
+
+    it('should not show start playing button for finished status', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
+
+      expect(screen.queryByRole('button', { name: /start playing/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show start playing button for dropped status', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="dropped" />);
+
+      expect(screen.queryByRole('button', { name: /start playing/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show start playing button for hidden status', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="hidden" />);
+
+      expect(screen.queryByRole('button', { name: /start playing/i })).not.toBeInTheDocument();
+    });
+
+    it('should keep same label when toggled active', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /start playing/i }));
+
+      expect(screen.getByRole('button', { name: /start playing/i })).toBeInTheDocument();
+    });
+
+    it('should call onConfirm with playing status when active and saved', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /start playing/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
+    });
+
+    it('should reset when switching away from backlog', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /start playing/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^finished$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^backlog$/i }));
+
+      // Should not pass playing after reset
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
+    });
+
+    it('should not pass playing status when not active', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
+    });
+  });
+
   describe('onClose callback', () => {
     it('should call onClose when Cancel is clicked', () => {
       render(<GameDetailModal {...defaultProps} />);

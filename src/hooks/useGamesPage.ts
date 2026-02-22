@@ -141,6 +141,7 @@ export function useGamesPage(): UseGamesPageReturn {
             status,
             ...(status === 'finished' ? { finishedAt: date } : {}),
             ...(status === 'dropped' ? { droppedAt: date } : {}),
+            ...(status === 'playing' ? { started_at: new Date().toISOString() } : {}),
             notes,
             rating,
           }),
