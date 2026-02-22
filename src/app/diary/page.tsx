@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Gamepad2, Pencil, Trophy } from 'lucide-react';
+import { ExternalLink, Gamepad2, Pencil, Trophy } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useDiary } from '@/hooks/useDiary';
@@ -91,7 +91,16 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
 
       {/* Game name + rating stacked on mobile */}
       <div className="min-w-0 flex-[2]">
-        <p className="font-medium text-zinc-100 truncate text-base">{entry.name}</p>
+        <a
+          href={`https://store.steampowered.com/app/${entry.app_id}/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={entry.name}
+          className="group/title inline-flex items-center gap-1 font-medium text-zinc-100 hover:text-white transition-colors truncate max-w-full text-base"
+        >
+          <span className="truncate min-w-0">{entry.name}</span>
+          <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
+        </a>
         {entry.rating != null && (
           <p className="text-sm text-zinc-400 sm:hidden mt-0.5">{entry.rating}/10</p>
         )}
