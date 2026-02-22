@@ -1,4 +1,4 @@
-export const METADATA_FRESHNESS_DAYS = 7;
+export const METADATA_FRESHNESS_DAYS = 30;
 
 /**
  * Checks if cached metadata is still fresh (less than 7 days old)
