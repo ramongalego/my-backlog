@@ -15,7 +15,7 @@ export function GamesSearch({ value, onSearchChange }: GamesSearchProps) {
         type="text"
         value={value}
         onChange={(e) => onSearchChange(e.target.value)}
-        placeholder="Search games..."
+        placeholder="Search by name or tag..."
         className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 text-sm focus:outline-none focus:border-zinc-500 transition-colors"
       />
     </div>

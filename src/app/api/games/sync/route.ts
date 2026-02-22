@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getGameDetails, extractGameMetadata, getSteamReviewData } from '@/lib/steam/store-api';
+import { getGameDetails, extractGameMetadata, getSteamReviewData, getSteamSpyTags } from '@/lib/steam/store-api';
 import { getMainStoryHours } from '@/lib/hltb/api';
 import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -19,6 +19,7 @@ interface GameMetadata {
   steam_review_count: number | null;
   steam_review_weighted: number | null;
   main_story_hours: number | null;
+  tags: string[] | null;
   synced_at: string;
 }
 
@@ -89,13 +90,14 @@ export async function POST(request: NextRequest) {
     if (extractedMetadata) {
       const isGame = extractedMetadata.type === 'game';
 
-      // Only fetch HLTB and Steam reviews for actual games
-      const [mainStoryHours, steamReviewData] = isGame
+      // Only fetch HLTB and Steam reviews for actual games; tags from SteamSpy for all
+      const [mainStoryHours, steamReviewData, tags] = isGame
         ? await Promise.all([
             getMainStoryHours(libraryName || details?.data?.name || ''),
             getSteamReviewData(appId),
+            getSteamSpyTags(appId),
           ])
-        : [null, null];
+        : [null, null, await getSteamSpyTags(appId)];
 
       // Calculate weighted score using Bayesian average
       const weightedScore = steamReviewData
@@ -116,6 +118,7 @@ export async function POST(request: NextRequest) {
         steam_review_count: steamReviewData?.count ?? null,
         steam_review_weighted: weightedScore,
         main_story_hours: mainStoryHours,
+        tags: tags,
         synced_at: new Date().toISOString(),
       };
 
@@ -140,6 +143,7 @@ export async function POST(request: NextRequest) {
         steam_review_weighted: metadata.steam_review_weighted,
         header_image: metadata.header_image,
         main_story_hours: metadata.main_story_hours,
+        tags: metadata.tags,
         metadata_synced: true,
       })
       .eq('user_id', user.id)

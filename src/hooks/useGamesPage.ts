@@ -17,6 +17,7 @@ export interface GameItem {
   rating: number | null;
   finished_at: string | null;
   dropped_at: string | null;
+  tags: string[] | null;
 }
 
 export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'hidden';
@@ -88,7 +89,7 @@ export function useGamesPage(): UseGamesPageReturn {
       const { data } = await supabase
         .from('games')
         .select(
-          'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at',
+          'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags',
         )
         .eq('user_id', user.id)
         .eq('type', 'game')
@@ -180,9 +181,11 @@ export function useGamesPage(): UseGamesPageReturn {
       if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
       if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
 
-      // Search filter
-      if (searchLower && !game.name.toLowerCase().includes(searchLower)) {
-        return false;
+      // Search filter — matches name or any tag
+      if (searchLower) {
+        const nameMatch = game.name.toLowerCase().includes(searchLower);
+        const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
+        if (!nameMatch && !tagMatch) return false;
       }
 
       return true;

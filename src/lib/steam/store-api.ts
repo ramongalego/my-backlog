@@ -61,6 +61,32 @@ export function extractGameMetadata(details: SteamGameDetails) {
   };
 }
 
+export async function getSteamSpyTags(appId: number): Promise<string[] | null> {
+  try {
+    const response = await fetchWithTimeout(
+      `https://steamspy.com/api.php?request=appdetails&appid=${appId}`,
+      { next: { revalidate: 86400 } } as RequestInit,
+      TIMEOUTS.STEAM_STORE,
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.tags || typeof data.tags !== 'object') {
+      return null;
+    }
+
+    // Tags come as { "Action": 1234, "RPG": 567 }, sorted by vote count descending
+    return Object.entries(data.tags as Record<string, number>)
+      .sort(([, a], [, b]) => b - a)
+      .map(([tag]) => tag);
+  } catch {
+    return null;
+  }
+}
+
 export interface SteamReviewData {
   score: number;
   count: number;
