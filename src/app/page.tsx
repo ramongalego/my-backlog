@@ -72,6 +72,7 @@ function HomeContent() {
         name,
         header_image: headerImage,
         main_story_hours: mainStoryHours ?? 0,
+        playtime_forever: 0,
       });
     },
     [handlePickGame],

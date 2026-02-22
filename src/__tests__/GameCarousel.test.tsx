@@ -24,18 +24,21 @@ const mockGames = [
     name: 'Game One',
     header_image: 'https://cdn.steam.com/game1.jpg',
     main_story_hours: 3,
+    playtime_forever: 0,
   },
   {
     app_id: 2,
     name: 'Game Two',
     header_image: 'https://cdn.steam.com/game2.jpg',
     main_story_hours: 4.5,
+    playtime_forever: 0,
   },
   {
     app_id: 3,
     name: 'Game Three',
     header_image: null,
     main_story_hours: 2,
+    playtime_forever: 0,
   },
 ];
 

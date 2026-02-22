@@ -253,7 +253,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
     const { data: eligibleGames } = await supabase
       .from('games')
-      .select('app_id, name, header_image, main_story_hours')
+      .select('app_id, name, header_image, main_story_hours, playtime_forever')
       .eq('user_id', currentUser.id)
       .eq('type', 'game')
       .not('main_story_hours', 'is', null)
@@ -327,7 +327,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: playingGame } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours')
+            .select('app_id, name, header_image, main_story_hours, playtime_forever')
             .eq('user_id', user.id)
             .eq('status', 'playing')
             .single();
@@ -338,7 +338,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: shortGamesData } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours')
+            .select('app_id, name, header_image, main_story_hours, playtime_forever')
             .eq('user_id', user.id)
             .eq('type', 'game')
             .not('main_story_hours', 'is', null)
@@ -354,7 +354,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: weekendGamesData } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours')
+            .select('app_id, name, header_image, main_story_hours, playtime_forever')
             .eq('user_id', user.id)
             .eq('type', 'game')
             .not('main_story_hours', 'is', null)
@@ -371,7 +371,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
           // Highly rated games the user has never played (0 playtime)
           const { data: highlyRatedData } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours')
+            .select('app_id, name, header_image, main_story_hours, playtime_forever')
             .eq('user_id', user.id)
             .eq('type', 'game')
             .not('steam_review_weighted', 'is', null)

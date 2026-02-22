@@ -19,6 +19,7 @@ describe('carousel deduplication', () => {
     name,
     header_image: `https://example.com/${id}.jpg`,
     main_story_hours: 10,
+    playtime_forever: 0,
   });
 
   describe('deduplicateHighlyRatedGames', () => {

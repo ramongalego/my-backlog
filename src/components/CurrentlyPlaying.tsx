@@ -9,6 +9,7 @@ interface Game {
   name: string;
   header_image: string | null;
   main_story_hours: number;
+  playtime_forever: number;
 }
 
 interface CurrentlyPlayingProps {
@@ -55,8 +56,41 @@ export function CurrentlyPlaying({
             {game.name}
             <ExternalLink className="w-4 h-4 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity" />
           </a>
-          {game.main_story_hours && (
-            <p className="text-zinc-500 text-sm mb-5">{game.main_story_hours}h to complete</p>
+          {game.main_story_hours > 0 && (
+            <div className="mb-5">
+              {game.playtime_forever >= 60 ? (
+                game.playtime_forever / 60 >= game.main_story_hours ? (
+                  <p className="text-sm">
+                    <span className="text-amber-400">
+                      {Math.round(game.playtime_forever / 60)}h played
+                    </span>
+                    <span className="text-zinc-500">
+                      {' '}
+                      · past the ~{game.main_story_hours}h estimate
+                    </span>
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-sm mb-1.5">
+                      <span className="text-zinc-400">
+                        {Math.round(game.playtime_forever / 60)}h played
+                      </span>
+                      <span className="text-zinc-500">{game.main_story_hours}h to beat</span>
+                    </div>
+                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-violet-500 rounded-full"
+                        style={{
+                          width: `${Math.min((game.playtime_forever / 60 / game.main_story_hours) * 100, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </>
+                )
+              ) : (
+                <p className="text-zinc-500 text-sm">{game.main_story_hours}h to beat</p>
+              )}
+            </div>
           )}
           <div className="flex gap-3">
             <Button
