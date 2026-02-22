@@ -74,14 +74,14 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
       <div className="w-6 shrink-0 text-right text-sm text-zinc-500">{day ?? ''}</div>
 
       {/* Cover image */}
-      <div className="relative w-20 h-12 sm:w-36 sm:h-20 shrink-0 rounded overflow-hidden bg-zinc-800 flex items-center justify-center">
+      <div className="relative w-16 h-10 sm:w-28 sm:h-16 shrink-0 rounded overflow-hidden bg-zinc-800 flex items-center justify-center">
         {entry.header_image ? (
           <Image
             src={entry.header_image}
             alt={entry.name}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 80px, 144px"
+            sizes="(max-width: 640px) 64px, 112px"
             quality={90}
           />
         ) : (

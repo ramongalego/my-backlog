@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Gamepad2, Check, X, EyeOff, Archive, Play } from 'lucide-react';
+import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays } from 'lucide-react';
+import { DayPicker } from 'react-day-picker';
 import { Modal } from '@/components/ui/Modal';
 
 type GameStatus = 'backlog' | 'finished' | 'dropped' | 'hidden';
@@ -51,6 +52,21 @@ const STATUS_OPTIONS: {
   },
 ];
 
+// Converts "YYYY-MM-DD" → Date (local time, no timezone shift)
+function isoToDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Converts Date → "YYYY-MM-DD"
+function dateToIso(d: Date): string {
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+}
+
+function formatDateLabel(iso: string): string {
+  return isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export function GameDetailModal({
   isOpen,
   onClose,
@@ -67,12 +83,24 @@ export function GameDetailModal({
   const [status, setStatus] = useState<GameStatus>(initialStatus);
   const [hasDate, setHasDate] = useState(true);
   const [date, setDate] = useState(initialDate ?? today);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
   const [isPicked, setIsPicked] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   const showDateField = status === 'finished' || status === 'dropped';
   const dateLabel = status === 'finished' ? 'Finished on' : 'Dropped on';
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false);
+      }
+    }
+    if (calendarOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [calendarOpen]);
 
   function handleStatusChange(next: GameStatus) {
     setStatus(next);
@@ -101,7 +129,6 @@ export function GameDetailModal({
             <Gamepad2 className="w-10 h-10 text-zinc-600" />
           </div>
         )}
-        {/* Gradient overlay so title reads cleanly */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
         <h2 className="absolute bottom-3 left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
           {gameName}
@@ -151,23 +178,49 @@ export function GameDetailModal({
               id="date-toggle"
               type="checkbox"
               checked={hasDate}
-              onChange={(e) => setHasDate(e.target.checked)}
+              onChange={(e) => {
+                setHasDate(e.target.checked);
+                setCalendarOpen(false);
+              }}
               className="w-4 h-4 rounded accent-violet-500 cursor-pointer shrink-0"
             />
             <label
               htmlFor="date-toggle"
               className="text-sm text-zinc-300 cursor-pointer select-none shrink-0"
             >
-              {dateLabel}
+              {hasDate ? dateLabel : 'No date selected'}
             </label>
+
             {hasDate && (
-              <input
-                data-testid="detail-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="bg-zinc-700 border border-zinc-600 rounded-lg px-2.5 py-1 text-sm text-zinc-100 focus:outline-none focus:border-zinc-400 cursor-pointer"
-              />
+              <div className="relative" ref={calendarRef}>
+                <button
+                  data-testid="detail-date"
+                  onClick={() => setCalendarOpen((o) => !o)}
+                  className="cursor-pointer flex items-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 rounded-lg px-2.5 py-1 text-sm text-zinc-100 transition-colors"
+                >
+                  <CalendarDays className="w-3.5 h-3.5 text-zinc-400" />
+                  {formatDateLabel(date)}
+                </button>
+
+                {calendarOpen && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl px-4 py-2">
+                    <DayPicker
+                      mode="single"
+                      captionLayout="dropdown"
+                      startMonth={new Date(2000, 0)}
+                      endMonth={new Date()}
+                      selected={isoToDate(date)}
+                      defaultMonth={isoToDate(date)}
+                      onSelect={(day) => {
+                        if (day) {
+                          setDate(dateToIso(day));
+                          setCalendarOpen(false);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

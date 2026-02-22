@@ -107,7 +107,7 @@ describe('GameDetailModal', () => {
         <GameDetailModal {...defaultProps} initialStatus="finished" initialDate="2024-06-15" />,
       );
 
-      expect(screen.getByTestId('detail-date')).toHaveValue('2024-06-15');
+      expect(screen.getByTestId('detail-date')).toHaveTextContent('Jun 15, 2024');
     });
 
     it('should pre-fill date for dropped game', () => {
@@ -115,7 +115,7 @@ describe('GameDetailModal', () => {
         <GameDetailModal {...defaultProps} initialStatus="dropped" initialDate="2024-03-01" />,
       );
 
-      expect(screen.getByTestId('detail-date')).toHaveValue('2024-03-01');
+      expect(screen.getByTestId('detail-date')).toHaveTextContent('Mar 1, 2024');
     });
   });
 
@@ -205,7 +205,7 @@ describe('GameDetailModal', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.click(screen.getByLabelText(/finished on/i)); // uncheck
-      fireEvent.click(screen.getByLabelText(/finished on/i)); // re-check
+      fireEvent.click(screen.getByLabelText(/no date selected/i)); // re-check
 
       expect(screen.getByTestId('detail-date')).toBeInTheDocument();
     });
