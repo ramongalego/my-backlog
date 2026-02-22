@@ -51,7 +51,7 @@ function TruncatedNotes({ text }: { text: string }) {
         {text}
       </p>
       {truncated && (
-        <div className="absolute bottom-full left-0 mb-2 hidden group-hover/notes:block z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 w-72 whitespace-normal shadow-xl">
+        <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 hidden group-hover/notes:block z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 w-72 whitespace-normal shadow-xl">
           {text}
         </div>
       )}
