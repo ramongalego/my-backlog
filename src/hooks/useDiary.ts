@@ -109,12 +109,18 @@ export function useDiary(): UseDiaryReturn {
         });
 
         if (status === 'finished') {
-          // Update the entry in place
-          setEntries((prev) =>
-            prev.map((e) =>
+          // Update the entry then re-sort to match DB ordering (newest first, nulls last)
+          setEntries((prev) => {
+            const updated = prev.map((e) =>
               e.app_id === appId ? { ...e, finished_at: date || null, notes, rating } : e,
-            ),
-          );
+            );
+            return updated.sort((a, b) => {
+              if (!a.finished_at && !b.finished_at) return 0;
+              if (!a.finished_at) return 1;
+              if (!b.finished_at) return -1;
+              return b.finished_at.localeCompare(a.finished_at);
+            });
+          });
         } else {
           // Remove from diary — no longer finished
           setEntries((prev) => prev.filter((e) => e.app_id !== appId));

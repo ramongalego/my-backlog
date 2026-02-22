@@ -17,7 +17,7 @@ function DiaryLoadingSkeleton() {
       {[...Array(8)].map((_, i) => (
         <div key={i} className="flex items-center gap-3 sm:gap-4 py-3 animate-pulse">
           <div className="w-6 h-4 bg-zinc-800 rounded shrink-0" />
-          <div className="w-16 h-10 sm:w-24 sm:h-14 bg-zinc-800 rounded shrink-0" />
+          <div className="w-20 h-12 sm:w-36 sm:h-20 bg-zinc-800 rounded shrink-0" />
           <div className="flex-1 h-4 bg-zinc-800 rounded" />
           <div className="w-10 h-4 bg-zinc-800 rounded hidden sm:block" />
         </div>
@@ -74,14 +74,15 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
       <div className="w-6 shrink-0 text-right text-sm text-zinc-500">{day ?? ''}</div>
 
       {/* Cover image */}
-      <div className="relative w-16 h-10 sm:w-24 sm:h-14 shrink-0 rounded overflow-hidden bg-zinc-800 flex items-center justify-center">
+      <div className="relative w-20 h-12 sm:w-36 sm:h-20 shrink-0 rounded overflow-hidden bg-zinc-800 flex items-center justify-center">
         {entry.header_image ? (
           <Image
             src={entry.header_image}
             alt={entry.name}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 64px, 96px"
+            sizes="(max-width: 640px) 80px, 144px"
+            quality={90}
           />
         ) : (
           <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600" />
@@ -125,6 +126,11 @@ interface MonthGroup {
   entries: DiaryEntry[];
 }
 
+interface YearGroup {
+  year: string; // "YYYY"
+  months: MonthGroup[];
+}
+
 export default function DiaryPage() {
   const {
     entries,
@@ -139,15 +145,25 @@ export default function DiaryPage() {
   const datedEntries = entries.filter((e) => e.finished_at);
   const undatedEntries = entries.filter((e) => !e.finished_at);
 
-  const monthGroups: MonthGroup[] = [];
+  // Build year → month hierarchy
+  const yearGroups: YearGroup[] = [];
   for (const entry of datedEntries) {
-    const key = getMonthKey(entry.finished_at!);
-    const existing = monthGroups.find((g) => g.key === key);
-    if (existing) {
-      existing.entries.push(entry);
-    } else {
-      monthGroups.push({ key, entries: [entry] });
+    const year = entry.finished_at!.slice(0, 4);
+    const monthKey = getMonthKey(entry.finished_at!);
+
+    let yg = yearGroups.find((g) => g.year === year);
+    if (!yg) {
+      yg = { year, months: [] };
+      yearGroups.push(yg);
     }
+
+    let mg = yg.months.find((m) => m.key === monthKey);
+    if (!mg) {
+      mg = { key: monthKey, entries: [] };
+      yg.months.push(mg);
+    }
+
+    mg.entries.push(entry);
   }
 
   return (
@@ -157,8 +173,15 @@ export default function DiaryPage() {
       <main className="pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-6">
           {/* Page heading */}
-          <div className="flex items-baseline gap-3 mb-8">
+          <div className="mb-8">
             <h1 className="text-2xl font-bold text-zinc-100">Diary</h1>
+            {!loading && (
+              <p className="text-zinc-500 text-sm mt-1">
+                {entries.length === 0
+                  ? "You haven't finished any games yet"
+                  : `You've finished ${entries.length} game${entries.length === 1 ? '' : 's'}`}
+              </p>
+            )}
           </div>
 
           {loading ? (
@@ -167,20 +190,29 @@ export default function DiaryPage() {
             <EmptyState />
           ) : (
             <div>
-              {/* Dated entries grouped by month */}
-              {monthGroups.map((group) => {
-                const label = formatMonthLabel(group.entries[0].finished_at!);
-                return (
-                  <div key={group.key}>
-                    <p className="text-sm font-semibold text-zinc-300 tracking-wide pt-6 pb-2">
-                      {label.month} {label.year}
-                    </p>
-                    {group.entries.map((entry) => (
-                      <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
-                    ))}
-                  </div>
-                );
-              })}
+              {/* Dated entries grouped by year → month */}
+              {yearGroups.map((yg, yi) => (
+                <div key={yg.year}>
+                  <h2
+                    className={`text-lg font-bold text-zinc-100 pb-1 border-b border-zinc-800 ${yi === 0 ? 'mt-2' : 'mt-10'}`}
+                  >
+                    {yg.year}
+                  </h2>
+                  {yg.months.map((mg) => {
+                    const { month } = formatMonthLabel(mg.entries[0].finished_at!);
+                    return (
+                      <div key={mg.key}>
+                        <p className="text-sm font-semibold text-zinc-400 tracking-wide pt-5 pb-2">
+                          {month}
+                        </p>
+                        {mg.entries.map((entry) => (
+                          <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
 
               {/* Undated entries */}
               {undatedEntries.length > 0 && (
