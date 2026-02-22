@@ -83,6 +83,14 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
                 Games
               </Link>
             )}
+            {user && (
+              <Link
+                href="/diary"
+                className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+              >
+                Diary
+              </Link>
+            )}
           </div>
 
           <nav className="flex items-center gap-3">

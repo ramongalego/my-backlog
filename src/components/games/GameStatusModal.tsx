@@ -65,6 +65,7 @@ export function GameDetailModal({
   const today = new Date().toISOString().slice(0, 10);
 
   const [status, setStatus] = useState<GameStatus>(initialStatus);
+  const [hasDate, setHasDate] = useState(true);
   const [date, setDate] = useState(initialDate ?? today);
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
@@ -80,7 +81,7 @@ export function GameDetailModal({
 
   function handleConfirm() {
     const parsedRating = rating !== '' ? parseInt(rating, 10) : null;
-    onConfirm(isPicked ? 'playing' : status, date, notes, parsedRating);
+    onConfirm(isPicked ? 'playing' : status, hasDate ? date : '', notes, parsedRating);
   }
 
   return (
@@ -145,20 +146,29 @@ export function GameDetailModal({
 
         {/* Date — only for finished/dropped */}
         {showDateField && (
-          <div>
+          <div className="flex items-center gap-2.5">
+            <input
+              id="date-toggle"
+              type="checkbox"
+              checked={hasDate}
+              onChange={(e) => setHasDate(e.target.checked)}
+              className="w-4 h-4 rounded accent-violet-500 cursor-pointer shrink-0"
+            />
             <label
-              className="block text-xs text-zinc-500 uppercase tracking-wider mb-1.5"
-              htmlFor="detail-date"
+              htmlFor="date-toggle"
+              className="text-sm text-zinc-300 cursor-pointer select-none shrink-0"
             >
               {dateLabel}
             </label>
-            <input
-              id="detail-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500"
-            />
+            {hasDate && (
+              <input
+                data-testid="detail-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="bg-zinc-700 border border-zinc-600 rounded-lg px-2.5 py-1 text-sm text-zinc-100 focus:outline-none focus:border-zinc-400 cursor-pointer"
+              />
+            )}
           </div>
         )}
 

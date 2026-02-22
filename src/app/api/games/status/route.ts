@@ -84,11 +84,11 @@ export async function POST(request: NextRequest) {
   } else if (status === 'backlog') {
     updatePayload.started_at = null;
   } else if (status === 'finished') {
-    updatePayload.finished_at = finishedAt ?? new Date().toISOString();
+    updatePayload.finished_at = finishedAt || null;
     updatePayload.notes = notes ?? null;
     updatePayload.rating = rating ?? null;
   } else if (status === 'dropped') {
-    updatePayload.dropped_at = droppedAt ?? new Date().toISOString();
+    updatePayload.dropped_at = droppedAt || null;
     updatePayload.notes = notes ?? null;
     updatePayload.rating = rating ?? null;
   }
