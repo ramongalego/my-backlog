@@ -44,7 +44,12 @@ interface UseGameLibraryReturn {
   handleRefreshLibrary: () => Promise<void>;
   handleRandomPick: () => Promise<void>;
   handleConnectSteam: () => void;
-  handleConfirmStatusChange: (date: string, notes: string, rating: number | null) => Promise<void>;
+  handleConfirmStatusChange: (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => Promise<void>;
   handleCloseStatusModal: () => void;
 }
 
@@ -166,9 +171,8 @@ export function useGameLibrary(): UseGameLibraryReturn {
   }, []);
 
   const handleConfirmStatusChange = useCallback(
-    async (date: string, notes: string, rating: number | null) => {
-      if (!currentlyPlaying || !statusModal) return;
-      const { action } = statusModal;
+    async (status: string, date: string, notes: string, rating: number | null) => {
+      if (!currentlyPlaying) return;
       const finishedGameName = currentlyPlaying.name;
       setStatusModal(null);
       setIsStatusLoading(true);
@@ -178,24 +182,25 @@ export function useGameLibrary(): UseGameLibraryReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             appId: currentlyPlaying.app_id,
-            status: action,
-            ...(action === 'finished' ? { finishedAt: date } : { droppedAt: date }),
+            status,
+            ...(status === 'finished' ? { finishedAt: date } : {}),
+            ...(status === 'dropped' ? { droppedAt: date } : {}),
             notes,
             rating,
           }),
         });
         setCurrentlyPlaying(null);
-        if (action === 'finished') {
+        if (status === 'finished') {
           celebrateGameFinished();
           setCelebrationMessage(finishedGameName);
           setTimeout(() => setCelebrationMessage(null), 3000);
         }
       } catch (err) {
-        console.error(`Failed to ${action} game:`, err);
+        console.error(`Failed to ${status} game:`, err);
       }
       setIsStatusLoading(false);
     },
-    [currentlyPlaying, statusModal],
+    [currentlyPlaying],
   );
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);

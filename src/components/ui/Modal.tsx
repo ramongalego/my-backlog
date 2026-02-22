@@ -7,9 +7,10 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   title?: string;
+  size?: 'md' | 'lg';
 }
 
-export function Modal({ isOpen, onClose, children, title }: ModalProps) {
+export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalProps) {
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -42,7 +43,7 @@ export function Modal({ isOpen, onClose, children, title }: ModalProps) {
           aria-hidden="true"
         />
         <div
-          className="relative z-10 w-full max-w-md bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800"
+          className={`relative z-10 w-full ${size === 'lg' ? 'max-w-lg' : 'max-w-md'} bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? 'modal-title' : undefined}

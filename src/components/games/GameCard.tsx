@@ -2,34 +2,24 @@
 
 import { memo } from 'react';
 import Image from 'next/image';
-import {
-  Clock,
-  Gamepad2,
-  Star,
-  Undo2,
-  Check,
-  X,
-  EyeOff,
-  ExternalLink,
-  FileText,
-} from 'lucide-react';
+import { Clock, Gamepad2, Star, ExternalLink, Pencil } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
 
 interface GameCardProps {
   game: GameItem;
-  onStatusChange: (appId: number, status: string) => void;
-  onEditNotes?: (appId: number) => void;
+  onOpenDetail: (appId: number) => void;
 }
 
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  finished: { label: 'Finished', className: 'bg-emerald-500/90' },
+  dropped: { label: 'Dropped', className: 'bg-zinc-600/90' },
+  hidden: { label: 'Hidden', className: 'bg-zinc-700/90' },
+  backlog: { label: 'Backlog', className: 'bg-violet-600/90' },
+};
+
 function StatusBadge({ status }: { status: string }) {
-  const config = {
-    finished: { label: 'Finished', className: 'bg-emerald-500/90' },
-    dropped: { label: 'Dropped', className: 'bg-zinc-600/90' },
-    hidden: { label: 'Hidden', className: 'bg-zinc-700/90' },
-  }[status];
-
+  const config = STATUS_BADGE[status];
   if (!config) return null;
-
   return (
     <div
       className={`absolute top-2 right-2 px-2 py-0.5 ${config.className} text-white text-xs font-medium rounded`}
@@ -39,86 +29,17 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function BacklogActions({ game, onStatusChange }: GameCardProps) {
-  return (
-    <div className="absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 sm:gap-2">
-      <button
-        onClick={() => onStatusChange(game.app_id, 'finished')}
-        className="cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-emerald-600/80 hover:bg-emerald-600 rounded-lg sm:rounded transition-colors"
-        title="Mark as finished"
-      >
-        <Check className="w-5 sm:w-3.5 h-5 sm:h-3.5 text-white" />
-        <span className="text-white text-sm sm:text-xs font-medium">Finish</span>
-      </button>
-      <button
-        onClick={() => onStatusChange(game.app_id, 'dropped')}
-        className="cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-zinc-600/80 hover:bg-zinc-600 rounded-lg sm:rounded transition-colors"
-        title="Mark as dropped"
-      >
-        <X className="w-5 sm:w-3.5 h-5 sm:h-3.5 text-white" />
-        <span className="text-white text-sm sm:text-xs font-medium">Drop</span>
-      </button>
-      <button
-        onClick={() => onStatusChange(game.app_id, 'hidden')}
-        className="cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-zinc-700/80 hover:bg-zinc-700 rounded-lg sm:rounded transition-colors"
-        title="Hide game"
-      >
-        <EyeOff className="w-5 sm:w-3.5 h-5 sm:h-3.5 text-zinc-300" />
-        <span className="text-zinc-300 text-sm sm:text-xs font-medium">Hide</span>
-      </button>
-    </div>
-  );
-}
-
-function CompletedActions({ game, onStatusChange, onEditNotes }: GameCardProps) {
-  if (game.status === 'hidden') {
-    return (
-      <button
-        onClick={() => onStatusChange(game.app_id, 'backlog')}
-        className="cursor-pointer absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
-      >
-        <Undo2 className="w-4 h-4 text-white" />
-        <span className="text-white font-medium text-sm">Unhide</span>
-      </button>
-    );
-  }
-
-  return (
-    <div className="absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 sm:gap-2">
-      {onEditNotes && (
-        <button
-          onClick={() => onEditNotes(game.app_id)}
-          className="cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-zinc-700/80 hover:bg-zinc-700 rounded-lg sm:rounded transition-colors"
-          title="View/edit notes"
-        >
-          <FileText className="w-5 sm:w-3.5 h-5 sm:h-3.5 text-zinc-300" />
-          <span className="text-zinc-300 text-sm sm:text-xs font-medium">Notes</span>
-        </button>
-      )}
-      <button
-        onClick={() => onStatusChange(game.app_id, 'backlog')}
-        className="cursor-pointer flex items-center gap-1.5 sm:gap-1 px-4 sm:px-2 py-2.5 sm:py-1.5 bg-zinc-600/80 hover:bg-zinc-600 rounded-lg sm:rounded transition-colors"
-        title="Move to backlog"
-      >
-        <Undo2 className="w-5 sm:w-3.5 h-5 sm:h-3.5 text-white" />
-        <span className="text-white text-sm sm:text-xs font-medium">Move to Backlog</span>
-      </button>
-    </div>
-  );
-}
-
-export const GameCard = memo(function GameCard({
-  game,
-  onStatusChange,
-  onEditNotes,
-}: GameCardProps) {
-  const isBacklog = !game.status || game.status === 'backlog';
-  const hasCompletedStatus =
-    game.status === 'finished' || game.status === 'dropped' || game.status === 'hidden';
+export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardProps) {
+  const status = game.status ?? 'backlog';
 
   return (
     <div className="group bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all sm:hover:scale-[1.02]">
-      <div className="relative h-40 sm:h-36">
+      {/* Clickable image area */}
+      <button
+        onClick={() => onOpenDetail(game.app_id)}
+        className="cursor-pointer relative h-40 sm:h-36 w-full block"
+        aria-label={`Open details for ${game.name}`}
+      >
         {game.header_image ? (
           <Image
             src={game.header_image}
@@ -133,15 +54,15 @@ export const GameCard = memo(function GameCard({
           </div>
         )}
 
-        {game.status && <StatusBadge status={game.status} />}
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+          <Pencil className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+        </div>
 
-        {hasCompletedStatus && (
-          <CompletedActions game={game} onStatusChange={onStatusChange} onEditNotes={onEditNotes} />
-        )}
+        <StatusBadge status={status} />
+      </button>
 
-        {isBacklog && <BacklogActions game={game} onStatusChange={onStatusChange} />}
-      </div>
-
+      {/* Card info */}
       <div className="p-4">
         <a
           href={`https://store.steampowered.com/app/${game.app_id}/`}

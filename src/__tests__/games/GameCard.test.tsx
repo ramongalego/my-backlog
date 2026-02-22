@@ -37,7 +37,7 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
 });
 
 describe('GameCard', () => {
-  const mockOnStatusChange = jest.fn();
+  const mockOnOpenDetail = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -45,13 +45,13 @@ describe('GameCard', () => {
 
   describe('rendering', () => {
     it('should render game name', () => {
-      render(<GameCard game={createGame()} onStatusChange={mockOnStatusChange} />);
+      render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText('Test Game')).toBeInTheDocument();
     });
 
     it('should render game image when available', () => {
-      render(<GameCard game={createGame()} onStatusChange={mockOnStatusChange} />);
+      render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
       const img = screen.getByAltText('Test Game');
       expect(img).toHaveAttribute('src', 'https://example.com/image.jpg');
@@ -59,33 +59,27 @@ describe('GameCard', () => {
 
     it('should render placeholder when no image', () => {
       render(
-        <GameCard game={createGame({ header_image: null })} onStatusChange={mockOnStatusChange} />,
+        <GameCard game={createGame({ header_image: null })} onOpenDetail={mockOnOpenDetail} />,
       );
 
       expect(screen.queryByAltText('Test Game')).not.toBeInTheDocument();
     });
 
     it('should render main story hours', () => {
-      render(<GameCard game={createGame()} onStatusChange={mockOnStatusChange} />);
+      render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText('10h')).toBeInTheDocument();
     });
 
-    it('should render steam review score', () => {
-      render(<GameCard game={createGame()} onStatusChange={mockOnStatusChange} />);
-
-      expect(screen.getByText('85%')).toBeInTheDocument();
-    });
-
     it('should render playtime', () => {
-      render(<GameCard game={createGame()} onStatusChange={mockOnStatusChange} />);
+      render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText('2h played')).toBeInTheDocument();
     });
 
     it('should not render playtime when zero', () => {
       render(
-        <GameCard game={createGame({ playtime_forever: 0 })} onStatusChange={mockOnStatusChange} />,
+        <GameCard game={createGame({ playtime_forever: 0 })} onOpenDetail={mockOnOpenDetail} />,
       );
 
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
@@ -95,106 +89,48 @@ describe('GameCard', () => {
   describe('status badges', () => {
     it('should show Finished badge for finished games', () => {
       render(
-        <GameCard game={createGame({ status: 'finished' })} onStatusChange={mockOnStatusChange} />,
+        <GameCard game={createGame({ status: 'finished' })} onOpenDetail={mockOnOpenDetail} />,
       );
 
       expect(screen.getByText('Finished')).toBeInTheDocument();
     });
 
     it('should show Dropped badge for dropped games', () => {
-      render(
-        <GameCard game={createGame({ status: 'dropped' })} onStatusChange={mockOnStatusChange} />,
-      );
+      render(<GameCard game={createGame({ status: 'dropped' })} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText('Dropped')).toBeInTheDocument();
     });
 
     it('should show Hidden badge for hidden games', () => {
-      render(
-        <GameCard game={createGame({ status: 'hidden' })} onStatusChange={mockOnStatusChange} />,
-      );
+      render(<GameCard game={createGame({ status: 'hidden' })} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText('Hidden')).toBeInTheDocument();
     });
 
-    it('should not show badge for backlog games', () => {
-      render(
-        <GameCard game={createGame({ status: 'backlog' })} onStatusChange={mockOnStatusChange} />,
-      );
+    it('should show Backlog badge for backlog games', () => {
+      render(<GameCard game={createGame({ status: 'backlog' })} onOpenDetail={mockOnOpenDetail} />);
 
-      expect(screen.queryByText('Finished')).not.toBeInTheDocument();
-      expect(screen.queryByText('Dropped')).not.toBeInTheDocument();
-      expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
+      expect(screen.getByText('Backlog')).toBeInTheDocument();
     });
   });
 
-  describe('backlog actions', () => {
-    it('should show Finish, Drop, Hide buttons for backlog games', () => {
-      render(<GameCard game={createGame({ status: null })} onStatusChange={mockOnStatusChange} />);
+  describe('image button interaction', () => {
+    it('should call onOpenDetail when image area is clicked', () => {
+      render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
-      expect(screen.getByText('Finish')).toBeInTheDocument();
-      expect(screen.getByText('Drop')).toBeInTheDocument();
-      expect(screen.getByText('Hide')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /open details/i }));
+
+      expect(mockOnOpenDetail).toHaveBeenCalledWith(123);
     });
 
-    it('should call onStatusChange with finished when Finish clicked', () => {
-      render(<GameCard game={createGame({ status: null })} onStatusChange={mockOnStatusChange} />);
-
-      fireEvent.click(screen.getByText('Finish'));
-
-      expect(mockOnStatusChange).toHaveBeenCalledWith(123, 'finished');
-    });
-
-    it('should call onStatusChange with dropped when Drop clicked', () => {
-      render(<GameCard game={createGame({ status: null })} onStatusChange={mockOnStatusChange} />);
-
-      fireEvent.click(screen.getByText('Drop'));
-
-      expect(mockOnStatusChange).toHaveBeenCalledWith(123, 'dropped');
-    });
-
-    it('should call onStatusChange with hidden when Hide clicked', () => {
-      render(<GameCard game={createGame({ status: null })} onStatusChange={mockOnStatusChange} />);
-
-      fireEvent.click(screen.getByText('Hide'));
-
-      expect(mockOnStatusChange).toHaveBeenCalledWith(123, 'hidden');
-    });
-  });
-
-  describe('restore actions', () => {
-    it('should show Move to Backlog for finished games', () => {
+    it('should call onOpenDetail for finished games', () => {
       render(
-        <GameCard game={createGame({ status: 'finished' })} onStatusChange={mockOnStatusChange} />,
+        <GameCard game={createGame({ status: 'finished' })} onOpenDetail={mockOnOpenDetail} />,
       );
 
-      expect(screen.getByText('Move to Backlog')).toBeInTheDocument();
-    });
+      fireEvent.click(screen.getByRole('button', { name: /open details/i }));
 
-    it('should show Move to Backlog for dropped games', () => {
-      render(
-        <GameCard game={createGame({ status: 'dropped' })} onStatusChange={mockOnStatusChange} />,
-      );
-
-      expect(screen.getByText('Move to Backlog')).toBeInTheDocument();
-    });
-
-    it('should show Unhide for hidden games', () => {
-      render(
-        <GameCard game={createGame({ status: 'hidden' })} onStatusChange={mockOnStatusChange} />,
-      );
-
-      expect(screen.getByText('Unhide')).toBeInTheDocument();
-    });
-
-    it('should call onStatusChange with backlog when restore clicked', () => {
-      render(
-        <GameCard game={createGame({ status: 'finished' })} onStatusChange={mockOnStatusChange} />,
-      );
-
-      fireEvent.click(screen.getByText('Move to Backlog'));
-
-      expect(mockOnStatusChange).toHaveBeenCalledWith(123, 'backlog');
+      expect(mockOnOpenDetail).toHaveBeenCalledWith(123);
     });
   });
 });

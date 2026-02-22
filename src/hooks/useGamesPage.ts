@@ -32,8 +32,9 @@ export interface FilterCounts {
 
 interface GamesPageStatusModal {
   appId: number;
-  action: 'finished' | 'dropped';
   gameName: string;
+  headerImage: string | null;
+  initialStatus: 'backlog' | 'finished' | 'dropped' | 'hidden';
   initialDate: string | null;
   initialNotes: string | null;
   initialRating: number | null;
@@ -48,14 +49,17 @@ interface UseGamesPageReturn {
   setSort: (sort: GameSort) => void;
   filteredGames: GameItem[];
   counts: FilterCounts;
-  handleStatusChange: (appId: number, status: string) => Promise<void>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  isSearching: boolean;
   statusModal: GamesPageStatusModal | null;
-  handleConfirmFinishDrop: (date: string, notes: string, rating: number | null) => Promise<void>;
+  handleConfirmDetail: (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => Promise<void>;
   handleCloseStatusModal: () => void;
-  handleEditNotes: (appId: number) => void;
+  handleOpenDetail: (appId: number) => void;
 }
 
 export function useGamesPage(): UseGamesPageReturn {
@@ -68,7 +72,6 @@ export function useGamesPage(): UseGamesPageReturn {
 
   // Defer the search value to keep input responsive during filtering
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const isSearching = searchQuery !== deferredSearchQuery;
 
   useEffect(() => {
     async function loadGames() {
@@ -98,39 +101,36 @@ export function useGamesPage(): UseGamesPageReturn {
     loadGames();
   }, []);
 
-  const handleStatusChange = useCallback(
-    async (appId: number, status: string) => {
-      if (status === 'finished' || status === 'dropped') {
-        const game = games.find((g) => g.app_id === appId);
-        if (!game) return;
-        setStatusModal({
-          appId,
-          action: status,
-          gameName: game.name,
-          initialDate: null,
-          initialNotes: null,
-          initialRating: null,
-        });
-        return;
-      }
-      try {
-        await fetch('/api/games/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ appId, status }),
-        });
-        setGames((prev) => prev.map((g) => (g.app_id === appId ? { ...g, status } : g)));
-      } catch (err) {
-        console.error('Failed to update game status:', err);
-      }
+  const handleOpenDetail = useCallback(
+    (appId: number) => {
+      const game = games.find((g) => g.app_id === appId);
+      if (!game) return;
+
+      const status = (game.status ?? 'backlog') as 'backlog' | 'finished' | 'dropped' | 'hidden';
+      const initialDate =
+        status === 'finished'
+          ? (game.finished_at?.slice(0, 10) ?? null)
+          : status === 'dropped'
+            ? (game.dropped_at?.slice(0, 10) ?? null)
+            : null;
+
+      setStatusModal({
+        appId,
+        gameName: game.name,
+        headerImage: game.header_image,
+        initialStatus: status,
+        initialDate,
+        initialNotes: game.notes,
+        initialRating: game.rating,
+      });
     },
     [games],
   );
 
-  const handleConfirmFinishDrop = useCallback(
-    async (date: string, notes: string, rating: number | null) => {
+  const handleConfirmDetail = useCallback(
+    async (status: string, date: string, notes: string, rating: number | null) => {
       if (!statusModal) return;
-      const { appId, action } = statusModal;
+      const { appId } = statusModal;
       setStatusModal(null);
       try {
         await fetch('/api/games/status', {
@@ -138,8 +138,9 @@ export function useGamesPage(): UseGamesPageReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             appId,
-            status: action,
-            ...(action === 'finished' ? { finishedAt: date } : { droppedAt: date }),
+            status,
+            ...(status === 'finished' ? { finishedAt: date } : {}),
+            ...(status === 'dropped' ? { droppedAt: date } : {}),
             notes,
             rating,
           }),
@@ -149,38 +150,23 @@ export function useGamesPage(): UseGamesPageReturn {
             g.app_id === appId
               ? {
                   ...g,
-                  status: action,
+                  status,
                   notes,
                   rating,
-                  ...(action === 'finished' ? { finished_at: date } : { dropped_at: date }),
+                  ...(status === 'finished' ? { finished_at: date } : {}),
+                  ...(status === 'dropped' ? { dropped_at: date } : {}),
                 }
               : g,
           ),
         );
       } catch (err) {
-        console.error(`Failed to ${action} game:`, err);
+        console.error('Failed to update game:', err);
       }
     },
     [statusModal],
   );
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
-
-  const handleEditNotes = useCallback(
-    (appId: number) => {
-      const game = games.find((g) => g.app_id === appId);
-      if (!game || (game.status !== 'finished' && game.status !== 'dropped')) return;
-      setStatusModal({
-        appId,
-        action: game.status as 'finished' | 'dropped',
-        gameName: game.name,
-        initialDate: game.status === 'finished' ? game.finished_at : game.dropped_at,
-        initialNotes: game.notes,
-        initialRating: game.rating,
-      });
-    },
-    [games],
-  );
 
   // Memoize filtered and sorted games to avoid recalculation on unrelated state changes
   // Uses deferredSearchQuery so input stays responsive during large list filtering
@@ -232,13 +218,11 @@ export function useGamesPage(): UseGamesPageReturn {
     setSort,
     filteredGames,
     counts,
-    handleStatusChange,
     searchQuery,
     setSearchQuery,
-    isSearching,
     statusModal,
-    handleConfirmFinishDrop,
+    handleConfirmDetail,
     handleCloseStatusModal,
-    handleEditNotes,
+    handleOpenDetail,
   };
 }

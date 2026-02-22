@@ -138,7 +138,9 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
 
   // If the top result is under 1h but a second result exists with >= 1h, prefer the second
   const best =
-    first.comp_main > 0 && first.comp_main < ONE_HOUR_SECONDS && second?.comp_main >= ONE_HOUR_SECONDS
+    first.comp_main > 0 &&
+    first.comp_main < ONE_HOUR_SECONDS &&
+    second?.comp_main >= ONE_HOUR_SECONDS
       ? second
       : first;
 

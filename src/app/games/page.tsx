@@ -3,7 +3,7 @@
 import { Gamepad2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameCard } from '@/components/games/GameCard';
-import { GameStatusModal } from '@/components/games/GameStatusModal';
+import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
@@ -44,13 +44,12 @@ export default function GamesPage() {
     setSort,
     filteredGames,
     counts,
-    handleStatusChange,
     searchQuery,
     setSearchQuery,
     statusModal,
-    handleConfirmFinishDrop,
+    handleConfirmDetail,
     handleCloseStatusModal,
-    handleEditNotes,
+    handleOpenDetail,
   } = useGamesPage();
 
   if (loading) {
@@ -93,12 +92,7 @@ export default function GamesPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredGames.map((game) => (
-                <GameCard
-                  key={game.app_id}
-                  game={game}
-                  onStatusChange={handleStatusChange}
-                  onEditNotes={handleEditNotes}
-                />
+                <GameCard key={game.app_id} game={game} onOpenDetail={handleOpenDetail} />
               ))}
             </div>
           )}
@@ -106,14 +100,15 @@ export default function GamesPage() {
       </main>
 
       {statusModal && (
-        <GameStatusModal
+        <GameDetailModal
           isOpen={true}
           onClose={handleCloseStatusModal}
-          onConfirm={handleConfirmFinishDrop}
-          action={statusModal.action}
+          onConfirm={handleConfirmDetail}
           gameName={statusModal.gameName}
-          initialDate={statusModal.initialDate ?? undefined}
-          initialNotes={statusModal.initialNotes ?? undefined}
+          headerImage={statusModal.headerImage}
+          initialStatus={statusModal.initialStatus}
+          initialDate={statusModal.initialDate}
+          initialNotes={statusModal.initialNotes}
           initialRating={statusModal.initialRating}
         />
       )}
