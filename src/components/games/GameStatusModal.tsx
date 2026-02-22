@@ -183,16 +183,16 @@ export function GameDetailModal({
         {/* Actions */}
         <div className="flex gap-3 pt-1">
           <button
-            onClick={handleConfirm}
-            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            Save Changes
-          </button>
-          <button
             onClick={onClose}
             className="cursor-pointer flex-1 py-2 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
           >
             Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Save Changes
           </button>
         </div>
       </div>
