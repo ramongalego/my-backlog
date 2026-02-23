@@ -48,7 +48,9 @@ interface UseGamesPageReturn {
   setFilter: (filter: GameFilter) => void;
   sort: GameSort;
   setSort: (sort: GameSort) => void;
-  filteredGames: GameItem[];
+  visibleGames: GameItem[];
+  hasMore: boolean;
+  loadMore: () => void;
   counts: FilterCounts;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -63,6 +65,8 @@ interface UseGamesPageReturn {
   handleOpenDetail: (appId: number) => void;
 }
 
+const BATCH_SIZE = 60;
+
 export function useGamesPage(): UseGamesPageReturn {
   const [games, setGames] = useState<GameItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +74,7 @@ export function useGamesPage(): UseGamesPageReturn {
   const [sort, setSort] = useState<GameSort>('playtime');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusModal, setStatusModal] = useState<GamesPageStatusModal | null>(null);
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
   // Defer the search value to keep input responsive during filtering
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -205,6 +210,17 @@ export function useGamesPage(): UseGamesPageReturn {
     });
   }, [games, filter, sort, deferredSearchQuery]);
 
+  const visibleGames = useMemo(
+    () => filteredGames.slice(0, visibleCount),
+    [filteredGames, visibleCount],
+  );
+
+  const hasMore = visibleCount < filteredGames.length;
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => prev + BATCH_SIZE);
+  }, []);
+
   const counts: FilterCounts = {
     all: games.length,
     backlog: games.filter((g) => !g.status || g.status === 'backlog').length,
@@ -213,17 +229,34 @@ export function useGamesPage(): UseGamesPageReturn {
     hidden: games.filter((g) => g.status === 'hidden').length,
   };
 
+  const setFilterAndReset = useCallback((f: GameFilter) => {
+    setFilter(f);
+    setVisibleCount(BATCH_SIZE);
+  }, []);
+
+  const setSortAndReset = useCallback((s: GameSort) => {
+    setSort(s);
+    setVisibleCount(BATCH_SIZE);
+  }, []);
+
+  const setSearchQueryAndReset = useCallback((q: string) => {
+    setSearchQuery(q);
+    setVisibleCount(BATCH_SIZE);
+  }, []);
+
   return {
     games,
     loading,
     filter,
-    setFilter,
+    setFilter: setFilterAndReset,
     sort,
-    setSort,
-    filteredGames,
+    setSort: setSortAndReset,
+    visibleGames,
+    hasMore,
+    loadMore,
     counts,
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: setSearchQueryAndReset,
     statusModal,
     handleConfirmDetail,
     handleCloseStatusModal,

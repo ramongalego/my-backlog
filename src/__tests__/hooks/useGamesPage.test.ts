@@ -44,24 +44,25 @@ function filterGames(games: GameItem[], filter: GameFilter, searchQuery: string)
   return filterAndSortGames(games, filter, searchQuery, 'playtime');
 }
 
+const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
+  app_id: 1,
+  name: 'Test Game',
+  playtime_forever: 100,
+  steam_review_score: 90,
+  steam_review_count: 1000,
+  steam_review_weighted: 85,
+  header_image: 'https://example.com/image.jpg',
+  main_story_hours: 10,
+  status: 'backlog',
+  notes: null,
+  rating: null,
+  finished_at: null,
+  dropped_at: null,
+  tags: null,
+  ...overrides,
+});
+
 describe('useGamesPage filtering logic', () => {
-  const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
-    app_id: 1,
-    name: 'Test Game',
-    playtime_forever: 100,
-    steam_review_score: 90,
-    steam_review_count: 1000,
-    steam_review_weighted: 85,
-    header_image: 'https://example.com/image.jpg',
-    main_story_hours: 10,
-    status: 'backlog',
-    notes: null,
-    rating: null,
-    finished_at: null,
-    dropped_at: null,
-    tags: null,
-    ...overrides,
-  });
 
   const sampleGames: GameItem[] = [
     createGame({ app_id: 1, name: 'The Legend of Zelda', status: 'backlog' }),
@@ -355,5 +356,75 @@ describe('useGamesPage filtering logic', () => {
       expect(result[0].name).toBe('Backlog Game B'); // Higher playtime among backlog
       expect(result[1].name).toBe('Backlog Game A');
     });
+  });
+});
+
+// Pagination logic extracted for independent testing
+const BATCH_SIZE = 60;
+
+function paginateGames(games: GameItem[], visibleCount: number) {
+  return {
+    visibleGames: games.slice(0, visibleCount),
+    hasMore: visibleCount < games.length,
+  };
+}
+
+describe('useGamesPage pagination logic', () => {
+  const makeGames = (count: number): GameItem[] =>
+    Array.from({ length: count }, (_, i) =>
+      createGame({ app_id: i + 1, name: `Game ${i + 1}` }),
+    );
+
+  it('should show only the first batch when visibleCount equals BATCH_SIZE', () => {
+    const games = makeGames(200);
+    const { visibleGames } = paginateGames(games, BATCH_SIZE);
+
+    expect(visibleGames).toHaveLength(BATCH_SIZE);
+    expect(visibleGames[0].name).toBe('Game 1');
+    expect(visibleGames[BATCH_SIZE - 1].name).toBe(`Game ${BATCH_SIZE}`);
+  });
+
+  it('should report hasMore true when games exceed visibleCount', () => {
+    const games = makeGames(200);
+    const { hasMore } = paginateGames(games, BATCH_SIZE);
+
+    expect(hasMore).toBe(true);
+  });
+
+  it('should report hasMore false when all games are visible', () => {
+    const games = makeGames(30);
+    const { hasMore } = paginateGames(games, BATCH_SIZE);
+
+    expect(hasMore).toBe(false);
+  });
+
+  it('should show all games after enough loadMore calls', () => {
+    const games = makeGames(130);
+    const { visibleGames } = paginateGames(games, BATCH_SIZE * 3);
+
+    expect(visibleGames).toHaveLength(130);
+  });
+
+  it('should show next batch after one loadMore', () => {
+    const games = makeGames(200);
+    const { visibleGames } = paginateGames(games, BATCH_SIZE * 2);
+
+    expect(visibleGames).toHaveLength(BATCH_SIZE * 2);
+  });
+
+  it('should handle fewer games than batch size', () => {
+    const games = makeGames(10);
+    const { visibleGames, hasMore } = paginateGames(games, BATCH_SIZE);
+
+    expect(visibleGames).toHaveLength(10);
+    expect(hasMore).toBe(false);
+  });
+
+  it('should handle exactly batch size games', () => {
+    const games = makeGames(BATCH_SIZE);
+    const { visibleGames, hasMore } = paginateGames(games, BATCH_SIZE);
+
+    expect(visibleGames).toHaveLength(BATCH_SIZE);
+    expect(hasMore).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameCard } from '@/components/games/GameCard';
@@ -42,7 +43,9 @@ export default function GamesPage() {
     setFilter,
     sort,
     setSort,
-    filteredGames,
+    visibleGames,
+    hasMore,
+    loadMore,
     counts,
     searchQuery,
     setSearchQuery,
@@ -51,6 +54,23 @@ export default function GamesPage() {
     handleCloseStatusModal,
     handleOpenDetail,
   } = useGamesPage();
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: '300px' },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
 
   if (loading) {
     return (
@@ -87,14 +107,17 @@ export default function GamesPage() {
             </div>
           </div>
 
-          {filteredGames.length === 0 ? (
+          {visibleGames.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredGames.map((game) => (
-                <GameCard key={game.app_id} game={game} onOpenDetail={handleOpenDetail} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {visibleGames.map((game) => (
+                  <GameCard key={game.app_id} game={game} onOpenDetail={handleOpenDetail} />
+                ))}
+              </div>
+              <div ref={sentinelRef} />
+            </>
           )}
         </div>
       </main>
