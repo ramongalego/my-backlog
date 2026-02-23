@@ -15,10 +15,9 @@ describe('questions configuration', () => {
       expect(values).toContain('emotional');
     });
 
-    it('should have emoji for each option', () => {
+    it('should have an icon for each option', () => {
       MOOD_QUESTION.options.forEach((option) => {
-        expect(option.emoji).toBeTruthy();
-        expect(option.emoji.length).toBeGreaterThan(0);
+        expect(option.icon).toBeTruthy();
       });
     });
 

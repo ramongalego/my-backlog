@@ -1,8 +1,22 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  Zap,
+  Leaf,
+  Lightbulb,
+  Heart,
+  BatteryFull,
+  BatteryMedium,
+  BatteryLow,
+  Timer,
+  CalendarDays,
+  Mountain,
+} from 'lucide-react';
 import type { MoodType, EnergyLevel, TimeCommitment } from './types';
 
 export interface QuestionOption<T> {
   value: T;
-  emoji: string;
+  icon: LucideIcon;
+  iconClassName: string;
   label: string;
   description: string;
 }
@@ -19,25 +33,29 @@ export const MOOD_QUESTION: Question<MoodType> = {
   options: [
     {
       value: 'adrenaline',
-      emoji: '🔥',
+      icon: Zap,
+      iconClassName: 'text-orange-400',
       label: 'Adrenaline',
       description: 'Fast, demanding, focus-heavy, skill based',
     },
     {
       value: 'relaxed',
-      emoji: '😌',
+      icon: Leaf,
+      iconClassName: 'text-emerald-400',
       label: 'Relaxed',
       description: 'Low pressure, cozy, forgiving, no stress',
     },
     {
       value: 'engaged',
-      emoji: '🧠',
+      icon: Lightbulb,
+      iconClassName: 'text-yellow-400',
       label: 'Engaged',
       description: 'Thinking, planning, problem-solving',
     },
     {
       value: 'emotional',
-      emoji: '🎭',
+      icon: Heart,
+      iconClassName: 'text-rose-400',
       label: 'Emotional',
       description: 'Story-first, atmosphere, character-driven',
     },
@@ -50,19 +68,22 @@ export const ENERGY_QUESTION: Question<EnergyLevel> = {
   options: [
     {
       value: 'high',
-      emoji: '🧠',
+      icon: BatteryFull,
+      iconClassName: 'text-emerald-400',
       label: 'High',
       description: 'Learn systems, think, optimize',
     },
     {
       value: 'medium',
-      emoji: '😐',
+      icon: BatteryMedium,
+      iconClassName: 'text-yellow-400',
       label: 'Medium',
       description: 'Familiar mechanics, light thinking',
     },
     {
       value: 'low',
-      emoji: '🫠',
+      icon: BatteryLow,
+      iconClassName: 'text-red-400',
       label: 'Low',
       description: 'Brain-off, react-only, comfy',
     },
@@ -75,19 +96,22 @@ export const TIME_QUESTION: Question<TimeCommitment> = {
   options: [
     {
       value: 'short',
-      emoji: '⏱',
+      icon: Timer,
+      iconClassName: 'text-blue-400',
       label: 'One session (1–5h)',
       description: 'Quick wins, roguelikes, short games',
     },
     {
       value: 'medium',
-      emoji: '📅',
+      icon: CalendarDays,
+      iconClassName: 'text-violet-400',
       label: 'A few nights (5–12h)',
       description: 'Weekend-sized adventures',
     },
     {
       value: 'long',
-      emoji: '🧱',
+      icon: Mountain,
+      iconClassName: 'text-zinc-400',
       label: 'Long haul (20h+)',
       description: 'Deep dives, RPGs, big campaigns',
     },

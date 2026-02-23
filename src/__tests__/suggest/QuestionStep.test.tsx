@@ -1,18 +1,27 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { Zap, Leaf, BatteryFull } from 'lucide-react';
 import { QuestionStep } from '@/components/suggest/QuestionStep';
 
 describe('QuestionStep', () => {
   const mockOptions = [
-    { value: 'option1', emoji: '🔥', label: 'Option One', description: 'First option description' },
+    {
+      value: 'option1',
+      icon: Zap,
+      iconClassName: 'text-orange-400',
+      label: 'Option One',
+      description: 'First option description',
+    },
     {
       value: 'option2',
-      emoji: '🧠',
+      icon: BatteryFull,
+      iconClassName: 'text-emerald-400',
       label: 'Option Two',
       description: 'Second option description',
     },
     {
       value: 'option3',
-      emoji: '😌',
+      icon: Leaf,
+      iconClassName: 'text-yellow-400',
       label: 'Option Three',
       description: 'Third option description',
     },
@@ -51,12 +60,13 @@ describe('QuestionStep', () => {
     expect(screen.getByText('Second option description')).toBeInTheDocument();
   });
 
-  it('should render emojis', () => {
-    render(<QuestionStep title="Test Question" options={mockOptions} onSelect={mockOnSelect} />);
+  it('should render an icon for each option', () => {
+    const { container } = render(
+      <QuestionStep title="Test Question" options={mockOptions} onSelect={mockOnSelect} />,
+    );
 
-    expect(screen.getByText('🔥')).toBeInTheDocument();
-    expect(screen.getByText('🧠')).toBeInTheDocument();
-    expect(screen.getByText('😌')).toBeInTheDocument();
+    const svgs = container.querySelectorAll('svg');
+    expect(svgs).toHaveLength(mockOptions.length);
   });
 
   it('should call onSelect with correct value when option clicked', () => {

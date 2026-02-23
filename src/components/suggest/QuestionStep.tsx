@@ -21,7 +21,7 @@ function QuestionStepInner<T>({ title, options, onSelect }: QuestionStepProps<T>
             onClick={() => onSelect(option.value)}
             className="group flex items-center gap-4 p-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 rounded-xl transition-all cursor-pointer text-left"
           >
-            <span className="text-2xl">{option.emoji}</span>
+            <option.icon className={`w-5 h-5 shrink-0 transition-colors ${option.iconClassName}`} />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-zinc-100 group-hover:text-white transition-colors">
                 {option.label}
