@@ -15,10 +15,18 @@ export interface GameForSuggestion {
   name: string;
   genres: string[] | null;
   categories: string[] | null;
+  tags: string[] | null;
   main_story_hours: number | null;
   playtime_forever: number;
   steam_review_weighted: number | null;
   reroll_count: number;
+}
+
+export interface TagAffinity {
+  tag: string;
+  completionRate: number;
+  finished: number;
+  total: number;
 }
 
 export interface SuggestionContext {
@@ -28,6 +36,7 @@ export interface SuggestionContext {
   droppedGames: string[];
   excludeAppIds: number[];
   previousReasonings: string[];
+  tagAffinities: TagAffinity[];
 }
 
 export interface SuggestionResult {

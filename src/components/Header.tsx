@@ -9,10 +9,10 @@ import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
 interface HeaderProps {
-  hideGamesLink?: boolean;
+  hideNavLinks?: boolean;
 }
 
-export function Header({ hideGamesLink }: HeaderProps = {}) {
+export function Header({ hideNavLinks }: HeaderProps = {}) {
   const [user, setUser] = useState<User | null>(null);
   const [steamUsername, setSteamUsername] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -75,7 +75,7 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
               <div className="w-8 h-8 bg-linear-to-br from-violet-500 to-fuchsia-500 rounded-lg" />
               <span className="text-xl font-bold text-zinc-100">MyBacklog</span>
             </Link>
-            {user && !hideGamesLink && (
+            {user && !hideNavLinks && (
               <Link
                 href="/games"
                 className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -83,7 +83,7 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
                 Games
               </Link>
             )}
-            {user && (
+            {user && !hideNavLinks && (
               <Link
                 href="/diary"
                 className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -91,7 +91,7 @@ export function Header({ hideGamesLink }: HeaderProps = {}) {
                 Diary
               </Link>
             )}
-            {user && (
+            {user && !hideNavLinks && (
               <Link
                 href="/stats"
                 className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"

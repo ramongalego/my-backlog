@@ -7,6 +7,7 @@ describe('buildSuggestionPrompt', () => {
     name: 'Test Game',
     genres: ['Action', 'Adventure'],
     categories: ['Single-player'],
+    tags: null,
     main_story_hours: 10,
     playtime_forever: 60,
     steam_review_weighted: 85,
@@ -28,6 +29,7 @@ describe('buildSuggestionPrompt', () => {
     droppedGames: ['Dropped Game'],
     excludeAppIds: [],
     previousReasonings: [],
+    tagAffinities: [],
   };
 
   it('should include user preferences in prompt', () => {
@@ -160,6 +162,69 @@ describe('buildSuggestionPrompt', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
     expect(prompt).not.toContain('AVOID REPETITION');
+  });
+
+  it('should include tags in game entry when present', () => {
+    const context: SuggestionContext = {
+      ...baseContext,
+      backlogGames: [
+        createGame({ tags: ['Story Rich', 'RPG', 'Atmospheric', 'Action', 'Adventure'] }),
+      ],
+    };
+
+    const prompt = buildSuggestionPrompt(context);
+
+    expect(prompt).toContain('Tags: Story Rich, RPG, Atmospheric, Action, Adventure');
+  });
+
+  it('should cap tags at 5 per game', () => {
+    const context: SuggestionContext = {
+      ...baseContext,
+      backlogGames: [
+        createGame({
+          tags: ['Story Rich', 'RPG', 'Atmospheric', 'Action', 'Adventure', 'Open World', 'Dark'],
+        }),
+      ],
+    };
+
+    const prompt = buildSuggestionPrompt(context);
+
+    expect(prompt).toContain('Tags: Story Rich, RPG, Atmospheric, Action, Adventure');
+    expect(prompt).not.toContain('Open World');
+    expect(prompt).not.toContain('Dark');
+  });
+
+  it('should omit tags field when game has no tags', () => {
+    const context: SuggestionContext = {
+      ...baseContext,
+      backlogGames: [createGame({ tags: null })],
+    };
+
+    const prompt = buildSuggestionPrompt(context);
+
+    expect(prompt).not.toContain('Tags:');
+  });
+
+  it('should include tag affinities section when affinities are present', () => {
+    const context: SuggestionContext = {
+      ...baseContext,
+      tagAffinities: [
+        { tag: 'Story Rich', completionRate: 0.8, finished: 8, total: 10 },
+        { tag: 'RPG', completionRate: 0.67, finished: 4, total: 6 },
+      ],
+    };
+
+    const prompt = buildSuggestionPrompt(context);
+
+    expect(prompt).toContain('TAG AFFINITIES');
+    expect(prompt).toContain('Story Rich: finished 8/10 games (80%)');
+    expect(prompt).toContain('RPG: finished 4/6 games (67%)');
+  });
+
+  it('should omit tag affinities section when no affinities', () => {
+    const prompt = buildSuggestionPrompt(baseContext);
+
+    expect(prompt).not.toContain('TAG AFFINITIES');
   });
 });
 

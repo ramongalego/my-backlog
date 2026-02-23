@@ -23,6 +23,7 @@ function formatGameForPrompt(game: GameForSuggestion): string {
   const parts = [
     `"${game.name}" (ID: ${game.app_id})`,
     game.genres?.length ? `Genres: ${game.genres.join(', ')}` : null,
+    game.tags?.length ? `Tags: ${game.tags.slice(0, 5).join(', ')}` : null,
     game.main_story_hours ? `Length: ${game.main_story_hours}h` : null,
     game.playtime_forever > 0
       ? `Already played: ${Math.round(game.playtime_forever / 60)}h`
@@ -44,6 +45,7 @@ export function buildSuggestionPrompt(context: SuggestionContext): string {
     droppedGames,
     excludeAppIds,
     previousReasonings,
+    tagAffinities,
   } = context;
 
   // Filter out excluded games
@@ -74,6 +76,17 @@ ${finishedGames.length > 0 ? `**Games they FINISHED** (they loved these enough t
 ${droppedGames.length > 0 ? `**Games they DROPPED** (lost interest - be cautious with similar styles/genres): ${droppedGames.slice(0, 10).join(', ')}${droppedGames.length > 10 ? ` and ${droppedGames.length - 10} more` : ''}` : 'No dropped games.'}
 
 **Playtime patterns in backlog:** Look at the "Already played" values - games with some playtime mean they've tried it and might want to continue. Games with 0 playtime are completely fresh.
+${
+  tagAffinities.length > 0
+    ? `
+## USER'S TAG AFFINITIES (based on completion history)
+
+These are the game tags this user tends to finish most consistently — a strong signal of genuine enjoyment:
+${tagAffinities.map((t) => `- ${t.tag}: finished ${t.finished}/${t.total} games (${Math.round(t.completionRate * 100)}%)`).join('\n')}
+
+Prioritize backlog games that share these tags when they also match the current mood/energy/time preferences.`
+    : ''
+}
 
 ## YOUR TASK
 

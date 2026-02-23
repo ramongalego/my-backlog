@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
   const { data: backlogGames, error: backlogError } = await supabase
     .from('games')
     .select(
-      'app_id, name, genres, categories, main_story_hours, playtime_forever, steam_review_weighted, reroll_count',
+      'app_id, name, genres, categories, tags, main_story_hours, playtime_forever, steam_review_weighted, reroll_count',
     )
     .eq('user_id', user.id)
     .eq('type', 'game')
@@ -127,6 +127,46 @@ export async function POST(request: NextRequest) {
     .eq('status', 'dropped')
     .limit(20);
 
+  // Fetch all games with tags + status to compute tag affinities
+  const { data: allGamesForAffinity } = await supabase
+    .from('games')
+    .select('tags, status')
+    .eq('user_id', user.id)
+    .eq('type', 'game')
+    .not('tags', 'is', null);
+
+  // Compute tag completion rates (min 3 games per tag to filter noise)
+  const EXCLUDED_AFFINITY_TAGS = new Set([
+    'Singleplayer',
+    'Multiplayer',
+    'Single-player',
+    'Multi-player',
+    'Quick-Time Events',
+    'Reboot',
+  ]);
+
+  const tagStats = new Map<string, { total: number; finished: number }>();
+  for (const game of allGamesForAffinity ?? []) {
+    for (const tag of (game.tags as string[] | null) ?? []) {
+      if (EXCLUDED_AFFINITY_TAGS.has(tag)) continue;
+      const stat = tagStats.get(tag) ?? { total: 0, finished: 0 };
+      stat.total++;
+      if (game.status === 'finished') stat.finished++;
+      tagStats.set(tag, stat);
+    }
+  }
+
+  const tagAffinities = [...tagStats.entries()]
+    .filter(([, s]) => s.total >= 3)
+    .map(([tag, s]) => ({
+      tag,
+      completionRate: s.finished / s.total,
+      finished: s.finished,
+      total: s.total,
+    }))
+    .sort((a, b) => b.completionRate - a.completionRate)
+    .slice(0, 10);
+
   // Build context for AI
   const context: SuggestionContext = {
     preferences,
@@ -136,6 +176,7 @@ export async function POST(request: NextRequest) {
         name: g.name,
         genres: g.genres,
         categories: g.categories,
+        tags: g.tags,
         main_story_hours: g.main_story_hours,
         playtime_forever: g.playtime_forever ?? 0,
         steam_review_weighted: g.steam_review_weighted,
@@ -146,6 +187,7 @@ export async function POST(request: NextRequest) {
     droppedGames: droppedGames?.map((g) => g.name) ?? [],
     excludeAppIds,
     previousReasonings,
+    tagAffinities,
   };
 
   // Check if there are any eligible games after exclusions

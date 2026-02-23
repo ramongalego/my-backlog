@@ -92,7 +92,7 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <Header hideGamesLink={isSyncing || carouselsLoading} />
+      <Header hideNavLinks={isSyncing} />
 
       <main className="pt-16 flex-1">
         <section className="max-w-7xl mx-auto px-6 py-12">
