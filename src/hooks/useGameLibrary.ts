@@ -335,7 +335,8 @@ export function useGameLibrary(): UseGameLibraryReturn {
             .from('games')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .eq('type', 'game');
+            .eq('type', 'game')
+            .neq('status', 'hidden');
 
           setGameCount(totalGames || 0);
           setIsLoading(false);
