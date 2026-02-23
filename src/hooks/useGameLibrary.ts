@@ -66,6 +66,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
+    if (typeof window === 'undefined') return false;
     const last = localStorage.getItem('playtime_refresh_at');
     return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
   });
