@@ -175,24 +175,24 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
 
+  // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
+  const searchFilteredGames = useMemo(() => {
+    if (!deferredSearchQuery) return games;
+    const searchLower = deferredSearchQuery.toLowerCase();
+    return games.filter((game) => {
+      const nameMatch = game.name.toLowerCase().includes(searchLower);
+      const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
+      return nameMatch || tagMatch;
+    });
+  }, [games, deferredSearchQuery]);
+
   // Memoize filtered and sorted games to avoid recalculation on unrelated state changes
   // Uses deferredSearchQuery so input stays responsive during large list filtering
   const filteredGames = useMemo(() => {
-    const searchLower = deferredSearchQuery.toLowerCase();
-
-    const filtered = games.filter((game) => {
-      // Status filter
+    const filtered = searchFilteredGames.filter((game) => {
       if (filter === 'all' && game.status === 'hidden') return false;
       if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
       if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
-
-      // Search filter — matches name or any tag
-      if (searchLower) {
-        const nameMatch = game.name.toLowerCase().includes(searchLower);
-        const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
-        if (!nameMatch && !tagMatch) return false;
-      }
-
       return true;
     });
 
@@ -208,7 +208,7 @@ export function useGamesPage(): UseGamesPageReturn {
           return b.playtime_forever - a.playtime_forever;
       }
     });
-  }, [games, filter, sort, deferredSearchQuery]);
+  }, [searchFilteredGames, filter, sort]);
 
   const visibleGames = useMemo(
     () => filteredGames.slice(0, visibleCount),
@@ -221,13 +221,27 @@ export function useGamesPage(): UseGamesPageReturn {
     setVisibleCount((prev) => prev + BATCH_SIZE);
   }, []);
 
-  const counts: FilterCounts = {
-    all: games.length,
-    backlog: games.filter((g) => !g.status || g.status === 'backlog').length,
-    finished: games.filter((g) => g.status === 'finished').length,
-    dropped: games.filter((g) => g.status === 'dropped').length,
-    hidden: games.filter((g) => g.status === 'hidden').length,
-  };
+  // Single pass over search-filtered games to compute all counts at once
+  const counts = useMemo((): FilterCounts => {
+    const result = { all: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
+    for (const game of searchFilteredGames) {
+      const s = game.status;
+      if (s === 'hidden') {
+        result.hidden++;
+      } else if (s === 'finished') {
+        result.all++;
+        result.finished++;
+      } else if (s === 'dropped') {
+        result.all++;
+        result.dropped++;
+      } else {
+        // null or 'backlog'
+        result.all++;
+        result.backlog++;
+      }
+    }
+    return result;
+  }, [searchFilteredGames]);
 
   const setFilterAndReset = useCallback((f: GameFilter) => {
     setFilter(f);

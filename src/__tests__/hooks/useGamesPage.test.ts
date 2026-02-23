@@ -358,6 +358,102 @@ describe('useGamesPage filtering logic', () => {
   });
 });
 
+// Count computation extracted for independent testing
+function computeCounts(games: GameItem[]) {
+  const result = { all: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
+  for (const game of games) {
+    const s = game.status;
+    if (s === 'hidden') {
+      result.hidden++;
+    } else if (s === 'finished') {
+      result.all++;
+      result.finished++;
+    } else if (s === 'dropped') {
+      result.all++;
+      result.dropped++;
+    } else {
+      result.all++;
+      result.backlog++;
+    }
+  }
+  return result;
+}
+
+function searchFilter(games: GameItem[], query: string): GameItem[] {
+  if (!query) return games;
+  const q = query.toLowerCase();
+  return games.filter((game) => {
+    const nameMatch = game.name.toLowerCase().includes(q);
+    const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(q)) ?? false;
+    return nameMatch || tagMatch;
+  });
+}
+
+describe('useGamesPage count computation', () => {
+  const sampleGames: GameItem[] = [
+    createGame({ app_id: 1, name: 'Zelda', status: 'backlog' }),
+    createGame({ app_id: 2, name: 'Final Fantasy', status: 'finished' }),
+    createGame({ app_id: 3, name: 'Mario', status: 'backlog', tags: ['Platformer'] }),
+    createGame({ app_id: 4, name: 'Dark Souls', status: 'dropped' }),
+    createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
+    createGame({ app_id: 6, name: 'New Game', status: null }),
+  ];
+
+  it('should exclude hidden games from all count', () => {
+    const counts = computeCounts(sampleGames);
+    expect(counts.all).toBe(5); // 6 games minus 1 hidden
+    expect(counts.hidden).toBe(1);
+  });
+
+  it('should count null status as backlog', () => {
+    const counts = computeCounts(sampleGames);
+    expect(counts.backlog).toBe(3); // Zelda + Mario + New Game (null)
+  });
+
+  it('should count all statuses correctly in a single pass', () => {
+    const counts = computeCounts(sampleGames);
+    expect(counts.finished).toBe(1);
+    expect(counts.dropped).toBe(1);
+  });
+
+  it('should return dynamic counts when search query is active', () => {
+    const filtered = searchFilter(sampleGames, 'mario');
+    const counts = computeCounts(filtered);
+    expect(counts.all).toBe(1);
+    expect(counts.backlog).toBe(1);
+    expect(counts.finished).toBe(0);
+    expect(counts.dropped).toBe(0);
+    expect(counts.hidden).toBe(0);
+  });
+
+  it('should return static counts when search is cleared', () => {
+    const filtered = searchFilter(sampleGames, '');
+    const counts = computeCounts(filtered);
+    expect(counts.all).toBe(5);
+    expect(counts.backlog).toBe(3);
+    expect(counts.finished).toBe(1);
+    expect(counts.dropped).toBe(1);
+    expect(counts.hidden).toBe(1);
+  });
+
+  it('should reflect cross-status search results in counts', () => {
+    const filtered = searchFilter(sampleGames, 'platformer'); // matches Mario by tag
+    const counts = computeCounts(filtered);
+    expect(counts.all).toBe(1);
+    expect(counts.backlog).toBe(1);
+  });
+
+  it('should return all zeros when search matches nothing', () => {
+    const filtered = searchFilter(sampleGames, 'xyznotfound');
+    const counts = computeCounts(filtered);
+    expect(counts.all).toBe(0);
+    expect(counts.backlog).toBe(0);
+    expect(counts.finished).toBe(0);
+    expect(counts.dropped).toBe(0);
+    expect(counts.hidden).toBe(0);
+  });
+});
+
 // Pagination logic extracted for independent testing
 const BATCH_SIZE = 60;
 

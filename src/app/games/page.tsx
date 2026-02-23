@@ -37,7 +37,6 @@ function EmptyState() {
 
 export default function GamesPage() {
   const {
-    games,
     loading,
     filter,
     setFilter,
@@ -95,7 +94,13 @@ export default function GamesPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="shrink-0">
                 <h1 className="text-2xl font-bold text-zinc-100">My Games</h1>
-                <p className="text-zinc-500 text-sm mt-1">{games.length} games in library</p>
+                <p className="flex items-center gap-1 text-zinc-500 text-sm mt-1">
+                  <span>{counts.all}</span>
+                  {searchQuery && (
+                    <span className="text-violet-400 font-medium">{searchQuery}</span>
+                  )}
+                  <span>games in library</span>
+                </p>
               </div>
 
               <GamesFilter filter={filter} counts={counts} onFilterChange={setFilter} />
