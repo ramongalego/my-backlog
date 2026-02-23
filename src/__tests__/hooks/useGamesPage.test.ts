@@ -63,7 +63,6 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
 });
 
 describe('useGamesPage filtering logic', () => {
-
   const sampleGames: GameItem[] = [
     createGame({ app_id: 1, name: 'The Legend of Zelda', status: 'backlog' }),
     createGame({ app_id: 2, name: 'Final Fantasy VII', status: 'finished' }),
@@ -371,9 +370,7 @@ function paginateGames(games: GameItem[], visibleCount: number) {
 
 describe('useGamesPage pagination logic', () => {
   const makeGames = (count: number): GameItem[] =>
-    Array.from({ length: count }, (_, i) =>
-      createGame({ app_id: i + 1, name: `Game ${i + 1}` }),
-    );
+    Array.from({ length: count }, (_, i) => createGame({ app_id: i + 1, name: `Game ${i + 1}` }));
 
   it('should show only the first batch when visibleCount equals BATCH_SIZE', () => {
     const games = makeGames(200);
