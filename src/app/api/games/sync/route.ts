@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getGameDetails, extractGameMetadata, getSteamReviewData, getSteamSpyTags } from '@/lib/steam/store-api';
+import {
+  getGameDetails,
+  extractGameMetadata,
+  getSteamReviewData,
+  getSteamSpyTags,
+} from '@/lib/steam/store-api';
 import { getMainStoryHours } from '@/lib/hltb/api';
 import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';

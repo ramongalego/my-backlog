@@ -60,11 +60,19 @@ function isoToDate(iso: string): Date {
 
 // Converts Date → "YYYY-MM-DD"
 function dateToIso(d: Date): string {
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
 }
 
 function formatDateLabel(iso: string): string {
-  return isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return isoToDate(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 export function GameDetailModal({

@@ -17,9 +17,11 @@ function filterAndSortGames(
     if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
     if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
 
-    // Search filter
-    if (searchLower && !game.name.toLowerCase().includes(searchLower)) {
-      return false;
+    // Search filter — matches name or any tag
+    if (searchLower) {
+      const nameMatch = game.name.toLowerCase().includes(searchLower);
+      const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
+      if (!nameMatch && !tagMatch) return false;
     }
 
     return true;
@@ -57,6 +59,7 @@ describe('useGamesPage filtering logic', () => {
     rating: null,
     finished_at: null,
     dropped_at: null,
+    tags: null,
     ...overrides,
   });
 
@@ -114,6 +117,71 @@ describe('useGamesPage filtering logic', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Final Fantasy VII');
+    });
+  });
+
+  describe('tag search', () => {
+    const gamesWithTags: GameItem[] = [
+      createGame({
+        app_id: 1,
+        name: 'Dark Souls',
+        status: 'backlog',
+        tags: ['Action', 'Souls-like', 'Difficult'],
+      }),
+      createGame({
+        app_id: 2,
+        name: 'Persona 5',
+        status: 'backlog',
+        tags: ['JRPG', 'Turn-Based', 'Anime'],
+      }),
+      createGame({
+        app_id: 3,
+        name: 'Hades',
+        status: 'backlog',
+        tags: ['Roguelike', 'Action', 'Indie'],
+      }),
+      createGame({ app_id: 4, name: 'No Tags Game', status: 'backlog', tags: null }),
+    ];
+
+    it('should filter by tag (case-insensitive)', () => {
+      const result = filterGames(gamesWithTags, 'all', 'jrpg');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Persona 5');
+    });
+
+    it('should filter by partial tag match', () => {
+      const result = filterGames(gamesWithTags, 'all', 'rogue');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Hades');
+    });
+
+    it('should return multiple games matching a tag', () => {
+      const result = filterGames(gamesWithTags, 'all', 'action');
+
+      expect(result).toHaveLength(2);
+      expect(result.map((g) => g.name)).toContain('Dark Souls');
+      expect(result.map((g) => g.name)).toContain('Hades');
+    });
+
+    it('should match by name even when tags are present', () => {
+      const result = filterGames(gamesWithTags, 'all', 'persona');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Persona 5');
+    });
+
+    it('should handle games with null tags gracefully', () => {
+      const result = filterGames(gamesWithTags, 'all', 'action');
+
+      expect(result.map((g) => g.name)).not.toContain('No Tags Game');
+    });
+
+    it('should return empty when tag does not match any game', () => {
+      const result = filterGames(gamesWithTags, 'all', 'sports');
+
+      expect(result).toHaveLength(0);
     });
   });
 

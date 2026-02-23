@@ -39,6 +39,7 @@ function HomeContent() {
     syncingGames,
     carouselsLoading,
     isRefreshing,
+    isRefreshDisabled,
     isStatusLoading,
     celebrationMessage,
     handlePickGame,
@@ -116,8 +117,8 @@ function HomeContent() {
               )}
               <button
                 onClick={handleRefreshLibrary}
-                disabled={isRefreshing || isSyncing}
-                className="cursor-pointer ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+                disabled={isRefreshing || isSyncing || isRefreshDisabled}
+                className="ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 enabled:cursor-pointer"
                 title="Check for new games"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />

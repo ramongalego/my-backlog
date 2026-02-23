@@ -33,6 +33,7 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   rating: null,
   finished_at: null,
   dropped_at: null,
+  tags: null,
   ...overrides,
 });
 

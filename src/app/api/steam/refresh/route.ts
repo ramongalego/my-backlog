@@ -51,38 +51,48 @@ export async function POST(request: NextRequest) {
     // Fetch current Steam library
     const steamGames = await getOwnedGames(profile.steam_id, apiKey);
 
-    // Get existing game app_ids from DB
+    // Get existing games from DB
     const { data: existingGames } = await supabase
       .from('games')
-      .select('app_id')
+      .select('app_id, playtime_forever')
       .eq('user_id', user.id);
 
-    const existingAppIds = new Set(existingGames?.map((g) => g.app_id) || []);
+    const existingMap = new Map(existingGames?.map((g) => [g.app_id, g.playtime_forever]) || []);
 
-    // Find new games not in DB
-    const newGames = steamGames.filter((game) => !existingAppIds.has(game.appid));
-
-    if (newGames.length === 0) {
-      return NextResponse.json({ success: true, newGames: 0 });
-    }
+    const newGames = steamGames.filter((game) => !existingMap.has(game.appid));
+    const updatedGames = steamGames.filter(
+      (game) =>
+        existingMap.has(game.appid) && existingMap.get(game.appid) !== game.playtime_forever,
+    );
 
     // Insert new games
-    const gamesToInsert = newGames.map((game) => ({
-      user_id: user.id,
-      app_id: game.appid,
-      name: game.name,
-      playtime_forever: game.playtime_forever,
-      img_icon_url: game.img_icon_url,
-    }));
-
-    const { error } = await supabase.from('games').insert(gamesToInsert);
-
-    if (error) {
-      console.error('Error inserting new games:', error);
-      return NextResponse.json({ error: 'Failed to insert games' }, { status: 500 });
+    if (newGames.length > 0) {
+      const gamesToInsert = newGames.map((game) => ({
+        user_id: user.id,
+        app_id: game.appid,
+        name: game.name,
+        playtime_forever: game.playtime_forever,
+        img_icon_url: game.img_icon_url,
+      }));
+      await supabase.from('games').insert(gamesToInsert);
     }
 
-    return NextResponse.json({ success: true, newGames: newGames.length });
+    // Update playtime for existing games that changed
+    await Promise.all(
+      updatedGames.map((game) =>
+        supabase
+          .from('games')
+          .update({ playtime_forever: game.playtime_forever })
+          .eq('user_id', user.id)
+          .eq('app_id', game.appid),
+      ),
+    );
+
+    return NextResponse.json({
+      success: true,
+      newGames: newGames.length,
+      updatedPlaytime: updatedGames.length,
+    });
   } catch (error) {
     console.error('Steam API error:', error);
     return NextResponse.json({ error: 'Steam API failed' }, { status: 500 });

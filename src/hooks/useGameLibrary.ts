@@ -31,6 +31,7 @@ interface UseGameLibraryReturn {
 
   // UI state
   isRefreshing: boolean;
+  isRefreshDisabled: boolean;
   isStatusLoading: boolean;
   celebrationMessage: string | null;
   statusModal: StatusModal | null;
@@ -62,7 +63,12 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const [syncProgress, setSyncProgress] = useState<SyncProgress>({ current: 0, total: 0 });
   const [syncingGames, setSyncingGames] = useState<Game[]>([]);
   const [carouselsLoading, setCarouselsLoading] = useState(true);
+  const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
+    const last = localStorage.getItem('playtime_refresh_at');
+    return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
+  });
   const [shortGamesPool, setShortGamesPool] = useState<GameWithImage[]>([]);
   const [weekendGamesPool, setWeekendGamesPool] = useState<GameWithImage[]>([]);
   const [highlyRatedGamesPool, setHighlyRatedGamesPool] = useState<GameWithImage[]>([]);
@@ -229,20 +235,28 @@ export function useGameLibrary(): UseGameLibraryReturn {
     setIsStatusLoading(false);
   }, [currentlyPlaying]);
 
-  const handleRefreshLibrary = useCallback(async () => {
-    setIsRefreshing(true);
+  const runRefresh = useCallback(async () => {
     try {
       const res = await fetch('/api/steam/refresh', { method: 'POST' });
+      if (!res.ok) return;
       const data = await res.json();
-
+      const now = Date.now();
+      localStorage.setItem('playtime_refresh_at', now.toString());
+      setIsRefreshDisabled(true);
+      setTimeout(() => setIsRefreshDisabled(false), REFRESH_COOLDOWN_MS);
       if (data.newGames > 0) {
         window.location.reload();
       }
     } catch (err) {
       console.error('Failed to refresh library:', err);
     }
+  }, [REFRESH_COOLDOWN_MS]);
+
+  const handleRefreshLibrary = useCallback(async () => {
+    setIsRefreshing(true);
+    await runRefresh();
     setIsRefreshing(false);
-  }, []);
+  }, [runRefresh]);
 
   const handleRandomPick = useCallback(async () => {
     const supabase = createClient();
@@ -383,6 +397,14 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           setHighlyRatedGamesPool(highlyRatedData || []);
           setCarouselsLoading(false);
+
+          // Auto-refresh playtime if it's been more than 1 hour
+          const lastRefresh = localStorage.getItem('playtime_refresh_at');
+          const oneHour = 60 * 60 * 1000;
+          if (!lastRefresh || Date.now() - parseInt(lastRefresh) > oneHour) {
+            runRefresh();
+          }
+
           return;
         }
       }
@@ -404,7 +426,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
     });
 
     return () => subscription.unsubscribe();
-  }, [syncGames]);
+  }, [syncGames, runRefresh]);
 
   return {
     user,
@@ -420,6 +442,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
     syncingGames,
     carouselsLoading,
     isRefreshing,
+    isRefreshDisabled,
     isStatusLoading,
     celebrationMessage,
     statusModal,
