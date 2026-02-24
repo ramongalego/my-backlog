@@ -153,7 +153,6 @@ function YearChart({ stats }: { stats: Stats }) {
   const [view, setView] = useState<YearView>('finished');
 
   const data = view === 'finished' ? stats.finishedByYear : stats.gamesByReleaseYear;
-  const BAR_MAX_HEIGHT = 120;
   const max = data.length > 0 ? Math.max(...data.map((y) => y.count)) : 1;
 
   const empty =
@@ -194,20 +193,23 @@ function YearChart({ stats }: { stats: Stats }) {
       {data.length === 0 ? (
         <p className="text-sm text-zinc-600">{empty}</p>
       ) : (
-        <div className="flex-1 flex items-end gap-1.5">
-          {data.map(({ year, count }) => (
-            <div key={year} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-zinc-300">{count}</span>
+        <div className="flex-1 flex items-end gap-1.5 min-h-[160px]">
+          {data.map(({ year, count }, i) => (
+            <div key={year} className="self-stretch flex-1 flex flex-col items-center min-w-0">
+              <div className="flex-1" />
+              <span className="text-xs font-semibold text-zinc-300 mb-1">{count}</span>
               <div
                 className={`w-full rounded-sm transition-colors ${
                   view === 'finished'
                     ? 'bg-emerald-500/80 hover:bg-emerald-500'
                     : 'bg-sky-500/80 hover:bg-sky-500'
                 }`}
-                style={{ height: `${Math.max((count / max) * BAR_MAX_HEIGHT, 4)}px` }}
+                style={{ height: `${Math.max((count / max) * 65, 3)}%` }}
               />
-              <span className="text-[10px] text-zinc-600">
-                {data.length <= 10 || parseInt(year) % 5 === 0 ? year : ''}
+              <span
+                className={`text-[10px] mt-1 ${data.length <= 14 || i % 2 === 0 ? 'text-zinc-600' : 'invisible'}`}
+              >
+                {year}
               </span>
             </div>
           ))}
@@ -382,7 +384,10 @@ export default function StatsPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-10">
             <h1 className="text-2xl font-bold text-zinc-100">Stats</h1>
-            <p className="text-zinc-500 text-sm mt-1">A look at your gaming library</p>
+            <p className="text-zinc-500 text-sm mt-1">
+              A look at your gaming library{' '}
+              <span className="text-zinc-600">· hidden games excluded</span>
+            </p>
           </div>
 
           {loading ? (
