@@ -153,14 +153,14 @@ describe('GameDetailModal', () => {
       expect(screen.getByTestId('detail-date')).toBeInTheDocument();
     });
 
-    it('should show date row after switching to finished', () => {
+    it("should show date row with today's date after switching to finished", () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
-      expect(screen.queryByLabelText(/no date selected/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-date')).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: /finished/i }));
 
-      expect(screen.getByLabelText(/no date selected/i)).toBeInTheDocument();
+      expect(screen.getByTestId('detail-date')).toBeInTheDocument();
     });
 
     it('should hide date field after switching from finished to hidden', () => {
@@ -198,10 +198,11 @@ describe('GameDetailModal', () => {
       expect(screen.getByLabelText(/finished on/i)).toBeChecked();
     });
 
-    it('should be unchecked by default when no date is saved', () => {
+    it('should be unchecked by default when no date was previously saved', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
       expect(screen.getByRole('checkbox')).not.toBeChecked();
+      expect(screen.queryByTestId('detail-date')).not.toBeInTheDocument();
     });
 
     it('should be unchecked by default when initialDate is empty string', () => {
@@ -253,7 +254,7 @@ describe('GameDetailModal', () => {
     });
   });
 
-  describe('null/empty initialDate bug regression', () => {
+  describe('null/empty initialDate behaviour', () => {
     it('should not render date button when initialDate is null', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
@@ -266,17 +267,17 @@ describe('GameDetailModal', () => {
       expect(screen.queryByTestId('detail-date')).not.toBeInTheDocument();
     });
 
-    it('should show a valid date (not "Invalid Date") when checkbox is checked after null initialDate', () => {
+    it('should show a valid date (not "Invalid Date") after checking the checkbox with null initialDate', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
-      fireEvent.click(screen.getByLabelText(/no date selected/i));
+      fireEvent.click(screen.getByRole('checkbox'));
 
       const dateButton = screen.getByTestId('detail-date');
       expect(dateButton).toBeInTheDocument();
       expect(dateButton).not.toHaveTextContent('Invalid Date');
     });
 
-    it('should pass empty string when saving with null initialDate and unchecked checkbox', () => {
+    it('should pass empty string when saving without checking the date (null initialDate)', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -284,10 +285,10 @@ describe('GameDetailModal', () => {
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
     });
 
-    it('should pass today date when saving after checking checkbox with null initialDate', () => {
+    it("should pass today's date when checking then saving with null initialDate", () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
-      fireEvent.click(screen.getByLabelText(/no date selected/i));
+      fireEvent.click(screen.getByRole('checkbox'));
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
       const today = new Date().toISOString().slice(0, 10);

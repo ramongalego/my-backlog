@@ -107,6 +107,13 @@ export function GameDetailModal({
   const showDateField = status === 'finished' || status === 'dropped';
   const dateLabel = status === 'finished' ? 'Finished on' : 'Dropped on';
 
+  function handleStatusChange(next: GameStatus) {
+    setStatus(next);
+    if (next === 'finished' || next === 'dropped') {
+      setHasDate(true);
+    }
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
@@ -154,7 +161,7 @@ export function GameDetailModal({
               (opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setStatus(opt.value)}
+                  onClick={() => handleStatusChange(opt.value)}
                   className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
                     status === opt.value
                       ? opt.activeClass
