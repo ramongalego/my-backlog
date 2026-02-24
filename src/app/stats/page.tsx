@@ -300,7 +300,7 @@ export default function StatsPage() {
     <div className="min-h-screen bg-zinc-950">
       <Header />
       <main className="pt-24 pb-16">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="mb-10">
             <h1 className="text-2xl font-bold text-zinc-100">Stats</h1>
             <p className="text-zinc-500 text-sm mt-1">A look at your gaming library</p>
