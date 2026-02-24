@@ -18,6 +18,7 @@ interface GameForStats {
   rating: number | null;
   finished_at: string | null;
   header_image: string | null;
+  release_date: string | null;
 }
 
 function computeTagStats(games: GameForStats[]) {
@@ -61,6 +62,7 @@ const makeGame = (overrides: Partial<GameForStats> = {}): GameForStats => ({
   rating: null,
   finished_at: null,
   header_image: null,
+  release_date: null,
   ...overrides,
 });
 
@@ -186,5 +188,151 @@ describe('useStats tag completion sorting', () => {
     const { tagCompletion } = computeTagStats(games);
     expect(tagCompletion.map((t) => t.tag)).not.toContain('Rare');
     expect(tagCompletion.map((t) => t.tag)).toContain('Common');
+  });
+});
+
+// ─── parseYear ────────────────────────────────────────────────────────────────
+
+function parseYear(releaseDate: string | null): string | null {
+  if (!releaseDate) return null;
+  const m = releaseDate.match(/\b(19|20)\d{2}\b/);
+  return m ? m[0] : null;
+}
+
+describe('parseYear', () => {
+  it('extracts year from "Apr 21, 2021" format', () => {
+    expect(parseYear('Apr 21, 2021')).toBe('2021');
+  });
+
+  it('extracts year from bare "2019" string', () => {
+    expect(parseYear('2019')).toBe('2019');
+  });
+
+  it('extracts year from "Oct 2022" format', () => {
+    expect(parseYear('Oct 2022')).toBe('2022');
+  });
+
+  it('extracts year from "Q4 2025" format', () => {
+    expect(parseYear('Q4 2025')).toBe('2025');
+  });
+
+  it('returns null for null input', () => {
+    expect(parseYear(null)).toBeNull();
+  });
+
+  it('returns null for unparseable string', () => {
+    expect(parseYear('Coming Soon')).toBeNull();
+  });
+
+  it('returns null for empty string', () => {
+    expect(parseYear('')).toBeNull();
+  });
+});
+
+// ─── computeRatingDistribution ───────────────────────────────────────────────
+
+function computeRatingDistribution(games: GameForStats[]) {
+  const allRatedGames = games.filter((g) => g.rating !== null);
+  return Array.from({ length: 11 }, (_, i) => ({
+    rating: i,
+    count: allRatedGames.filter((g) => g.rating === i).length,
+  }));
+}
+
+describe('computeRatingDistribution', () => {
+  it('always returns 11 buckets (0–10)', () => {
+    const dist = computeRatingDistribution([]);
+    expect(dist).toHaveLength(11);
+    expect(dist[0].rating).toBe(0);
+    expect(dist[10].rating).toBe(10);
+  });
+
+  it('counts ratings correctly across buckets', () => {
+    const games = [
+      makeGame({ rating: 8, status: 'finished' }),
+      makeGame({ rating: 8, status: 'finished' }),
+      makeGame({ rating: 7, status: 'finished' }),
+    ];
+    const dist = computeRatingDistribution(games);
+    expect(dist[8].count).toBe(2);
+    expect(dist[7].count).toBe(1);
+    expect(dist[0].count).toBe(0);
+  });
+
+  it('includes ratings from non-finished games', () => {
+    const games = [
+      makeGame({ rating: 5, status: 'dropped' }),
+      makeGame({ rating: 9, status: 'backlog' }),
+    ];
+    const dist = computeRatingDistribution(games);
+    expect(dist[5].count).toBe(1);
+    expect(dist[9].count).toBe(1);
+  });
+
+  it('ignores games with null rating', () => {
+    const games = [makeGame({ rating: null }), makeGame({ rating: 7 })];
+    const dist = computeRatingDistribution(games);
+    const total = dist.reduce((sum, b) => sum + b.count, 0);
+    expect(total).toBe(1);
+  });
+
+  it('returns all zeros when no games are rated', () => {
+    const dist = computeRatingDistribution([makeGame(), makeGame()]);
+    expect(dist.every((b) => b.count === 0)).toBe(true);
+  });
+});
+
+// ─── computeGamesByReleaseYear ────────────────────────────────────────────────
+
+function computeGamesByReleaseYear(games: GameForStats[]) {
+  const counts = new Map<string, number>();
+  for (const game of games) {
+    const year = parseYear(game.release_date);
+    if (year) counts.set(year, (counts.get(year) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([year, count]) => ({ year, count }));
+}
+
+describe('computeGamesByReleaseYear', () => {
+  it('groups games by parsed year', () => {
+    const games = [
+      makeGame({ release_date: 'Apr 21, 2021' }),
+      makeGame({ release_date: 'Nov 5, 2021' }),
+      makeGame({ release_date: '2022' }),
+    ];
+    const result = computeGamesByReleaseYear(games);
+    const map = Object.fromEntries(result.map(({ year, count }) => [year, count]));
+    expect(map['2021']).toBe(2);
+    expect(map['2022']).toBe(1);
+  });
+
+  it('ignores games with null release_date', () => {
+    const games = [makeGame({ release_date: null }), makeGame({ release_date: '2020' })];
+    const result = computeGamesByReleaseYear(games);
+    expect(result).toHaveLength(1);
+    expect(result[0].year).toBe('2020');
+  });
+
+  it('ignores games with unparseable release_date', () => {
+    const games = [makeGame({ release_date: 'Coming Soon' }), makeGame({ release_date: '2021' })];
+    const result = computeGamesByReleaseYear(games);
+    expect(result).toHaveLength(1);
+  });
+
+  it('returns results sorted by year ascending', () => {
+    const games = [
+      makeGame({ release_date: '2022' }),
+      makeGame({ release_date: '2019' }),
+      makeGame({ release_date: '2021' }),
+    ];
+    const result = computeGamesByReleaseYear(games);
+    expect(result.map((r) => r.year)).toEqual(['2019', '2021', '2022']);
+  });
+
+  it('returns empty array when no valid release dates', () => {
+    const games = [makeGame({ release_date: null }), makeGame({ release_date: 'Coming Soon' })];
+    expect(computeGamesByReleaseYear(games)).toHaveLength(0);
   });
 });

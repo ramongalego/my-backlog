@@ -13,6 +13,7 @@ interface GameForStats {
   rating: number | null;
   finished_at: string | null;
   header_image: string | null;
+  release_date: string | null;
 }
 
 export interface TagStat {
@@ -29,6 +30,11 @@ export interface TagCompletion {
 
 export interface YearStat {
   year: string;
+  count: number;
+}
+
+export interface RatingBar {
+  rating: number;
   count: number;
 }
 
@@ -51,13 +57,22 @@ export interface Stats {
   backlogPct: number;
   playingPct: number;
   totalPlaytimeHours: number;
+  totalPlaytimeDays: number;
   estimatedBacklogHours: number;
   topTags: TagStat[];
   tagCompletion: TagCompletion[];
   avgRating: number | null;
   ratedCount: number;
   finishedByYear: YearStat[];
+  gamesByReleaseYear: YearStat[];
+  ratingDistribution: RatingBar[];
   mostPlayedUnfinished: MostPlayedUnfinished[];
+}
+
+function parseYear(releaseDate: string | null): string | null {
+  if (!releaseDate) return null;
+  const m = releaseDate.match(/\b(19|20)\d{2}\b/);
+  return m ? m[0] : null;
 }
 
 export function useStats() {
@@ -81,7 +96,7 @@ export function useStats() {
       const { data } = await supabase
         .from('games')
         .select(
-          'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image',
+          'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date',
         )
         .eq('user_id', user.id)
         .eq('type', 'game')
@@ -103,9 +118,9 @@ export function useStats() {
     const playing = games.filter((g) => g.status === 'playing').length;
     const backlog = total - finished - dropped - playing;
 
-    const totalPlaytimeHours = Math.round(
-      games.reduce((sum, g) => sum + g.playtime_forever, 0) / 60,
-    );
+    const rawPlaytimeMins = games.reduce((sum, g) => sum + g.playtime_forever, 0);
+    const totalPlaytimeHours = Math.round(rawPlaytimeMins / 60);
+    const totalPlaytimeDays = Math.round((rawPlaytimeMins / 60 / 24) * 10) / 10;
 
     const estimatedBacklogHours = Math.round(
       games
@@ -159,6 +174,13 @@ export function useStats() {
           10
         : null;
 
+    // Rating distribution — all games with a rating (any status)
+    const allRatedGames = games.filter((g) => g.rating !== null);
+    const ratingDistribution: RatingBar[] = Array.from({ length: 11 }, (_, i) => ({
+      rating: i,
+      count: allRatedGames.filter((g) => g.rating === i).length,
+    }));
+
     // Finished by year
     const yearCounts = new Map<string, number>();
     for (const game of games) {
@@ -168,6 +190,16 @@ export function useStats() {
       }
     }
     const finishedByYear: YearStat[] = [...yearCounts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([year, count]) => ({ year, count }));
+
+    // Games by release year
+    const releaseYearCounts = new Map<string, number>();
+    for (const game of games) {
+      const year = parseYear(game.release_date);
+      if (year) releaseYearCounts.set(year, (releaseYearCounts.get(year) ?? 0) + 1);
+    }
+    const gamesByReleaseYear: YearStat[] = [...releaseYearCounts.entries()]
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
 
@@ -195,12 +227,15 @@ export function useStats() {
       backlogPct: Math.round((backlog / total) * 100),
       playingPct: Math.round((playing / total) * 100),
       totalPlaytimeHours,
+      totalPlaytimeDays,
       estimatedBacklogHours,
       topTags,
       tagCompletion,
       avgRating,
       ratedCount: ratedGames.length,
       finishedByYear,
+      gamesByReleaseYear,
+      ratingDistribution,
       mostPlayedUnfinished,
     };
   }, [games]);

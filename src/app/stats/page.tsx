@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Gamepad2, Clock, Inbox, Trophy, Star, TrendingUp, Pencil } from 'lucide-react';
+import {
+  Gamepad2,
+  Clock,
+  Inbox,
+  Trophy,
+  Star,
+  TrendingUp,
+  Pencil,
+  CalendarDays,
+} from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
@@ -19,8 +28,8 @@ interface EditModalState {
 function StatsLoadingSkeleton() {
   return (
     <div className="space-y-8 animate-pulse">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {[...Array(5)].map((_, i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl h-28" />
         ))}
       </div>
@@ -138,31 +147,101 @@ function TopTags({ stats }: { stats: Stats }) {
   );
 }
 
-function FinishedByYear({ stats }: { stats: Stats }) {
-  if (stats.finishedByYear.length === 0) {
-    return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <SectionTitle>Games finished by year</SectionTitle>
-        <p className="text-sm text-zinc-600">No finished games with dates yet.</p>
-      </div>
-    );
-  }
+type YearView = 'finished' | 'released';
 
-  const max = Math.max(...stats.finishedByYear.map((y) => y.count));
+function YearChart({ stats }: { stats: Stats }) {
+  const [view, setView] = useState<YearView>('finished');
+
+  const data = view === 'finished' ? stats.finishedByYear : stats.gamesByReleaseYear;
   const BAR_MAX_HEIGHT = 120;
+  const max = data.length > 0 ? Math.max(...data.map((y) => y.count)) : 1;
+
+  const empty =
+    view === 'finished'
+      ? 'No finished games with dates yet.'
+      : 'No release year data yet — sync your library.';
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col">
-      <SectionTitle>Games finished by year</SectionTitle>
-      <div className="flex-1 flex items-end gap-2">
-        {stats.finishedByYear.map(({ year, count }) => (
-          <div key={year} className="flex-1 flex flex-col items-center gap-1.5">
-            <span className="text-xs font-semibold text-zinc-300">{count}</span>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+          Games by year
+        </h2>
+        <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-xs">
+          <button
+            onClick={() => setView('finished')}
+            className={`px-2.5 py-1 cursor-pointer transition-colors ${
+              view === 'finished'
+                ? 'bg-zinc-700 text-zinc-100'
+                : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            Finished
+          </button>
+          <button
+            onClick={() => setView('released')}
+            className={`px-2.5 py-1 cursor-pointer transition-colors ${
+              view === 'released'
+                ? 'bg-zinc-700 text-zinc-100'
+                : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            Released
+          </button>
+        </div>
+      </div>
+
+      {data.length === 0 ? (
+        <p className="text-sm text-zinc-600">{empty}</p>
+      ) : (
+        <div className="flex-1 flex items-end gap-1.5">
+          {data.map(({ year, count }) => (
+            <div key={year} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+              <span className="text-xs font-semibold text-zinc-300">{count}</span>
+              <div
+                className={`w-full rounded-sm transition-colors ${
+                  view === 'finished'
+                    ? 'bg-emerald-500/80 hover:bg-emerald-500'
+                    : 'bg-sky-500/80 hover:bg-sky-500'
+                }`}
+                style={{ height: `${Math.max((count / max) * BAR_MAX_HEIGHT, 4)}px` }}
+              />
+              <span className="text-[10px] text-zinc-600">
+                {data.length <= 10 || parseInt(year) % 5 === 0 ? year : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RatingHistogram({ stats }: { stats: Stats }) {
+  const totalRated = stats.ratingDistribution.reduce((sum, b) => sum + b.count, 0);
+  if (totalRated < 3) return null;
+
+  const max = Math.max(...stats.ratingDistribution.map((b) => b.count), 1);
+  const BAR_MAX_HEIGHT = 80;
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <SectionTitle>Rating distribution</SectionTitle>
+      <div className="flex items-end gap-2">
+        {stats.ratingDistribution.map(({ rating, count }) => (
+          <div key={rating} className="flex-1 flex flex-col items-center gap-1.5">
+            <span
+              className={`text-xs font-semibold ${count > 0 ? 'text-zinc-300' : 'text-transparent'}`}
+            >
+              {count}
+            </span>
             <div
-              className="w-full bg-emerald-500/80 hover:bg-emerald-500 rounded-sm transition-colors"
-              style={{ height: `${Math.max((count / max) * BAR_MAX_HEIGHT, 4)}px` }}
+              className="w-full bg-yellow-500/70 hover:bg-yellow-500 rounded-sm transition-colors"
+              style={{
+                height: `${Math.max((count / max) * BAR_MAX_HEIGHT, count > 0 ? 4 : 2)}px`,
+              }}
             />
-            <span className="text-xs text-zinc-600">{year}</span>
+            <span className="text-xs text-zinc-500">{rating}</span>
           </div>
         ))}
       </div>
@@ -316,7 +395,7 @@ export default function StatsPage() {
           ) : (
             <div className="space-y-6">
               {/* Summary cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard
                   icon={Gamepad2}
                   label="Total games"
@@ -335,6 +414,12 @@ export default function StatsPage() {
                   label="Hours played"
                   value={`${stats.totalPlaytimeHours.toLocaleString()}h`}
                   sub="across all games"
+                />
+                <StatCard
+                  icon={CalendarDays}
+                  label="Days played"
+                  value={`${stats.totalPlaytimeDays}d`}
+                  sub="of your life"
                 />
                 <StatCard
                   icon={Inbox}
@@ -361,11 +446,14 @@ export default function StatsPage() {
               {/* Tags + Year chart */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <TopTags stats={stats} />
-                <FinishedByYear stats={stats} />
+                <YearChart stats={stats} />
               </div>
 
               {/* Tag completion */}
               <TagCompletion stats={stats} />
+
+              {/* Rating distribution */}
+              <RatingHistogram stats={stats} />
 
               {/* Most played unfinished */}
               {stats.mostPlayedUnfinished.length > 0 && (
