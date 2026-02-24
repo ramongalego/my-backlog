@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Game, GameWithImage, SyncProgress } from '@/types/games';
+import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
 interface StatusModal {
   action: 'finished' | 'dropped';
@@ -33,8 +34,8 @@ interface UseGameLibraryReturn {
   isRefreshing: boolean;
   isRefreshDisabled: boolean;
   isStatusLoading: boolean;
-  celebrationMessage: string | null;
   statusModal: StatusModal | null;
+  gameSummary: GameSummaryData | null;
 
   // Actions
   handlePickGame: (game: GameWithImage) => Promise<void>;
@@ -52,6 +53,7 @@ interface UseGameLibraryReturn {
     rating: number | null,
   ) => Promise<void>;
   handleCloseStatusModal: () => void;
+  handleCloseSummary: () => void;
 }
 
 export function useGameLibrary(): UseGameLibraryReturn {
@@ -75,8 +77,8 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const [highlyRatedGamesPool, setHighlyRatedGamesPool] = useState<GameWithImage[]>([]);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<GameWithImage | null>(null);
   const [isStatusLoading, setIsStatusLoading] = useState(false);
-  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
+  const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
   const syncingRef = useRef(false);
 
   // Display only first 10 games from each pool
@@ -196,12 +198,46 @@ export function useGameLibrary(): UseGameLibraryReturn {
             rating,
           }),
         });
-        setCurrentlyPlaying(null);
         if (status === 'finished') {
+          const supabase = createClient();
+          const {
+            data: { user: currentUser },
+          } = await supabase.auth.getUser();
+          let finishedCount: number | undefined;
+          let totalGames: number | undefined;
+          if (currentUser) {
+            const [{ count: fin }, { count: tot }] = await Promise.all([
+              supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', currentUser.id)
+                .eq('type', 'game')
+                .eq('status', 'finished'),
+              supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', currentUser.id)
+                .eq('type', 'game')
+                .neq('status', 'hidden'),
+            ]);
+            finishedCount = fin ?? undefined;
+            totalGames = tot ?? undefined;
+          }
+          setGameSummary({
+            gameName: finishedGameName,
+            headerImage: currentlyPlaying.header_image,
+            startedAt: currentlyPlaying.started_at ?? null,
+            finishedAt: date,
+            playtimeMinutes: currentlyPlaying.playtime_forever,
+            mainStoryHours:
+              currentlyPlaying.main_story_hours > 0 ? currentlyPlaying.main_story_hours : null,
+            rating,
+            finishedCount,
+            totalGames,
+          });
           celebrateGameFinished();
-          setCelebrationMessage(finishedGameName);
-          setTimeout(() => setCelebrationMessage(null), 3000);
         }
+        setCurrentlyPlaying(null);
       } catch (err) {
         console.error(`Failed to ${status} game:`, err);
       }
@@ -211,6 +247,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
   );
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
+  const handleCloseSummary = useCallback(() => setGameSummary(null), []);
 
   const handleCancelGame = useCallback(async () => {
     if (!currentlyPlaying) return;
@@ -343,7 +380,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: playingGame } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours, playtime_forever')
+            .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at')
             .eq('user_id', user.id)
             .eq('status', 'playing')
             .single();
@@ -446,8 +483,8 @@ export function useGameLibrary(): UseGameLibraryReturn {
     isRefreshing,
     isRefreshDisabled,
     isStatusLoading,
-    celebrationMessage,
     statusModal,
+    gameSummary,
     handlePickGame,
     handleFinishGame,
     handleDropGame,
@@ -458,5 +495,6 @@ export function useGameLibrary(): UseGameLibraryReturn {
     handleConnectSteam,
     handleConfirmStatusChange,
     handleCloseStatusModal,
+    handleCloseSummary,
   };
 }

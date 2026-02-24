@@ -17,6 +17,7 @@ export interface GameWithImage {
   header_image: string | null;
   main_story_hours: number;
   playtime_forever: number;
+  started_at?: string | null;
 }
 
 export interface SyncProgress {

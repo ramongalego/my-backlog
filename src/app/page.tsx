@@ -11,12 +11,12 @@ import { SyncProgress } from '@/components/SyncProgress';
 import { LandingPage } from '@/components/LandingPage';
 import { SuggestionModal } from '@/components/suggest';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
+import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import {
   LoadingState,
   CarouselsLoadingState,
   StatusLoadingState,
 } from '@/components/home/HomeLoadingStates';
-import { CelebrationMessage } from '@/components/home/CelebrationMessage';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
 import { RefreshCw, Dices } from 'lucide-react';
 
@@ -41,7 +41,6 @@ function HomeContent() {
     isRefreshing,
     isRefreshDisabled,
     isStatusLoading,
-    celebrationMessage,
     handlePickGame,
     handleFinishGame,
     handleDropGame,
@@ -51,8 +50,10 @@ function HomeContent() {
     handleRandomPick,
     handleConnectSteam,
     statusModal,
+    gameSummary,
     handleConfirmStatusChange,
     handleCloseStatusModal,
+    handleCloseSummary,
   } = useGameLibrary();
 
   useEffect(() => {
@@ -138,8 +139,6 @@ function HomeContent() {
               />
             ) : isStatusLoading ? (
               <StatusLoadingState />
-            ) : celebrationMessage ? (
-              <CelebrationMessage gameName={celebrationMessage} />
             ) : (
               <div className="flex items-center gap-2">
                 <Button
@@ -208,6 +207,10 @@ function HomeContent() {
         onPick={handleSuggestionPick}
       />
 
+      {gameSummary && (
+        <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
+      )}
+
       {statusModal && currentlyPlaying && (
         <GameDetailModal
           isOpen={true}
@@ -216,6 +219,7 @@ function HomeContent() {
           gameName={currentlyPlaying.name}
           headerImage={currentlyPlaying.header_image}
           initialStatus={statusModal.action}
+          initialDate={new Date().toISOString().slice(0, 10)}
         />
       )}
     </div>
