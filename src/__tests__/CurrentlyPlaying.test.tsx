@@ -47,12 +47,12 @@ describe('CurrentlyPlaying', () => {
       expect(screen.getByAltText('Dota 2')).toHaveAttribute('src', 'https://example.com/dota2.jpg');
     });
 
-    it('should render Finish, Drop, and Cancel buttons', () => {
+    it('should render Finish, Drop, and Move to Backlog buttons', () => {
       render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
 
       expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Drop' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Move to Backlog' })).toBeInTheDocument();
     });
 
     it('should call onFinish when Finish is clicked', () => {
@@ -71,10 +71,10 @@ describe('CurrentlyPlaying', () => {
       expect(defaultCallbacks.onDrop).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onCancel when Cancel is clicked', () => {
+    it('should call onCancel when Move to Backlog is clicked', () => {
       render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Move to Backlog' }));
 
       expect(defaultCallbacks.onCancel).toHaveBeenCalledTimes(1);
     });
@@ -84,7 +84,7 @@ describe('CurrentlyPlaying', () => {
 
       expect(screen.getByRole('button', { name: 'Finish' })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Drop' })).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Move to Backlog' })).toBeDisabled();
     });
   });
 

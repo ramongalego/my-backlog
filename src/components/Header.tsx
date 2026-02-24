@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -18,6 +19,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
@@ -78,7 +80,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
             {user && !hideNavLinks && (
               <Link
                 href="/games"
-                className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/games' ? 'text-zinc-100' : 'text-zinc-400'}`}
               >
                 Games
               </Link>
@@ -86,7 +88,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
             {user && !hideNavLinks && (
               <Link
                 href="/diary"
-                className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/diary' ? 'text-zinc-100' : 'text-zinc-400'}`}
               >
                 Diary
               </Link>
@@ -94,7 +96,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
             {user && !hideNavLinks && (
               <Link
                 href="/stats"
-                className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/stats' ? 'text-zinc-100' : 'text-zinc-400'}`}
               >
                 Stats
               </Link>

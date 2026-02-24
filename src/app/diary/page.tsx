@@ -152,7 +152,9 @@ export default function DiaryPage() {
 
   // Split into dated and undated
   const datedEntries = entries.filter((e) => e.finished_at);
-  const undatedEntries = entries.filter((e) => !e.finished_at);
+  const undatedEntries = entries
+    .filter((e) => !e.finished_at)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Build year → month hierarchy
   const yearGroups: YearGroup[] = [];

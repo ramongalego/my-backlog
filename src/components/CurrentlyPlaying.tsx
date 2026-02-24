@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface Game {
@@ -113,9 +113,10 @@ export function CurrentlyPlaying({
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="mt-3 w-full text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
+            className="mt-5 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
           >
-            Cancel
+            <Archive className="w-3.5 h-3.5" />
+            Move to Backlog
           </button>
         </div>
       </div>
