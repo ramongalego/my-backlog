@@ -4,16 +4,19 @@ export function LoadingState() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
       <Header />
-      <main className="pt-16 flex-1 flex items-center justify-center">
-        <div className="space-y-6 text-center">
-          <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg">
-            <div className="w-8 h-8 bg-zinc-700 rounded animate-pulse" />
-            <div className="w-24 h-4 bg-zinc-700 rounded animate-pulse" />
-            <span className="text-zinc-700">·</span>
-            <div className="w-16 h-4 bg-zinc-700 rounded animate-pulse" />
+      <main className="pt-16 flex-1">
+        <section className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex flex-col items-center text-center space-y-6">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-zinc-800 rounded-lg">
+              <div className="w-8 h-8 bg-zinc-700 rounded animate-pulse" />
+              <div className="w-24 h-4 bg-zinc-700 rounded animate-pulse" />
+              <span className="text-zinc-700">·</span>
+              <div className="w-16 h-4 bg-zinc-700 rounded animate-pulse" />
+            </div>
+            <div className="h-12 w-40 bg-zinc-800 rounded-lg animate-pulse" />
           </div>
-          <div className="h-12 w-40 mx-auto bg-zinc-800 rounded-lg animate-pulse" />
-        </div>
+        </section>
+        <CarouselsLoadingState />
       </main>
     </div>
   );
