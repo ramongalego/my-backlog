@@ -89,8 +89,8 @@ export function GameDetailModal({
   const today = new Date().toISOString().slice(0, 10);
 
   const [status, setStatus] = useState<GameStatus>(initialStatus);
-  const [hasDate, setHasDate] = useState(true);
-  const [date, setDate] = useState(initialDate ?? today);
+  const [hasDate, setHasDate] = useState(!!initialDate);
+  const [date, setDate] = useState(initialDate || today);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
@@ -187,7 +187,9 @@ export function GameDetailModal({
               type="checkbox"
               checked={hasDate}
               onChange={(e) => {
-                setHasDate(e.target.checked);
+                const checked = e.target.checked;
+                setHasDate(checked);
+                if (checked && !date) setDate(today);
                 setCalendarOpen(false);
               }}
               className="w-4 h-4 rounded accent-violet-500 cursor-pointer shrink-0"

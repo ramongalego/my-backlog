@@ -160,8 +160,8 @@ export function useGamesPage(): UseGamesPageReturn {
                   status,
                   notes,
                   rating,
-                  ...(status === 'finished' ? { finished_at: date } : {}),
-                  ...(status === 'dropped' ? { dropped_at: date } : {}),
+                  ...(status === 'finished' ? { finished_at: date || null } : {}),
+                  ...(status === 'dropped' ? { dropped_at: date || null } : {}),
                 }
               : g,
           ),
