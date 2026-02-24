@@ -138,6 +138,7 @@ export default function GamesPage() {
           initialDate={statusModal.initialDate}
           initialNotes={statusModal.initialNotes}
           initialRating={statusModal.initialRating}
+          disablePlaying={counts.playing > 0 && statusModal.initialStatus !== 'playing'}
         />
       )}
     </div>

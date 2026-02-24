@@ -69,6 +69,7 @@ describe('useGamesPage filtering logic', () => {
     createGame({ app_id: 3, name: 'Mario Kart', status: 'backlog' }),
     createGame({ app_id: 4, name: 'Dark Souls', status: 'dropped' }),
     createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
+    createGame({ app_id: 6, name: 'Elden Ring', status: 'playing' }),
   ];
 
   describe('search filtering', () => {
@@ -96,7 +97,7 @@ describe('useGamesPage filtering logic', () => {
     it('should return all non-hidden games when search is empty', () => {
       const result = filterGames(sampleGames, 'all', '');
 
-      expect(result).toHaveLength(4); // excludes hidden
+      expect(result).toHaveLength(5); // excludes hidden
     });
 
     it('should return empty array when no matches', () => {
@@ -245,10 +246,17 @@ describe('useGamesPage filtering logic', () => {
       expect(result[0].name).toBe('Dark Souls');
     });
 
+    it('should filter by playing status', () => {
+      const result = filterGames(sampleGames, 'playing', '');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Elden Ring');
+    });
+
     it('should show all non-hidden games with "all" filter', () => {
       const result = filterGames(sampleGames, 'all', '');
 
-      expect(result).toHaveLength(4);
+      expect(result).toHaveLength(5);
       expect(result.map((g) => g.name)).not.toContain('Hidden Gem');
     });
   });
@@ -360,7 +368,7 @@ describe('useGamesPage filtering logic', () => {
 
 // Count computation extracted for independent testing
 function computeCounts(games: GameItem[]) {
-  const result = { all: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
+  const result = { all: 0, playing: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
   for (const game of games) {
     const s = game.status;
     if (s === 'hidden') {
@@ -371,6 +379,9 @@ function computeCounts(games: GameItem[]) {
     } else if (s === 'dropped') {
       result.all++;
       result.dropped++;
+    } else if (s === 'playing') {
+      result.all++;
+      result.playing++;
     } else {
       result.all++;
       result.backlog++;
@@ -397,11 +408,12 @@ describe('useGamesPage count computation', () => {
     createGame({ app_id: 4, name: 'Dark Souls', status: 'dropped' }),
     createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
     createGame({ app_id: 6, name: 'New Game', status: null }),
+    createGame({ app_id: 7, name: 'Currently Playing', status: 'playing' }),
   ];
 
   it('should exclude hidden games from all count', () => {
     const counts = computeCounts(sampleGames);
-    expect(counts.all).toBe(5); // 6 games minus 1 hidden
+    expect(counts.all).toBe(6); // 7 games minus 1 hidden
     expect(counts.hidden).toBe(1);
   });
 
@@ -414,6 +426,7 @@ describe('useGamesPage count computation', () => {
     const counts = computeCounts(sampleGames);
     expect(counts.finished).toBe(1);
     expect(counts.dropped).toBe(1);
+    expect(counts.playing).toBe(1);
   });
 
   it('should return dynamic counts when search query is active', () => {
@@ -423,16 +436,18 @@ describe('useGamesPage count computation', () => {
     expect(counts.backlog).toBe(1);
     expect(counts.finished).toBe(0);
     expect(counts.dropped).toBe(0);
+    expect(counts.playing).toBe(0);
     expect(counts.hidden).toBe(0);
   });
 
   it('should return static counts when search is cleared', () => {
     const filtered = searchFilter(sampleGames, '');
     const counts = computeCounts(filtered);
-    expect(counts.all).toBe(5);
+    expect(counts.all).toBe(6);
     expect(counts.backlog).toBe(3);
     expect(counts.finished).toBe(1);
     expect(counts.dropped).toBe(1);
+    expect(counts.playing).toBe(1);
     expect(counts.hidden).toBe(1);
   });
 
@@ -450,6 +465,7 @@ describe('useGamesPage count computation', () => {
     expect(counts.backlog).toBe(0);
     expect(counts.finished).toBe(0);
     expect(counts.dropped).toBe(0);
+    expect(counts.playing).toBe(0);
     expect(counts.hidden).toBe(0);
   });
 });

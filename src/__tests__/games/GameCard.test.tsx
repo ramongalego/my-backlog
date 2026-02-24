@@ -113,6 +113,12 @@ describe('GameCard', () => {
 
       expect(screen.getByText('Backlog')).toBeInTheDocument();
     });
+
+    it('should show Playing badge for playing games', () => {
+      render(<GameCard game={createGame({ status: 'playing' })} onOpenDetail={mockOnOpenDetail} />);
+
+      expect(screen.getByText('Playing')).toBeInTheDocument();
+    });
   });
 
   describe('image button interaction', () => {

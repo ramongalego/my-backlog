@@ -20,11 +20,12 @@ export interface GameItem {
   tags: string[] | null;
 }
 
-export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'hidden';
+export type GameFilter = 'all' | 'playing' | 'backlog' | 'finished' | 'dropped' | 'hidden';
 export type GameSort = 'playtime' | 'score' | 'recent';
 
 export interface FilterCounts {
   all: number;
+  playing: number;
   backlog: number;
   finished: number;
   dropped: number;
@@ -35,7 +36,7 @@ interface GamesPageStatusModal {
   appId: number;
   gameName: string;
   headerImage: string | null;
-  initialStatus: 'backlog' | 'finished' | 'dropped' | 'hidden';
+  initialStatus: 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';
   initialDate: string | null;
   initialNotes: string | null;
   initialRating: number | null;
@@ -112,7 +113,12 @@ export function useGamesPage(): UseGamesPageReturn {
       const game = games.find((g) => g.app_id === appId);
       if (!game) return;
 
-      const status = (game.status ?? 'backlog') as 'backlog' | 'finished' | 'dropped' | 'hidden';
+      const status = (game.status ?? 'backlog') as
+        | 'backlog'
+        | 'playing'
+        | 'finished'
+        | 'dropped'
+        | 'hidden';
       const initialDate =
         status === 'finished'
           ? (game.finished_at?.slice(0, 10) ?? null)
@@ -223,7 +229,7 @@ export function useGamesPage(): UseGamesPageReturn {
 
   // Single pass over search-filtered games to compute all counts at once
   const counts = useMemo((): FilterCounts => {
-    const result = { all: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
+    const result = { all: 0, playing: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
     for (const game of searchFilteredGames) {
       const s = game.status;
       if (s === 'hidden') {
@@ -234,6 +240,9 @@ export function useGamesPage(): UseGamesPageReturn {
       } else if (s === 'dropped') {
         result.all++;
         result.dropped++;
+      } else if (s === 'playing') {
+        result.all++;
+        result.playing++;
       } else {
         // null or 'backlog'
         result.all++;

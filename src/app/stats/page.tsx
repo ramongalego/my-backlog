@@ -394,6 +394,7 @@ export default function StatsPage() {
           gameName={editModal.gameName}
           headerImage={editModal.headerImage}
           initialStatus="backlog"
+          disablePlaying={(stats?.playing ?? 0) > 0}
         />
       )}
     </div>

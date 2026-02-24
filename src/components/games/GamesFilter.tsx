@@ -8,12 +8,14 @@ interface GamesFilterProps {
   onFilterChange: (filter: GameFilter) => void;
 }
 
-const FILTERS: GameFilter[] = ['all', 'backlog', 'finished', 'dropped', 'hidden'];
+const FILTERS: GameFilter[] = ['all', 'playing', 'backlog', 'finished', 'dropped', 'hidden'];
 
 export function GamesFilter({ filter, counts, onFilterChange }: GamesFilterProps) {
+  const visibleFilters = counts.playing > 0 ? FILTERS : FILTERS.filter((f) => f !== 'playing');
+
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 -mb-2">
-      {FILTERS.map((f) => (
+      {visibleFilters.map((f) => (
         <button
           key={f}
           onClick={() => onFilterChange(f)}

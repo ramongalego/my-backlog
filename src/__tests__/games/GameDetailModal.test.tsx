@@ -53,10 +53,11 @@ describe('GameDetailModal', () => {
       expect(screen.queryByAltText('Dark Souls')).not.toBeInTheDocument();
     });
 
-    it('should render all four status options', () => {
+    it('should render all five status options', () => {
       render(<GameDetailModal {...defaultProps} />);
 
       expect(screen.getByRole('button', { name: /backlog/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /finished/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /dropped/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /hidden/i })).toBeInTheDocument();
@@ -343,66 +344,48 @@ describe('GameDetailModal', () => {
     });
   });
 
-  describe('pick this game', () => {
-    it('should show start playing button only for backlog status', () => {
+  describe('playing status pill', () => {
+    it('should render the playing pill', () => {
+      render(<GameDetailModal {...defaultProps} />);
+
+      expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
+    });
+
+    it('should select playing when the pill is clicked', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
-      expect(screen.getByRole('button', { name: /start playing/i })).toBeInTheDocument();
-    });
-
-    it('should not show start playing button for finished status', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
-
-      expect(screen.queryByRole('button', { name: /start playing/i })).not.toBeInTheDocument();
-    });
-
-    it('should not show start playing button for dropped status', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="dropped" />);
-
-      expect(screen.queryByRole('button', { name: /start playing/i })).not.toBeInTheDocument();
-    });
-
-    it('should not show start playing button for hidden status', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="hidden" />);
-
-      expect(screen.queryByRole('button', { name: /start playing/i })).not.toBeInTheDocument();
-    });
-
-    it('should keep same label when toggled active', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
-
-      fireEvent.click(screen.getByRole('button', { name: /start playing/i }));
-
-      expect(screen.getByRole('button', { name: /start playing/i })).toBeInTheDocument();
-    });
-
-    it('should call onConfirm with playing status when active and saved', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
-
-      fireEvent.click(screen.getByRole('button', { name: /start playing/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^playing$/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
     });
 
-    it('should reset when switching away from backlog', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+    it('should pre-select playing when initialStatus is playing', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="playing" />);
 
-      fireEvent.click(screen.getByRole('button', { name: /start playing/i }));
-      fireEvent.click(screen.getByRole('button', { name: /^finished$/i }));
-      fireEvent.click(screen.getByRole('button', { name: /^backlog$/i }));
-
-      // Should not pass playing after reset
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
     });
 
-    it('should not pass playing status when not active', () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+    it('should not show date field for playing status', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="playing" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      expect(screen.queryByTestId('detail-date')).not.toBeInTheDocument();
+    });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
+    describe('disablePlaying', () => {
+      it('should hide the playing pill when disablePlaying is true', () => {
+        render(<GameDetailModal {...defaultProps} initialStatus="backlog" disablePlaying />);
+
+        expect(screen.queryByRole('button', { name: /^playing$/i })).not.toBeInTheDocument();
+      });
+
+      it('should show the playing pill when disablePlaying is false', () => {
+        render(<GameDetailModal {...defaultProps} />);
+
+        expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
+      });
     });
   });
 

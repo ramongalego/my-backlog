@@ -6,7 +6,7 @@ import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays } from 'lucide-
 import { DayPicker } from 'react-day-picker';
 import { Modal } from '@/components/ui/Modal';
 
-type GameStatus = 'backlog' | 'finished' | 'dropped' | 'hidden';
+type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';
 
 interface GameDetailModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ interface GameDetailModalProps {
   initialDate?: string | null;
   initialNotes?: string | null;
   initialRating?: number | null;
+  disablePlaying?: boolean;
 }
 
 const STATUS_OPTIONS: {
@@ -31,6 +32,12 @@ const STATUS_OPTIONS: {
     label: 'Backlog',
     icon: <Archive className="w-3.5 h-3.5" />,
     activeClass: 'bg-violet-600 text-white border-violet-600',
+  },
+  {
+    value: 'playing',
+    label: 'Playing',
+    icon: <Play className="w-3.5 h-3.5" />,
+    activeClass: 'bg-sky-600 text-white border-sky-600',
   },
   {
     value: 'finished',
@@ -85,6 +92,7 @@ export function GameDetailModal({
   initialDate,
   initialNotes,
   initialRating,
+  disablePlaying = false,
 }: GameDetailModalProps) {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -94,7 +102,6 @@ export function GameDetailModal({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
-  const [isPicked, setIsPicked] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
   const showDateField = status === 'finished' || status === 'dropped';
@@ -110,14 +117,9 @@ export function GameDetailModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [calendarOpen]);
 
-  function handleStatusChange(next: GameStatus) {
-    setStatus(next);
-    if (next !== 'backlog') setIsPicked(false);
-  }
-
   function handleConfirm() {
     const parsedRating = rating !== '' ? parseInt(rating, 10) : null;
-    onConfirm(isPicked ? 'playing' : status, hasDate ? date : '', notes, parsedRating);
+    onConfirm(status, hasDate ? date : '', notes, parsedRating);
   }
 
   return (
@@ -147,36 +149,24 @@ export function GameDetailModal({
         {/* Status pills */}
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2.5">Status</p>
-          <div className="grid grid-cols-4 gap-2">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleStatusChange(opt.value)}
-                className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
-                  status === opt.value
-                    ? opt.activeClass
-                    : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            ))}
+          <div className={`grid gap-2 ${disablePlaying ? 'grid-cols-4' : 'grid-cols-5'}`}>
+            {STATUS_OPTIONS.filter((opt) => !(opt.value === 'playing' && disablePlaying)).map(
+              (opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setStatus(opt.value)}
+                  className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
+                    status === opt.value
+                      ? opt.activeClass
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
+                  }`}
+                >
+                  {opt.icon}
+                  {opt.label}
+                </button>
+              ),
+            )}
           </div>
-
-          {status === 'backlog' && (
-            <button
-              onClick={() => setIsPicked((prev) => !prev)}
-              className={`cursor-pointer mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                isPicked
-                  ? 'bg-violet-600 border-violet-600 text-white'
-                  : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-              }`}
-            >
-              <Play className="w-3.5 h-3.5" />
-              Start Playing
-            </button>
-          )}
         </div>
 
         {/* Date — only for finished/dropped */}

@@ -5,6 +5,7 @@ import type { FilterCounts } from '@/hooks/useGamesPage';
 describe('GamesFilter', () => {
   const mockCounts: FilterCounts = {
     all: 100,
+    playing: 3,
     backlog: 50,
     finished: 30,
     dropped: 15,
@@ -18,20 +19,31 @@ describe('GamesFilter', () => {
   });
 
   describe('rendering', () => {
-    it('should render all filter buttons', () => {
+    it('should render all filter buttons including playing when count > 0', () => {
       render(<GamesFilter filter="all" counts={mockCounts} onFilterChange={mockOnFilterChange} />);
 
       expect(screen.getByText(/All/)).toBeInTheDocument();
+      expect(screen.getByText(/Playing/)).toBeInTheDocument();
       expect(screen.getByText(/Backlog/)).toBeInTheDocument();
       expect(screen.getByText(/Finished/)).toBeInTheDocument();
       expect(screen.getByText(/Dropped/)).toBeInTheDocument();
       expect(screen.getByText(/Hidden/)).toBeInTheDocument();
     });
 
+    it('should hide the playing filter when count is 0', () => {
+      const noPlayingCounts: FilterCounts = { ...mockCounts, playing: 0 };
+      render(
+        <GamesFilter filter="all" counts={noPlayingCounts} onFilterChange={mockOnFilterChange} />,
+      );
+
+      expect(screen.queryByText(/Playing/)).not.toBeInTheDocument();
+    });
+
     it('should display counts for each filter', () => {
       render(<GamesFilter filter="all" counts={mockCounts} onFilterChange={mockOnFilterChange} />);
 
       expect(screen.getByText('100')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
       expect(screen.getByText('50')).toBeInTheDocument();
       expect(screen.getByText('30')).toBeInTheDocument();
       expect(screen.getByText('15')).toBeInTheDocument();
