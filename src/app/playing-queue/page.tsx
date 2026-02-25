@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Gamepad2, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
+import { Gamepad2, ListOrdered, X, Play, Check, GripVertical, Clock, Star } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -27,6 +27,35 @@ import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
 import type { GameWithImage, QueueItem } from '@/types/games';
+
+function GameMetaRow({
+  estimateHours,
+  steamReviewScore,
+  playedHours,
+}: {
+  estimateHours: number | null;
+  steamReviewScore: number | null | undefined;
+  playedHours: number | null;
+}) {
+  if (estimateHours === null && steamReviewScore == null && playedHours === null) return null;
+  return (
+    <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
+      {estimateHours !== null && (
+        <span className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {estimateHours}h
+        </span>
+      )}
+      {steamReviewScore != null && (
+        <span className="flex items-center gap-1">
+          <Star className="w-3 h-3" />
+          {(steamReviewScore / 10).toFixed(1)}
+        </span>
+      )}
+      {playedHours !== null && <span className="text-zinc-600">{playedHours}h played</span>}
+    </div>
+  );
+}
 
 function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
@@ -57,28 +86,29 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
 
   return (
     <div className="flex items-center gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-4">
-      <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 shrink-0">
-        <Play className="w-3.5 h-3.5 fill-emerald-400" />
+      <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
+        <Play className="w-3.5 h-3.5 fill-sky-400" />
       </span>
 
       <GameThumbnail src={game.header_image} alt={game.name} />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-zinc-100 truncate">{game.name}</p>
-        {(playedHours !== null || estimateHours !== null) && (
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {playedHours !== null ? `${playedHours}h played` : null}
-            {playedHours !== null && estimateHours !== null ? ' · ' : null}
-            {estimateHours !== null ? `~${estimateHours}h to beat` : null}
-          </p>
-        )}
-        {progressPct !== null && (
-          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-2 w-32">
-            <div
-              className="h-full bg-emerald-500 rounded-full"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
+        {progressPct !== null ? (
+          <>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {playedHours}h played · ~{estimateHours}h to beat
+            </p>
+            <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-2 w-32">
+              <div className="h-full bg-sky-500 rounded-full" style={{ width: `${progressPct}%` }} />
+            </div>
+          </>
+        ) : (
+          <GameMetaRow
+            estimateHours={estimateHours}
+            steamReviewScore={game.steam_review_score}
+            playedHours={playedHours}
+          />
         )}
       </div>
 
@@ -159,13 +189,11 @@ function QueueItemRow({
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-zinc-100 truncate">{item.game.name}</p>
-        {(playedHours !== null || estimateHours !== null) && (
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {playedHours !== null ? `${playedHours}h played` : null}
-            {playedHours !== null && estimateHours !== null ? ' · ' : null}
-            {estimateHours !== null ? `~${estimateHours}h to beat` : null}
-          </p>
-        )}
+        <GameMetaRow
+          estimateHours={estimateHours}
+          steamReviewScore={item.game.steam_review_score}
+          playedHours={playedHours}
+        />
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -173,7 +201,7 @@ function QueueItemRow({
           <button
             onClick={() => onPick(item.app_id)}
             disabled={isLoading}
-            className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+            className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
           >
             <Play className="w-3.5 h-3.5 fill-white" />
             Play

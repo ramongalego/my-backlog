@@ -51,7 +51,7 @@ const STATUS_OPTIONS: {
     value: 'dropped',
     label: 'Dropped',
     icon: <X className="w-3.5 h-3.5" />,
-    activeClass: 'bg-zinc-600 text-white border-zinc-500',
+    activeClass: 'bg-rose-600 text-white border-rose-600',
   },
   {
     value: 'hidden',

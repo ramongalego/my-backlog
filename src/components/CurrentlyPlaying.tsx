@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, Archive } from 'lucide-react';
+import { ExternalLink, Archive, Check, Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface Game {
@@ -10,6 +10,7 @@ interface Game {
   header_image: string | null;
   main_story_hours: number;
   playtime_forever: number;
+  steam_review_score?: number | null;
 }
 
 interface CurrentlyPlayingProps {
@@ -77,7 +78,7 @@ export function CurrentlyPlaying({
                     </div>
                     <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-violet-500 rounded-full"
+                        className="h-full bg-sky-500 rounded-full"
                         style={{
                           width: `${Math.min((game.playtime_forever / 60 / game.main_story_hours) * 100, 100)}%`,
                         }}
@@ -86,7 +87,18 @@ export function CurrentlyPlaying({
                   </>
                 )
               ) : (
-                <p className="text-zinc-500 text-sm">~{game.main_story_hours}h to beat</p>
+                <div className="flex items-center justify-center gap-3 text-sm text-zinc-500">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {game.main_story_hours}h
+                  </span>
+                  {game.steam_review_score != null && (
+                    <span className="flex items-center gap-1">
+                      <Star className="w-3 h-3" />
+                      {(game.steam_review_score / 10).toFixed(1)}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -97,12 +109,13 @@ export function CurrentlyPlaying({
               variant="success"
               className="flex-1 cursor-pointer"
             >
+              <Check className="w-3.5 h-3.5 mr-1.5" />
               Finish
             </Button>
             <Button
               onClick={onDrop}
               disabled={isLoading}
-              variant="secondary"
+              variant="danger"
               className="flex-1 cursor-pointer"
             >
               Drop

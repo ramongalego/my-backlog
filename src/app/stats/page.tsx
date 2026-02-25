@@ -81,7 +81,6 @@ function StatCard({
 function LibraryBreakdown({ stats }: { stats: Stats }) {
   const segments = [
     { label: 'Finished', pct: stats.finishedPct, count: stats.finished, color: 'bg-emerald-500' },
-    { label: 'Playing', pct: stats.playingPct, count: stats.playing, color: 'bg-violet-500' },
     { label: 'Dropped', pct: stats.droppedPct, count: stats.dropped, color: 'bg-rose-500' },
     { label: 'Backlog', pct: stats.backlogPct, count: stats.backlog, color: 'bg-zinc-600' },
   ].filter((s) => s.count > 0);
@@ -238,7 +237,7 @@ function RatingHistogram({ stats }: { stats: Stats }) {
               {count}
             </span>
             <div
-              className="w-full bg-yellow-500/70 hover:bg-yellow-500 rounded-sm transition-colors"
+              className="w-full bg-amber-500/70 hover:bg-amber-500 rounded-sm transition-colors"
               style={{
                 height: `${Math.max((count / max) * BAR_MAX_HEIGHT, count > 0 ? 4 : 2)}px`,
               }}
@@ -441,7 +440,7 @@ export default function StatsPage() {
                       ? `from ${stats.ratedCount} rated game${stats.ratedCount === 1 ? '' : 's'}`
                       : 'no ratings yet'
                   }
-                  accent="text-yellow-400"
+                  accent="text-amber-400"
                 />
               </div>
 
@@ -466,7 +465,7 @@ export default function StatsPage() {
                   <MostPlayedUnfinished stats={stats} onEdit={handleEdit} />
                   {stats.avgRating !== null && (
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col justify-center items-center text-center gap-2">
-                      <TrendingUp className="w-8 h-8 text-yellow-400 mb-2" />
+                      <TrendingUp className="w-8 h-8 text-amber-400 mb-2" />
                       <p className="text-zinc-500 text-sm">You rate finished games</p>
                       <p className="text-5xl font-bold text-zinc-100">{stats.avgRating}</p>
                       <p className="text-zinc-600 text-sm">out of 10 on average</p>

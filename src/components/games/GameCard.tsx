@@ -14,7 +14,7 @@ interface GameCardProps {
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   finished: { label: 'Finished', className: 'bg-emerald-500/90' },
   playing: { label: 'Playing', className: 'bg-sky-500/90' },
-  dropped: { label: 'Dropped', className: 'bg-zinc-600/90' },
+  dropped: { label: 'Dropped', className: 'bg-rose-500/90' },
   hidden: { label: 'Hidden', className: 'bg-zinc-700/90' },
   backlog: { label: 'Backlog', className: 'bg-violet-600/90' },
 };

@@ -311,7 +311,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
       if (currentUser) {
         const { data: playingGame } = await supabase
           .from('games')
-          .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at')
+          .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score')
           .eq('user_id', currentUser.id)
           .eq('status', 'playing')
           .single();
@@ -406,7 +406,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: playingGame } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at')
+            .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score')
             .eq('user_id', user.id)
             .eq('status', 'playing')
             .single();

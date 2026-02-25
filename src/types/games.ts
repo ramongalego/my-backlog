@@ -36,5 +36,6 @@ export interface QueueItem {
     header_image: string | null;
     playtime_forever: number;
     main_story_hours: number | null;
+    steam_review_score: number | null;
   };
 }
