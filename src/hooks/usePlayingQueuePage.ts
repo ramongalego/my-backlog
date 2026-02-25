@@ -70,7 +70,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       if (user) {
         const { data: playingGame } = await supabase
           .from('games')
-          .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score')
+          .select(
+            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+          )
           .eq('user_id', user.id)
           .eq('status', 'playing')
           .single();
@@ -96,7 +98,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       const [{ data: playingGame }, queueRes] = await Promise.all([
         supabase
           .from('games')
-          .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score')
+          .select(
+            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+          )
           .eq('user_id', user.id)
           .eq('status', 'playing')
           .single(),
@@ -154,6 +158,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           header_image: game.header_image,
           playtime_forever: game.playtime_forever,
           main_story_hours: game.main_story_hours,
+          steam_review_score: game.steam_review_score ?? null,
         },
       },
     ]);
@@ -295,7 +300,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         if (user) {
           const { data: game } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score')
+            .select(
+              'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+            )
             .eq('user_id', user.id)
             .eq('app_id', appId)
             .single();

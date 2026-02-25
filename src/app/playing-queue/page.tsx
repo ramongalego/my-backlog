@@ -100,7 +100,10 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
               {playedHours}h played · ~{estimateHours}h to beat
             </p>
             <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-2 w-32">
-              <div className="h-full bg-sky-500 rounded-full" style={{ width: `${progressPct}%` }} />
+              <div
+                className="h-full bg-sky-500 rounded-full"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
           </>
         ) : (

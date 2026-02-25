@@ -89,17 +89,17 @@ describe('CurrentlyPlaying', () => {
   });
 
   describe('playtime progress — under 1 hour played', () => {
-    it('should show only "Xh to beat" when playtime is 0', () => {
+    it('should show only time to beat when playtime is 0', () => {
       render(<CurrentlyPlaying game={createGame(0, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
+      expect(screen.getByText('20h')).toBeInTheDocument();
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
     });
 
-    it('should show only "Xh to beat" when playtime is under 60 minutes', () => {
+    it('should show only time to beat when playtime is under 60 minutes', () => {
       render(<CurrentlyPlaying game={createGame(59, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
+      expect(screen.getByText('20h')).toBeInTheDocument();
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
     });
 
@@ -131,7 +131,7 @@ describe('CurrentlyPlaying', () => {
       render(<CurrentlyPlaying game={createGame(600, 20)} {...defaultCallbacks} />);
 
       // 600 min = 10h played / 20h to beat = 50%
-      const bar = document.querySelector('.bg-violet-500');
+      const bar = document.querySelector('.bg-sky-500');
       expect(bar).toBeInTheDocument();
       expect(bar).toHaveStyle({ width: '50%' });
     });
@@ -163,7 +163,7 @@ describe('CurrentlyPlaying', () => {
     it('should not render a progress bar when over estimate', () => {
       render(<CurrentlyPlaying game={createGame(1800, 20)} {...defaultCallbacks} />);
 
-      expect(document.querySelector('.bg-violet-500')).not.toBeInTheDocument();
+      expect(document.querySelector('.bg-sky-500')).not.toBeInTheDocument();
     });
 
     it('should not show "Xh to beat" label when over estimate', () => {
