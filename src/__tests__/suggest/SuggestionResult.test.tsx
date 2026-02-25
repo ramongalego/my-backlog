@@ -48,7 +48,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    expect(screen.getByText('15h to beat')).toBeInTheDocument();
+    expect(screen.getByText('15h')).toBeInTheDocument();
   });
 
   it('should render genres (limited to 2)', () => {
@@ -79,7 +79,7 @@ describe('SuggestionResult', () => {
     expect(screen.getByText(/This game perfectly matches/)).toBeInTheDocument();
   });
 
-  it('should call onPick when Pick This button clicked', () => {
+  it('should call onPick when Start Playing button clicked', () => {
     render(
       <SuggestionResult
         suggestion={mockSuggestion}
@@ -90,7 +90,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Pick This'));
+    fireEvent.click(screen.getByText('Start Playing'));
 
     expect(mockOnPick).toHaveBeenCalledTimes(1);
   });
@@ -151,7 +151,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    expect(screen.getByText('Pick This').closest('button')).toBeDisabled();
+    expect(screen.getByText('Start Playing').closest('button')).toBeDisabled();
     expect(screen.getByText('Reroll').closest('button')).toBeDisabled();
   });
 
@@ -174,7 +174,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    expect(screen.queryByText(/to beat/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\dh$/)).not.toBeInTheDocument();
   });
 
   it('should handle game without genres', () => {

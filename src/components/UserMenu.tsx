@@ -92,9 +92,7 @@ export function UserMenu({
             <p className="text-sm font-medium text-zinc-100 truncate">
               {steamUsername ?? user.email}
             </p>
-            {gameCount != null && (
-              <p className="text-xs text-zinc-500 mt-0.5">{gameCount} games</p>
-            )}
+            {gameCount != null && <p className="text-xs text-zinc-500 mt-0.5">{gameCount} games</p>}
           </div>
 
           {onRefresh && (
