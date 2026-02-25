@@ -1,8 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ExternalLink, Gamepad2, Pencil, Trophy } from 'lucide-react';
+import { ExternalLink, Gamepad2, Pencil, Trophy, Star, MessageCircle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useDiary } from '@/hooks/useDiary';
@@ -35,26 +34,13 @@ function EmptyState() {
   );
 }
 
-function TruncatedNotes({ text }: { text: string }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [truncated, setTruncated] = useState(false);
-
-  useEffect(() => {
-    if (ref.current) {
-      setTruncated(ref.current.scrollWidth > ref.current.clientWidth);
-    }
-  }, [text]);
-
+function NotesTooltip({ text }: { text: string }) {
   return (
-    <div className="relative group/notes min-w-0">
-      <p ref={ref} className="text-sm text-zinc-500 italic truncate">
+    <div className="relative group/notes">
+      <MessageCircle className="w-4 h-4 text-zinc-600 hover:text-zinc-400 transition-colors cursor-default" />
+      <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 hidden group-hover/notes:block z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 w-72 whitespace-normal shadow-xl">
         {text}
-      </p>
-      {truncated && (
-        <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 hidden group-hover/notes:block z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 w-72 whitespace-normal shadow-xl">
-          {text}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -102,25 +88,33 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
           <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
         </a>
         {entry.rating != null && (
-          <p className="text-sm text-zinc-400 sm:hidden mt-0.5">{entry.rating}/10</p>
+          <p className="flex items-center gap-1 text-sm text-zinc-400 sm:hidden mt-0.5">
+            <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" />
+            {entry.rating}/10
+          </p>
         )}
       </div>
 
       {/* Rating — desktop only */}
-      <div className="hidden sm:block shrink-0 w-14 text-right">
-        {entry.rating != null && <span className="text-base text-zinc-300">{entry.rating}/10</span>}
+      <div className="hidden sm:block shrink-0 w-20 text-right">
+        {entry.rating != null && (
+          <span className="flex items-center justify-end gap-1 text-base text-zinc-300">
+            <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
+            {entry.rating}/10
+          </span>
+        )}
       </div>
 
-      {/* Notes — hidden on mobile, tooltip only when truncated */}
-      <div className="hidden sm:block min-w-0 flex-[1]">
-        {entry.notes && <TruncatedNotes text={entry.notes} />}
+      {/* Notes icon — desktop only */}
+      <div className="hidden sm:flex shrink-0 w-10 items-center justify-center">
+        {entry.notes && <NotesTooltip text={entry.notes} />}
       </div>
 
       {/* Edit button — always visible */}
       <button
         onClick={() => onEdit(entry.app_id)}
         aria-label={`Edit ${entry.name}`}
-        className="cursor-pointer shrink-0 p-1 text-zinc-500 hover:text-zinc-100 transition-colors"
+        className="cursor-pointer shrink-0 p-1.5 text-zinc-500 hover:text-zinc-100 transition-colors"
       >
         <Pencil className="w-4 h-4" />
       </button>

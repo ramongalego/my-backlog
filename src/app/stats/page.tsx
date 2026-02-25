@@ -82,7 +82,7 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
   const segments = [
     { label: 'Finished', pct: stats.finishedPct, count: stats.finished, color: 'bg-emerald-500' },
     { label: 'Dropped', pct: stats.droppedPct, count: stats.dropped, color: 'bg-rose-500' },
-    { label: 'Backlog', pct: stats.backlogPct, count: stats.backlog, color: 'bg-zinc-600' },
+    { label: 'Backlog', pct: stats.backlogPct, count: stats.backlog, color: 'bg-violet-600' },
   ].filter((s) => s.count > 0);
 
   return (
@@ -201,7 +201,7 @@ function YearChart({ stats }: { stats: Stats }) {
                 className={`w-full rounded-sm transition-colors ${
                   view === 'finished'
                     ? 'bg-emerald-500/80 hover:bg-emerald-500'
-                    : 'bg-sky-500/80 hover:bg-sky-500'
+                    : 'bg-violet-500/80 hover:bg-violet-500'
                 }`}
                 style={{ height: `${Math.max((count / max) * 65, 3)}%` }}
               />
@@ -325,7 +325,7 @@ function MostPlayedUnfinished({
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-amber-500/70 rounded-full"
+                        className="h-full bg-violet-500/70 rounded-full"
                         style={{ width: `${barPct}%` }}
                       />
                     </div>
@@ -405,6 +405,7 @@ export default function StatsPage() {
                   label="Total games"
                   value={stats.total}
                   sub="non-hidden"
+                  accent="text-zinc-400"
                 />
                 <StatCard
                   icon={Trophy}
@@ -418,18 +419,21 @@ export default function StatsPage() {
                   label="Hours played"
                   value={`${stats.totalPlaytimeHours.toLocaleString()}h`}
                   sub="across all games"
+                  accent="text-amber-400"
                 />
                 <StatCard
                   icon={CalendarDays}
                   label="Days played"
                   value={`${stats.totalPlaytimeDays}d`}
                   sub="of your life"
+                  accent="text-amber-400"
                 />
                 <StatCard
                   icon={Inbox}
                   label="Backlog hours"
                   value={`~${stats.estimatedBacklogHours.toLocaleString()}h`}
                   sub="estimated to beat"
+                  accent="text-violet-400"
                 />
                 <StatCard
                   icon={Star}
