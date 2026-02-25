@@ -46,6 +46,8 @@ export interface SuggestionResult {
     header_image: string | null;
     main_story_hours: number | null;
     genres: string[] | null;
+    tags: string[] | null;
+    steam_review_score: number | null;
   };
   reasoning: string;
 }

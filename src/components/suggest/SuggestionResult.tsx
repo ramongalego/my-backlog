@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Gamepad2, RotateCcw, Clock, Sparkles, ExternalLink } from 'lucide-react';
+import { Gamepad2, RotateCcw, Clock, Sparkles, ExternalLink, Star } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
 
@@ -24,78 +24,96 @@ export function SuggestionResult({
   const isOnCooldown = cooldownRemaining > 0;
 
   return (
-    <div className="flex flex-col items-center py-4">
-      <div className="flex items-center gap-2 mb-6">
-        <Sparkles className="w-5 h-5 text-amber-400" />
-        <p className="text-zinc-400 text-sm">AI Recommendation</p>
+    <>
+      {/* Hero — bleeds to modal edges, same pattern as GameSummaryModal */}
+      <div className="relative -mx-6 -mt-6 h-44 overflow-hidden rounded-t-2xl">
+        {game.header_image ? (
+          <Image
+            src={game.header_image}
+            alt={game.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 512px"
+          />
+        ) : (
+          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+            <Gamepad2 className="w-10 h-10 text-zinc-600" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
+        <h2 className="absolute bottom-3 left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
+          {game.name}
+        </h2>
       </div>
 
-      {/* Game card */}
-      <div className="w-full max-w-sm bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-        <div className="relative h-44">
-          {game.header_image ? (
-            <Image
-              src={game.header_image}
-              alt={game.name}
-              fill
-              className="object-cover"
-              sizes="384px"
-            />
-          ) : (
-            <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-              <Gamepad2 className="w-12 h-12 text-zinc-700" />
-            </div>
-          )}
+      <div className="space-y-4 mt-5">
+        {/* AI badge */}
+        <div className="flex items-center gap-2 text-sm">
+          <Sparkles className="w-4 h-4 text-violet-400 shrink-0" />
+          <p className="text-zinc-400 uppercase tracking-wider font-medium">Picked for you</p>
         </div>
 
-        <div className="p-5">
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
+          {game.main_story_hours && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {game.main_story_hours}h
+            </span>
+          )}
+          {game.steam_review_score && (
+            <span className="flex items-center gap-1">
+              <Star className="w-3.5 h-3.5" />
+              {(game.steam_review_score / 10).toFixed(1)}
+            </span>
+          )}
+          {game.genres && game.genres.length > 0 && (
+            <span>{game.genres.slice(0, 2).join(', ')}</span>
+          )}
           <a
             href={`https://store.steampowered.com/app/${game.app_id}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/title inline-flex items-center gap-1.5 text-xl font-semibold text-zinc-100 mb-1 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 ml-auto hover:text-zinc-300 transition-colors"
           >
-            {game.name}
-            <ExternalLink className="w-4 h-4 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity" />
+            Steam <ExternalLink className="w-3 h-3" />
           </a>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 mb-4">
-            {game.main_story_hours && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />~{game.main_story_hours}h to beat
+        {/* Tags */}
+        {game.tags && game.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {game.tags.slice(0, 6).map((tag) => (
+              <span key={tag} className="px-2 py-0.5 rounded-md bg-zinc-800 text-xs text-zinc-400">
+                {tag}
               </span>
-            )}
-            {game.genres && game.genres.length > 0 && (
-              <span>{game.genres.slice(0, 2).join(', ')}</span>
-            )}
+            ))}
           </div>
+        )}
 
-          {/* AI reasoning */}
-          <div className="bg-zinc-800/50 rounded-lg p-3 mb-5">
-            <p className="text-sm text-zinc-300 leading-relaxed">{reasoning}</p>
-          </div>
+        {/* AI reasoning */}
+        <p className="text-sm text-zinc-300 leading-relaxed">{reasoning}</p>
 
-          {/* Action buttons */}
-          <div className="flex gap-3">
-            <Button onClick={onPick} disabled={isLoading} className="flex-1 cursor-pointer">
-              Pick This
-            </Button>
-            <button
-              onClick={onReroll}
-              disabled={isOnCooldown || isLoading}
-              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-colors cursor-pointer ${
-                isOnCooldown || isLoading
-                  ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed'
-                  : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
-              }`}
-              title={isOnCooldown ? `Wait ${cooldownRemaining}s` : 'Get another suggestion'}
-            >
-              <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              {isOnCooldown ? `${cooldownRemaining}s` : 'Reroll'}
-            </button>
-          </div>
+        {/* Action buttons */}
+        <div className="flex gap-3 pt-1">
+          <Button onClick={onPick} disabled={isLoading} className="flex-1 cursor-pointer">
+            Start Playing
+          </Button>
+          <button
+            onClick={onReroll}
+            disabled={isOnCooldown || isLoading}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-colors cursor-pointer ${
+              isOnCooldown || isLoading
+                ? 'border-zinc-700 text-zinc-500 cursor-not-allowed'
+                : 'border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
+            }`}
+            title={isOnCooldown ? `Wait ${cooldownRemaining}s` : 'Get another suggestion'}
+          >
+            <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isOnCooldown ? `${cooldownRemaining}s` : 'Reroll'}
+          </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

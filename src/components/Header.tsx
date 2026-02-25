@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { UserMenu } from '@/components/UserMenu';
 import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
+
+const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
 
 interface HeaderProps {
   hideNavLinks?: boolean;
@@ -16,10 +19,29 @@ interface HeaderProps {
 export function Header({ hideNavLinks }: HeaderProps = {}) {
   const [user, setUser] = useState<User | null>(null);
   const [steamUsername, setSteamUsername] = useState<string | null>(null);
+  const [steamAvatar, setSteamAvatar] = useState<string | null>(null);
+  const [gameCount, setGameCount] = useState<number | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const last = localStorage.getItem('playtime_refresh_at');
+    return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
+  });
   const pathname = usePathname();
+
+  // Re-enable the refresh button when the cooldown expires, whether the cooldown
+  // was set in this session or carried over from a previous page load via localStorage.
+  useEffect(() => {
+    if (!isRefreshDisabled) return;
+    const last = localStorage.getItem('playtime_refresh_at');
+    if (!last) return;
+    const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - parseInt(last)));
+    const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
+    return () => clearTimeout(id);
+  }, [isRefreshDisabled]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -33,11 +55,21 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('steam_username')
+          .select('steam_username, steam_avatar')
           .eq('id', user.id)
           .single();
 
         setSteamUsername(profile?.steam_username ?? null);
+        setSteamAvatar(profile?.steam_avatar ?? null);
+
+        const { count } = await supabase
+          .from('games')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('type', 'game')
+          .neq('status', 'hidden');
+
+        setGameCount(count ?? 0);
       }
 
       setIsLoading(false);
@@ -51,17 +83,31 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setSteamUsername(null);
+        setSteamAvatar(null);
+        setGameCount(null);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.reload();
-  };
+  const handleRefreshLibrary = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/steam/refresh', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('playtime_refresh_at', Date.now().toString());
+        setIsRefreshDisabled(true);
+        if (data.newGames > 0 || data.updatedPlaytime > 0) {
+          window.location.reload();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refresh library:', err);
+    }
+    setIsRefreshing(false);
+  }, []);
 
   const openAuthModal = (mode: AuthMode) => {
     setAuthMode(mode);
@@ -113,21 +159,17 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
 
           <nav className="flex items-center gap-3">
             {isLoading ? (
-              <div className="w-20 h-9 bg-zinc-800 rounded-lg animate-pulse" />
+              <div className="w-10 h-10 bg-zinc-800 rounded animate-pulse" />
             ) : user ? (
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-zinc-400 hidden sm:block">
-                  {steamUsername ?? user.email}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="cursor-pointer"
-                >
-                  Sign Out
-                </Button>
-              </div>
+              <UserMenu
+                user={user}
+                steamUsername={steamUsername}
+                steamAvatar={steamAvatar}
+                gameCount={gameCount ?? undefined}
+                onRefresh={handleRefreshLibrary}
+                isRefreshing={isRefreshing}
+                isRefreshDisabled={isRefreshDisabled}
+              />
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => openAuthModal('login')}>

@@ -33,8 +33,6 @@ interface UseGameLibraryReturn {
   carouselsLoading: boolean;
 
   // UI state
-  isRefreshing: boolean;
-  isRefreshDisabled: boolean;
   isStatusLoading: boolean;
   statusModal: StatusModal | null;
   gameSummary: GameSummaryData | null;
@@ -55,7 +53,6 @@ interface UseGameLibraryReturn {
   ) => Promise<void>;
   handleCloseCarouselModal: () => void;
   handleCancelGame: () => Promise<void>;
-  handleRefreshLibrary: () => Promise<void>;
   handleRandomPick: () => Promise<void>;
   handleConnectSteam: () => void;
   handleConfirmStatusChange: (
@@ -77,13 +74,6 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const [syncProgress, setSyncProgress] = useState<SyncProgress>({ current: 0, total: 0 });
   const [syncingGames, setSyncingGames] = useState<Game[]>([]);
   const [carouselsLoading, setCarouselsLoading] = useState(true);
-  const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const last = localStorage.getItem('playtime_refresh_at');
-    return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
-  });
   const [shortGamesPool, setShortGamesPool] = useState<GameWithImage[]>([]);
   const [weekendGamesPool, setWeekendGamesPool] = useState<GameWithImage[]>([]);
   const [highlyRatedGamesPool, setHighlyRatedGamesPool] = useState<GameWithImage[]>([]);
@@ -308,23 +298,29 @@ export function useGameLibrary(): UseGameLibraryReturn {
       const res = await fetch('/api/steam/refresh', { method: 'POST' });
       if (!res.ok) return;
       const data = await res.json();
-      const now = Date.now();
-      localStorage.setItem('playtime_refresh_at', now.toString());
-      setIsRefreshDisabled(true);
-      setTimeout(() => setIsRefreshDisabled(false), REFRESH_COOLDOWN_MS);
+      localStorage.setItem('playtime_refresh_at', Date.now().toString());
       if (data.newGames > 0) {
         window.location.reload();
+        return;
+      }
+      // No new games — re-fetch currently playing to show updated playtime
+      const supabase = createClient();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: playingGame } = await supabase
+          .from('games')
+          .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at')
+          .eq('user_id', currentUser.id)
+          .eq('status', 'playing')
+          .single();
+        if (playingGame) setCurrentlyPlaying(playingGame);
       }
     } catch (err) {
       console.error('Failed to refresh library:', err);
     }
-  }, [REFRESH_COOLDOWN_MS]);
-
-  const handleRefreshLibrary = useCallback(async () => {
-    setIsRefreshing(true);
-    await runRefresh();
-    setIsRefreshing(false);
-  }, [runRefresh]);
+  }, []);
 
   const handleRandomPick = useCallback(async () => {
     const supabase = createClient();
@@ -518,8 +514,6 @@ export function useGameLibrary(): UseGameLibraryReturn {
     syncProgress,
     syncingGames,
     carouselsLoading,
-    isRefreshing,
-    isRefreshDisabled,
     isStatusLoading,
     statusModal,
     gameSummary,
@@ -533,7 +527,6 @@ export function useGameLibrary(): UseGameLibraryReturn {
     handleConfirmCarouselDetail,
     handleCloseCarouselModal,
     handleCancelGame,
-    handleRefreshLibrary,
     handleRandomPick,
     handleConnectSteam,
     handleConfirmStatusChange,

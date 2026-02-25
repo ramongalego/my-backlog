@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
 import { GameCarousel } from '@/components/GameCarousel';
@@ -18,7 +17,7 @@ import {
   StatusLoadingState,
 } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
-import { RefreshCw, Dices } from 'lucide-react';
+import { Dices } from 'lucide-react';
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -29,7 +28,6 @@ function HomeContent() {
     user,
     profile,
     isLoading,
-    gameCount,
     shortGames,
     weekendGames,
     highlyRatedGames,
@@ -38,15 +36,12 @@ function HomeContent() {
     syncProgress,
     syncingGames,
     carouselsLoading,
-    isRefreshing,
-    isRefreshDisabled,
     isStatusLoading,
     handlePickGame,
     handleFinishGame,
     handleDropGame,
     handleQueueGame,
     handleCancelGame,
-    handleRefreshLibrary,
     handleRandomPick,
     handleConnectSteam,
     statusModal,
@@ -103,34 +98,6 @@ function HomeContent() {
       <main className="pt-16 flex-1">
         <section className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col items-center text-center">
-            {/* Profile bar */}
-            <div className="inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-zinc-800 rounded-lg mb-8">
-              {profile?.steam_avatar && (
-                <Image
-                  src={profile.steam_avatar}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="rounded"
-                />
-              )}
-              <span className="text-zinc-100 text-sm sm:text-base">{profile?.steam_username}</span>
-              {!isSyncing && (
-                <>
-                  <span className="text-zinc-500 hidden sm:inline">·</span>
-                  <span className="text-zinc-400 text-sm sm:text-base">{gameCount} games</span>
-                </>
-              )}
-              <button
-                onClick={handleRefreshLibrary}
-                disabled={isRefreshing || isSyncing || isRefreshDisabled}
-                className="ml-1 p-1 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 enabled:cursor-pointer"
-                title="Update library for new games and playtime"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-
             {/* Main content area */}
             {isSyncing ? (
               <SyncProgress progress={syncProgress} games={syncingGames} />

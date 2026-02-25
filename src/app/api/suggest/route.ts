@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
   // Fetch full game details for response
   const { data: gameDetails } = await supabase
     .from('games')
-    .select('app_id, name, header_image, main_story_hours, genres')
+    .select('app_id, name, header_image, main_story_hours, genres, tags, steam_review_score')
     .eq('user_id', user.id)
     .eq('app_id', parsedResponse.app_id)
     .single();

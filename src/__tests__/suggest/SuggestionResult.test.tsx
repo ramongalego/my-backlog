@@ -10,6 +10,8 @@ describe('SuggestionResult', () => {
       header_image: 'https://example.com/image.jpg',
       main_story_hours: 15,
       genres: ['Action', 'Adventure', 'RPG'],
+      tags: ['Singleplayer', 'Story Rich', 'Open World'],
+      steam_review_score: 92,
     },
     reasoning: 'This game perfectly matches your mood for adventure and has great reviews.',
   };
@@ -46,7 +48,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    expect(screen.getByText('~15h to beat')).toBeInTheDocument();
+    expect(screen.getByText('15h to beat')).toBeInTheDocument();
   });
 
   it('should render genres (limited to 2)', () => {
