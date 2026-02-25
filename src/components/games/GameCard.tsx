@@ -2,8 +2,9 @@
 
 import { memo } from 'react';
 import Image from 'next/image';
-import { Clock, Gamepad2, Star, ExternalLink, Pencil } from 'lucide-react';
+import { Gamepad2, Pencil } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
+import { GameCardInfo } from './GameCardInfo';
 
 interface GameCardProps {
   game: GameItem;
@@ -65,38 +66,14 @@ export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardP
 
       {/* Card info */}
       <div className="p-4">
-        <a
-          href={`https://store.steampowered.com/app/${game.app_id}/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={game.name}
-          className="group/title flex items-center gap-1 text-zinc-200 font-medium hover:text-white transition-colors cursor-pointer"
-        >
-          <span className="truncate min-w-0">{game.name}</span>
-          <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
-        </a>
-        <div className="flex items-center gap-3 mt-2 text-xs text-zinc-500">
-          {game.main_story_hours && (
-            <span className="flex items-center gap-1" title="Time to beat">
-              <Clock className="w-3 h-3" />
-              {game.main_story_hours}h
-            </span>
-          )}
-          {game.steam_review_score && (
-            <span
-              className="flex items-center gap-1"
-              title={`Steam reviews${game.steam_review_count ? ` (${game.steam_review_count.toLocaleString()} reviews)` : ''}`}
-            >
-              <Star className="w-3 h-3" />
-              {(game.steam_review_score / 10).toFixed(1)}
-            </span>
-          )}
-          {game.playtime_forever > 0 && (
-            <span className="text-zinc-600" title="Played">
-              {Math.round(game.playtime_forever / 60)}h played
-            </span>
-          )}
-        </div>
+        <GameCardInfo
+          appId={game.app_id}
+          name={game.name}
+          mainStoryHours={game.main_story_hours}
+          steamReviewScore={game.steam_review_score}
+          steamReviewCount={game.steam_review_count}
+          playtimeMinutes={game.playtime_forever}
+        />
       </div>
     </div>
   );

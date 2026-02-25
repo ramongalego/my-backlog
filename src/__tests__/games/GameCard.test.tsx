@@ -85,6 +85,14 @@ describe('GameCard', () => {
 
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
     });
+
+    it('should not render playtime when less than one hour', () => {
+      render(
+        <GameCard game={createGame({ playtime_forever: 30 })} onOpenDetail={mockOnOpenDetail} />,
+      );
+
+      expect(screen.queryByText(/played/)).not.toBeInTheDocument();
+    });
   });
 
   describe('status badges', () => {

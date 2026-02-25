@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
 
 export interface GameItem {
   app_id: number;
@@ -96,7 +97,7 @@ export function useGamesPage(): UseGamesPageReturn {
         return;
       }
 
-      const [{ data }, queueRes] = await Promise.all([
+      const [{ data }, queuedIds] = await Promise.all([
         supabase
           .from('games')
           .select(
@@ -105,18 +106,11 @@ export function useGamesPage(): UseGamesPageReturn {
           .eq('user_id', user.id)
           .eq('type', 'game')
           .order('playtime_forever', { ascending: false }),
-        fetch('/api/queue'),
+        fetchQueuedAppIds(),
       ]);
 
       setGames(data || []);
-
-      if (queueRes.ok) {
-        const queueData = await queueRes.json();
-        const ids = new Set<number>(
-          (queueData.queue ?? []).map((q: { app_id: number }) => q.app_id),
-        );
-        setQueuedAppIds(ids);
-      }
+      setQueuedAppIds(queuedIds);
 
       setLoading(false);
     }
@@ -198,18 +192,8 @@ export function useGamesPage(): UseGamesPageReturn {
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
 
   const handleAddToQueue = useCallback(async (appId: number) => {
-    try {
-      const res = await fetch('/api/queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId }),
-      });
-      if (res.ok) {
-        setQueuedAppIds((prev) => new Set([...prev, appId]));
-      }
-    } catch (err) {
-      console.error('Failed to add to queue:', err);
-    }
+    const ok = await addToQueue(appId);
+    if (ok) setQueuedAppIds((prev) => new Set([...prev, appId]));
   }, []);
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames

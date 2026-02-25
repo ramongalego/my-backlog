@@ -172,14 +172,6 @@ export function GameSummaryModal({
             </span>
           </div>
         )}
-
-        {/* Action */}
-        <button
-          onClick={onClose}
-          className="cursor-pointer w-full py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          On to the next one
-        </button>
       </div>
     </Modal>
   );

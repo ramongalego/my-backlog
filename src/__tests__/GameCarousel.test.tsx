@@ -61,9 +61,9 @@ describe('GameCarousel', () => {
     it('should display hours to beat for each game', () => {
       render(<GameCarousel title="Test Games" games={mockGames} />);
 
-      expect(screen.getByText('~3h to beat')).toBeInTheDocument();
-      expect(screen.getByText('~4.5h to beat')).toBeInTheDocument();
-      expect(screen.getByText('~2h to beat')).toBeInTheDocument();
+      expect(screen.getByText('3h')).toBeInTheDocument();
+      expect(screen.getByText('4.5h')).toBeInTheDocument();
+      expect(screen.getByText('2h')).toBeInTheDocument();
     });
 
     it('should render nothing when games array is empty', () => {
@@ -117,62 +117,29 @@ describe('GameCarousel', () => {
   });
 
   describe('game actions', () => {
-    it('should show Pick button when onPickGame is provided', () => {
-      const mockPick = jest.fn();
-      render(<GameCarousel title="Test" games={mockGames} onPickGame={mockPick} />);
-
-      const pickButtons = screen.getAllByText('Pick');
-      expect(pickButtons.length).toBeGreaterThan(0);
-    });
-
-    it('should show Hide button when onHideGame is provided', () => {
-      const mockHide = jest.fn();
-      render(<GameCarousel title="Test" games={mockGames} onHideGame={mockHide} />);
-
-      const hideButtons = screen.getAllByText('Hide');
-      expect(hideButtons.length).toBeGreaterThan(0);
-    });
-
-    it('should not show action buttons when no handlers provided', () => {
+    it('should render an image button for each game', () => {
       render(<GameCarousel title="Test" games={mockGames} />);
 
-      expect(screen.queryByText('Pick')).not.toBeInTheDocument();
+      const buttons = screen.getAllByRole('button', { name: /open details for/i });
+      expect(buttons).toHaveLength(mockGames.length);
+    });
+
+    it('should call onOpenDetail with the correct game when image is clicked', () => {
+      const mockOpenDetail = jest.fn();
+      render(<GameCarousel title="Test" games={mockGames} onOpenDetail={mockOpenDetail} />);
+
+      const buttons = screen.getAllByRole('button', { name: /open details for/i });
+      fireEvent.click(buttons[1]);
+
+      expect(mockOpenDetail).toHaveBeenCalledWith(mockGames[1]);
+    });
+
+    it('should not show Play, Queue or Hide buttons', () => {
+      render(<GameCarousel title="Test" games={mockGames} />);
+
+      expect(screen.queryByText('Play')).not.toBeInTheDocument();
+      expect(screen.queryByText('Queue')).not.toBeInTheDocument();
       expect(screen.queryByText('Hide')).not.toBeInTheDocument();
-    });
-
-    it('should call onPickGame with correct game when Pick is clicked', () => {
-      const mockPick = jest.fn();
-      render(<GameCarousel title="Test" games={mockGames} onPickGame={mockPick} />);
-
-      const pickButtons = screen.getAllByText('Pick');
-      fireEvent.click(pickButtons[0]);
-
-      expect(mockPick).toHaveBeenCalledWith(mockGames[0]);
-    });
-
-    it('should call onHideGame with correct game when Hide is clicked', () => {
-      const mockHide = jest.fn();
-      render(<GameCarousel title="Test" games={mockGames} onHideGame={mockHide} />);
-
-      const hideButtons = screen.getAllByText('Hide');
-      fireEvent.click(hideButtons[1]);
-
-      expect(mockHide).toHaveBeenCalledWith(mockGames[1]);
-    });
-
-    it('should show both Pick and Hide when both handlers provided', () => {
-      const mockPick = jest.fn();
-      const mockHide = jest.fn();
-      render(
-        <GameCarousel title="Test" games={mockGames} onPickGame={mockPick} onHideGame={mockHide} />,
-      );
-
-      // Each game should have both buttons
-      const pickButtons = screen.getAllByText('Pick');
-      const hideButtons = screen.getAllByText('Hide');
-
-      expect(pickButtons).toHaveLength(mockGames.length);
-      expect(hideButtons).toHaveLength(mockGames.length);
     });
   });
 

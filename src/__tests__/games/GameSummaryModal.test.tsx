@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 
 jest.mock('next/image', () => ({
@@ -57,12 +57,6 @@ describe('GameSummaryModal', () => {
       render(<GameSummaryModal {...defaultProps} headerImage={null} />);
 
       expect(screen.queryByAltText('Hades')).not.toBeInTheDocument();
-    });
-
-    it('should render "On to the next one" button', () => {
-      render(<GameSummaryModal {...defaultProps} />);
-
-      expect(screen.getByRole('button', { name: 'On to the next one' })).toBeInTheDocument();
     });
 
     it('should not render when isOpen is false', () => {
@@ -223,16 +217,6 @@ describe('GameSummaryModal', () => {
 
       expect(screen.queryByText(/games finished/i)).not.toBeInTheDocument();
       expect(screen.queryByTestId('backlog-hours')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('onClose callback', () => {
-    it('should call onClose when "On to the next one" is clicked', () => {
-      render(<GameSummaryModal {...defaultProps} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'On to the next one' }));
-
-      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

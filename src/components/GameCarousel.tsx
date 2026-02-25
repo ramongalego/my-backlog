@@ -2,7 +2,8 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Play, EyeOff, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { GameCardInfo } from '@/components/games/GameCardInfo';
 
 interface Game {
   app_id: number;
@@ -10,16 +11,17 @@ interface Game {
   header_image: string | null;
   main_story_hours: number;
   playtime_forever: number;
+  steam_review_score?: number | null;
+  steam_review_count?: number | null;
 }
 
 interface GameCarouselProps {
   title: string;
   games: Game[];
-  onPickGame?: (game: Game) => void;
-  onHideGame?: (game: Game) => void;
+  onOpenDetail?: (game: Game) => void;
 }
 
-export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarouselProps) {
+export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -100,7 +102,11 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
               key={game.app_id}
               className="group shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors relative"
             >
-              <div className="relative h-32">
+              <button
+                onClick={() => onOpenDetail?.(game)}
+                className="relative h-32 w-full block cursor-pointer"
+                aria-label={`Open details for ${game.name}`}
+              >
                 {game.header_image ? (
                   <Image
                     src={game.header_image}
@@ -112,42 +118,19 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
                 ) : (
                   <div className="w-full h-full bg-zinc-800" />
                 )}
-                {(onPickGame || onHideGame) && (
-                  <div className="absolute inset-0 bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {onPickGame && (
-                      <button
-                        onClick={() => onPickGame(game)}
-                        className="cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                      >
-                        <Play className="w-4 h-4 text-white fill-white" />
-                        <span className="text-white font-medium text-sm">Pick</span>
-                      </button>
-                    )}
-                    {onHideGame && (
-                      <button
-                        onClick={() => onHideGame(game)}
-                        className="cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-                      >
-                        <EyeOff className="w-4 h-4 text-zinc-300" />
-                        <span className="text-zinc-300 font-medium text-sm">Hide</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <a
-                  href={`https://store.steampowered.com/app/${game.app_id}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group/title flex items-center gap-1 text-zinc-200 font-medium hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="truncate min-w-0">{game.name}</span>
-                  <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity" />
-                </a>
-                {game.main_story_hours && (
-                  <p className="text-zinc-500 text-sm mt-1">~{game.main_story_hours}h to beat</p>
-                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                  <Pencil className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                </div>
+              </button>
+              <div className="px-3 py-4">
+                <GameCardInfo
+                  appId={game.app_id}
+                  name={game.name}
+                  mainStoryHours={game.main_story_hours}
+                  steamReviewScore={game.steam_review_score}
+                  steamReviewCount={game.steam_review_count}
+                  playtimeMinutes={game.playtime_forever}
+                />
               </div>
             </div>
           ))}

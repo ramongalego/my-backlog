@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Profile, Game, GameWithImage, SyncProgress } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
+import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
 
 interface StatusModal {
   action: 'finished' | 'dropped';
@@ -37,12 +38,22 @@ interface UseGameLibraryReturn {
   isStatusLoading: boolean;
   statusModal: StatusModal | null;
   gameSummary: GameSummaryData | null;
+  queuedAppIds: Set<number>;
+  carouselModal: { game: GameWithImage } | null;
 
   // Actions
   handlePickGame: (game: GameWithImage) => Promise<void>;
   handleFinishGame: () => void;
   handleDropGame: () => void;
-  handleHideGame: (game: GameWithImage) => Promise<void>;
+  handleQueueGame: (game: GameWithImage) => Promise<void>;
+  handleOpenCarouselDetail: (game: GameWithImage) => void;
+  handleConfirmCarouselDetail: (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => Promise<void>;
+  handleCloseCarouselModal: () => void;
   handleCancelGame: () => Promise<void>;
   handleRefreshLibrary: () => Promise<void>;
   handleRandomPick: () => Promise<void>;
@@ -80,6 +91,8 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
+  const [queuedAppIds, setQueuedAppIds] = useState<Set<number>>(new Set());
+  const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
   const syncingRef = useRef(false);
 
   // Display only first 10 games from each pool
@@ -165,20 +178,50 @@ export function useGameLibrary(): UseGameLibraryReturn {
     setStatusModal({ action: 'dropped' });
   }, [currentlyPlaying]);
 
-  const handleHideGame = useCallback(async (game: GameWithImage) => {
-    try {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: game.app_id, status: 'hidden' }),
-      });
-      setShortGamesPool((prev) => prev.filter((g) => g.app_id !== game.app_id));
-      setWeekendGamesPool((prev) => prev.filter((g) => g.app_id !== game.app_id));
-      setHighlyRatedGamesPool((prev) => prev.filter((g) => g.app_id !== game.app_id));
-    } catch (err) {
-      console.error('Failed to hide game:', err);
-    }
+  const handleQueueGame = useCallback(async (game: GameWithImage) => {
+    const ok = await addToQueue(game.app_id);
+    if (ok) setQueuedAppIds((prev) => new Set([...prev, game.app_id]));
   }, []);
+
+  const handleOpenCarouselDetail = useCallback((game: GameWithImage) => {
+    setCarouselModal({ game });
+  }, []);
+
+  const handleCloseCarouselModal = useCallback(() => setCarouselModal(null), []);
+
+  const handleConfirmCarouselDetail = useCallback(
+    async (status: string, date: string, notes: string, rating: number | null) => {
+      if (!carouselModal) return;
+      const { game } = carouselModal;
+      setCarouselModal(null);
+
+      if (status === 'playing') {
+        await handlePickGame(game);
+        return;
+      }
+
+      try {
+        await fetch('/api/games/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appId: game.app_id,
+            status,
+            ...(status === 'finished' ? { finishedAt: date } : {}),
+            ...(status === 'dropped' ? { droppedAt: date } : {}),
+            notes,
+            rating,
+          }),
+        });
+        setShortGamesPool((prev) => prev.filter((g) => g.app_id !== game.app_id));
+        setWeekendGamesPool((prev) => prev.filter((g) => g.app_id !== game.app_id));
+        setHighlyRatedGamesPool((prev) => prev.filter((g) => g.app_id !== game.app_id));
+      } catch (err) {
+        console.error('Failed to update game status:', err);
+      }
+    },
+    [carouselModal, handlePickGame],
+  );
 
   const handleConfirmStatusChange = useCallback(
     async (status: string, date: string, notes: string, rating: number | null) => {
@@ -378,7 +421,9 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: shortGamesData } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours, playtime_forever')
+            .select(
+              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count',
+            )
             .eq('user_id', user.id)
             .eq('type', 'game')
             .not('main_story_hours', 'is', null)
@@ -394,7 +439,9 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           const { data: weekendGamesData } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours, playtime_forever')
+            .select(
+              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count',
+            )
             .eq('user_id', user.id)
             .eq('type', 'game')
             .not('main_story_hours', 'is', null)
@@ -411,7 +458,9 @@ export function useGameLibrary(): UseGameLibraryReturn {
           // Highly rated games the user has never played (0 playtime)
           const { data: highlyRatedData } = await supabase
             .from('games')
-            .select('app_id, name, header_image, main_story_hours, playtime_forever')
+            .select(
+              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count',
+            )
             .eq('user_id', user.id)
             .eq('type', 'game')
             .not('steam_review_weighted', 'is', null)
@@ -423,6 +472,8 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           setHighlyRatedGamesPool(highlyRatedData || []);
           setCarouselsLoading(false);
+
+          setQueuedAppIds(await fetchQueuedAppIds());
 
           // Auto-refresh playtime if it's been more than 1 hour
           const lastRefresh = localStorage.getItem('playtime_refresh_at');
@@ -472,10 +523,15 @@ export function useGameLibrary(): UseGameLibraryReturn {
     isStatusLoading,
     statusModal,
     gameSummary,
+    queuedAppIds,
+    carouselModal,
     handlePickGame,
     handleFinishGame,
     handleDropGame,
-    handleHideGame,
+    handleQueueGame,
+    handleOpenCarouselDetail,
+    handleConfirmCarouselDetail,
+    handleCloseCarouselModal,
     handleCancelGame,
     handleRefreshLibrary,
     handleRandomPick,

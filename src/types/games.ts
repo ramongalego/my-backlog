@@ -18,6 +18,8 @@ export interface GameWithImage {
   main_story_hours: number;
   playtime_forever: number;
   started_at?: string | null;
+  steam_review_score?: number | null;
+  steam_review_count?: number | null;
 }
 
 export interface SyncProgress {

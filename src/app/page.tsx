@@ -44,13 +44,18 @@ function HomeContent() {
     handlePickGame,
     handleFinishGame,
     handleDropGame,
-    handleHideGame,
+    handleQueueGame,
     handleCancelGame,
     handleRefreshLibrary,
     handleRandomPick,
     handleConnectSteam,
     statusModal,
     gameSummary,
+    queuedAppIds,
+    carouselModal,
+    handleOpenCarouselDetail,
+    handleConfirmCarouselDetail,
+    handleCloseCarouselModal,
     handleConfirmStatusChange,
     handleCloseStatusModal,
     handleCloseSummary,
@@ -171,24 +176,21 @@ function HomeContent() {
                 <GameCarousel
                   title="Top-Rated Games Under 5 Hours"
                   games={shortGames}
-                  onPickGame={!currentlyPlaying ? handlePickGame : undefined}
-                  onHideGame={handleHideGame}
+                  onOpenDetail={handleOpenCarouselDetail}
                 />
               )}
               {highlyRatedGames.length > 0 && (
                 <GameCarousel
                   title="Highly Rated, Never Played"
                   games={highlyRatedGames}
-                  onPickGame={!currentlyPlaying ? handlePickGame : undefined}
-                  onHideGame={handleHideGame}
+                  onOpenDetail={handleOpenCarouselDetail}
                 />
               )}
               {weekendGames.length > 0 && (
                 <GameCarousel
                   title="Beat It in a Weekend"
                   games={weekendGames}
-                  onPickGame={!currentlyPlaying ? handlePickGame : undefined}
-                  onHideGame={handleHideGame}
+                  onOpenDetail={handleOpenCarouselDetail}
                 />
               )}
             </section>
@@ -209,6 +211,23 @@ function HomeContent() {
 
       {gameSummary && (
         <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
+      )}
+
+      {carouselModal && (
+        <GameDetailModal
+          isOpen={true}
+          onClose={handleCloseCarouselModal}
+          onConfirm={handleConfirmCarouselDetail}
+          gameName={carouselModal.game.name}
+          headerImage={carouselModal.game.header_image}
+          initialStatus="backlog"
+          disablePlaying={!!currentlyPlaying}
+          onAddToQueue={
+            currentlyPlaying && !queuedAppIds.has(carouselModal.game.app_id)
+              ? () => handleQueueGame(carouselModal.game)
+              : undefined
+          }
+        />
       )}
 
       {statusModal && currentlyPlaying && (
