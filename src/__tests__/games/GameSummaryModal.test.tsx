@@ -218,42 +218,7 @@ describe('GameSummaryModal', () => {
   });
 
   describe('library progress', () => {
-    it('should show games finished count when provided', () => {
-      render(<GameSummaryModal {...defaultProps} finishedCount={12} totalGames={89} />);
-
-      expect(screen.getByText('12')).toBeInTheDocument();
-      expect(screen.getByText('89')).toBeInTheDocument();
-      expect(screen.getByText(/games finished/i)).toBeInTheDocument();
-    });
-
-    it('should show backlog hours when mainStoryHours and counts are provided', () => {
-      render(
-        <GameSummaryModal
-          {...defaultProps}
-          mainStoryHours={20}
-          finishedCount={12}
-          totalGames={89}
-        />,
-      );
-
-      expect(screen.getByTestId('backlog-hours')).toHaveTextContent(/~20h/);
-      expect(screen.getByTestId('backlog-hours')).toHaveTextContent(/off your backlog/i);
-    });
-
-    it('should not show backlog hours when mainStoryHours is null', () => {
-      render(
-        <GameSummaryModal
-          {...defaultProps}
-          mainStoryHours={null}
-          finishedCount={12}
-          totalGames={89}
-        />,
-      );
-
-      expect(screen.queryByTestId('backlog-hours')).not.toBeInTheDocument();
-    });
-
-    it('should not show library progress section when counts are not provided', () => {
+    it('should not show library progress section', () => {
       render(<GameSummaryModal {...defaultProps} />);
 
       expect(screen.queryByText(/games finished/i)).not.toBeInTheDocument();

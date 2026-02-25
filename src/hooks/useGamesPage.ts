@@ -53,6 +53,7 @@ interface UseGamesPageReturn {
   hasMore: boolean;
   loadMore: () => void;
   counts: FilterCounts;
+  hasPlayingGame: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   statusModal: GamesPageStatusModal | null;
@@ -64,6 +65,8 @@ interface UseGamesPageReturn {
   ) => Promise<void>;
   handleCloseStatusModal: () => void;
   handleOpenDetail: (appId: number) => void;
+  handleAddToQueue: (appId: number) => Promise<void>;
+  queuedAppIds: Set<number>;
 }
 
 const BATCH_SIZE = 60;
@@ -76,6 +79,7 @@ export function useGamesPage(): UseGamesPageReturn {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusModal, setStatusModal] = useState<GamesPageStatusModal | null>(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const [queuedAppIds, setQueuedAppIds] = useState<Set<number>>(new Set());
 
   // Defer the search value to keep input responsive during filtering
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -92,16 +96,28 @@ export function useGamesPage(): UseGamesPageReturn {
         return;
       }
 
-      const { data } = await supabase
-        .from('games')
-        .select(
-          'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags',
-        )
-        .eq('user_id', user.id)
-        .eq('type', 'game')
-        .order('playtime_forever', { ascending: false });
+      const [{ data }, queueRes] = await Promise.all([
+        supabase
+          .from('games')
+          .select(
+            'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags',
+          )
+          .eq('user_id', user.id)
+          .eq('type', 'game')
+          .order('playtime_forever', { ascending: false }),
+        fetch('/api/queue'),
+      ]);
 
       setGames(data || []);
+
+      if (queueRes.ok) {
+        const queueData = await queueRes.json();
+        const ids = new Set<number>(
+          (queueData.queue ?? []).map((q: { app_id: number }) => q.app_id),
+        );
+        setQueuedAppIds(ids);
+      }
+
       setLoading(false);
     }
 
@@ -181,6 +197,21 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
 
+  const handleAddToQueue = useCallback(async (appId: number) => {
+    try {
+      const res = await fetch('/api/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId }),
+      });
+      if (res.ok) {
+        setQueuedAppIds((prev) => new Set([...prev, appId]));
+      }
+    } catch (err) {
+      console.error('Failed to add to queue:', err);
+    }
+  }, []);
+
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
   const searchFilteredGames = useMemo(() => {
     if (!deferredSearchQuery) return games;
@@ -226,6 +257,10 @@ export function useGamesPage(): UseGamesPageReturn {
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => prev + BATCH_SIZE);
   }, []);
+
+  // Derived directly from the full games array — not search-filtered — so a search query
+  // for a backlog game never hides the now playing game from the count.
+  const hasPlayingGame = useMemo(() => games.some((g) => g.status === 'playing'), [games]);
 
   // Single pass over search-filtered games to compute all counts at once
   const counts = useMemo((): FilterCounts => {
@@ -278,11 +313,14 @@ export function useGamesPage(): UseGamesPageReturn {
     hasMore,
     loadMore,
     counts,
+    hasPlayingGame,
     searchQuery,
     setSearchQuery: setSearchQueryAndReset,
     statusModal,
     handleConfirmDetail,
     handleCloseStatusModal,
     handleOpenDetail,
+    handleAddToQueue,
+    queuedAppIds,
   };
 }

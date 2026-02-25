@@ -46,7 +46,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    expect(screen.getByText('15h to beat')).toBeInTheDocument();
+    expect(screen.getByText('~15h to beat')).toBeInTheDocument();
   });
 
   it('should render genres (limited to 2)', () => {

@@ -46,12 +46,14 @@ export default function GamesPage() {
     hasMore,
     loadMore,
     counts,
+    hasPlayingGame,
     searchQuery,
     setSearchQuery,
     statusModal,
     handleConfirmDetail,
     handleCloseStatusModal,
     handleOpenDetail,
+    handleAddToQueue,
   } = useGamesPage();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -138,7 +140,12 @@ export default function GamesPage() {
           initialDate={statusModal.initialDate}
           initialNotes={statusModal.initialNotes}
           initialRating={statusModal.initialRating}
-          disablePlaying={counts.playing > 0 && statusModal.initialStatus !== 'playing'}
+          disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
+          onAddToQueue={
+            hasPlayingGame && statusModal.initialStatus === 'backlog'
+              ? () => handleAddToQueue(statusModal.appId)
+              : undefined
+          }
         />
       )}
     </div>

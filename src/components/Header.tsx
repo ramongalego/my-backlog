@@ -87,6 +87,14 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
             )}
             {user && !hideNavLinks && (
               <Link
+                href="/playing-queue"
+                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/playing-queue' ? 'text-zinc-100' : 'text-zinc-400'}`}
+              >
+                Queue
+              </Link>
+            )}
+            {user && !hideNavLinks && (
+              <Link
                 href="/diary"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/diary' ? 'text-zinc-100' : 'text-zinc-400'}`}
               >

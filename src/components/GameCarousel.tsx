@@ -146,7 +146,7 @@ export function GameCarousel({ title, games, onPickGame, onHideGame }: GameCarou
                   <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity" />
                 </a>
                 {game.main_story_hours && (
-                  <p className="text-zinc-500 text-sm mt-1">{game.main_story_hours}h to complete</p>
+                  <p className="text-zinc-500 text-sm mt-1">~{game.main_story_hours}h to beat</p>
                 )}
               </div>
             </div>

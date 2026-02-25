@@ -29,9 +29,7 @@ export function CurrentlyPlaying({
 }: CurrentlyPlayingProps) {
   return (
     <div className="w-full max-w-md mx-auto">
-      <p className="text-sm text-zinc-500 uppercase tracking-wide mb-3 text-center">
-        Currently Playing
-      </p>
+      <p className="text-sm text-zinc-500 uppercase tracking-wide mb-3 text-center">Now Playing</p>
       <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
         <div className="relative h-48">
           {game.header_image ? (
@@ -75,7 +73,7 @@ export function CurrentlyPlaying({
                       <span className="text-zinc-400">
                         {Math.round(game.playtime_forever / 60)}h played
                       </span>
-                      <span className="text-zinc-500">{game.main_story_hours}h to beat</span>
+                      <span className="text-zinc-500">~{game.main_story_hours}h to beat</span>
                     </div>
                     <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
@@ -88,7 +86,7 @@ export function CurrentlyPlaying({
                   </>
                 )
               ) : (
-                <p className="text-zinc-500 text-sm">{game.main_story_hours}h to beat</p>
+                <p className="text-zinc-500 text-sm">~{game.main_story_hours}h to beat</p>
               )}
             </div>
           )}

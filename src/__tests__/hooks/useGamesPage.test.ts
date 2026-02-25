@@ -408,7 +408,7 @@ describe('useGamesPage count computation', () => {
     createGame({ app_id: 4, name: 'Dark Souls', status: 'dropped' }),
     createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
     createGame({ app_id: 6, name: 'New Game', status: null }),
-    createGame({ app_id: 7, name: 'Currently Playing', status: 'playing' }),
+    createGame({ app_id: 7, name: 'Now Playing', status: 'playing' }),
   ];
 
   it('should exclude hidden games from all count', () => {

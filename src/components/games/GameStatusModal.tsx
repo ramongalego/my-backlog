@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays } from 'lucide-react';
+import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays, ListOrdered } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { Modal } from '@/components/ui/Modal';
 
 type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';
+type InternalStatus = GameStatus | 'queue';
 
 interface GameDetailModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface GameDetailModalProps {
   initialNotes?: string | null;
   initialRating?: number | null;
   disablePlaying?: boolean;
+  onAddToQueue?: () => void;
 }
 
 const STATUS_OPTIONS: {
@@ -93,10 +95,11 @@ export function GameDetailModal({
   initialNotes,
   initialRating,
   disablePlaying = false,
+  onAddToQueue,
 }: GameDetailModalProps) {
   const today = new Date().toISOString().slice(0, 10);
 
-  const [status, setStatus] = useState<GameStatus>(initialStatus);
+  const [status, setStatus] = useState<InternalStatus>(initialStatus);
   const [hasDate, setHasDate] = useState(!!initialDate);
   const [date, setDate] = useState(initialDate || today);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -107,7 +110,7 @@ export function GameDetailModal({
   const showDateField = status === 'finished' || status === 'dropped';
   const dateLabel = status === 'finished' ? 'Finished on' : 'Dropped on';
 
-  function handleStatusChange(next: GameStatus) {
+  function handleStatusChange(next: InternalStatus) {
     setStatus(next);
     if (next === 'finished' || next === 'dropped') {
       setHasDate(true);
@@ -125,6 +128,11 @@ export function GameDetailModal({
   }, [calendarOpen]);
 
   function handleConfirm() {
+    if (status === 'queue') {
+      onAddToQueue?.();
+      onClose();
+      return;
+    }
     const parsedRating = rating !== '' ? parseInt(rating, 10) : null;
     onConfirm(status, hasDate ? date : '', notes, parsedRating);
   }
@@ -156,9 +164,30 @@ export function GameDetailModal({
         {/* Status pills */}
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2.5">Status</p>
-          <div className={`grid gap-2 ${disablePlaying ? 'grid-cols-4' : 'grid-cols-5'}`}>
-            {STATUS_OPTIONS.filter((opt) => !(opt.value === 'playing' && disablePlaying)).map(
-              (opt) => (
+          <div
+            className={`grid gap-2 ${disablePlaying && !onAddToQueue ? 'grid-cols-4' : 'grid-cols-5'}`}
+          >
+            {STATUS_OPTIONS.map((opt) => {
+              // Replace the Playing slot with Queue (or nothing) when playing is disabled
+              if (opt.value === 'playing' && disablePlaying) {
+                if (!onAddToQueue) return null;
+                const isActive = status === 'queue';
+                return (
+                  <button
+                    key="queue"
+                    onClick={() => handleStatusChange('queue')}
+                    className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-sky-600 text-white border-sky-600'
+                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
+                    }`}
+                  >
+                    <ListOrdered className="w-3.5 h-3.5" />
+                    Queue
+                  </button>
+                );
+              }
+              return (
                 <button
                   key={opt.value}
                   onClick={() => handleStatusChange(opt.value)}
@@ -171,8 +200,8 @@ export function GameDetailModal({
                   {opt.icon}
                   {opt.label}
                 </button>
-              ),
-            )}
+              );
+            })}
           </div>
         </div>
 

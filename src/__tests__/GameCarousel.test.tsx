@@ -58,12 +58,12 @@ describe('GameCarousel', () => {
       expect(screen.getByText('Game Three')).toBeInTheDocument();
     });
 
-    it('should display hours to complete for each game', () => {
+    it('should display hours to beat for each game', () => {
       render(<GameCarousel title="Test Games" games={mockGames} />);
 
-      expect(screen.getByText('3h to complete')).toBeInTheDocument();
-      expect(screen.getByText('4.5h to complete')).toBeInTheDocument();
-      expect(screen.getByText('2h to complete')).toBeInTheDocument();
+      expect(screen.getByText('~3h to beat')).toBeInTheDocument();
+      expect(screen.getByText('~4.5h to beat')).toBeInTheDocument();
+      expect(screen.getByText('~2h to beat')).toBeInTheDocument();
     });
 
     it('should render nothing when games array is empty', () => {

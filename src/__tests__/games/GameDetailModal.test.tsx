@@ -388,6 +388,69 @@ describe('GameDetailModal', () => {
         expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
       });
     });
+
+    describe('Queue pill', () => {
+      const onAddToQueue = jest.fn();
+
+      beforeEach(() => {
+        onAddToQueue.mockClear();
+      });
+
+      it('should show Queue pill when disablePlaying and onAddToQueue are provided for a backlog game', () => {
+        render(
+          <GameDetailModal
+            {...defaultProps}
+            initialStatus="backlog"
+            disablePlaying
+            onAddToQueue={onAddToQueue}
+          />,
+        );
+
+        expect(screen.getByRole('button', { name: /queue/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^playing$/i })).not.toBeInTheDocument();
+      });
+
+      it('should not show Queue pill when onAddToQueue is not provided', () => {
+        render(<GameDetailModal {...defaultProps} initialStatus="backlog" disablePlaying />);
+
+        expect(screen.queryByRole('button', { name: /queue/i })).not.toBeInTheDocument();
+      });
+
+      it('should select Queue pill on click without immediately acting', () => {
+        render(
+          <GameDetailModal
+            {...defaultProps}
+            initialStatus="backlog"
+            disablePlaying
+            onAddToQueue={onAddToQueue}
+          />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /queue/i }));
+
+        expect(onAddToQueue).not.toHaveBeenCalled();
+        expect(defaultProps.onClose).not.toHaveBeenCalled();
+        expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      });
+
+      it('should call onAddToQueue and onClose (not onConfirm) when saving with Queue selected', () => {
+        render(
+          <GameDetailModal
+            {...defaultProps}
+            initialStatus="backlog"
+            disablePlaying
+            onAddToQueue={onAddToQueue}
+          />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /queue/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+        expect(onAddToQueue).toHaveBeenCalledTimes(1);
+        expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+        expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('onClose callback', () => {

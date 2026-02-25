@@ -1,16 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import {
-  Gamepad2,
-  Trophy,
-  TrendingUp,
-  TrendingDown,
-  Check,
-  Star,
-  BookOpen,
-  Clock,
-} from 'lucide-react';
+import { Gamepad2, Trophy, TrendingUp, TrendingDown, Check, Star } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 
 export interface GameSummaryData {
@@ -21,8 +12,6 @@ export interface GameSummaryData {
   playtimeMinutes: number;
   mainStoryHours: number | null;
   rating: number | null;
-  finishedCount?: number;
-  totalGames?: number;
 }
 
 interface GameSummaryModalProps extends GameSummaryData {
@@ -51,8 +40,6 @@ export function GameSummaryModal({
   playtimeMinutes,
   mainStoryHours,
   rating,
-  finishedCount,
-  totalGames,
 }: GameSummaryModalProps) {
   const steamHours = Math.round((playtimeMinutes / 60) * 10) / 10;
 
@@ -117,8 +104,6 @@ export function GameSummaryModal({
     hoursPerDay !== null ? { value: `${hoursPerDay}h`, label: 'avg per day' } : null,
   ].filter((b): b is { value: string; label: string } => b !== null);
 
-  const showLibraryProgress = finishedCount !== undefined && totalGames !== undefined;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       {/* Hero */}
@@ -168,9 +153,11 @@ export function GameSummaryModal({
         {estimate && (
           <div data-testid="estimate-text" className="flex items-center gap-2 text-sm">
             {estimate.icon}
-            <span className="font-semibold text-zinc-100">{estimate.value}</span>
-            <span className="text-zinc-400">{estimate.middle}</span>
-            {estimate.pct && <span className="font-semibold text-zinc-100">{estimate.pct}</span>}
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-zinc-100">{estimate.value}</span>
+              <span className="text-zinc-400">{estimate.middle}</span>
+              {estimate.pct && <span className="font-semibold text-zinc-100">{estimate.pct}</span>}
+            </span>
           </div>
         )}
 
@@ -178,33 +165,11 @@ export function GameSummaryModal({
         {rating !== null && (
           <div className="flex items-center gap-2 text-sm">
             <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
-            <span className="text-zinc-400">You rated it</span>
-            <span className="text-zinc-100 font-semibold">{rating}</span>
-            <span className="text-zinc-500">/ 10</span>
-          </div>
-        )}
-
-        {/* Library progress */}
-        {showLibraryProgress && (
-          <div className="border-t border-zinc-800 pt-5 space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <BookOpen className="w-4 h-4 text-zinc-500 shrink-0" />
-              <span className="text-zinc-400">
-                <span className="text-zinc-100 font-semibold">{finishedCount}</span>
-                {' of '}
-                <span className="text-zinc-100 font-semibold">{totalGames}</span>
-                {' games finished'}
-              </span>
-            </div>
-            {mainStoryHours && mainStoryHours > 0 && (
-              <div className="flex items-center gap-2 text-sm" data-testid="backlog-hours">
-                <Clock className="w-4 h-4 text-zinc-500 shrink-0" />
-                <span className="text-zinc-400">
-                  <span className="text-zinc-100 font-semibold">~{mainStoryHours}h</span>
-                  {' off your backlog'}
-                </span>
-              </div>
-            )}
+            <span className="flex items-center gap-1.5">
+              <span className="text-zinc-400">You rated it</span>
+              <span className="text-zinc-100 font-semibold">{rating}</span>
+              <span className="text-zinc-500">/ 10</span>
+            </span>
           </div>
         )}
 

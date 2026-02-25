@@ -6,6 +6,7 @@ import { celebrateGameFinished } from '@/lib/confetti';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Game, GameWithImage, SyncProgress } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
+import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 
 interface StatusModal {
   action: 'finished' | 'dropped';
@@ -199,30 +200,6 @@ export function useGameLibrary(): UseGameLibraryReturn {
           }),
         });
         if (status === 'finished') {
-          const supabase = createClient();
-          const {
-            data: { user: currentUser },
-          } = await supabase.auth.getUser();
-          let finishedCount: number | undefined;
-          let totalGames: number | undefined;
-          if (currentUser) {
-            const [{ count: fin }, { count: tot }] = await Promise.all([
-              supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', currentUser.id)
-                .eq('type', 'game')
-                .eq('status', 'finished'),
-              supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', currentUser.id)
-                .eq('type', 'game')
-                .neq('status', 'hidden'),
-            ]);
-            finishedCount = fin ?? undefined;
-            totalGames = tot ?? undefined;
-          }
           setGameSummary({
             gameName: finishedGameName,
             headerImage: currentlyPlaying.header_image,
@@ -232,12 +209,22 @@ export function useGameLibrary(): UseGameLibraryReturn {
             mainStoryHours:
               currentlyPlaying.main_story_hours > 0 ? currentlyPlaying.main_story_hours : null,
             rating,
-            finishedCount,
-            totalGames,
           });
           celebrateGameFinished();
         }
-        setCurrentlyPlaying(null);
+
+        const supabase = createClient();
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
+
+        // Promote next game from queue
+        if (currentUser) {
+          const promoted = await promoteNextFromQueue(currentUser.id, supabase);
+          setCurrentlyPlaying(promoted);
+        } else {
+          setCurrentlyPlaying(null);
+        }
       } catch (err) {
         console.error(`Failed to ${status} game:`, err);
       }

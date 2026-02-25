@@ -24,3 +24,15 @@ export interface SyncProgress {
   current: number;
   total: number;
 }
+
+export interface QueueItem {
+  id: number;
+  app_id: number;
+  position: number;
+  game: {
+    name: string;
+    header_image: string | null;
+    playtime_forever: number;
+    main_story_hours: number | null;
+  };
+}

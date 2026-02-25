@@ -92,14 +92,14 @@ describe('CurrentlyPlaying', () => {
     it('should show only "Xh to beat" when playtime is 0', () => {
       render(<CurrentlyPlaying game={createGame(0, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('20h to beat')).toBeInTheDocument();
+      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
     });
 
     it('should show only "Xh to beat" when playtime is under 60 minutes', () => {
       render(<CurrentlyPlaying game={createGame(59, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('20h to beat')).toBeInTheDocument();
+      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
     });
 
@@ -116,7 +116,7 @@ describe('CurrentlyPlaying', () => {
       render(<CurrentlyPlaying game={createGame(60, 20)} {...defaultCallbacks} />);
 
       expect(screen.getByText('1h played')).toBeInTheDocument();
-      expect(screen.getByText('20h to beat')).toBeInTheDocument();
+      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
     });
 
     it('should show rounded hours played', () => {
@@ -124,7 +124,7 @@ describe('CurrentlyPlaying', () => {
       render(<CurrentlyPlaying game={createGame(750, 20)} {...defaultCallbacks} />);
 
       expect(screen.getByText('13h played')).toBeInTheDocument();
-      expect(screen.getByText('20h to beat')).toBeInTheDocument();
+      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
     });
 
     it('should render a progress bar', () => {
@@ -169,7 +169,7 @@ describe('CurrentlyPlaying', () => {
     it('should not show "Xh to beat" label when over estimate', () => {
       render(<CurrentlyPlaying game={createGame(1800, 20)} {...defaultCallbacks} />);
 
-      expect(screen.queryByText('20h to beat')).not.toBeInTheDocument();
+      expect(screen.queryByText('~20h to beat')).not.toBeInTheDocument();
     });
   });
 });

@@ -62,8 +62,7 @@ export function SuggestionResult({
           <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 mb-4">
             {game.main_story_hours && (
               <span className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {game.main_story_hours}h to beat
+                <Clock className="w-4 h-4" />~{game.main_story_hours}h to beat
               </span>
             )}
             {game.genres && game.genres.length > 0 && (

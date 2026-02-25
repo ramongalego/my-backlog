@@ -117,7 +117,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Get currently playing game
+  // Get now playing game
   const { data } = await supabase
     .from('games')
     .select('app_id, name, header_image, main_story_hours')
