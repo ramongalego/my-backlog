@@ -105,6 +105,7 @@ export function GameDetailModal({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
+  const [ratingError, setRatingError] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
   const showDateField = status === 'finished' || status === 'dropped';
@@ -134,6 +135,11 @@ export function GameDetailModal({
       return;
     }
     const parsedRating = rating !== '' ? parseInt(rating, 10) : null;
+    if (parsedRating !== null && (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 10)) {
+      setRatingError('Rating must be between 0 and 10');
+      return;
+    }
+    setRatingError(null);
     onConfirm(status, hasDate ? date : '', notes, parsedRating);
   }
 
@@ -275,26 +281,40 @@ export function GameDetailModal({
             min={0}
             max={10}
             value={rating}
-            onChange={(e) => setRating(e.target.value)}
+            onChange={(e) => {
+              setRating(e.target.value);
+              setRatingError(null);
+            }}
             placeholder="Unrated"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600"
+            className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none placeholder:text-zinc-600 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-zinc-700 focus:border-zinc-500'}`}
           />
+          {ratingError && <p className="text-rose-400 text-xs mt-1">{ratingError}</p>}
         </div>
 
         {/* Notes */}
         <div>
-          <label
-            className="block text-xs text-zinc-500 uppercase tracking-wider mb-1.5"
-            htmlFor="detail-notes"
-          >
-            Notes
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label
+              className="text-xs text-zinc-500 uppercase tracking-wider"
+              htmlFor="detail-notes"
+            >
+              Notes
+            </label>
+            {notes.length > 0 && (
+              <span
+                className={`text-xs ${notes.length >= 1000 ? 'text-rose-400' : 'text-zinc-600'}`}
+              >
+                {notes.length}/1000
+              </span>
+            )}
+          </div>
           <textarea
             id="detail-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Any thoughts?"
-            rows={3}
+            rows={5}
+            maxLength={1000}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600 resize-none"
           />
         </div>

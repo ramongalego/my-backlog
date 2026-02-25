@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { gameStatusSchema } from '@/lib/validations/games';
 
 export async function POST(request: NextRequest) {
   // Rate limiting
@@ -37,26 +38,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appId, status, finishedAt, droppedAt, notes, rating } = body;
-
-  if (!appId || typeof appId !== 'number' || !Number.isInteger(appId) || appId <= 0) {
-    return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
+  const parsed = gameStatusSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Invalid request' },
+      { status: 400 },
+    );
   }
 
-  if (!status) {
-    return NextResponse.json({ error: 'Missing status' }, { status: 400 });
-  }
-
-  const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'hidden'];
-  if (!validStatuses.includes(status)) {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-  }
-
-  if (rating !== undefined && rating !== null) {
-    if (!Number.isInteger(rating) || rating < 0 || rating > 10) {
-      return NextResponse.json({ error: 'Invalid rating' }, { status: 400 });
-    }
-  }
+  const { appId, status, finishedAt, droppedAt, notes, rating } = parsed.data;
 
   // If setting to "playing", first clear any other "playing" games
   if (status === 'playing') {

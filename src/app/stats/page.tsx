@@ -15,6 +15,7 @@ import {
 import { Header } from '@/components/Header';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
+import { addToQueue } from '@/lib/games/queue';
 import type { Stats } from '@/hooks/useStats';
 
 interface EditModalState {
@@ -353,6 +354,11 @@ export default function StatsPage() {
     setEditModal({ appId, gameName, headerImage });
   };
 
+  const handleAddToQueue = async (appId: number) => {
+    await addToQueue(appId);
+    setEditModal(null);
+  };
+
   const handleConfirm = async (
     status: string,
     date: string,
@@ -491,6 +497,9 @@ export default function StatsPage() {
           headerImage={editModal.headerImage}
           initialStatus="backlog"
           disablePlaying={(stats?.playing ?? 0) > 0}
+          onAddToQueue={
+            (stats?.playing ?? 0) > 0 ? () => handleAddToQueue(editModal.appId) : undefined
+          }
         />
       )}
     </div>

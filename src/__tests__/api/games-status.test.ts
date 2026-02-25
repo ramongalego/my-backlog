@@ -1,137 +1,91 @@
-import {
-  validateStatusUpdate,
-  requiresClearingPlayingGames,
-  VALID_STATUSES,
-  GameStatus,
-} from '@/lib/games/status-validation';
+import { gameStatusSchema } from '@/lib/validations/games';
 
-describe('validateStatusUpdate', () => {
-  describe('appId validation', () => {
-    it('should reject missing appId', () => {
-      const result = validateStatusUpdate({ appId: undefined, status: 'playing' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+describe('gameStatusSchema', () => {
+  const valid = { appId: 730, status: 'playing' as const };
+
+  describe('appId', () => {
+    it('rejects missing appId', () => {
+      expect(gameStatusSchema.safeParse({ status: 'playing' }).success).toBe(false);
     });
 
-    it('should reject null appId', () => {
-      const result = validateStatusUpdate({ appId: null, status: 'playing' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+    it('rejects negative appId', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, appId: -1 }).success).toBe(false);
     });
 
-    it('should reject non-number appId', () => {
-      const result = validateStatusUpdate({ appId: 'abc', status: 'playing' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+    it('rejects zero appId', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, appId: 0 }).success).toBe(false);
     });
 
-    it('should reject negative appId', () => {
-      const result = validateStatusUpdate({ appId: -1, status: 'playing' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+    it('rejects float appId', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, appId: 123.45 }).success).toBe(false);
     });
 
-    it('should reject zero appId', () => {
-      const result = validateStatusUpdate({ appId: 0, status: 'playing' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
-    });
-
-    it('should reject float appId', () => {
-      const result = validateStatusUpdate({ appId: 123.45, status: 'playing' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
-    });
-
-    it('should accept valid positive integer appId', () => {
-      const result = validateStatusUpdate({ appId: 730, status: 'playing' });
-      expect(result.valid).toBe(true);
-      expect(result.data?.appId).toBe(730);
-    });
-
-    it('should accept large appId values', () => {
-      const result = validateStatusUpdate({ appId: 1234567890, status: 'backlog' });
-      expect(result.valid).toBe(true);
-      expect(result.data?.appId).toBe(1234567890);
+    it('accepts valid positive integer appId', () => {
+      expect(gameStatusSchema.safeParse(valid).success).toBe(true);
     });
   });
 
-  describe('status validation', () => {
-    it('should reject missing status', () => {
-      const result = validateStatusUpdate({ appId: 123, status: undefined });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing status');
+  describe('status', () => {
+    it('rejects missing status', () => {
+      expect(gameStatusSchema.safeParse({ appId: 730 }).success).toBe(false);
     });
 
-    it('should reject null status', () => {
-      const result = validateStatusUpdate({ appId: 123, status: null });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing status');
+    it('rejects invalid status', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, status: 'completed' }).success).toBe(false);
     });
 
-    it('should reject empty string status', () => {
-      const result = validateStatusUpdate({ appId: 123, status: '' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing status');
-    });
-
-    it('should reject invalid status values', () => {
-      const invalidStatuses = ['invalid', 'completed', 'active', 'paused', 'PLAYING'];
-
-      invalidStatuses.forEach((status) => {
-        const result = validateStatusUpdate({ appId: 123, status });
-        expect(result.valid).toBe(false);
-        expect(result.error).toBe('Invalid status');
-      });
-    });
-
-    it('should accept all valid status values', () => {
-      VALID_STATUSES.forEach((status) => {
-        const result = validateStatusUpdate({ appId: 123, status });
-        expect(result.valid).toBe(true);
-        expect(result.data?.status).toBe(status);
-      });
+    it('accepts all valid statuses', () => {
+      for (const status of ['backlog', 'playing', 'finished', 'dropped', 'hidden'] as const) {
+        expect(gameStatusSchema.safeParse({ ...valid, status }).success).toBe(true);
+      }
     });
   });
 
-  describe('valid input', () => {
-    it('should return valid result with parsed data for valid input', () => {
-      const result = validateStatusUpdate({ appId: 730, status: 'playing' });
+  describe('rating', () => {
+    it('accepts null rating', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, rating: null }).success).toBe(true);
+    });
 
-      expect(result.valid).toBe(true);
-      expect(result.error).toBeUndefined();
-      expect(result.data).toEqual({
-        appId: 730,
-        status: 'playing',
-      });
+    it('accepts rating of 0', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, rating: 0 }).success).toBe(true);
+    });
+
+    it('accepts rating of 10', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, rating: 10 }).success).toBe(true);
+    });
+
+    it('rejects rating above 10', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, rating: 11 }).success).toBe(false);
+    });
+
+    it('rejects rating below 0', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, rating: -1 }).success).toBe(false);
+    });
+
+    it('rejects float rating', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, rating: 7.5 }).success).toBe(false);
     });
   });
-});
 
-describe('requiresClearingPlayingGames', () => {
-  it('should return true for "playing" status', () => {
-    expect(requiresClearingPlayingGames('playing')).toBe(true);
-  });
-
-  it('should return false for all other statuses', () => {
-    const otherStatuses: GameStatus[] = ['backlog', 'finished', 'dropped', 'hidden'];
-
-    otherStatuses.forEach((status) => {
-      expect(requiresClearingPlayingGames(status)).toBe(false);
+  describe('notes', () => {
+    it('accepts notes within 1000 characters', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, notes: 'Great game' }).success).toBe(true);
     });
-  });
-});
 
-describe('VALID_STATUSES constant', () => {
-  it('should contain exactly 5 statuses', () => {
-    expect(VALID_STATUSES).toHaveLength(5);
-  });
+    it('accepts notes at exactly 1000 characters', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, notes: 'a'.repeat(1000) }).success).toBe(true);
+    });
 
-  it('should include all expected statuses', () => {
-    expect(VALID_STATUSES).toContain('backlog');
-    expect(VALID_STATUSES).toContain('playing');
-    expect(VALID_STATUSES).toContain('finished');
-    expect(VALID_STATUSES).toContain('dropped');
-    expect(VALID_STATUSES).toContain('hidden');
+    it('rejects notes exceeding 1000 characters', () => {
+      const result = gameStatusSchema.safeParse({ ...valid, notes: 'a'.repeat(1001) });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Notes must be 1000 characters or fewer');
+      }
+    });
+
+    it('accepts null notes', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, notes: null }).success).toBe(true);
+    });
   });
 });

@@ -345,6 +345,59 @@ describe('GameDetailModal', () => {
     });
   });
 
+  describe('rating validation', () => {
+    it('should block save and show error when rating is above 10', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
+    });
+
+    it('should block save and show error when rating is below 0', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '-1' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
+    });
+
+    it('should clear the error when the rating is corrected', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '8' } });
+
+      expect(screen.queryByText('Rating must be between 0 and 10')).not.toBeInTheDocument();
+    });
+
+    it('should allow save with rating of 0', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', 0);
+    });
+
+    it('should allow save with rating of 10', () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '10' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', 10);
+    });
+  });
+
   describe('playing status pill', () => {
     it('should render the playing pill', () => {
       render(<GameDetailModal {...defaultProps} />);
