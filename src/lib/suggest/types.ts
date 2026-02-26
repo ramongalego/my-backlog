@@ -29,10 +29,15 @@ export interface TagAffinity {
   total: number;
 }
 
+export interface FinishedGame {
+  name: string;
+  rating: number | null;
+}
+
 export interface SuggestionContext {
   preferences: SuggestionPreferences;
   backlogGames: GameForSuggestion[];
-  finishedGames: string[];
+  finishedGames: FinishedGame[];
   droppedGames: string[];
   excludeAppIds: number[];
   previousReasonings: string[];

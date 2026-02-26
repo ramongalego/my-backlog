@@ -1,4 +1,4 @@
-import type { SuggestionContext, GameForSuggestion } from './types';
+import type { SuggestionContext, GameForSuggestion, FinishedGame } from './types';
 
 const MOOD_DESCRIPTIONS = {
   adrenaline: 'fast, demanding, focus-heavy, skill or reaction based gameplay',
@@ -37,6 +37,28 @@ function formatGameForPrompt(game: GameForSuggestion): string {
   return parts.join(' | ');
 }
 
+function formatFinishedGames(games: FinishedGame[]): string {
+  if (games.length === 0) return 'No finished games yet.';
+
+  const loved = games.filter((g) => g.rating !== null && g.rating >= 8);
+  const ok = games.filter((g) => g.rating !== null && g.rating >= 5 && g.rating < 8);
+  const disliked = games.filter((g) => g.rating !== null && g.rating < 5);
+  const unrated = games.filter((g) => g.rating === null);
+
+  const lines: string[] = [];
+  if (loved.length > 0)
+    lines.push(`Loved (8-10/10): ${loved.map((g) => `${g.name} (${g.rating}/10)`).join(', ')}`);
+  if (ok.length > 0)
+    lines.push(`Liked (5-7/10): ${ok.map((g) => `${g.name} (${g.rating}/10)`).join(', ')}`);
+  if (disliked.length > 0)
+    lines.push(
+      `Disliked (0-4/10): ${disliked.map((g) => `${g.name} (${g.rating}/10)`).join(', ')}`,
+    );
+  if (unrated.length > 0) lines.push(`No rating: ${unrated.map((g) => g.name).join(', ')}`);
+
+  return lines.join('\n');
+}
+
 export function buildSuggestionPrompt(context: SuggestionContext): string {
   const {
     preferences,
@@ -71,7 +93,8 @@ ${gamesListFormatted}
 
 ## USER'S GAMING HISTORY (Important - use this to personalize your recommendation!)
 
-${finishedGames.length > 0 ? `**Games they FINISHED** (they loved these enough to complete - similar games are likely safe picks): ${finishedGames.slice(0, 10).join(', ')}${finishedGames.length > 10 ? ` and ${finishedGames.length - 10} more` : ''}` : 'No finished games yet.'}
+**Games they FINISHED** (user ratings are the strongest taste signal — prioritise accordingly):
+${formatFinishedGames(finishedGames)}
 
 ${droppedGames.length > 0 ? `**Games they DROPPED** (lost interest - be cautious with similar styles/genres): ${droppedGames.slice(0, 10).join(', ')}${droppedGames.length > 10 ? ` and ${droppedGames.length - 10} more` : ''}` : 'No dropped games.'}
 
@@ -91,12 +114,13 @@ Prioritize backlog games that share these tags when they also match the current 
 ## YOUR TASK
 
 Pick ONE game from the backlog that best matches the current mood, energy, and time preferences. Consider:
-- **Their history matters**: If they finished similar games before, that's a strong signal. If they dropped similar games, be cautious.
-- **Playtime signals interest**: Games they've already started playing might be good to continue. Fresh games (0 playtime) are also great for new experiences.
-- Games that were skipped/rerolled before should generally be deprioritized (but not excluded)
-- Higher-rated games are generally safer picks
-- Match the time commitment (roguelikes work for "short" sessions even if total playtime is long)
-- Match the mood/genre appropriately
+- **User ratings are the strongest signal**: Ratings are on a 0–10 scale. Games rated 8–10 reveal exactly what they enjoy — look for backlog games with similar tags, genres, or themes. Games rated 0–4 reveal what they don't enjoy — avoid recommending similar styles even if they technically match the mood filter.
+- **Completion without a rating** still signals they liked it enough to finish, but treat it as a weaker signal than an explicit rating.
+- **Dropped games**: be cautious with games that share styles or themes with dropped titles.
+- **Playtime signals interest**: games they've already started might be good to continue.
+- Games that were skipped/rerolled before should generally be deprioritised (but not excluded).
+- Match the time commitment (roguelikes work for "short" sessions even if total playtime is long).
+- Match the mood/genre appropriately.
 
 IMPORTANT: Write the reasoning in second person, speaking directly to the user (use "you/your", not "the user/their"). Reference their history when relevant (e.g., "Since you finished X, you might enjoy this similar game...").
 ${

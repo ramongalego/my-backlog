@@ -14,11 +14,36 @@ interface LandingPageProps {
 }
 
 const MOCK_LIBRARY = [
-  { gradient: 'from-violet-800 to-fuchsia-900', title: 'Hades', status: 'Playing', pill: 'bg-violet-500/15 text-violet-400' },
-  { gradient: 'from-sky-800 to-blue-900', title: 'Disco Elysium', status: 'Backlog', pill: 'bg-zinc-800 text-zinc-500' },
-  { gradient: 'from-emerald-800 to-teal-900', title: 'Hollow Knight', status: 'Finished', pill: 'bg-emerald-500/15 text-emerald-400' },
-  { gradient: 'from-amber-800 to-orange-900', title: 'Celeste', status: 'Finished', pill: 'bg-emerald-500/15 text-emerald-400' },
-  { gradient: 'from-rose-800 to-pink-900', title: 'Cyberpunk 2077', status: 'Backlog', pill: 'bg-zinc-800 text-zinc-500' },
+  {
+    gradient: 'from-violet-800 to-fuchsia-900',
+    title: 'Hades',
+    status: 'Playing',
+    pill: 'bg-violet-500/15 text-violet-400',
+  },
+  {
+    gradient: 'from-sky-800 to-blue-900',
+    title: 'Disco Elysium',
+    status: 'Backlog',
+    pill: 'bg-zinc-800 text-zinc-500',
+  },
+  {
+    gradient: 'from-emerald-800 to-teal-900',
+    title: 'Hollow Knight',
+    status: 'Finished',
+    pill: 'bg-emerald-500/15 text-emerald-400',
+  },
+  {
+    gradient: 'from-amber-800 to-orange-900',
+    title: 'Celeste',
+    status: 'Finished',
+    pill: 'bg-emerald-500/15 text-emerald-400',
+  },
+  {
+    gradient: 'from-rose-800 to-pink-900',
+    title: 'Cyberpunk 2077',
+    status: 'Backlog',
+    pill: 'bg-zinc-800 text-zinc-500',
+  },
 ];
 
 export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
@@ -35,7 +60,6 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
       <Header />
 
       <main className="pt-16 flex-1">
-
         {/* ── Hero ── */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -50,7 +74,8 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </span>
             </h1>
             <p className="text-xl text-zinc-400 mb-12 max-w-lg mx-auto leading-relaxed">
-              Your Steam library has hundreds of games. We help you actually play them — and finish them.
+              Your Steam library has hundreds of games. We help you actually play them — and finish
+              them.
             </p>
 
             {user ? (
@@ -81,8 +106,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 No more decision paralysis
               </p>
               <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
-                We pick the game.{' '}
-                <span className="text-zinc-500">You just play it.</span>
+                We pick the game. <span className="text-zinc-500">You just play it.</span>
               </h2>
               <p className="text-zinc-400 leading-relaxed mb-4">
                 You know the drill — you sit down to play, spend 20 minutes scrolling through your
@@ -100,17 +124,29 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               <div>
                 <p className="text-xs text-zinc-500 mb-3">How much time do you have?</p>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">Under 2h</span>
-                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">3–5 hours</span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">All weekend</span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
+                    Under 2h
+                  </span>
+                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">
+                    3–5 hours
+                  </span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
+                    All weekend
+                  </span>
                 </div>
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-3">What are you in the mood for?</p>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">Story</span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">Action</span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">Chill</span>
+                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">
+                    Story
+                  </span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
+                    Action
+                  </span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
+                    Chill
+                  </span>
                 </div>
               </div>
               <div className="h-px bg-zinc-800" />
@@ -144,8 +180,12 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               <div className="divide-y divide-zinc-800/60">
                 {MOCK_LIBRARY.map((game, i) => (
                   <div key={i} className="flex items-center gap-3.5 px-5 py-3.5">
-                    <div className={`w-9 h-9 rounded-md bg-gradient-to-br ${game.gradient} shrink-0`} />
-                    <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">{game.title}</span>
+                    <div
+                      className={`w-9 h-9 rounded-md bg-gradient-to-br ${game.gradient} shrink-0`}
+                    />
+                    <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">
+                      {game.title}
+                    </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${game.pill}`}>
                       {game.status}
                     </span>
@@ -159,17 +199,16 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 Everything in one place
               </p>
               <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
-                Your backlog,{' '}
-                <span className="text-zinc-500">finally under control.</span>
+                Your backlog, <span className="text-zinc-500">finally under control.</span>
               </h2>
               <p className="text-zinc-400 leading-relaxed mb-4">
-                Hundreds of games, bought across dozens of sales, spread across years — and you
-                have no idea what you actually own anymore.
+                Hundreds of games, bought across dozens of sales, spread across years — and you have
+                no idea what you actually own anymore.
               </p>
               <p className="text-zinc-500 leading-relaxed">
-                MyBacklog pulls your full Steam library and lets you see it all clearly. Mark
-                games as playing, finished, dropped, or hidden. Filter and sort however you want.
-                Know exactly what&apos;s waiting for you.
+                MyBacklog pulls your full Steam library and lets you see it all clearly. Mark games
+                as playing, finished, dropped, or hidden. Filter and sort however you want. Know
+                exactly what&apos;s waiting for you.
               </p>
             </div>
           </div>
@@ -187,17 +226,16 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 Queue · Diary · Stats
               </p>
               <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
-                Build momentum.{' '}
-                <span className="text-zinc-500">Watch the backlog shrink.</span>
+                Build momentum. <span className="text-zinc-500">Watch the backlog shrink.</span>
               </h2>
               <p className="text-zinc-400 leading-relaxed mb-4">
-                Finishing one game feels good. Finishing ten feels like you&apos;re actually
-                making progress. MyBacklog is built to keep that momentum going.
+                Finishing one game feels good. Finishing ten feels like you&apos;re actually making
+                progress. MyBacklog is built to keep that momentum going.
               </p>
               <p className="text-zinc-500 leading-relaxed">
                 Queue up what&apos;s next so you never start a session without a plan. Log every
-                game you finish — with a rating and notes. Then open Stats and watch your
-                completion rate climb. The backlog was always finite. Now you&apos;ll believe it.
+                game you finish — with a rating and notes. Then open Stats and watch your completion
+                rate climb. The backlog was always finite. Now you&apos;ll believe it.
               </p>
             </div>
 
@@ -210,7 +248,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   {['Disco Elysium', 'Celeste', 'Portal 2'].map((name, i) => (
                     <div key={i} className="flex items-center gap-3">
                       <span className="text-xs text-zinc-700 font-mono w-4 shrink-0">{i + 1}</span>
-                      <div className={`w-6 h-6 rounded bg-gradient-to-br shrink-0 ${['from-sky-800 to-blue-900', 'from-amber-800 to-orange-900', 'from-zinc-700 to-zinc-800'][i]}`} />
+                      <div
+                        className={`w-6 h-6 rounded bg-gradient-to-br shrink-0 ${['from-sky-800 to-blue-900', 'from-amber-800 to-orange-900', 'from-zinc-700 to-zinc-800'][i]}`}
+                      />
                       <span className="text-sm text-zinc-400">{name}</span>
                     </div>
                   ))}
@@ -231,7 +271,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                     ))}
                     <Star className="w-3 h-3 text-zinc-700" />
                   </div>
-                  <p className="text-xs text-zinc-600 truncate">One of the best I&apos;ve ever played.</p>
+                  <p className="text-xs text-zinc-600 truncate">
+                    One of the best I&apos;ve ever played.
+                  </p>
                 </div>
               </div>
 
@@ -275,7 +317,6 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
             )}
           </div>
         </section>
-
       </main>
 
       <footer className="py-6 border-t border-zinc-800">

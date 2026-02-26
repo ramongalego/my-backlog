@@ -171,6 +171,10 @@ export default function DiaryPage() {
     mg.entries.push(entry);
   }
 
+  const thisYearCount = entries.filter((e) =>
+    e.finished_at?.startsWith(String(new Date().getFullYear())),
+  ).length;
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <Header />
@@ -184,7 +188,7 @@ export default function DiaryPage() {
               <p className="text-zinc-500 text-sm mt-1">
                 {entries.length === 0
                   ? "You haven't finished any games yet"
-                  : `You've finished ${entries.length} game${entries.length === 1 ? '' : 's'}`}
+                  : `${entries.length} game${entries.length === 1 ? '' : 's'} finished · ${thisYearCount} this year`}
               </p>
             )}
           </div>

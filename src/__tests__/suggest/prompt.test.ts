@@ -1,5 +1,5 @@
 import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
-import type { SuggestionContext, GameForSuggestion } from '@/lib/suggest/types';
+import type { SuggestionContext, GameForSuggestion, FinishedGame } from '@/lib/suggest/types';
 
 describe('buildSuggestionPrompt', () => {
   const createGame = (overrides: Partial<GameForSuggestion> = {}): GameForSuggestion => ({
@@ -25,7 +25,7 @@ describe('buildSuggestionPrompt', () => {
       createGame({ app_id: 1, name: 'Game One' }),
       createGame({ app_id: 2, name: 'Game Two' }),
     ],
-    finishedGames: ['Completed Game'],
+    finishedGames: [{ name: 'Completed Game', rating: 9 }] as FinishedGame[],
     droppedGames: ['Dropped Game'],
     excludeAppIds: [],
     previousReasonings: [],

@@ -6,6 +6,7 @@ import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
 import type {
   SuggestionPreferences,
   GameForSuggestion,
+  FinishedGame,
   SuggestionContext,
   MoodType,
   EnergyLevel,
@@ -111,13 +112,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'No games in backlog' }, { status: 400 });
   }
 
-  // Fetch finished games for context
+  // Fetch finished games with ratings for context
   const { data: finishedGames } = await supabase
     .from('games')
-    .select('name')
+    .select('name, rating')
     .eq('user_id', user.id)
     .eq('status', 'finished')
-    .limit(20);
+    .order('finished_at', { ascending: false })
+    .limit(30);
 
   // Fetch dropped games for context
   const { data: droppedGames } = await supabase
@@ -183,7 +185,8 @@ export async function POST(request: NextRequest) {
         reroll_count: g.reroll_count ?? 0,
       }),
     ),
-    finishedGames: finishedGames?.map((g) => g.name) ?? [],
+    finishedGames:
+      finishedGames?.map((g): FinishedGame => ({ name: g.name, rating: g.rating ?? null })) ?? [],
     droppedGames: droppedGames?.map((g) => g.name) ?? [],
     excludeAppIds,
     previousReasonings,
