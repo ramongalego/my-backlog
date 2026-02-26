@@ -11,6 +11,7 @@ interface SuggestionResultProps {
   onReroll: () => void;
   cooldownRemaining: number;
   isLoading: boolean;
+  mode?: 'play' | 'queue';
 }
 
 export function SuggestionResult({
@@ -19,6 +20,7 @@ export function SuggestionResult({
   onReroll,
   cooldownRemaining,
   isLoading,
+  mode = 'play',
 }: SuggestionResultProps) {
   const { game, reasoning } = suggestion;
   const isOnCooldown = cooldownRemaining > 0;
@@ -97,7 +99,7 @@ export function SuggestionResult({
         {/* Action buttons */}
         <div className="flex gap-3 pt-1">
           <Button onClick={onPick} disabled={isLoading} className="flex-1 cursor-pointer">
-            Start Playing
+            {mode === 'queue' ? 'Add to Queue' : 'Start Playing'}
           </Button>
           <button
             onClick={onReroll}

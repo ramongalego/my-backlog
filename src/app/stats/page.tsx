@@ -16,6 +16,7 @@ import { Header } from '@/components/Header';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
 import { addToQueue } from '@/lib/games/queue';
+import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
 
 interface EditModalState {
@@ -355,7 +356,8 @@ export default function StatsPage() {
   };
 
   const handleAddToQueue = async (appId: number) => {
-    await addToQueue(appId);
+    const ok = await addToQueue(appId);
+    if (ok) toast.success(`${editModal?.gameName} added to the queue!`);
     setEditModal(null);
   };
 

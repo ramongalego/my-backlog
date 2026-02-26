@@ -62,22 +62,23 @@ function HomeContent() {
     }
   }, [searchParams, router]);
 
-  const handleSuggestionPick = useCallback(
+  const handleSuggestionAction = useCallback(
     async (
       appId: number,
       name: string,
       headerImage: string | null,
       mainStoryHours: number | null,
     ) => {
-      await handlePickGame({
+      const game = {
         app_id: appId,
         name,
         header_image: headerImage,
         main_story_hours: mainStoryHours ?? 0,
         playtime_forever: 0,
-      });
+      };
+      await (currentlyPlaying ? handleQueueGame(game) : handlePickGame(game));
     },
-    [handlePickGame],
+    [currentlyPlaying, handlePickGame, handleQueueGame],
   );
 
   const isSteamConnected = profile?.steam_id != null;
@@ -102,13 +103,33 @@ function HomeContent() {
             {isSyncing ? (
               <SyncProgress progress={syncProgress} games={syncingGames} />
             ) : currentlyPlaying ? (
-              <CurrentlyPlaying
-                game={currentlyPlaying}
-                onFinish={handleFinishGame}
-                onDrop={handleDropGame}
-                onCancel={handleCancelGame}
-                isLoading={isStatusLoading}
-              />
+              <>
+                <CurrentlyPlaying
+                  game={currentlyPlaying}
+                  onFinish={handleFinishGame}
+                  onDrop={handleDropGame}
+                  onCancel={handleCancelGame}
+                  isLoading={isStatusLoading}
+                />
+                <div className="flex flex-col items-center gap-1.5 mt-10">
+                  <Button
+                    size="lg"
+                    className="cursor-pointer"
+                    onClick={() => setIsSuggestionModalOpen(true)}
+                  >
+                    Pick My Next Game
+                  </Button>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    The picked game will be added to your{' '}
+                    <a
+                      href="/playing-queue"
+                      className="font-medium text-zinc-400 hover:text-zinc-300 transition-colors"
+                    >
+                      queue
+                    </a>
+                  </p>
+                </div>
+              </>
             ) : isStatusLoading ? (
               <StatusLoadingState />
             ) : (
@@ -173,7 +194,8 @@ function HomeContent() {
       <SuggestionModal
         isOpen={isSuggestionModalOpen}
         onClose={() => setIsSuggestionModalOpen(false)}
-        onPick={handleSuggestionPick}
+        onPick={handleSuggestionAction}
+        mode={currentlyPlaying ? 'queue' : 'play'}
       />
 
       {gameSummary && (

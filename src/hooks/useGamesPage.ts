@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
+import { toast } from 'sonner';
 
 export interface GameItem {
   app_id: number;
@@ -66,7 +67,7 @@ interface UseGamesPageReturn {
   ) => Promise<void>;
   handleCloseStatusModal: () => void;
   handleOpenDetail: (appId: number) => void;
-  handleAddToQueue: (appId: number) => Promise<void>;
+  handleAddToQueue: (appId: number, gameName: string) => Promise<void>;
   queuedAppIds: Set<number>;
 }
 
@@ -191,9 +192,12 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
 
-  const handleAddToQueue = useCallback(async (appId: number) => {
+  const handleAddToQueue = useCallback(async (appId: number, gameName: string) => {
     const ok = await addToQueue(appId);
-    if (ok) setQueuedAppIds((prev) => new Set([...prev, appId]));
+    if (ok) {
+      setQueuedAppIds((prev) => new Set([...prev, appId]));
+      toast.success(`${gameName} added to the queue!`);
+    }
   }, []);
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames

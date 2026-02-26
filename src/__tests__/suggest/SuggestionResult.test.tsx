@@ -155,6 +155,56 @@ describe('SuggestionResult', () => {
     expect(screen.getByText('Reroll').closest('button')).toBeDisabled();
   });
 
+  describe('mode="queue"', () => {
+    it('should show "Add to Queue" instead of "Start Playing"', () => {
+      render(
+        <SuggestionResult
+          suggestion={mockSuggestion}
+          onPick={mockOnPick}
+          onReroll={mockOnReroll}
+          cooldownRemaining={0}
+          isLoading={false}
+          mode="queue"
+        />,
+      );
+
+      expect(screen.getByText('Add to Queue')).toBeInTheDocument();
+      expect(screen.queryByText('Start Playing')).not.toBeInTheDocument();
+    });
+
+    it('should call onPick when Add to Queue is clicked', () => {
+      render(
+        <SuggestionResult
+          suggestion={mockSuggestion}
+          onPick={mockOnPick}
+          onReroll={mockOnReroll}
+          cooldownRemaining={0}
+          isLoading={false}
+          mode="queue"
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Add to Queue'));
+
+      expect(mockOnPick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should disable Add to Queue button when loading', () => {
+      render(
+        <SuggestionResult
+          suggestion={mockSuggestion}
+          onPick={mockOnPick}
+          onReroll={mockOnReroll}
+          cooldownRemaining={0}
+          isLoading={true}
+          mode="queue"
+        />,
+      );
+
+      expect(screen.getByText('Add to Queue').closest('button')).toBeDisabled();
+    });
+  });
+
   it('should handle game without duration', () => {
     const suggestionWithoutDuration: SuggestionResultType = {
       ...mockSuggestion,

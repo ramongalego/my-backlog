@@ -8,6 +8,7 @@ import type { Profile, Game, GameWithImage, SyncProgress } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
+import { toast } from 'sonner';
 
 interface StatusModal {
   action: 'finished' | 'dropped';
@@ -170,7 +171,10 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
   const handleQueueGame = useCallback(async (game: GameWithImage) => {
     const ok = await addToQueue(game.app_id);
-    if (ok) setQueuedAppIds((prev) => new Set([...prev, game.app_id]));
+    if (ok) {
+      setQueuedAppIds((prev) => new Set([...prev, game.app_id]));
+      toast.success(`${game.name} added to the queue!`);
+    }
   }, []);
 
   const handleOpenCarouselDetail = useCallback((game: GameWithImage) => {

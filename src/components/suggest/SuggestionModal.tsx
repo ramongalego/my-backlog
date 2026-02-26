@@ -17,9 +17,10 @@ interface SuggestionModalProps {
     headerImage: string | null,
     mainStoryHours: number | null,
   ) => void;
+  mode?: 'play' | 'queue';
 }
 
-export function SuggestionModal({ isOpen, onClose, onPick }: SuggestionModalProps) {
+export function SuggestionModal({ isOpen, onClose, onPick, mode = 'play' }: SuggestionModalProps) {
   const {
     step,
     suggestion,
@@ -122,6 +123,7 @@ export function SuggestionModal({ isOpen, onClose, onPick }: SuggestionModalProp
               onReroll={reroll}
               cooldownRemaining={cooldownRemaining}
               isLoading={isLoading}
+              mode={mode}
             />
           )}
         </div>

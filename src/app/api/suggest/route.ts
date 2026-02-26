@@ -91,6 +91,15 @@ export async function POST(request: NextRequest) {
       )
     : [];
 
+  // Fetch queued games to exclude from suggestions
+  const { data: queuedGames } = await supabase
+    .from('playing_queue')
+    .select('app_id')
+    .eq('user_id', user.id);
+
+  const queuedAppIds = (queuedGames ?? []).map((q) => q.app_id as number);
+  const allExcludeAppIds = [...new Set([...excludeAppIds, ...queuedAppIds])];
+
   // Fetch user's games
   const { data: backlogGames, error: backlogError } = await supabase
     .from('games')
@@ -188,14 +197,14 @@ export async function POST(request: NextRequest) {
     finishedGames:
       finishedGames?.map((g): FinishedGame => ({ name: g.name, rating: g.rating ?? null })) ?? [],
     droppedGames: droppedGames?.map((g) => g.name) ?? [],
-    excludeAppIds,
+    excludeAppIds: allExcludeAppIds,
     previousReasonings,
     tagAffinities,
   };
 
   // Check if there are any eligible games after exclusions
   const eligibleCount = context.backlogGames.filter(
-    (g) => !excludeAppIds.includes(g.app_id),
+    (g) => !allExcludeAppIds.includes(g.app_id),
   ).length;
   if (eligibleCount === 0) {
     return NextResponse.json(
