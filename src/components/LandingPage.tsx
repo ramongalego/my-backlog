@@ -1,35 +1,56 @@
 'use client';
 
 import { useState } from 'react';
+import { Star } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
 import type { User } from '@supabase/supabase-js';
+import type { AuthMode } from '@/types/auth';
 
 interface LandingPageProps {
   user: User | null;
   onConnectSteam: () => void;
 }
 
+const MOCK_LIBRARY = [
+  { gradient: 'from-violet-800 to-fuchsia-900', title: 'Hades', status: 'Playing', pill: 'bg-violet-500/15 text-violet-400' },
+  { gradient: 'from-sky-800 to-blue-900', title: 'Disco Elysium', status: 'Backlog', pill: 'bg-zinc-800 text-zinc-500' },
+  { gradient: 'from-emerald-800 to-teal-900', title: 'Hollow Knight', status: 'Finished', pill: 'bg-emerald-500/15 text-emerald-400' },
+  { gradient: 'from-amber-800 to-orange-900', title: 'Celeste', status: 'Finished', pill: 'bg-emerald-500/15 text-emerald-400' },
+  { gradient: 'from-rose-800 to-pink-900', title: 'Cyberpunk 2077', status: 'Backlog', pill: 'bg-zinc-800 text-zinc-500' },
+];
+
 export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('signup');
+
+  const openModal = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setIsAuthModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
       <Header />
 
       <main className="pt-16 flex-1">
-        <section className="max-w-4xl mx-auto px-6 py-24 md:py-32">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-zinc-100 leading-tight mb-6">
+
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-[900px] h-[600px] bg-violet-600/8 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative max-w-4xl mx-auto px-6 py-32 md:py-48 text-center">
+            <h1 className="text-5xl md:text-7xl font-bold text-zinc-100 leading-[1.1] tracking-tight mb-6">
               Stop scrolling.{' '}
               <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400">
                 Start playing.
               </span>
             </h1>
-            <p className="text-lg text-zinc-400 mb-10 max-w-xl mx-auto">
-              Connect your Steam library and let us pick your next game based on your mood and
-              available time.
+            <p className="text-xl text-zinc-400 mb-12 max-w-lg mx-auto leading-relaxed">
+              Your Steam library has hundreds of games. We help you actually play them — and finish them.
             </p>
 
             {user ? (
@@ -37,45 +58,236 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 Connect Your Steam
               </Button>
             ) : (
-              <Button size="lg" onClick={() => setIsAuthModalOpen(true)}>
-                Get Started
-              </Button>
+              <div className="flex flex-col items-center gap-4">
+                <Button size="lg" onClick={() => openModal('signup')}>
+                  Get Started — it&apos;s free
+                </Button>
+                <button
+                  onClick={() => openModal('login')}
+                  className="text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+                >
+                  Already have an account? Sign in
+                </button>
+              </div>
             )}
           </div>
+        </section>
 
-          <div className="mt-32 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
-            <div className="flex items-center gap-4">
-              <span className="text-4xl font-light text-violet-400">1</span>
-              <span className="text-zinc-400">Connect Steam</span>
+        {/* ── Section 1: Game Picker ── */}
+        <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+            <div>
+              <p className="text-xs text-violet-400 uppercase tracking-widest mb-4 font-medium">
+                No more decision paralysis
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
+                We pick the game.{' '}
+                <span className="text-zinc-500">You just play it.</span>
+              </h2>
+              <p className="text-zinc-400 leading-relaxed mb-4">
+                You know the drill — you sit down to play, spend 20 minutes scrolling through your
+                library, and end up watching YouTube instead. We fix that.
+              </p>
+              <p className="text-zinc-500 leading-relaxed">
+                Answer two quick questions about your mood and how much time you have. We&apos;ll
+                surface the right game from your own library. No subscriptions. No outside
+                recommendations. Just your backlog, finally sorted.
+              </p>
             </div>
 
-            <div className="hidden md:block w-12 h-px bg-zinc-800" />
-
-            <div className="flex items-center gap-4">
-              <span className="text-4xl font-light text-violet-400">2</span>
-              <span className="text-zinc-400">Set your mood</span>
-            </div>
-
-            <div className="hidden md:block w-12 h-px bg-zinc-800" />
-
-            <div className="flex items-center gap-4">
-              <span className="text-4xl font-light text-violet-400">3</span>
-              <span className="text-zinc-400">Play</span>
+            {/* Picker mock */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5">
+              <div>
+                <p className="text-xs text-zinc-500 mb-3">How much time do you have?</p>
+                <div className="flex gap-2 flex-wrap">
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">Under 2h</span>
+                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">3–5 hours</span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">All weekend</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 mb-3">What are you in the mood for?</p>
+                <div className="flex gap-2 flex-wrap">
+                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">Story</span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">Action</span>
+                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">Chill</span>
+                </div>
+              </div>
+              <div className="h-px bg-zinc-800" />
+              <div className="flex items-center gap-4 bg-zinc-950 rounded-xl p-4 border border-zinc-800/60">
+                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-violet-800 to-fuchsia-900 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-zinc-100 mb-0.5">Hollow Knight</p>
+                  <p className="text-xs text-zinc-500">~25h to beat · 4.9 rating</p>
+                </div>
+                <div className="text-xs px-3 py-1.5 bg-violet-600 rounded-lg text-white shrink-0">
+                  Play this
+                </div>
+              </div>
             </div>
           </div>
         </section>
+
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="h-px bg-zinc-900" />
+        </div>
+
+        {/* ── Section 2: Library ── */}
+        <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+            {/* Library mock */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden order-last lg:order-first">
+              <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-300">My Library</span>
+                <span className="text-xs text-zinc-600">847 games</span>
+              </div>
+              <div className="divide-y divide-zinc-800/60">
+                {MOCK_LIBRARY.map((game, i) => (
+                  <div key={i} className="flex items-center gap-3.5 px-5 py-3.5">
+                    <div className={`w-9 h-9 rounded-md bg-gradient-to-br ${game.gradient} shrink-0`} />
+                    <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">{game.title}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${game.pill}`}>
+                      {game.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-violet-400 uppercase tracking-widest mb-4 font-medium">
+                Everything in one place
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
+                Your backlog,{' '}
+                <span className="text-zinc-500">finally under control.</span>
+              </h2>
+              <p className="text-zinc-400 leading-relaxed mb-4">
+                Hundreds of games, bought across dozens of sales, spread across years — and you
+                have no idea what you actually own anymore.
+              </p>
+              <p className="text-zinc-500 leading-relaxed">
+                MyBacklog pulls your full Steam library and lets you see it all clearly. Mark
+                games as playing, finished, dropped, or hidden. Filter and sort however you want.
+                Know exactly what&apos;s waiting for you.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="h-px bg-zinc-900" />
+        </div>
+
+        {/* ── Section 3: Momentum ── */}
+        <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+            <div>
+              <p className="text-xs text-violet-400 uppercase tracking-widest mb-4 font-medium">
+                Queue · Diary · Stats
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
+                Build momentum.{' '}
+                <span className="text-zinc-500">Watch the backlog shrink.</span>
+              </h2>
+              <p className="text-zinc-400 leading-relaxed mb-4">
+                Finishing one game feels good. Finishing ten feels like you&apos;re actually
+                making progress. MyBacklog is built to keep that momentum going.
+              </p>
+              <p className="text-zinc-500 leading-relaxed">
+                Queue up what&apos;s next so you never start a session without a plan. Log every
+                game you finish — with a rating and notes. Then open Stats and watch your
+                completion rate climb. The backlog was always finite. Now you&apos;ll believe it.
+              </p>
+            </div>
+
+            {/* Momentum mock */}
+            <div className="space-y-3">
+              {/* Queue */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4">
+                <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Up next</p>
+                <div className="space-y-2.5">
+                  {['Disco Elysium', 'Celeste', 'Portal 2'].map((name, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-xs text-zinc-700 font-mono w-4 shrink-0">{i + 1}</span>
+                      <div className={`w-6 h-6 rounded bg-gradient-to-br shrink-0 ${['from-sky-800 to-blue-900', 'from-amber-800 to-orange-900', 'from-zinc-700 to-zinc-800'][i]}`} />
+                      <span className="text-sm text-zinc-400">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Diary entry */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-800 to-teal-900 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-zinc-300">Hollow Knight</span>
+                    <span className="text-xs text-zinc-600">Jan 2025</span>
+                  </div>
+                  <div className="flex gap-0.5 mb-1.5">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    ))}
+                    <Star className="w-3 h-3 text-zinc-700" />
+                  </div>
+                  <p className="text-xs text-zinc-600 truncate">One of the best I&apos;ve ever played.</p>
+                </div>
+              </div>
+
+              {/* Stats callout */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-5">
+                <div className="flex items-end gap-1 h-10">
+                  {[40, 60, 45, 80, 65, 90, 70].map((h, i) => (
+                    <div
+                      key={i}
+                      className="w-3 bg-violet-500/30 rounded-sm"
+                      style={{ height: `${h}%` }}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-zinc-100">47</p>
+                  <p className="text-xs text-zinc-500">games finished this year</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Final CTA ── */}
+        <section className="border-t border-zinc-900">
+          <div className="max-w-2xl mx-auto px-6 py-24 md:py-32 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
+              Start clearing your backlog tonight.
+            </h2>
+            <p className="text-zinc-500 mb-10">
+              Free to use. Connect your Steam library in under a minute.
+            </p>
+            {user ? (
+              <Button size="lg" onClick={onConnectSteam}>
+                Connect Your Steam
+              </Button>
+            ) : (
+              <Button size="lg" onClick={() => openModal('signup')}>
+                Get Started — it&apos;s free
+              </Button>
+            )}
+          </div>
+        </section>
+
       </main>
 
       <footer className="py-6 border-t border-zinc-800">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-sm text-zinc-500">MyBacklog</p>
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="text-sm text-zinc-600">MyBacklog</p>
         </div>
       </footer>
 
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        initialMode="signup"
+        initialMode={authMode}
       />
     </div>
   );
