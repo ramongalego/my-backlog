@@ -115,9 +115,10 @@ Prioritize backlog games that share these tags when they also match the current 
 
 Pick ONE game from the backlog that best matches the current mood, energy, and time preferences. Consider:
 - **User ratings are the strongest signal**: Ratings are on a 0–10 scale. Games rated 8–10 reveal exactly what they enjoy — look for backlog games with similar tags, genres, or themes. Games rated 0–4 reveal what they don't enjoy — avoid recommending similar styles even if they technically match the mood filter.
+- **Sequels and series come first**: If the user has finished and rated entries in a series (e.g. "X II", "X III"), and the next entry (e.g. "X IV") is in their backlog, that is almost certainly the best recommendation — prioritise it strongly. Same applies to spin-offs or games by the same developer in the same sub-genre.
 - **Completion without a rating** still signals they liked it enough to finish, but treat it as a weaker signal than an explicit rating.
 - **Dropped games**: be cautious with games that share styles or themes with dropped titles.
-- **Playtime signals interest**: games they've already started might be good to continue.
+- **Playtime signals interest**: games they've already started might be good to continue — especially if it's a sequel to something they loved.
 - Games that were skipped/rerolled before should generally be deprioritised (but not excluded).
 - Match the time commitment (roguelikes work for "short" sessions even if total playtime is long).
 - Match the mood/genre appropriately.

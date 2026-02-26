@@ -104,6 +104,12 @@ describe('buildSuggestionPrompt', () => {
     expect(prompt).toContain('DROPPED');
   });
 
+  it('should include sequel/series priority instruction', () => {
+    const prompt = buildSuggestionPrompt(baseContext);
+
+    expect(prompt).toContain('Sequels and series come first');
+  });
+
   it('should exclude games in excludeAppIds', () => {
     const context: SuggestionContext = {
       ...baseContext,
