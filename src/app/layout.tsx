@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MyBacklog - Clear Your Gaming Backlog',
+  title: {
+    template: '%s · MyBacklog',
+    default: 'MyBacklog',
+  },
   description:
     'Stop buying new games and start finishing the ones you own. MyBacklog helps you pick the perfect game from your Steam library.',
 };

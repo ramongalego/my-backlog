@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const protectedRoutes = ['/games', '/diary', '/stats'];
+const protectedRoutes = ['/home', '/games', '/diary', '/stats', '/playing-queue'];
+const publicOnlyRoutes = ['/'];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -34,13 +35,18 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Check if accessing protected route without auth
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route),
-  );
+  const { pathname } = request.nextUrl;
 
+  // Redirect unauthenticated users away from protected routes
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
   if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Redirect authenticated users away from public-only routes (landing page)
+  const isPublicOnlyRoute = publicOnlyRoutes.some((route) => pathname === route);
+  if (isPublicOnlyRoute && user) {
+    return NextResponse.redirect(new URL('/home', request.url));
   }
 
   return supabaseResponse;

@@ -119,10 +119,18 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
               <div className="w-8 h-8 bg-linear-to-br from-violet-500 to-fuchsia-500 rounded-lg" />
               <span className="text-xl font-bold text-zinc-100">MyBacklog</span>
             </Link>
+            {user && !hideNavLinks && (
+              <Link
+                href="/home"
+                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/home' ? 'text-zinc-100' : 'text-zinc-400'}`}
+              >
+                Home
+              </Link>
+            )}
             {user && !hideNavLinks && (
               <Link
                 href="/games"
