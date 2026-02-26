@@ -28,7 +28,7 @@ export interface SteamReviewsResponse {
 export async function getGameDetails(appId: number): Promise<SteamGameDetails | null> {
   try {
     const response = await fetchWithTimeout(
-      `https://store.steampowered.com/api/appdetails?appids=${appId}`,
+      `https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`,
       { next: { revalidate: 86400 } } as RequestInit, // Cache for 24 hours
       TIMEOUTS.STEAM_STORE,
     );
