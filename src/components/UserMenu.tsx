@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
-import { RefreshCw, LogOut } from 'lucide-react';
+import { RefreshCw, LogOut, Bug } from 'lucide-react';
+import { SupportModal } from '@/components/SupportModal';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -26,6 +27,7 @@ export function UserMenu({
   isRefreshDisabled,
 }: UserMenuProps) {
   const [open, setOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [cooldownLabel, setCooldownLabel] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +113,17 @@ export function UserMenu({
           )}
 
           <button
+            onClick={() => {
+              setOpen(false);
+              setIsReportOpen(true);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            <Bug className="w-4 h-4" />
+            Report an issue
+          </button>
+
+          <button
             onClick={handleSignOut}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
           >
@@ -119,6 +132,7 @@ export function UserMenu({
           </button>
         </div>
       )}
+      <SupportModal open={isReportOpen} onClose={() => setIsReportOpen(false)} />
     </div>
   );
 }
