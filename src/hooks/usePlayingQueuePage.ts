@@ -71,7 +71,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         const { data: playingGame } = await supabase
           .from('games')
           .select(
-            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
           )
           .eq('user_id', user.id)
           .eq('status', 'playing')
@@ -99,7 +99,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         supabase
           .from('games')
           .select(
-            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
           )
           .eq('user_id', user.id)
           .eq('status', 'playing')
@@ -146,6 +146,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     const game = currentlyPlaying;
 
     // Optimistic update: immediately remove from now playing and append to queue
+    setIsStatusLoading(true);
     setCurrentlyPlaying(null);
     setQueue((prev) => [
       ...prev,
@@ -180,6 +181,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       // Revert
       setCurrentlyPlaying(game);
       setQueue((prev) => prev.filter((q) => q.app_id !== game.app_id));
+    } finally {
+      setIsStatusLoading(false);
     }
   }, [currentlyPlaying, fetchQueue]);
 
@@ -274,6 +277,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       if (!item) return;
 
       // Optimistic update: immediately show as now playing
+      setIsStatusLoading(true);
       setCurrentlyPlaying({
         app_id: item.app_id,
         name: item.game.name,
@@ -301,7 +305,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           const { data: game } = await supabase
             .from('games')
             .select(
-              'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+              'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
             )
             .eq('user_id', user.id)
             .eq('app_id', appId)
@@ -313,6 +317,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         // Revert
         setCurrentlyPlaying(null);
         setQueue((prev) => [...prev, item]);
+      } finally {
+        setIsStatusLoading(false);
       }
     },
     [queue],

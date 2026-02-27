@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { ExternalLink, Archive, Check, Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 
 interface Game {
   app_id: number;
@@ -11,6 +12,7 @@ interface Game {
   main_story_hours: number;
   playtime_forever: number;
   steam_review_score?: number | null;
+  deck_compat?: number | null;
 }
 
 interface CurrentlyPlayingProps {
@@ -98,6 +100,7 @@ export function CurrentlyPlaying({
                       {(game.steam_review_score / 10).toFixed(1)}
                     </span>
                   )}
+                  <SteamDeckBadge deckCompat={game.deck_compat} />
                 </div>
               )}
             </div>

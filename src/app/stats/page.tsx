@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
+import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { useStats } from '@/hooks/useStats';
 import { addToQueue } from '@/lib/games/queue';
 import { toast } from 'sonner';
@@ -23,6 +24,9 @@ interface EditModalState {
   appId: number;
   gameName: string;
   headerImage: string | null;
+  mainStoryHours: number | null;
+  playtimeMinutes: number;
+  deckCompat: number | null;
 }
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────────
@@ -288,7 +292,14 @@ function MostPlayedUnfinished({
   onEdit,
 }: {
   stats: Stats;
-  onEdit: (appId: number, gameName: string, headerImage: string | null) => void;
+  onEdit: (
+    appId: number,
+    gameName: string,
+    headerImage: string | null,
+    mainStoryHours: number | null,
+    playtimeMinutes: number,
+    deckCompat: number | null,
+  ) => void;
 }) {
   if (stats.mostPlayedUnfinished.length === 0) return null;
 
@@ -297,7 +308,7 @@ function MostPlayedUnfinished({
       <SectionTitle>Most played but still in backlog</SectionTitle>
       <div className="space-y-3">
         {stats.mostPlayedUnfinished.map(
-          ({ app_id, name, playtime_forever, main_story_hours, header_image }) => {
+          ({ app_id, name, playtime_forever, main_story_hours, header_image, deck_compat }) => {
             const hours = Math.round(playtime_forever / 60);
             const barPct =
               main_story_hours && main_story_hours > 0
@@ -306,7 +317,16 @@ function MostPlayedUnfinished({
             return (
               <div key={name} className="flex items-center gap-3">
                 <button
-                  onClick={() => onEdit(app_id, name, header_image)}
+                  onClick={() =>
+                    onEdit(
+                      app_id,
+                      name,
+                      header_image,
+                      main_story_hours,
+                      playtime_forever,
+                      deck_compat,
+                    )
+                  }
                   className="group relative w-16 h-9 shrink-0 rounded overflow-hidden bg-zinc-800 cursor-pointer"
                 >
                   {header_image && (
@@ -323,7 +343,10 @@ function MostPlayedUnfinished({
                   </div>
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
+                    <SteamDeckBadge deckCompat={deck_compat} />
+                  </div>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
@@ -351,8 +374,15 @@ export default function StatsPage() {
   const { stats, loading, refresh } = useStats();
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
-  const handleEdit = (appId: number, gameName: string, headerImage: string | null) => {
-    setEditModal({ appId, gameName, headerImage });
+  const handleEdit = (
+    appId: number,
+    gameName: string,
+    headerImage: string | null,
+    mainStoryHours: number | null,
+    playtimeMinutes: number,
+    deckCompat: number | null,
+  ) => {
+    setEditModal({ appId, gameName, headerImage, mainStoryHours, playtimeMinutes, deckCompat });
   };
 
   const handleAddToQueue = async (appId: number) => {
@@ -497,6 +527,9 @@ export default function StatsPage() {
           onConfirm={handleConfirm}
           gameName={editModal.gameName}
           headerImage={editModal.headerImage}
+          mainStoryHours={editModal.mainStoryHours}
+          playtimeMinutes={editModal.playtimeMinutes}
+          deckCompat={editModal.deckCompat}
           initialStatus="backlog"
           disablePlaying={(stats?.playing ?? 0) > 0}
           onAddToQueue={

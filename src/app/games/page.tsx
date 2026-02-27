@@ -140,6 +140,11 @@ export default function GamesPage() {
           initialDate={statusModal.initialDate}
           initialNotes={statusModal.initialNotes}
           initialRating={statusModal.initialRating}
+          mainStoryHours={statusModal.mainStoryHours}
+          steamReviewScore={statusModal.steamReviewScore}
+          steamReviewCount={statusModal.steamReviewCount}
+          playtimeMinutes={statusModal.playtimeMinutes}
+          deckCompat={statusModal.deckCompat}
           disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
           onAddToQueue={
             hasPlayingGame && statusModal.initialStatus === 'backlog'

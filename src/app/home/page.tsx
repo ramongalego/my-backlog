@@ -211,6 +211,11 @@ function HomeContent() {
           onConfirm={handleConfirmCarouselDetail}
           gameName={carouselModal.game.name}
           headerImage={carouselModal.game.header_image}
+          mainStoryHours={carouselModal.game.main_story_hours}
+          steamReviewScore={carouselModal.game.steam_review_score}
+          steamReviewCount={carouselModal.game.steam_review_count}
+          playtimeMinutes={carouselModal.game.playtime_forever}
+          deckCompat={carouselModal.game.deck_compat}
           initialStatus="backlog"
           disablePlaying={!!currentlyPlaying}
           onAddToQueue={

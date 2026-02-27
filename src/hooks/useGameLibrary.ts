@@ -318,7 +318,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
         const { data: playingGame } = await supabase
           .from('games')
           .select(
-            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
           )
           .eq('user_id', currentUser.id)
           .eq('status', 'playing')
@@ -415,7 +415,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
           const { data: playingGame } = await supabase
             .from('games')
             .select(
-              'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score',
+              'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
             )
             .eq('user_id', user.id)
             .eq('status', 'playing')
@@ -428,7 +428,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
           const { data: shortGamesData } = await supabase
             .from('games')
             .select(
-              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count',
+              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat',
             )
             .eq('user_id', user.id)
             .eq('type', 'game')
@@ -446,7 +446,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
           const { data: weekendGamesData } = await supabase
             .from('games')
             .select(
-              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count',
+              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat',
             )
             .eq('user_id', user.id)
             .eq('type', 'game')
@@ -465,7 +465,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
           const { data: highlyRatedData } = await supabase
             .from('games')
             .select(
-              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count',
+              'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat',
             )
             .eq('user_id', user.id)
             .eq('type', 'game')

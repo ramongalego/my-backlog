@@ -13,6 +13,7 @@ interface Game {
   playtime_forever: number;
   steam_review_score?: number | null;
   steam_review_count?: number | null;
+  deck_compat?: number | null;
 }
 
 interface GameCarouselProps {
@@ -104,7 +105,7 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
             >
               <button
                 onClick={() => onOpenDetail?.(game)}
-                className="relative h-32 w-full block cursor-pointer"
+                className="relative h-32 w-full block cursor-pointer focus:outline-none select-none"
                 aria-label={`Open details for ${game.name}`}
               >
                 {game.header_image ? (
@@ -114,6 +115,7 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
                     fill
                     className="object-cover"
                     sizes="256px"
+                    draggable={false}
                   />
                 ) : (
                   <div className="w-full h-full bg-zinc-800" />
@@ -130,6 +132,7 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
                   steamReviewScore={game.steam_review_score}
                   steamReviewCount={game.steam_review_count}
                   playtimeMinutes={game.playtime_forever}
+                  deckCompat={game.deck_compat}
                 />
               </div>
             </div>

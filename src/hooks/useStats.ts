@@ -44,6 +44,7 @@ export interface MostPlayedUnfinished {
   playtime_forever: number;
   main_story_hours: number | null;
   header_image: string | null;
+  deck_compat: number | null;
 }
 
 export interface Stats {
@@ -96,7 +97,7 @@ export function useStats() {
       const { data } = await supabase
         .from('games')
         .select(
-          'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date',
+          'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
         )
         .eq('user_id', user.id)
         .eq('type', 'game')
@@ -214,6 +215,7 @@ export function useStats() {
         playtime_forever: g.playtime_forever,
         main_story_hours: g.main_story_hours,
         header_image: g.header_image,
+        deck_compat: (g as { deck_compat?: number | null }).deck_compat ?? null,
       }));
 
     return {

@@ -30,7 +30,9 @@ export async function GET() {
   const appIds = queueRows.map((r) => r.app_id);
   const { data: games } = await supabase
     .from('games')
-    .select('app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score')
+    .select(
+      'app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, deck_compat',
+    )
     .eq('user_id', user.id)
     .in('app_id', appIds);
 
@@ -48,6 +50,7 @@ export async function GET() {
         playtime_forever: g?.playtime_forever ?? 0,
         main_story_hours: g?.main_story_hours ?? null,
         steam_review_score: g?.steam_review_score ?? null,
+        deck_compat: g?.deck_compat ?? null,
       },
     };
   });

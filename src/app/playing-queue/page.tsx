@@ -23,6 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import { Header } from '@/components/Header';
+import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
@@ -32,12 +33,15 @@ function GameMetaRow({
   estimateHours,
   steamReviewScore,
   playedHours,
+  deckCompat,
 }: {
   estimateHours: number | null;
   steamReviewScore: number | null | undefined;
   playedHours: number | null;
+  deckCompat?: number | null;
 }) {
-  if (estimateHours === null && steamReviewScore == null && playedHours === null) return null;
+  if (estimateHours === null && steamReviewScore == null && playedHours === null && !deckCompat)
+    return null;
   return (
     <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
       {estimateHours !== null && (
@@ -53,6 +57,7 @@ function GameMetaRow({
         </span>
       )}
       {playedHours !== null && <span className="text-zinc-600">{playedHours}h played</span>}
+      <SteamDeckBadge deckCompat={deckCompat} />
     </div>
   );
 }
@@ -111,6 +116,7 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
             estimateHours={estimateHours}
             steamReviewScore={game.steam_review_score}
             playedHours={playedHours}
+            deckCompat={game.deck_compat}
           />
         )}
       </div>
@@ -196,6 +202,7 @@ function QueueItemRow({
           estimateHours={estimateHours}
           steamReviewScore={item.game.steam_review_score}
           playedHours={playedHours}
+          deckCompat={item.game.deck_compat}
         />
       </div>
 

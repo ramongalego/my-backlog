@@ -39,7 +39,7 @@ export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardP
       {/* Clickable image area */}
       <button
         onClick={() => onOpenDetail(game.app_id)}
-        className="cursor-pointer relative h-40 sm:h-36 w-full block"
+        className="cursor-pointer relative h-40 sm:h-36 w-full block focus:outline-none select-none"
         aria-label={`Open details for ${game.name}`}
       >
         {game.header_image ? (
@@ -49,6 +49,7 @@ export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardP
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            draggable={false}
           />
         ) : (
           <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
@@ -73,6 +74,7 @@ export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardP
           steamReviewScore={game.steam_review_score}
           steamReviewCount={game.steam_review_count}
           playtimeMinutes={game.playtime_forever}
+          deckCompat={game.deck_compat}
         />
       </div>
     </div>

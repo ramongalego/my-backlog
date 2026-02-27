@@ -20,6 +20,7 @@ export interface GameWithImage {
   started_at?: string | null;
   steam_review_score?: number | null;
   steam_review_count?: number | null;
+  deck_compat?: number | null;
 }
 
 export interface SyncProgress {
@@ -37,5 +38,6 @@ export interface QueueItem {
     playtime_forever: number;
     main_story_hours: number | null;
     steam_review_score: number | null;
+    deck_compat?: number | null;
   };
 }

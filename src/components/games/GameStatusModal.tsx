@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays, ListOrdered } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { Modal } from '@/components/ui/Modal';
+import { GameMetaRow } from './GameCardInfo';
 
 type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';
 type InternalStatus = GameStatus | 'queue';
@@ -21,6 +22,11 @@ interface GameDetailModalProps {
   initialRating?: number | null;
   disablePlaying?: boolean;
   onAddToQueue?: () => void;
+  mainStoryHours?: number | null;
+  steamReviewScore?: number | null;
+  steamReviewCount?: number | null;
+  playtimeMinutes?: number;
+  deckCompat?: number | null;
 }
 
 const STATUS_OPTIONS: {
@@ -96,6 +102,11 @@ export function GameDetailModal({
   initialRating,
   disablePlaying = false,
   onAddToQueue,
+  mainStoryHours,
+  steamReviewScore,
+  steamReviewCount,
+  playtimeMinutes,
+  deckCompat,
 }: GameDetailModalProps) {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -161,12 +172,22 @@ export function GameDetailModal({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
-        <h2 className="absolute bottom-3 left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
+        <h2 className="absolute bottom-2 left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
           {gameName}
         </h2>
       </div>
 
-      <div className="space-y-5 mt-5">
+      <div className="mt-1">
+        <GameMetaRow
+          mainStoryHours={mainStoryHours}
+          steamReviewScore={steamReviewScore}
+          steamReviewCount={steamReviewCount}
+          playtimeMinutes={playtimeMinutes}
+          deckCompat={deckCompat}
+        />
+      </div>
+
+      <div className="space-y-5 mt-4">
         {/* Status pills */}
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2.5">Status</p>
@@ -313,7 +334,7 @@ export function GameDetailModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Any thoughts?"
-            rows={5}
+            rows={4}
             maxLength={1000}
             className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600 resize-none"
           />

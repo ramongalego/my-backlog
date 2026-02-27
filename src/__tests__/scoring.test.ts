@@ -14,51 +14,59 @@ describe('isMetadataFresh', () => {
   });
 
   it('should return true for metadata synced today', () => {
-    const now = new Date('2024-01-15T12:00:00Z');
+    const now = new Date('2026-03-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const syncedAt = new Date('2024-01-15T10:00:00Z').toISOString();
+    const syncedAt = new Date('2026-03-15T10:00:00Z').toISOString();
     expect(isMetadataFresh(syncedAt)).toBe(true);
   });
 
   it('should return true for metadata synced 6 days ago', () => {
-    const now = new Date('2024-01-15T12:00:00Z');
+    const now = new Date('2026-03-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const sixDaysAgo = new Date('2024-01-09T12:00:00Z').toISOString();
+    const sixDaysAgo = new Date('2026-03-09T12:00:00Z').toISOString();
     expect(isMetadataFresh(sixDaysAgo)).toBe(true);
   });
 
   it('should return false for metadata synced exactly 30 days ago', () => {
-    const now = new Date('2024-02-15T12:00:00Z');
+    const now = new Date('2026-04-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const thirtyDaysAgo = new Date('2024-01-16T12:00:00Z').toISOString();
+    const thirtyDaysAgo = new Date('2026-03-16T12:00:00Z').toISOString();
     expect(isMetadataFresh(thirtyDaysAgo)).toBe(false);
   });
 
   it('should return false for metadata synced 31 days ago', () => {
-    const now = new Date('2024-02-15T12:00:00Z');
+    const now = new Date('2026-04-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const thirtyOneDaysAgo = new Date('2024-01-15T12:00:00Z').toISOString();
+    const thirtyOneDaysAgo = new Date('2026-03-15T12:00:00Z').toISOString();
     expect(isMetadataFresh(thirtyOneDaysAgo)).toBe(false);
   });
 
   it('should handle boundary case just under 30 days', () => {
-    const now = new Date('2024-02-15T12:00:00Z');
+    const now = new Date('2026-04-15T12:00:00Z');
     jest.setSystemTime(now);
 
     // 29 days, 23 hours, 59 minutes ago - should be fresh
-    const justUnder = new Date('2024-01-16T12:01:00Z').toISOString();
+    const justUnder = new Date('2026-03-16T12:01:00Z').toISOString();
     expect(isMetadataFresh(justUnder)).toBe(true);
   });
 
-  it('should handle very old metadata', () => {
-    const now = new Date('2024-01-15T12:00:00Z');
+  it('should return false for metadata synced before the minimum schema date', () => {
+    const now = new Date('2026-03-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const oneYearAgo = new Date('2023-01-15T12:00:00Z').toISOString();
+    const beforeMinDate = new Date('2026-02-01T12:00:00Z').toISOString();
+    expect(isMetadataFresh(beforeMinDate)).toBe(false);
+  });
+
+  it('should handle very old metadata', () => {
+    const now = new Date('2026-03-15T12:00:00Z');
+    jest.setSystemTime(now);
+
+    const oneYearAgo = new Date('2025-03-15T12:00:00Z').toISOString();
     expect(isMetadataFresh(oneYearAgo)).toBe(false);
   });
 

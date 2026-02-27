@@ -20,6 +20,7 @@ export interface GameItem {
   finished_at: string | null;
   dropped_at: string | null;
   tags: string[] | null;
+  deck_compat?: number | null;
 }
 
 export type GameFilter = 'all' | 'playing' | 'backlog' | 'finished' | 'dropped' | 'hidden';
@@ -42,6 +43,11 @@ interface GamesPageStatusModal {
   initialDate: string | null;
   initialNotes: string | null;
   initialRating: number | null;
+  mainStoryHours: number | null;
+  steamReviewScore: number | null;
+  steamReviewCount: number | null;
+  playtimeMinutes: number;
+  deckCompat?: number | null;
 }
 
 interface UseGamesPageReturn {
@@ -102,7 +108,7 @@ export function useGamesPage(): UseGamesPageReturn {
         supabase
           .from('games')
           .select(
-            'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags',
+            'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
           )
           .eq('user_id', user.id)
           .eq('type', 'game')
@@ -145,6 +151,11 @@ export function useGamesPage(): UseGamesPageReturn {
         initialDate,
         initialNotes: game.notes,
         initialRating: game.rating,
+        mainStoryHours: game.main_story_hours,
+        steamReviewScore: game.steam_review_score,
+        steamReviewCount: game.steam_review_count,
+        playtimeMinutes: game.playtime_forever,
+        deckCompat: game.deck_compat,
       });
     },
     [games],

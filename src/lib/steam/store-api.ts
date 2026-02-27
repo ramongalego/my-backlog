@@ -119,3 +119,22 @@ export async function getSteamReviewData(appId: number): Promise<SteamReviewData
     return null;
   }
 }
+
+// resolved_category: 0=Unknown, 1=Unsupported, 2=Playable, 3=Verified
+export async function getSteamDeckCompat(appId: number): Promise<number | null> {
+  try {
+    const response = await fetchWithTimeout(
+      `https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=${appId}`,
+      { next: { revalidate: 86400 } } as RequestInit,
+      TIMEOUTS.STEAM_STORE,
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    const category = data?.results?.resolved_category;
+    console.log(`[deck-compat] appId=${appId} resolved_category=${category}`);
+    if (typeof category !== 'number' || category === 0) return null;
+    return category;
+  } catch {
+    return null;
+  }
+}
