@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Gamepad2, ListOrdered, X, Play, Check, GripVertical, Clock, Star } from 'lucide-react';
+import { Gamepad2, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -23,44 +23,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import { Header } from '@/components/Header';
-import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
+import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
 import type { GameWithImage, QueueItem } from '@/types/games';
-
-function GameMetaRow({
-  estimateHours,
-  steamReviewScore,
-  playedHours,
-  deckCompat,
-}: {
-  estimateHours: number | null;
-  steamReviewScore: number | null | undefined;
-  playedHours: number | null;
-  deckCompat?: number | null;
-}) {
-  if (estimateHours === null && steamReviewScore == null && playedHours === null && !deckCompat)
-    return null;
-  return (
-    <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
-      {estimateHours !== null && (
-        <span className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          {estimateHours}h
-        </span>
-      )}
-      {steamReviewScore != null && (
-        <span className="flex items-center gap-1">
-          <Star className="w-3 h-3" />
-          {(steamReviewScore / 10).toFixed(1)}
-        </span>
-      )}
-      {playedHours !== null && <span className="text-zinc-600">{playedHours}h played</span>}
-      <SteamDeckBadge deckCompat={deckCompat} />
-    </div>
-  );
-}
 
 function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
@@ -98,7 +65,7 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
       <GameThumbnail src={game.header_image} alt={game.name} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-100 truncate">{game.name}</p>
+        <p className="text-sm font-medium text-zinc-100 truncate mb-1">{game.name}</p>
         {progressPct !== null ? (
           <>
             <p className="text-xs text-zinc-500 mt-0.5">
@@ -113,9 +80,9 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
           </>
         ) : (
           <GameMetaRow
-            estimateHours={estimateHours}
+            mainStoryHours={estimateHours}
             steamReviewScore={game.steam_review_score}
-            playedHours={playedHours}
+            playtimeMinutes={game.playtime_forever}
             deckCompat={game.deck_compat}
           />
         )}
@@ -178,10 +145,6 @@ function QueueItemRow({
     transition,
   };
 
-  const playedHours =
-    item.game.playtime_forever >= 60 ? Math.round(item.game.playtime_forever / 60) : null;
-  const estimateHours = item.game.main_story_hours ? item.game.main_story_hours : null;
-
   return (
     <div
       ref={setNodeRef}
@@ -197,11 +160,11 @@ function QueueItemRow({
       <GameThumbnail src={item.game.header_image} alt={item.game.name} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-100 truncate">{item.game.name}</p>
+        <p className="text-sm font-medium text-zinc-100 truncate mb-1">{item.game.name}</p>
         <GameMetaRow
-          estimateHours={estimateHours}
+          mainStoryHours={item.game.main_story_hours}
           steamReviewScore={item.game.steam_review_score}
-          playedHours={playedHours}
+          playtimeMinutes={item.game.playtime_forever}
           deckCompat={item.game.deck_compat}
         />
       </div>
