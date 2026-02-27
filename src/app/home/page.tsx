@@ -28,6 +28,7 @@ function HomeContent() {
     user,
     profile,
     isLoading,
+    historyCount,
     shortGames,
     weekendGames,
     highlyRatedGames,
@@ -196,6 +197,7 @@ function HomeContent() {
         onClose={() => setIsSuggestionModalOpen(false)}
         onPick={handleSuggestionAction}
         mode={currentlyPlaying ? 'queue' : 'play'}
+        showHistoryWarning={historyCount <= 5}
       />
 
       {gameSummary && (

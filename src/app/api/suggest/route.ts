@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
   const allExcludeAppIds = [...new Set([...excludeAppIds, ...queuedAppIds])];
 
   // Fetch user's games
-  const { data: rawBacklogGames, error: backlogError } = await supabase
+  const { data: backlogGames, error: backlogError } = await supabase
     .from('games')
     .select(
       'app_id, name, genres, categories, tags, main_story_hours, playtime_forever, steam_review_weighted, reroll_count',
@@ -116,13 +116,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to fetch games' }, { status: 500 });
   }
 
-  // Filter single-player games in JS to handle both Steam category variants
-  const backlogGames = (rawBacklogGames ?? []).filter((g) => {
-    const cats = g.categories as string[] | null;
-    return cats?.includes('Single-player') || cats?.includes('Singleplayer');
-  });
-
-  if (backlogGames.length === 0) {
+  if (!backlogGames || backlogGames.length === 0) {
     return NextResponse.json({ success: false, error: 'No games in backlog' }, { status: 400 });
   }
 

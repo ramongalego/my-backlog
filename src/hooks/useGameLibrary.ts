@@ -22,6 +22,7 @@ interface UseGameLibraryReturn {
 
   // Game library state
   gameCount: number;
+  historyCount: number;
   shortGames: GameWithImage[];
   weekendGames: GameWithImage[];
   highlyRatedGames: GameWithImage[];
@@ -70,6 +71,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [gameCount, setGameCount] = useState<number>(0);
+  const [historyCount, setHistoryCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress>({ current: 0, total: 0 });
@@ -479,6 +481,15 @@ export function useGameLibrary(): UseGameLibraryReturn {
 
           setQueuedAppIds(await fetchQueuedAppIds());
 
+          const { count: finishedOrDropped } = await supabase
+            .from('games')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('type', 'game')
+            .in('status', ['finished', 'dropped']);
+
+          setHistoryCount(finishedOrDropped ?? 0);
+
           // Auto-refresh playtime if it's been more than 1 hour
           const lastRefresh = localStorage.getItem('playtime_refresh_at');
           const oneHour = 60 * 60 * 1000;
@@ -514,6 +525,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
     profile,
     isLoading,
     gameCount,
+    historyCount,
     shortGames,
     weekendGames,
     highlyRatedGames,

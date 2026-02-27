@@ -18,9 +18,16 @@ interface SuggestionModalProps {
     mainStoryHours: number | null,
   ) => void;
   mode?: 'play' | 'queue';
+  showHistoryWarning?: boolean;
 }
 
-export function SuggestionModal({ isOpen, onClose, onPick, mode = 'play' }: SuggestionModalProps) {
+export function SuggestionModal({
+  isOpen,
+  onClose,
+  onPick,
+  mode = 'play',
+  showHistoryWarning = false,
+}: SuggestionModalProps) {
   const {
     step,
     suggestion,
@@ -109,6 +116,7 @@ export function SuggestionModal({ isOpen, onClose, onPick, mode = 'play' }: Sugg
               onSelectEnergy={selectEnergy}
               onSelectTime={selectTime}
               onBack={goBack}
+              showHistoryWarning={showHistoryWarning}
             />
           )}
 

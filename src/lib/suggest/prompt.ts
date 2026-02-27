@@ -122,6 +122,7 @@ Pick ONE game from the backlog that best matches the current mood, energy, and t
 - Games that were skipped/rerolled before should generally be deprioritised (but not excluded).
 - Match the time commitment (roguelikes work for "short" sessions even if total playtime is long).
 - Match the mood/genre appropriately.
+- **Prefer single-player games or games with a substantial single-player campaign**. Only suggest a multiplayer-focused game if it clearly has a strong solo experience.
 
 IMPORTANT: Write the reasoning in second person, speaking directly to the user (use "you/your", not "the user/their"). Reference their history when relevant (e.g., "Since you finished X, you might enjoy this similar game...").
 ${

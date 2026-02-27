@@ -13,6 +13,7 @@ interface SuggestionWizardProps {
   onSelectEnergy: (energy: EnergyLevel) => void;
   onSelectTime: (time: TimeCommitment) => void;
   onBack: () => void;
+  showHistoryWarning?: boolean;
 }
 
 export function SuggestionWizard({
@@ -21,6 +22,7 @@ export function SuggestionWizard({
   onSelectEnergy,
   onSelectTime,
   onBack,
+  showHistoryWarning = false,
 }: SuggestionWizardProps) {
   // Progress indicator
   const stepNumber = step === 'mood' ? 1 : step === 'energy' ? 2 : 3;
@@ -81,6 +83,13 @@ export function SuggestionWizard({
           options={TIME_QUESTION.options}
           onSelect={onSelectTime}
         />
+      )}
+
+      {/* History warning — shown on all steps */}
+      {showHistoryWarning && (
+        <p className="text-xs text-zinc-500 text-center mt-6">
+          Suggestions improve as you finish, drop, and rate more games.
+        </p>
       )}
     </div>
   );
