@@ -69,9 +69,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
 
           <div className="relative max-w-4xl mx-auto px-6 py-32 md:py-48 text-center">
             <h1 className="text-5xl md:text-7xl font-bold text-zinc-100 leading-[1.1] tracking-tight mb-6">
-              Stop scrolling.{' '}
+              Stop scrolling <br />
               <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400">
-                Start playing.
+                Start playing
               </span>
             </h1>
             <p className="text-xl text-zinc-400 mb-12 max-w-lg mx-auto leading-relaxed">
@@ -235,7 +235,8 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               <p className="text-zinc-500 leading-relaxed">
                 MyBacklog pulls your full Steam library and lets you see it all clearly. Mark games
                 as playing, finished, dropped, or hidden. Rate the ones you finish, jot down your
-                thoughts. Filter and sort however you want. Know exactly what&apos;s waiting for you.
+                thoughts. Filter and sort however you want. Know exactly what&apos;s waiting for
+                you.
               </p>
             </div>
           </div>
