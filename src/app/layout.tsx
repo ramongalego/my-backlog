@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://mybacklog.app'),
   title: {
     template: '%s · MyBacklog',
     default: 'MyBacklog',

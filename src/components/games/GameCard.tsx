@@ -12,11 +12,11 @@ interface GameCardProps {
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  finished: { label: 'Finished', className: 'bg-emerald-500/90' },
-  playing: { label: 'Playing', className: 'bg-sky-500/90' },
-  dropped: { label: 'Dropped', className: 'bg-rose-500/90' },
-  hidden: { label: 'Hidden', className: 'bg-zinc-700/90' },
-  backlog: { label: 'Backlog', className: 'bg-violet-600/90' },
+  finished: { label: 'Finished', className: 'bg-emerald-950/95 text-emerald-400' },
+  playing: { label: 'Playing', className: 'bg-sky-950/95 text-sky-400' },
+  dropped: { label: 'Dropped', className: 'bg-rose-950/95 text-rose-400' },
+  hidden: { label: 'Hidden', className: 'bg-zinc-900/95 text-zinc-400' },
+  backlog: { label: 'Backlog', className: 'bg-violet-950/95 text-violet-400' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -24,7 +24,7 @@ function StatusBadge({ status }: { status: string }) {
   if (!config) return null;
   return (
     <div
-      className={`absolute top-2 right-2 px-2 py-0.5 ${config.className} text-white text-xs font-medium rounded`}
+      className={`absolute top-2 right-2 px-2 py-0.5 ${config.className} text-xs font-medium rounded`}
     >
       {config.label}
     </div>
