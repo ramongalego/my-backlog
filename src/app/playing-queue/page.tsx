@@ -284,7 +284,9 @@ export default function PlayingQueuePage() {
             <div className="text-center py-16">
               <ListOrdered className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
               <p className="text-zinc-500">Your queue is empty.</p>
-              <p className="text-zinc-600 text-sm mt-1">Add games from your library.</p>
+              <p className="text-zinc-600 text-sm mt-1">
+                Pick a game to play first, then queue up what&apos;s next from your library.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">

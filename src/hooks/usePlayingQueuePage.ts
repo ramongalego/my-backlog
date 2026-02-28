@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { celebrateGameFinished } from '@/lib/confetti';
@@ -41,8 +41,14 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isStatusLoading, setIsStatusLoading] = useState(false);
+  const isStatusLoadingRef = useRef(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
+
+  const setStatusLoading = useCallback((val: boolean) => {
+    isStatusLoadingRef.current = val;
+    setIsStatusLoading(val);
+  }, []);
 
   const fetchQueue = useCallback(async () => {
     const res = await fetch('/api/queue');
@@ -76,7 +82,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           .eq('user_id', user.id)
           .eq('status', 'playing')
           .single();
-        if (playingGame) setCurrentlyPlaying(playingGame);
+        if (playingGame && !isStatusLoadingRef.current) setCurrentlyPlaying(playingGame);
       }
     } catch (err) {
       console.error('Failed to refresh library:', err);
@@ -146,7 +152,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     const game = currentlyPlaying;
 
     // Optimistic update: immediately remove from now playing and append to queue
-    setIsStatusLoading(true);
+    setStatusLoading(true);
     setCurrentlyPlaying(null);
     setQueue((prev) => [
       ...prev,
@@ -182,16 +188,16 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       setCurrentlyPlaying(game);
       setQueue((prev) => prev.filter((q) => q.app_id !== game.app_id));
     } finally {
-      setIsStatusLoading(false);
+      setStatusLoading(false);
     }
-  }, [currentlyPlaying, fetchQueue]);
+  }, [currentlyPlaying, fetchQueue, setStatusLoading]);
 
   const handleConfirm = useCallback(
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!currentlyPlaying) return;
       const finishedGame = currentlyPlaying;
       setStatusModal(null);
-      setIsStatusLoading(true);
+      setStatusLoading(true);
       try {
         await fetch('/api/games/status', {
           method: 'POST',
@@ -211,34 +217,59 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           data: { user },
         } = await supabase.auth.getUser();
 
+        let promoted: GameWithImage | null = null;
+        let gamesFinished = 0;
+        let totalGames = 0;
+
+        if (user) {
+          const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all(
+            [
+              supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('type', 'game')
+                .eq('status', 'finished'),
+              supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('type', 'game')
+                .neq('status', 'hidden'),
+              promoteNextFromQueue(user.id, supabase),
+            ],
+          );
+          promoted = promotedGame;
+          gamesFinished = finishedCount ?? 0;
+          totalGames = totalCount ?? 0;
+        }
+
+        setCurrentlyPlaying(promoted);
+
         if (status === 'finished') {
           setGameSummary({
             gameName: finishedGame.name,
             headerImage: finishedGame.header_image,
-            startedAt: finishedGame.started_at ?? null,
-            finishedAt: date,
             playtimeMinutes: finishedGame.playtime_forever,
             mainStoryHours:
               finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
             rating,
+            gamesFinished,
+            totalGames,
+            backlogHoursRemoved:
+              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
+            nextGame: promoted?.name ?? null,
           });
           celebrateGameFinished();
-        }
-
-        if (user) {
-          const promoted = await promoteNextFromQueue(user.id, supabase);
-          setCurrentlyPlaying(promoted);
-        } else {
-          setCurrentlyPlaying(null);
         }
 
         await fetchQueue();
       } catch (err) {
         console.error(`Failed to ${status} game:`, err);
       }
-      setIsStatusLoading(false);
+      setStatusLoading(false);
     },
-    [currentlyPlaying, fetchQueue],
+    [currentlyPlaying, fetchQueue, setStatusLoading],
   );
 
   const handleRemoveFromQueue = useCallback(async (appId: number) => {
@@ -277,7 +308,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       if (!item) return;
 
       // Optimistic update: immediately show as now playing
-      setIsStatusLoading(true);
+      setStatusLoading(true);
       setCurrentlyPlaying({
         app_id: item.app_id,
         name: item.game.name,
@@ -318,10 +349,10 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         setCurrentlyPlaying(null);
         setQueue((prev) => [...prev, item]);
       } finally {
-        setIsStatusLoading(false);
+        setStatusLoading(false);
       }
     },
-    [queue],
+    [queue, setStatusLoading],
   );
 
   return {

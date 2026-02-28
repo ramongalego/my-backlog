@@ -222,7 +222,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
   const handleConfirmStatusChange = useCallback(
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!currentlyPlaying) return;
-      const finishedGameName = currentlyPlaying.name;
+      const finishedGame = currentlyPlaying;
       setStatusModal(null);
       setIsStatusLoading(true);
       try {
@@ -230,7 +230,7 @@ export function useGameLibrary(): UseGameLibraryReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            appId: currentlyPlaying.app_id,
+            appId: finishedGame.app_id,
             status,
             ...(status === 'finished' ? { finishedAt: date } : {}),
             ...(status === 'dropped' ? { droppedAt: date } : {}),
@@ -238,31 +238,56 @@ export function useGameLibrary(): UseGameLibraryReturn {
             rating,
           }),
         });
-        if (status === 'finished') {
-          setGameSummary({
-            gameName: finishedGameName,
-            headerImage: currentlyPlaying.header_image,
-            startedAt: currentlyPlaying.started_at ?? null,
-            finishedAt: date,
-            playtimeMinutes: currentlyPlaying.playtime_forever,
-            mainStoryHours:
-              currentlyPlaying.main_story_hours > 0 ? currentlyPlaying.main_story_hours : null,
-            rating,
-          });
-          celebrateGameFinished();
-        }
 
         const supabase = createClient();
         const {
           data: { user: currentUser },
         } = await supabase.auth.getUser();
 
-        // Promote next game from queue
+        let promoted: GameWithImage | null = null;
+        let gamesFinished = 0;
+        let totalGames = 0;
+
         if (currentUser) {
-          const promoted = await promoteNextFromQueue(currentUser.id, supabase);
-          setCurrentlyPlaying(promoted);
-        } else {
-          setCurrentlyPlaying(null);
+          const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all(
+            [
+              supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', currentUser.id)
+                .eq('type', 'game')
+                .eq('status', 'finished'),
+              supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', currentUser.id)
+                .eq('type', 'game')
+                .neq('status', 'hidden'),
+              promoteNextFromQueue(currentUser.id, supabase),
+            ],
+          );
+          promoted = promotedGame;
+          gamesFinished = finishedCount ?? 0;
+          totalGames = totalCount ?? 0;
+        }
+
+        setCurrentlyPlaying(promoted);
+
+        if (status === 'finished') {
+          setGameSummary({
+            gameName: finishedGame.name,
+            headerImage: finishedGame.header_image,
+            playtimeMinutes: finishedGame.playtime_forever,
+            mainStoryHours:
+              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
+            rating,
+            gamesFinished,
+            totalGames,
+            backlogHoursRemoved:
+              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
+            nextGame: promoted?.name ?? null,
+          });
+          celebrateGameFinished();
         }
       } catch (err) {
         console.error(`Failed to ${status} game:`, err);
