@@ -308,10 +308,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                     <span className="text-xs text-zinc-600">Jan 2025</span>
                   </div>
                   <div className="flex gap-0.5 mb-1.5">
-                    {[1, 2, 3, 4].map((i) => (
+                    {[1, 2, 3, 4, 5].map((i) => (
                       <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
                     ))}
-                    <Star className="w-3 h-3 text-zinc-700" />
                   </div>
                   <p className="text-xs text-zinc-600 truncate">
                     One of the best I&apos;ve ever played.
@@ -346,7 +345,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               Start clearing your backlog tonight.
             </h2>
             <p className="text-zinc-500 mb-10">
-              Free to use. Connect your Steam library in under a minute.
+              Free to use. Your Steam library, synced and ready to go.
             </p>
             {user ? (
               <Button size="lg" onClick={onConnectSteam}>
