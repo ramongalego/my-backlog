@@ -72,19 +72,19 @@ describe('GameSummaryModal', () => {
     it('should render Steam hours when playtime > 0', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={1440} />);
 
-      expect(screen.getByText('24h')).toBeInTheDocument();
+      expect(screen.getByText('24h of playtime')).toBeInTheDocument();
     });
 
     it('should always render "of playtime" label alongside hours', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={1440} />);
 
-      expect(screen.getByText('of playtime')).toBeInTheDocument();
+      expect(screen.getByText(/of playtime/)).toBeInTheDocument();
     });
 
     it('should round Steam hours to 1 decimal', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={90} />); // 1.5h
 
-      expect(screen.getByText('1.5h')).toBeInTheDocument();
+      expect(screen.getByText('1.5h of playtime')).toBeInTheDocument();
     });
 
     it('should not render playtime row when playtime is 0', () => {

@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 const protectedRoutes = ['/home', '/games', '/diary', '/stats', '/playing-queue'];
 const publicOnlyRoutes = ['/'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
