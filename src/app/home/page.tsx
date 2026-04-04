@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
 import { GameCarousel } from '@/components/GameCarousel';
@@ -122,12 +123,12 @@ function HomeContent() {
                   </Button>
                   <p className="mt-1 text-xs text-zinc-500">
                     The picked game will be added to your{' '}
-                    <a
+                    <Link
                       href="/playing-queue"
                       className="font-medium text-zinc-400 hover:text-zinc-300 transition-colors"
                     >
                       queue
-                    </a>
+                    </Link>
                   </p>
                 </div>
               </>
@@ -177,7 +178,7 @@ function HomeContent() {
               )}
               {weekendGames.length > 0 && (
                 <GameCarousel
-                  title="Beat It in a Weekend"
+                  title="Finish It in a Weekend"
                   games={weekendGames}
                   onOpenDetail={handleOpenCarouselDetail}
                 />

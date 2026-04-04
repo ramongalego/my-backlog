@@ -2,9 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays, ListOrdered } from 'lucide-react';
-import { DayPicker } from 'react-day-picker';
 import { Modal } from '@/components/ui/Modal';
+
+const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.DayPicker), {
+  ssr: false,
+});
 import { GameMetaRow } from './GameCardInfo';
 
 type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';

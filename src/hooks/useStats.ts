@@ -14,6 +14,7 @@ interface GameForStats {
   finished_at: string | null;
   header_image: string | null;
   release_date: string | null;
+  deck_compat: number | null;
 }
 
 export interface TagStat {
@@ -215,7 +216,7 @@ export function useStats() {
         playtime_forever: g.playtime_forever,
         main_story_hours: g.main_story_hours,
         header_image: g.header_image,
-        deck_compat: (g as { deck_compat?: number | null }).deck_compat ?? null,
+        deck_compat: g.deck_compat ?? null,
       }));
 
     return {

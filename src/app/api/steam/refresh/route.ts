@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { getSteamApiKey } from '@/lib/env.server';
 
 export async function POST(request: NextRequest) {
   // Rate limiting - stricter for Steam refresh
@@ -42,8 +43,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Steam not connected' }, { status: 400 });
   }
 
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) {
+  let apiKey: string;
+  try {
+    apiKey = getSteamApiKey();
+  } catch {
     return NextResponse.json({ error: 'Server config error' }, { status: 500 });
   }
 

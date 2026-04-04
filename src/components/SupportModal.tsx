@@ -72,10 +72,21 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={handleClose}
+        aria-hidden="true"
+      />
+      <div
+        className="relative w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="support-modal-title"
+      >
         <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-          <h2 className="text-sm font-semibold text-zinc-100">Report an issue</h2>
+          <h2 id="support-modal-title" className="text-sm font-semibold text-zinc-100">
+            Report an issue
+          </h2>
           <button
             onClick={handleClose}
             className="cursor-pointer rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, ReactNode } from 'react';
+import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -53,20 +54,7 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
             className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors z-10"
             aria-label="Close modal"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
           {title && (
             <div className="p-6 pb-0">

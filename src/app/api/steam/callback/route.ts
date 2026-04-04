@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createSteamRelyingParty, extractSteamId } from '@/lib/steam/auth';
 import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
+import { getSteamApiKey } from '@/lib/env.server';
 import { timingSafeEqual } from 'crypto';
 
 function constantTimeCompare(a: string, b: string): boolean {
@@ -52,9 +53,10 @@ export async function GET(request: NextRequest) {
         return;
       }
 
-      const apiKey = process.env.STEAM_API_KEY;
-
-      if (!apiKey) {
+      let apiKey: string;
+      try {
+        apiKey = getSteamApiKey();
+      } catch {
         console.error('STEAM_API_KEY not configured');
         resolve(redirectWithClearedState(`${baseUrl}/?error=server_config`));
         return;

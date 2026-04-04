@@ -94,10 +94,18 @@ export function SuggestionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl">
+      <div
+        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Close button */}
         <button
           onClick={onClose}

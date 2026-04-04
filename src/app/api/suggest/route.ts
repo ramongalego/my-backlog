@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { getOpenAIApiKey } from '@/lib/env.server';
 import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
 import type {
   SuggestionPreferences,
@@ -38,7 +39,10 @@ function validateExcludeAppIds(value: unknown): number[] {
 
 export async function POST(request: NextRequest) {
   // Check for API key configuration
-  if (!process.env.OPENAI_API_KEY) {
+  let openaiApiKey: string;
+  try {
+    openaiApiKey = getOpenAIApiKey();
+  } catch {
     return NextResponse.json(
       { success: false, error: 'AI suggestions not configured' },
       { status: 503 },
@@ -227,7 +231,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({ apiKey: openaiApiKey });
 
   let aiResponse: string;
   try {
