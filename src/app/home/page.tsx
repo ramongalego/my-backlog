@@ -18,7 +18,7 @@ import {
   StatusLoadingState,
 } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
-import { Dices } from 'lucide-react';
+import { Dices, Sparkles } from 'lucide-react';
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -33,6 +33,8 @@ function HomeContent() {
     shortGames,
     weekendGames,
     highlyRatedGames,
+    hiddenGems,
+    recentlyAdded,
     currentlyPlaying,
     isSyncing,
     syncProgress,
@@ -119,6 +121,7 @@ function HomeContent() {
                     className="cursor-pointer"
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
+                    <Sparkles className="w-5 h-5 mr-1.5" />
                     Pick My Next Game
                   </Button>
                   <p className="mt-1 text-xs text-zinc-500">
@@ -141,6 +144,7 @@ function HomeContent() {
                   className="cursor-pointer"
                   onClick={() => setIsSuggestionModalOpen(true)}
                 >
+                  <Sparkles className="w-5 h-5 mr-1.5" />
                   Pick My Game
                 </Button>
                 <button
@@ -160,7 +164,11 @@ function HomeContent() {
 
         {!isSyncing &&
           !carouselsLoading &&
-          (shortGames.length > 0 || weekendGames.length > 0 || highlyRatedGames.length > 0) && (
+          (shortGames.length > 0 ||
+            weekendGames.length > 0 ||
+            highlyRatedGames.length > 0 ||
+            hiddenGems.length > 0 ||
+            recentlyAdded.length > 0) && (
             <section className="max-w-7xl mx-auto px-6 pb-24 space-y-16">
               {shortGames.length > 0 && (
                 <GameCarousel
@@ -180,6 +188,20 @@ function HomeContent() {
                 <GameCarousel
                   title="Finish It in a Weekend"
                   games={weekendGames}
+                  onOpenDetail={handleOpenCarouselDetail}
+                />
+              )}
+              {hiddenGems.length > 0 && (
+                <GameCarousel
+                  title="Hidden Gems"
+                  games={hiddenGems}
+                  onOpenDetail={handleOpenCarouselDetail}
+                />
+              )}
+              {recentlyAdded.length > 0 && (
+                <GameCarousel
+                  title="Recently Added"
+                  games={recentlyAdded}
                   onOpenDetail={handleOpenCarouselDetail}
                 />
               )}

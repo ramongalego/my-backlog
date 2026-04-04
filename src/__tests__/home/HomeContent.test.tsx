@@ -42,6 +42,8 @@ const baseLibrary = {
   shortGames: [],
   weekendGames: [],
   highlyRatedGames: [],
+  hiddenGems: [],
+  recentlyAdded: [],
   currentlyPlaying: null,
   isSyncing: false,
   syncProgress: { current: 0, total: 0 },

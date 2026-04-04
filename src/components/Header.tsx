@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Gamepad2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -120,8 +121,8 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-linear-to-br from-violet-500 to-fuchsia-500 rounded-lg" />
-              <span className="text-xl font-bold text-zinc-100">MyBacklog</span>
+              <Gamepad2 className="w-6 h-6 text-violet-400" />
+              <span className="text-xl font-bold text-zinc-100 -ml-1">MyBacklog</span>
             </Link>
             {user && !hideNavLinks && (
               <Link

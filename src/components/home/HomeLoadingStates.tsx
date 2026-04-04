@@ -26,7 +26,7 @@ export function CarouselsLoadingState() {
         <div key={i} className="space-y-6">
           <div className="h-8 w-64 bg-zinc-800 rounded animate-pulse" />
           <div className="flex gap-4">
-            {[1, 2, 3, 4].map((j) => (
+            {[1, 2, 3, 4, 5].map((j) => (
               <div key={j} className="shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden">
                 <div className="h-32 bg-zinc-800 animate-pulse" />
                 <div className="p-4 space-y-2">

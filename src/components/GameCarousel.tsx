@@ -26,8 +26,9 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const isAnimatingRef = useRef(false);
 
-  const updateScrollButtons = useCallback(() => {
+  const syncButtons = useCallback(() => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       setCanScrollLeft(scrollLeft > 0);
@@ -39,27 +40,46 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
     const el = scrollRef.current;
     if (!el) return;
 
-    updateScrollButtons();
-    el.addEventListener('scroll', updateScrollButtons, { passive: true });
-    window.addEventListener('resize', updateScrollButtons);
+    syncButtons();
+
+    function handleScroll() {
+      // Skip mid-animation updates — the optimistic state is already correct
+      if (!isAnimatingRef.current) syncButtons();
+    }
+
+    function handleScrollEnd() {
+      isAnimatingRef.current = false;
+      syncButtons();
+    }
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    el.addEventListener('scrollend', handleScrollEnd, { passive: true });
+    window.addEventListener('resize', syncButtons);
 
     return () => {
-      el.removeEventListener('scroll', updateScrollButtons);
-      window.removeEventListener('resize', updateScrollButtons);
+      el.removeEventListener('scroll', handleScroll);
+      el.removeEventListener('scrollend', handleScrollEnd);
+      window.removeEventListener('resize', syncButtons);
     };
-  }, [updateScrollButtons, games]);
+  }, [syncButtons, games]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       const scrollAmount = 272;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
+      const delta = direction === 'left' ? -scrollAmount : scrollAmount;
+      const target = Math.max(0, Math.min(scrollLeft + delta, scrollWidth - clientWidth));
+
+      // Set optimistic state and suppress scroll-event overrides until scrollend
+      isAnimatingRef.current = true;
+      setCanScrollLeft(target > 0);
+      setCanScrollRight(target + clientWidth < scrollWidth - 1);
+
+      scrollRef.current.scrollBy({ left: delta, behavior: 'smooth' });
     }
   };
 
-  if (games.length === 0) return null;
+  if (games.length < 3) return null;
 
   return (
     <div>
