@@ -76,6 +76,70 @@ export async function parseSteamInput(input: string, apiKey: string): Promise<st
   return null;
 }
 
+export interface SteamPlayerBans {
+  SteamId: string;
+  CommunityBanned: boolean;
+  VACBanned: boolean;
+  NumberOfVACBans: number;
+  DaysSinceLastBan: number;
+  NumberOfGameBans: number;
+}
+
+export async function getPlayerBans(
+  steamId: string,
+  apiKey: string,
+): Promise<SteamPlayerBans | null> {
+  const url = new URL('https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/');
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('steamids', steamId);
+
+  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return data.players?.[0] ?? null;
+}
+
+export async function getSteamLevel(steamId: string, apiKey: string): Promise<number | null> {
+  const url = new URL('https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/');
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('steamid', steamId);
+
+  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return data.response?.player_level ?? null;
+}
+
+export async function getFriendCount(steamId: string, apiKey: string): Promise<number | null> {
+  const url = new URL('https://api.steampowered.com/ISteamUser/GetFriendList/v1/');
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('steamid', steamId);
+
+  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
+  if (!response.ok) return null; // Private friend list
+
+  const data = await response.json();
+  return data.friendslist?.friends?.length ?? null;
+}
+
+export async function getWishlistCount(steamId: string): Promise<number | null> {
+  try {
+    const response = await fetchWithTimeout(
+      `https://store.steampowered.com/wishlist/profiles/${steamId}/wishlistdata/?p=0`,
+      {},
+      TIMEOUTS.STEAM_API,
+    );
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return Object.keys(data).length;
+  } catch {
+    return null;
+  }
+}
+
 export async function getPlayerSummary(
   steamId: string,
   apiKey: string,

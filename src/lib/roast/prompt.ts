@@ -91,62 +91,78 @@ export interface TagCount {
   count: number;
 }
 
+export interface ProfileExtras {
+  bans: {
+    VACBanned: boolean;
+    NumberOfVACBans: number;
+    DaysSinceLastBan: number;
+    NumberOfGameBans: number;
+  } | null;
+  steamLevel: number | null;
+  wishlistCount: number | null;
+}
+
 export function buildRoastPrompt(
   profile: SteamPlayerSummary,
   games: SteamGame[],
   topTags?: TagCount[],
+  extras?: ProfileExtras,
 ): string {
   const stats = computeStats(games);
 
-  const lines: string[] = [
-    `You are a passive-aggressive gaming therapist who has reviewed thousands of Steam libraries and lost all faith in humanity. Roast this user's library in 3–5 paragraphs.`,
-    `Go hard. Be genuinely funny and cutting — the user WANTS to be destroyed. Drag specific games, call out embarrassing playtime patterns, mock their taste. If the data is damning, don't soften it.`,
-    `Don't announce what you're doing. Just do it. End with a backhanded compliment or a fake redemption arc that's really one more insult.`,
-    `Do NOT use markdown. Write plain conversational paragraphs.`,
-    ``,
-    `== PROFILE ==`,
-    `Username: ${profile.personaname}`,
-    ``,
-    `== LIBRARY STATS ==`,
-    `Total games owned: ${stats.totalGames}`,
-    `Total hours played: ${stats.totalHours.toLocaleString()}h`,
-    `Games never launched: ${stats.neverPlayed} (${stats.unlaunchedPct}% of library)`,
-    `Games played less than 1 hour: ${stats.under1Hour}`,
-    `Average playtime per played game: ${stats.avgPlaytimeHours}h`,
-    `Games played 90–120 min (refund window survivors): ${stats.refundSurvivors}`,
-    `Top game accounts for ${stats.topGameDominance}% of all playtime`,
-  ];
-
-  if (stats.top10.length > 0) {
-    lines.push(``, `== MOST PLAYED ==`);
-    stats.top10.forEach((g, i) => lines.push(`${i + 1}. ${formatGame(g)}`));
-  }
+  // Build a flat data dump — let the model decide what's funny
+  const data: Record<string, unknown> = {
+    username: profile.personaname,
+    totalGames: stats.totalGames,
+    totalHours: stats.totalHours,
+    neverLaunched: `${stats.neverPlayed} (${stats.unlaunchedPct}%)`,
+    under1Hour: stats.under1Hour,
+    avgPlaytimeHours: stats.avgPlaytimeHours,
+    refundWindowSurvivors: stats.refundSurvivors,
+    topGameDominance: `${stats.topGameDominance}%`,
+    mostPlayed: stats.top10.map((g) => formatGame(g)),
+  };
 
   if (topTags && topTags.length > 0) {
-    lines.push(``, `== FAVOURITE GENRES/TAGS (from most-played games) ==`);
-    topTags.forEach((t) => lines.push(`- ${t.tag}: ${t.count} of top 10 games`));
+    data.topTags = topTags.map((t) => `${t.tag} (${t.count}/10)`);
   }
 
   if (stats.recentlyPlayed.length > 0) {
-    lines.push(``, `== RECENTLY PLAYED (last 2 weeks) ==`);
-    stats.recentlyPlayed.forEach((g) => {
+    data.recentlyPlayed = stats.recentlyPlayed.map((g) => {
       const hrs = Math.round((g.playtime_2weeks ?? 0) / 60);
-      lines.push(`- ${g.name} (${hrs}h this fortnight)`);
+      return `${g.name} (${hrs}h last 2 weeks)`;
     });
   }
 
   if (stats.shameGames.length > 0) {
-    lines.push(``, `== SHAME WALL (bought, played ≤15 min, abandoned) ==`);
-    stats.shameGames.forEach((g) => lines.push(`- ${formatGame(g)}`));
+    data.abandoned = stats.shameGames.map((g) => formatGame(g));
   }
 
   if (stats.currentlyReplayingShame) {
-    const g = stats.currentlyReplayingShame;
-    lines.push(
-      ``,
-      `Currently replaying a shame game: ${g.name} (${g.playtime_forever}min total, active this fortnight)`,
-    );
+    data.currentlyReplayingAbandonedGame = stats.currentlyReplayingShame.name;
   }
+
+  if (extras?.steamLevel != null) data.steamLevel = extras.steamLevel;
+  if (extras?.wishlistCount != null) data.wishlistSize = extras.wishlistCount;
+  if (extras?.bans) {
+    if (extras.bans.VACBanned) {
+      data.vacBans = `${extras.bans.NumberOfVACBans} VAC ban(s), last ${extras.bans.DaysSinceLastBan} days ago`;
+    }
+    if (extras.bans.NumberOfGameBans > 0) {
+      data.gameBans = extras.bans.NumberOfGameBans;
+    }
+  }
+
+  const lines: string[] = [
+    `You roast people's Steam gaming profiles as harsh and spicy as possible.`,
+    `Roast this Steam user in 3–4 short paragraphs. Each paragraph should be 2–3 sentences max — punchy, not rambling.`,
+    `Tone: sharp, personal, and condescending. Talk directly to them. Each paragraph should land one clear joke or observation, then move on. Think mean tweet energy, not essay.`,
+    `Reference specific games by name, call out specific numbers (hours, percentages), and make it sting. The user WANTS to be destroyed.`,
+    `End with a final paragraph that sounds like a compliment but is actually one last insult.`,
+    `Do NOT use markdown, headers, or bullet points. Just plain short paragraphs.`,
+    ``,
+    `Give a harsh roasting for the following Steam profile: ${profile.personaname}. Here are the details: "${JSON.stringify(data)}"`,
+  ];
 
   return lines.join('\n');
 }

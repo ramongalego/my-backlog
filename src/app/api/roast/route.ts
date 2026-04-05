@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { parseSteamInput, getPlayerSummary, getOwnedGames } from '@/lib/steam/api';
+import {
+  parseSteamInput,
+  getPlayerSummary,
+  getOwnedGames,
+  getPlayerBans,
+  getSteamLevel,
+  getWishlistCount,
+} from '@/lib/steam/api';
 import { getSteamSpyTags } from '@/lib/steam/store-api';
 import { getSteamApiKey, getOpenAIApiKey } from '@/lib/env.server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 import { buildRoastPrompt } from '@/lib/roast/prompt';
+import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
 
 export async function POST(request: NextRequest) {
   // Check API keys
@@ -15,22 +23,6 @@ export async function POST(request: NextRequest) {
     openaiApiKey = getOpenAIApiKey();
   } catch {
     return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
-  }
-
-  // Rate limiting
-  const ip = getClientIp(request);
-  const rateLimitResult = checkRateLimit(`roast:${ip}`, RATE_LIMITS.roast);
-
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Too many roasts — try again later' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-        },
-      },
-    );
   }
 
   // Parse input
@@ -58,13 +50,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fetch Steam data
+  // Return cached result if available (no rate limit cost)
+  const cached = getCachedRoast(steamId);
+  if (cached) return NextResponse.json(cached);
+
+  // Rate limit only when we need to generate a new roast
+  const ip = getClientIp(request);
+  const rateLimitResult = checkRateLimit(`roast:${ip}`, RATE_LIMITS.roast);
+
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: 'Too many roasts — try again later' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
+        },
+      },
+    );
+  }
+
+  // Fetch Steam data — all in parallel
   let profile;
   let games;
+  let bans;
+  let steamLevel;
+  let wishlistCount;
   try {
-    [profile, games] = await Promise.all([
+    [profile, games, bans, steamLevel, wishlistCount] = await Promise.all([
       getPlayerSummary(steamId, steamApiKey),
       getOwnedGames(steamId, steamApiKey),
+      getPlayerBans(steamId, steamApiKey),
+      getSteamLevel(steamId, steamApiKey),
+      getWishlistCount(steamId),
     ]);
   } catch {
     return NextResponse.json(
@@ -91,7 +109,6 @@ export async function POST(request: NextRequest) {
   const tagCounts = new Map<string, number>();
   for (const tags of tagResults) {
     if (!tags) continue;
-    // Only count top 5 tags per game to avoid noise
     for (const tag of tags.slice(0, 5)) {
       tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
     }
@@ -103,7 +120,11 @@ export async function POST(request: NextRequest) {
     .map(([tag, count]) => ({ tag, count }));
 
   // Build prompt and call OpenAI
-  const prompt = buildRoastPrompt(profile, games, topTags);
+  const prompt = buildRoastPrompt(profile, games, topTags, {
+    bans,
+    steamLevel,
+    wishlistCount,
+  });
   const openai = new OpenAI({ apiKey: openaiApiKey });
 
   try {
@@ -111,13 +132,14 @@ export async function POST(request: NextRequest) {
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.9,
-      max_tokens: 1000,
+      max_tokens: 500,
     });
 
     const roast = completion.choices[0]?.message?.content ?? '';
 
-    return NextResponse.json({
+    const response = {
       roast,
+      steamId,
       profile: {
         name: profile.personaname,
         avatar: profile.avatarfull,
@@ -128,7 +150,11 @@ export async function POST(request: NextRequest) {
         totalHours: Math.round(games.reduce((sum, g) => sum + g.playtime_forever, 0) / 60),
         neverPlayed: games.filter((g) => g.playtime_forever === 0).length,
       },
-    });
+    };
+
+    setCachedRoast(steamId, response);
+
+    return NextResponse.json(response);
   } catch (err) {
     console.error('OpenAI API error:', err);
     return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 503 });
