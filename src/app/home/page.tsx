@@ -101,7 +101,7 @@ function HomeContent() {
       <Header hideNavLinks={isSyncing} />
 
       <main className="pt-16 flex-1">
-        <section className="max-w-7xl mx-auto px-6 py-12">
+        <section className="max-w-7xl mx-auto px-6 pt-12 pb-20">
           <div className="flex flex-col items-center text-center">
             {/* Main content area */}
             {isSyncing ? (
@@ -138,22 +138,28 @@ function HomeContent() {
             ) : isStatusLoading ? (
               <StatusLoadingState />
             ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="lg"
-                  className="cursor-pointer"
-                  onClick={() => setIsSuggestionModalOpen(true)}
-                >
-                  <Sparkles className="w-5 h-5 mr-1.5" />
-                  Pick My Game
-                </Button>
-                <button
-                  onClick={handleRandomPick}
-                  className="cursor-pointer p-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
-                  title="Pick a random game"
-                >
-                  <Dices className="w-5 h-5 text-zinc-100" />
-                </button>
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-zinc-400">What are you playing next?</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="lg"
+                    className="cursor-pointer"
+                    onClick={() => setIsSuggestionModalOpen(true)}
+                  >
+                    <Sparkles className="w-5 h-5 mr-1.5" />
+                    Pick My Game
+                  </Button>
+                  <Button
+                    onClick={handleRandomPick}
+                    variant="secondary"
+                    size="lg"
+                    className="cursor-pointer"
+                    title="Pick a random game"
+                  >
+                    <Dices className="w-5 h-5 mr-1.5" />
+                    Random
+                  </Button>
+                </div>
               </div>
             )}
           </div>

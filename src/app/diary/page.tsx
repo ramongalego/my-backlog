@@ -188,7 +188,7 @@ export default function DiaryPage() {
               <p className="text-zinc-500 text-sm mt-1">
                 {entries.length === 0
                   ? "You haven't finished any games yet"
-                  : `${entries.length} game${entries.length === 1 ? '' : 's'} finished · ${thisYearCount} this year`}
+                  : `${entries.length} game${entries.length === 1 ? '' : 's'} finished${thisYearCount > 0 ? ` · ${thisYearCount} this year` : ''}`}
               </p>
             )}
           </div>
