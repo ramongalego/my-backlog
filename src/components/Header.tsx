@@ -164,6 +164,14 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
                 Stats
               </Link>
             )}
+            {!hideNavLinks && (
+              <Link
+                href="/roast"
+                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/roast' ? 'text-zinc-100' : 'text-zinc-400'}`}
+              >
+                Roast
+              </Link>
+            )}
           </div>
 
           <nav className="flex items-center gap-3">

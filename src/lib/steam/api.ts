@@ -34,6 +34,48 @@ export async function getOwnedGames(steamId: string, apiKey: string): Promise<St
   return data.response?.games || [];
 }
 
+export async function resolveVanityURL(vanityName: string, apiKey: string): Promise<string | null> {
+  const url = new URL('https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/');
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('vanityurl', vanityName);
+
+  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return data.response?.success === 1 ? data.response.steamid : null;
+}
+
+/**
+ * Parse a Steam input (URL, profile ID, or vanity name) into a Steam ID.
+ * Supported formats:
+ *  - https://steamcommunity.com/profiles/76561198012345678
+ *  - https://steamcommunity.com/id/username
+ *  - 76561198012345678
+ *  - username
+ */
+export async function parseSteamInput(input: string, apiKey: string): Promise<string | null> {
+  const trimmed = input.trim();
+
+  // Direct Steam ID (17-digit number)
+  if (/^\d{17}$/.test(trimmed)) return trimmed;
+
+  // Profile URL with numeric ID
+  const profileMatch = trimmed.match(/steamcommunity\.com\/profiles\/(\d{17})/);
+  if (profileMatch) return profileMatch[1];
+
+  // Vanity URL
+  const vanityMatch = trimmed.match(/steamcommunity\.com\/id\/([^/\s]+)/);
+  if (vanityMatch) return resolveVanityURL(vanityMatch[1], apiKey);
+
+  // Bare username (no slashes, not a number)
+  if (/^[a-zA-Z0-9_-]+$/.test(trimmed) && !/^\d+$/.test(trimmed)) {
+    return resolveVanityURL(trimmed, apiKey);
+  }
+
+  return null;
+}
+
 export async function getPlayerSummary(
   steamId: string,
   apiKey: string,

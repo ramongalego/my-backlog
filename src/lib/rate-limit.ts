@@ -96,4 +96,6 @@ export const RATE_LIMITS = {
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // 20 requests per minute for AI suggestions (accounts for rerolls)
   suggestion: { limit: 20, windowMs: 60 * 1000 },
+  // 3 roasts per hour per IP (public, uses OpenAI)
+  roast: { limit: 3, windowMs: 60 * 60 * 1000 },
 } as const;
