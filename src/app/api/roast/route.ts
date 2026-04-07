@@ -13,6 +13,7 @@ import { getSteamApiKey, getOpenAIApiKey } from '@/lib/env.server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 import { buildRoastPrompt } from '@/lib/roast/prompt';
 import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
+import { getBlacklistMessage } from '@/lib/roast/blacklist';
 
 export async function POST(request: NextRequest) {
   // Check API keys
@@ -36,6 +37,12 @@ export async function POST(request: NextRequest) {
   const { steamInput } = body;
   if (!steamInput || typeof steamInput !== 'string' || steamInput.trim().length === 0) {
     return NextResponse.json({ error: 'Steam URL or username is required' }, { status: 400 });
+  }
+
+  // Check blacklist before any API calls
+  const blacklistMessage = getBlacklistMessage(steamInput);
+  if (blacklistMessage) {
+    return NextResponse.json({ blacklisted: true, message: blacklistMessage });
   }
 
   // Resolve to Steam ID

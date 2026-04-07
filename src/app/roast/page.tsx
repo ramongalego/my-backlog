@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Flame, Loader2 } from 'lucide-react';
+import { Flame, Loader2, ShieldOff } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
 import { RoastResult } from '@/components/roast/RoastResult';
@@ -10,6 +10,7 @@ import type { RoastResponse } from '@/lib/roast/cache';
 export default function RoastPage() {
   const [input, setInput] = useState('');
   const [result, setResult] = useState<RoastResponse | null>(null);
+  const [blacklistMessage, setBlacklistMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,6 +20,7 @@ export default function RoastPage() {
 
     setError(null);
     setResult(null);
+    setBlacklistMessage(null);
     setIsLoading(true);
 
     try {
@@ -30,7 +32,9 @@ export default function RoastPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (data.blacklisted) {
+        setBlacklistMessage(data.message);
+      } else if (!res.ok) {
         setError(data.error ?? 'Something went wrong');
       } else {
         setResult(data);
@@ -91,6 +95,23 @@ export default function RoastPage() {
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-8">
               {error}
+            </div>
+          )}
+
+          {/* Blacklisted profile */}
+          {blacklistMessage && (
+            <div className="text-center py-16">
+              <ShieldOff className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
+              <p className="text-lg text-zinc-300">{blacklistMessage}</p>
+              <button
+                onClick={() => {
+                  setBlacklistMessage(null);
+                  setInput('');
+                }}
+                className="mt-6 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              >
+                Roast someone else
+              </button>
             </div>
           )}
 
