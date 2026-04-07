@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Flame, Loader2, ShieldOff } from 'lucide-react';
+import { Flame, Loader2, ShieldOff, X } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
 import { RoastResult } from '@/components/roast/RoastResult';
@@ -64,14 +64,26 @@ export default function RoastPage() {
           {/* Input form */}
           <form onSubmit={handleSubmit} className="mb-10">
             <div className="flex gap-3">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Enter Steam URL, Username, or Profile ID"
-                aria-label="Steam profile URL or username"
-                className="flex-1 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Enter Steam URL, Username, or Profile ID"
+                  aria-label="Steam profile URL or username"
+                  className="w-full px-4 py-3 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
+                />
+                {input && (
+                  <button
+                    type="button"
+                    onClick={() => setInput('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    aria-label="Clear input"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               <Button type="submit" disabled={isLoading || !input.trim()}>
                 {isLoading ? (
                   <>

@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.93.1",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.563.0",
+    "nanoid": "^5.1.7",
     "next": "^16.2.1",
     "openai": "^6.17.0",
     "openid": "^2.0.14",
