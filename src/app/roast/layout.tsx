@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Roast My Steam',
+  title: 'Steam Profile Roaster',
   description:
-    'Paste your Steam profile link and get a brutally funny AI roast of your gaming habits.',
+    'Paste a Steam profile link and get a savage roast of their gaming habits',
 };
 
 export default function RoastLayout({ children }: { children: React.ReactNode }) {

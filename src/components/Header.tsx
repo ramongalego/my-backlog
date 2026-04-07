@@ -12,12 +12,19 @@ import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
+const HIDDEN_ROUTES = ['/share/'];
 
-interface HeaderProps {
-  hideNavLinks?: boolean;
+export function Header() {
+  const pathname = usePathname();
+
+  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
+    return null;
+  }
+
+  return <HeaderInner />;
 }
 
-export function Header({ hideNavLinks }: HeaderProps = {}) {
+function HeaderInner() {
   const [user, setUser] = useState<User | null>(null);
   const [steamUsername, setSteamUsername] = useState<string | null>(null);
   const [steamAvatar, setSteamAvatar] = useState<string | null>(null);
@@ -26,23 +33,19 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const last = localStorage.getItem('playtime_refresh_at');
-    return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
-  });
+  const [isRefreshDisabled, setIsRefreshDisabled] = useState(false);
   const pathname = usePathname();
 
-  // Re-enable the refresh button when the cooldown expires, whether the cooldown
-  // was set in this session or carried over from a previous page load via localStorage.
+  // Check localStorage on mount and re-enable when the cooldown expires.
   useEffect(() => {
-    if (!isRefreshDisabled) return;
     const last = localStorage.getItem('playtime_refresh_at');
-    if (!last) return;
-    const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - parseInt(last)));
-    const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
-    return () => clearTimeout(id);
-  }, [isRefreshDisabled]);
+    if (last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS) {
+      setIsRefreshDisabled(true);
+      const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - parseInt(last)));
+      const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
+      return () => clearTimeout(id);
+    }
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -124,7 +127,17 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
               <Gamepad2 className="w-6 h-6 text-violet-400" />
               <span className="text-xl font-bold text-zinc-100 -ml-1">MyBacklog</span>
             </Link>
-            {user && !hideNavLinks && (
+            {isLoading && (
+              <>
+                <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-4 w-12 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-4 w-11 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-4 w-9 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
+              </>
+            )}
+            {!isLoading && user && (
               <Link
                 href="/home"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/home' ? 'text-zinc-100' : 'text-zinc-400'}`}
@@ -132,7 +145,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
                 Home
               </Link>
             )}
-            {user && !hideNavLinks && (
+            {!isLoading && user && (
               <Link
                 href="/games"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/games' ? 'text-zinc-100' : 'text-zinc-400'}`}
@@ -140,7 +153,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
                 Games
               </Link>
             )}
-            {user && !hideNavLinks && (
+            {!isLoading && user && (
               <Link
                 href="/playing-queue"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/playing-queue' ? 'text-zinc-100' : 'text-zinc-400'}`}
@@ -148,7 +161,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
                 Queue
               </Link>
             )}
-            {user && !hideNavLinks && (
+            {!isLoading && user && (
               <Link
                 href="/diary"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/diary' ? 'text-zinc-100' : 'text-zinc-400'}`}
@@ -156,7 +169,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
                 Diary
               </Link>
             )}
-            {user && !hideNavLinks && (
+            {!isLoading && user && (
               <Link
                 href="/stats"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/stats' ? 'text-zinc-100' : 'text-zinc-400'}`}
@@ -164,7 +177,7 @@ export function Header({ hideNavLinks }: HeaderProps = {}) {
                 Stats
               </Link>
             )}
-            {!hideNavLinks && (
+            {!isLoading && (
               <Link
                 href="/roast"
                 className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/roast' ? 'text-zinc-100' : 'text-zinc-400'}`}

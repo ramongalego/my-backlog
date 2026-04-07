@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Header } from '@/components/Header';
+
 import { Button } from '@/components/ui/Button';
 import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
@@ -98,8 +98,6 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <Header hideNavLinks={isSyncing} />
-
       <main className="pt-16 flex-1">
         <section className="max-w-7xl mx-auto px-6 pt-12 pb-20">
           <div className="flex flex-col items-center text-center">

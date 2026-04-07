@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Star } from 'lucide-react';
 import Image from 'next/image';
-import { Header } from '@/components/Header';
+
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
 import type { User } from '@supabase/supabase-js';
@@ -58,8 +58,6 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <Header />
-
       <main className="pt-16 flex-1">
         {/* ── Hero ── */}
         <section className="relative overflow-hidden">

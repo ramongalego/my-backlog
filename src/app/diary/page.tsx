@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { ExternalLink, Gamepad2, Pencil, Trophy, Star, MessageCircle } from 'lucide-react';
-import { Header } from '@/components/Header';
+
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useDiary } from '@/hooks/useDiary';
 import type { DiaryEntry } from '@/hooks/useDiary';
@@ -177,8 +177,6 @@ export default function DiaryPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Header />
-
       <main className="pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-6">
           {/* Page heading */}

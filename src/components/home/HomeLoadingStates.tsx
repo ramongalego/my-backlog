@@ -1,9 +1,8 @@
-import { Header } from '@/components/Header';
+
 
 export function LoadingState() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <Header />
       <main className="pt-16 flex-1">
         <section className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col items-center text-center">

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Gamepad2 } from 'lucide-react';
-import { Header } from '@/components/Header';
+
 import { GameCard } from '@/components/games/GameCard';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
@@ -76,7 +76,6 @@ export default function GamesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950">
-        <Header />
         <div className="pt-24">
           <div className="max-w-7xl mx-auto px-6">
             <GamesLoadingSkeleton />
@@ -88,8 +87,6 @@ export default function GamesPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Header />
-
       <main className="pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col gap-4 mb-8">

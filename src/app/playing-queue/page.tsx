@@ -22,7 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
-import { Header } from '@/components/Header';
+
 import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
@@ -269,8 +269,6 @@ export default function PlayingQueuePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Header />
-
       <main className="pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-8">

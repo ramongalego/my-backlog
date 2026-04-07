@@ -149,7 +149,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
               href="/"
               className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
             >
-              Track your own backlog with MyBacklog
+              Track your own Steam backlog with MyBacklog
             </Link>
           </div>
         </div>

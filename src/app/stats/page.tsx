@@ -12,7 +12,7 @@ import {
   Pencil,
   CalendarDays,
 } from 'lucide-react';
-import { Header } from '@/components/Header';
+
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { useStats } from '@/hooks/useStats';
@@ -416,7 +416,6 @@ export default function StatsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Header />
       <main className="pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-10">

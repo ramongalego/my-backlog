@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Flame } from 'lucide-react';
-import { Header } from '@/components/Header';
+
 import { RoastResult } from '@/components/roast/RoastResult';
 import type { RoastResponse } from '@/lib/roast/cache';
 
@@ -48,7 +48,6 @@ export default function SharedRoastPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Header />
 
       <main className="pt-24 pb-16">
         <div className="max-w-3xl mx-auto px-6">
