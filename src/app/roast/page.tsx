@@ -48,7 +48,6 @@ export default function RoastPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-
       <main className="pt-24 pb-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           {/* Header */}
@@ -57,7 +56,9 @@ export default function RoastPage() {
               <Flame className="w-7 h-7 text-violet-400" />
             </div>
             <h1 className="text-3xl font-bold text-zinc-100 mb-2">Steam Profile Roaster</h1>
-            <p className="text-zinc-400">Enter a Steam Profile and get a savage roast of their gaming habits</p>
+            <p className="text-zinc-400">
+              Enter a Steam Profile and get a savage roast of their gaming habits
+            </p>
           </div>
 
           {/* Input form */}

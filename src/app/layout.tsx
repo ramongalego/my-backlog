@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { Header } from '@/components/Header';
+import { getBaseUrl } from '@/lib/url';
 import './globals.css';
 
 const geistSans = Geist({
@@ -16,11 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : 'https://mybacklog.app'
-  ),
+  metadataBase: new URL(getBaseUrl()),
   title: {
     template: '%s · MyBacklog',
     default: 'MyBacklog',

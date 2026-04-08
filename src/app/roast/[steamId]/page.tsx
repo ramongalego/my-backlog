@@ -48,7 +48,6 @@ export default function SharedRoastPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-
       <main className="pt-24 pb-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           {/* Header */}

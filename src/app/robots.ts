@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { getBaseUrl } from '@/lib/url';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/home', '/games', '/diary', '/stats', '/playing-queue'],
       },
     ],
-    sitemap: 'https://mybacklog.app/sitemap.xml',
+    sitemap: `${getBaseUrl()}/sitemap.xml`,
   };
 }

@@ -21,6 +21,30 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'MyBacklog',
+  url: 'https://mybacklog.app',
+  description:
+    'Stop buying new games and start finishing the ones you own. MyBacklog helps you pick the perfect game from your Steam library.',
+  applicationCategory: 'GameApplication',
+  operatingSystem: 'All',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+};
+
 export default function LandingRoute() {
-  return <LandingPage user={null} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <LandingPage user={null} />
+    </>
+  );
 }

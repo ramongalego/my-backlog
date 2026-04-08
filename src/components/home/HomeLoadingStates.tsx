@@ -1,5 +1,3 @@
-
-
 export function LoadingState() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">

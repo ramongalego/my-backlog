@@ -33,19 +33,22 @@ function HeaderInner() {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isRefreshDisabled, setIsRefreshDisabled] = useState(false);
+  const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const last = localStorage.getItem('playtime_refresh_at');
+    return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
+  });
   const pathname = usePathname();
 
-  // Check localStorage on mount and re-enable when the cooldown expires.
+  // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
+    if (!isRefreshDisabled) return;
     const last = localStorage.getItem('playtime_refresh_at');
-    if (last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS) {
-      setIsRefreshDisabled(true);
-      const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - parseInt(last)));
-      const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
-      return () => clearTimeout(id);
-    }
-  }, []);
+    if (!last) return;
+    const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - parseInt(last)));
+    const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
+    return () => clearTimeout(id);
+  }, [isRefreshDisabled]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -119,11 +122,7 @@ function HeaderInner() {
   };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   const navLinks = [
     ...(user
@@ -145,7 +144,7 @@ function HeaderInner() {
           <div className="flex items-center gap-6">
             <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
               <Gamepad2 className="w-6 h-6 text-violet-400 shrink-0" />
-              <span className="text-xl font-bold text-zinc-100 leading-none">MyBacklog</span>
+              <span className="text-lg font-semibold text-zinc-100">MyBacklog</span>
             </Link>
             {isLoading && (
               <div className="hidden md:flex items-center gap-6">
@@ -215,6 +214,7 @@ function HeaderInner() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  onClick={closeMobileMenu}
                   className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? 'text-zinc-100 bg-zinc-800' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'}`}
                 >
                   {link.label}

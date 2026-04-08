@@ -3,7 +3,17 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { Gamepad2, Check, X, EyeOff, Archive, Play, CalendarDays, ListOrdered, Loader2 } from 'lucide-react';
+import {
+  Gamepad2,
+  Check,
+  X,
+  EyeOff,
+  Archive,
+  Play,
+  CalendarDays,
+  ListOrdered,
+  Loader2,
+} from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 
 const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.DayPicker), {
@@ -17,7 +27,12 @@ type InternalStatus = GameStatus | 'queue';
 interface GameDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (status: string, date: string, notes: string, rating: number | null) => void | Promise<void>;
+  onConfirm: (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => void | Promise<void>;
   gameName: string;
   headerImage: string | null;
   initialStatus: GameStatus;
@@ -366,7 +381,13 @@ export function GameDetailModal({
             disabled={saving}
             className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Save Changes'}
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Saving…
+              </>
+            ) : (
+              'Save Changes'
+            )}
           </button>
         </div>
       </div>

@@ -16,7 +16,13 @@ interface DropdownProps<T extends string> {
   align?: 'left' | 'right';
 }
 
-export function Dropdown<T extends string>({ value, options, onChange, icon, align = 'right' }: DropdownProps<T>) {
+export function Dropdown<T extends string>({
+  value,
+  options,
+  onChange,
+  icon,
+  align = 'right',
+}: DropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
