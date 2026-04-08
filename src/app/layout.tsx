@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import { getBaseUrl } from '@/lib/url';
 import Providers from './providers';
 import './globals.css';
@@ -42,6 +43,7 @@ export default function RootLayout({
         <Providers>
           <Header />
           {children}
+          <Footer />
           <Toaster richColors position="bottom-right" />
           <Analytics />
         </Providers>

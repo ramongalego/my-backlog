@@ -358,12 +358,6 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         </section>
       </main>
 
-      <footer className="py-6 border-t border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-sm text-zinc-600">MyBacklog</p>
-        </div>
-      </footer>
-
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

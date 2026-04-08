@@ -124,18 +124,15 @@ function HeaderInner() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  const navLinks = [
-    ...(user
-      ? [
-          { href: '/home', label: 'Home' },
-          { href: '/games', label: 'Games' },
-          { href: '/playing-queue', label: 'Queue' },
-          { href: '/diary', label: 'Diary' },
-          { href: '/stats', label: 'Stats' },
-        ]
-      : []),
-    { href: '/roast', label: 'Roast' },
-  ];
+  const navLinks = user
+    ? [
+        { href: '/home', label: 'Home' },
+        { href: '/games', label: 'Games' },
+        { href: '/playing-queue', label: 'Queue' },
+        { href: '/diary', label: 'Diary' },
+        { href: '/stats', label: 'Stats' },
+      ]
+    : [];
 
   return (
     <>

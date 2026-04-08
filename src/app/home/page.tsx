@@ -211,12 +211,6 @@ function HomeContent() {
           )}
       </main>
 
-      <footer className="py-6 border-t border-zinc-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-sm text-zinc-500">MyBacklog</p>
-        </div>
-      </footer>
-
       <SuggestionModal
         isOpen={isSuggestionModalOpen}
         onClose={() => setIsSuggestionModalOpen(false)}
