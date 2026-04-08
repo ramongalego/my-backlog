@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { addToQueue } from '@/lib/games/queue';
 import { updateGameStatus } from '@/lib/games/status';
+import { queryKeys } from '@/lib/query-keys';
 import { toast } from 'sonner';
 import type { GameWithImage } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
@@ -24,33 +26,42 @@ interface UseCurrentGameOpts {
 const PLAYING_SELECT =
   'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat';
 
+async function fetchCurrentlyPlaying(userId: string): Promise<GameWithImage | null> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('games')
+    .select(PLAYING_SELECT)
+    .eq('user_id', userId)
+    .eq('status', 'playing')
+    .single();
+  return data ?? null;
+}
+
 export function useCurrentGame({
   userId,
   removeFromPools,
   addBackToPool,
   addQueuedAppId,
 }: UseCurrentGameOpts) {
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<GameWithImage | null>(null);
+  const queryClient = useQueryClient();
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
   const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
 
-  // Load currently playing game
-  useEffect(() => {
-    if (!userId) return;
-    async function load() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('games')
-        .select(PLAYING_SELECT)
-        .eq('user_id', userId)
-        .eq('status', 'playing')
-        .single();
-      if (data) setCurrentlyPlaying(data);
-    }
-    load();
-  }, [userId]);
+  const { data: currentlyPlaying = null } = useQuery({
+    queryKey: queryKeys.games.playing(),
+    queryFn: () => fetchCurrentlyPlaying(userId!),
+    enabled: !!userId,
+    staleTime: 30 * 1000,
+  });
+
+  const setCurrentlyPlaying = useCallback(
+    (game: GameWithImage | null) => {
+      queryClient.setQueryData(queryKeys.games.playing(), game);
+    },
+    [queryClient],
+  );
 
   // ─── Actions ────────────────────────────────────────────────────────────────
 
@@ -67,7 +78,7 @@ export function useCurrentGame({
       }
       setIsStatusLoading(false);
     },
-    [removeFromPools],
+    [removeFromPools, setCurrentlyPlaying],
   );
 
   const handleFinishGame = useCallback(() => {
@@ -85,10 +96,11 @@ export function useCurrentGame({
       const ok = await addToQueue(game.app_id);
       if (ok) {
         addQueuedAppId(game.app_id);
+        queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
         toast.success(`${game.name} added to the queue!`);
       }
     },
-    [addQueuedAppId],
+    [addQueuedAppId, queryClient],
   );
 
   const handleOpenCarouselDetail = useCallback((game: GameWithImage) => {
@@ -191,7 +203,7 @@ export function useCurrentGame({
       }
       setIsStatusLoading(false);
     },
-    [currentlyPlaying],
+    [currentlyPlaying, setCurrentlyPlaying],
   );
 
   const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
@@ -208,7 +220,7 @@ export function useCurrentGame({
       console.error('Failed to cancel game:', err);
     }
     setIsStatusLoading(false);
-  }, [currentlyPlaying, addBackToPool]);
+  }, [currentlyPlaying, addBackToPool, setCurrentlyPlaying]);
 
   const handleRandomPick = useCallback(async () => {
     const supabase = createClient();

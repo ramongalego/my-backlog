@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Flame, Loader2, ShieldOff, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -8,43 +9,54 @@ import { RoastResult } from '@/components/roast/RoastResult';
 import type { RoastResponse } from '@/lib/roast/cache';
 
 export default function RoastPage() {
+  const queryClient = useQueryClient();
   const [input, setInput] = useState('');
-  const [result, setResult] = useState<RoastResponse | null>(null);
   const [blacklistMessage, setBlacklistMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    setError(null);
-    setResult(null);
-    setBlacklistMessage(null);
-    setIsLoading(true);
-
-    try {
+  const roastMutation = useMutation({
+    mutationFn: async (steamInput: string) => {
       const res = await fetch('/api/roast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steamInput: input.trim() }),
+        body: JSON.stringify({ steamInput }),
       });
 
       const data = await res.json();
 
       if (data.blacklisted) {
-        setBlacklistMessage(data.message);
-      } else if (!res.ok) {
-        setError(data.error ?? 'Something went wrong');
-      } else {
-        setResult(data);
+        throw { blacklisted: true, message: data.message };
       }
-    } catch {
-      setError('Failed to connect. Please try again.');
-    }
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Something went wrong');
+      }
+      return data as RoastResponse;
+    },
+    onSuccess: (data) => {
+      // Seed the shared roast page cache so /roast/[steamId] is instant
+      queryClient.setQueryData(['roast', data.steamId], data);
+    },
+    onError: (err) => {
+      if (typeof err === 'object' && err !== null && 'blacklisted' in err) {
+        setBlacklistMessage((err as { message: string }).message);
+      }
+    },
+    onMutate: () => {
+      setBlacklistMessage(null);
+    },
+  });
 
-    setIsLoading(false);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || roastMutation.isPending) return;
+    roastMutation.mutate(input.trim());
   };
+
+  const error =
+    roastMutation.error && !blacklistMessage
+      ? roastMutation.error instanceof Error
+        ? roastMutation.error.message
+        : 'Failed to connect. Please try again.'
+      : null;
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -84,8 +96,8 @@ export default function RoastPage() {
                   </button>
                 )}
               </div>
-              <Button type="submit" disabled={isLoading || !input.trim()}>
-                {isLoading ? (
+              <Button type="submit" disabled={roastMutation.isPending || !input.trim()}>
+                {roastMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                     Roasting...
@@ -118,6 +130,7 @@ export default function RoastPage() {
               <button
                 onClick={() => {
                   setBlacklistMessage(null);
+                  roastMutation.reset();
                   setInput('');
                 }}
                 className="mt-6 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
@@ -128,7 +141,7 @@ export default function RoastPage() {
           )}
 
           {/* Loading state */}
-          {isLoading && (
+          {roastMutation.isPending && (
             <div className="text-center py-16">
               <div className="relative inline-block">
                 <div className="w-16 h-16 border-4 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
@@ -139,11 +152,11 @@ export default function RoastPage() {
           )}
 
           {/* Result */}
-          {result && !isLoading && (
+          {roastMutation.data && !roastMutation.isPending && (
             <RoastResult
-              result={result}
+              result={roastMutation.data}
               onRoastAnother={() => {
-                setResult(null);
+                roastMutation.reset();
                 setInput('');
               }}
             />

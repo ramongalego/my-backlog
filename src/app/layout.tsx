@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { Header } from '@/components/Header';
 import { getBaseUrl } from '@/lib/url';
+import Providers from './providers';
 import './globals.css';
 
 const geistSans = Geist({
@@ -36,10 +37,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100`}
       >
-        <Header />
-        {children}
-        <Toaster richColors position="bottom-right" />
-        <Analytics />
+        <Providers>
+          <Header />
+          {children}
+          <Toaster richColors position="bottom-right" />
+          <Analytics />
+        </Providers>
       </body>
     </html>
   );

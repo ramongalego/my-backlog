@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { queryKeys } from '@/lib/query-keys';
 
 interface GameForStats {
   app_id: number;
@@ -77,39 +79,31 @@ function parseYear(releaseDate: string | null): string | null {
   return m ? m[0] : null;
 }
 
+async function fetchStatsGames(): Promise<GameForStats[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from('games')
+    .select(
+      'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
+    )
+    .eq('user_id', user.id)
+    .eq('type', 'game')
+    .neq('status', 'hidden');
+
+  return (data || []) as GameForStats[];
+}
+
 export function useStats() {
-  const [games, setGames] = useState<GameForStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tick, setTick] = useState(0);
-
-  const refresh = () => setTick((t) => t + 1);
-
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from('games')
-        .select(
-          'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
-        )
-        .eq('user_id', user.id)
-        .eq('type', 'game')
-        .neq('status', 'hidden');
-
-      setGames(data || []);
-      setLoading(false);
-    }
-
-    load();
-  }, [tick]);
+  const { data: games = [], isPending } = useQuery({
+    queryKey: queryKeys.games.stats(),
+    queryFn: fetchStatsGames,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const stats = useMemo((): Stats | null => {
     if (games.length === 0) return null;
@@ -243,5 +237,5 @@ export function useStats() {
     };
   }, [games]);
 
-  return { stats, loading, refresh };
+  return { stats, loading: isPending };
 }

@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { queryKeys } from '@/lib/query-keys';
+import { useInvalidateGameQueries } from '@/lib/mutations';
 
 export interface DiaryEntry {
   app_id: number;
@@ -36,36 +39,93 @@ interface UseDiaryReturn {
   ) => Promise<void>;
 }
 
+async function fetchDiaryEntries(): Promise<DiaryEntry[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from('games')
+    .select('app_id, name, header_image, rating, notes, finished_at')
+    .eq('user_id', user.id)
+    .eq('status', 'finished')
+    .order('finished_at', { ascending: false, nullsFirst: false });
+
+  return (data || []) as DiaryEntry[];
+}
+
 export function useDiary(): UseDiaryReturn {
-  const [entries, setEntries] = useState<DiaryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const invalidateGameQueries = useInvalidateGameQueries();
   const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
 
-  useEffect(() => {
-    async function loadEntries() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  const { data: entries = [], isPending } = useQuery({
+    queryKey: queryKeys.games.diary(),
+    queryFn: fetchDiaryEntries,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (!user) {
-        setLoading(false);
-        return;
+  const diaryMutation = useMutation({
+    mutationFn: async (vars: {
+      appId: number;
+      status: string;
+      date: string;
+      notes: string;
+      rating: number | null;
+    }) => {
+      await fetch('/api/games/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: vars.appId,
+          status: vars.status,
+          ...(vars.status === 'finished' ? { finishedAt: vars.date } : {}),
+          ...(vars.status === 'dropped' ? { droppedAt: vars.date } : {}),
+          ...(vars.status === 'playing' ? { started_at: new Date().toISOString() } : {}),
+          notes: vars.notes,
+          rating: vars.rating,
+        }),
+      });
+      return vars;
+    },
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.games.diary() });
+      const previous = queryClient.getQueryData<DiaryEntry[]>(queryKeys.games.diary());
+
+      if (vars.status === 'finished') {
+        queryClient.setQueryData(queryKeys.games.diary(), (old: DiaryEntry[] | undefined) => {
+          if (!old) return old;
+          const updated = old.map((e) =>
+            e.app_id === vars.appId
+              ? { ...e, finished_at: vars.date || null, notes: vars.notes, rating: vars.rating }
+              : e,
+          );
+          return updated.sort((a, b) => {
+            if (!a.finished_at && !b.finished_at) return 0;
+            if (!a.finished_at) return 1;
+            if (!b.finished_at) return -1;
+            return b.finished_at.localeCompare(a.finished_at);
+          });
+        });
+      } else {
+        queryClient.setQueryData(queryKeys.games.diary(), (old: DiaryEntry[] | undefined) => {
+          if (!old) return old;
+          return old.filter((e) => e.app_id !== vars.appId);
+        });
       }
 
-      const { data } = await supabase
-        .from('games')
-        .select('app_id, name, header_image, rating, notes, finished_at')
-        .eq('user_id', user.id)
-        .eq('status', 'finished')
-        .order('finished_at', { ascending: false, nullsFirst: false });
-
-      setEntries(data || []);
-      setLoading(false);
-    }
-
-    loadEntries();
-  }, []);
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.games.diary(), context.previous);
+      }
+    },
+    onSettled: () => invalidateGameQueries(),
+  });
 
   const handleOpenDetail = useCallback(
     (appId: number) => {
@@ -90,49 +150,14 @@ export function useDiary(): UseDiaryReturn {
   const handleConfirmDetail = useCallback(
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!detailModal) return;
-      const { appId } = detailModal;
-      try {
-        await fetch('/api/games/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            appId,
-            status,
-            ...(status === 'finished' ? { finishedAt: date } : {}),
-            ...(status === 'dropped' ? { droppedAt: date } : {}),
-            ...(status === 'playing' ? { started_at: new Date().toISOString() } : {}),
-            notes,
-            rating,
-          }),
-        });
-
-        if (status === 'finished') {
-          // Update the entry then re-sort to match DB ordering (newest first, nulls last)
-          setEntries((prev) => {
-            const updated = prev.map((e) =>
-              e.app_id === appId ? { ...e, finished_at: date || null, notes, rating } : e,
-            );
-            return updated.sort((a, b) => {
-              if (!a.finished_at && !b.finished_at) return 0;
-              if (!a.finished_at) return 1;
-              if (!b.finished_at) return -1;
-              return b.finished_at.localeCompare(a.finished_at);
-            });
-          });
-        } else {
-          // Remove from diary — no longer finished
-          setEntries((prev) => prev.filter((e) => e.app_id !== appId));
-        }
-      } catch (err) {
-        console.error('Failed to update game:', err);
-      }
+      diaryMutation.mutate({ appId: detailModal.appId, status, date, notes, rating });
     },
-    [detailModal],
+    [detailModal, diaryMutation],
   );
 
   return {
     entries,
-    loading,
+    loading: isPending,
     detailModal,
     handleOpenDetail,
     handleCloseDetail,

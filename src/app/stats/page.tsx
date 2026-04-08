@@ -13,10 +13,12 @@ import {
   CalendarDays,
 } from 'lucide-react';
 
+import { useMutation } from '@tanstack/react-query';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { useStats } from '@/hooks/useStats';
 import { addToQueue } from '@/lib/games/queue';
+import { useInvalidateGameQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
 
@@ -371,8 +373,33 @@ function MostPlayedUnfinished({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const { stats, loading, refresh } = useStats();
+  const { stats, loading } = useStats();
+  const invalidateGameQueries = useInvalidateGameQueries();
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
+
+  const statusMutation = useMutation({
+    mutationFn: async (vars: {
+      appId: number;
+      status: string;
+      date: string;
+      notes: string;
+      rating: number | null;
+    }) => {
+      await fetch('/api/games/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: vars.appId,
+          status: vars.status,
+          ...(vars.status === 'finished' ? { finishedAt: vars.date } : {}),
+          ...(vars.status === 'dropped' ? { droppedAt: vars.date } : {}),
+          notes: vars.notes,
+          rating: vars.rating,
+        }),
+      });
+    },
+    onSettled: () => invalidateGameQueries(),
+  });
 
   const handleEdit = (
     appId: number,
@@ -398,20 +425,8 @@ export default function StatsPage() {
     rating: number | null,
   ) => {
     if (!editModal) return;
-    await fetch('/api/games/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        appId: editModal.appId,
-        status,
-        ...(status === 'finished' ? { finishedAt: date } : {}),
-        ...(status === 'dropped' ? { droppedAt: date } : {}),
-        notes,
-        rating,
-      }),
-    });
+    statusMutation.mutate({ appId: editModal.appId, status, date, notes, rating });
     setEditModal(null);
-    refresh();
   };
 
   return (

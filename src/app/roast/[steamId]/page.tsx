@@ -1,50 +1,44 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { Flame } from 'lucide-react';
 
 import { RoastResult } from '@/components/roast/RoastResult';
 import type { RoastResponse } from '@/lib/roast/cache';
 
+async function fetchRoast(steamId: string): Promise<RoastResponse> {
+  // Try cache first
+  let res = await fetch(`/api/roast/${steamId}`);
+
+  // If not cached, generate a fresh one
+  if (res.status === 404) {
+    res = await fetch('/api/roast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamInput: steamId }),
+    });
+  }
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Could not load this roast');
+  return data as RoastResponse;
+}
+
 export default function SharedRoastPage() {
   const { steamId } = useParams<{ steamId: string }>();
-  const [result, setResult] = useState<RoastResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadRoast() {
-      try {
-        // Try cache first
-        let res = await fetch(`/api/roast/${steamId}`);
-
-        // If not cached, generate a fresh one
-        if (res.status === 404) {
-          res = await fetch('/api/roast', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ steamInput: steamId }),
-          });
-        }
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          setError(data.error ?? 'Could not load this roast');
-        } else {
-          setResult(data);
-        }
-      } catch {
-        setError('Failed to connect. Please try again.');
-      }
-
-      setIsLoading(false);
-    }
-
-    loadRoast();
-  }, [steamId]);
+  const {
+    data: result,
+    error,
+    isPending,
+  } = useQuery({
+    queryKey: ['roast', steamId],
+    queryFn: () => fetchRoast(steamId),
+    staleTime: 24 * 60 * 60 * 1000,
+    retry: false,
+  });
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -59,7 +53,7 @@ export default function SharedRoastPage() {
           </div>
 
           {/* Loading */}
-          {isLoading && (
+          {isPending && (
             <div className="text-center py-16">
               <div className="relative inline-block">
                 <div className="w-16 h-16 border-4 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
@@ -70,9 +64,9 @@ export default function SharedRoastPage() {
           )}
 
           {/* Error */}
-          {error && !isLoading && (
+          {error && !isPending && (
             <div className="text-center py-16">
-              <p className="text-zinc-400 mb-4">{error}</p>
+              <p className="text-zinc-400 mb-4">{error.message}</p>
               <Link
                 href="/roast"
                 className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
@@ -83,10 +77,10 @@ export default function SharedRoastPage() {
           )}
 
           {/* Result */}
-          {result && !isLoading && <RoastResult result={result} />}
+          {result && !isPending && <RoastResult result={result} />}
 
           {/* CTA to roast another */}
-          {result && !isLoading && (
+          {result && !isPending && (
             <div className="text-center mt-6">
               <Link
                 href="/roast"

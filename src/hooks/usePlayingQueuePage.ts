@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { celebrateGameFinished } from '@/lib/confetti';
+import { queryKeys } from '@/lib/query-keys';
+import { useInvalidateGameQueries } from '@/lib/mutations';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
@@ -36,103 +39,130 @@ interface UsePlayingQueuePageReturn {
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+async function fetchPlayingGame(): Promise<GameWithImage | null> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from('games')
+    .select(
+      'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
+    )
+    .eq('user_id', user.id)
+    .eq('status', 'playing')
+    .single();
+
+  return data ?? null;
+}
+
+async function fetchQueue(): Promise<QueueItem[]> {
+  const res = await fetch('/api/queue');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.queue ?? [];
+}
+
 export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<GameWithImage | null>(null);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const invalidateGameQueries = useInvalidateGameQueries();
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const isStatusLoadingRef = useRef(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
 
-  const setStatusLoading = useCallback((val: boolean) => {
+  const setStatusLoadingBoth = useCallback((val: boolean) => {
     isStatusLoadingRef.current = val;
     setIsStatusLoading(val);
   }, []);
 
-  const fetchQueue = useCallback(async () => {
-    const res = await fetch('/api/queue');
-    if (res.ok) {
-      const data = await res.json();
-      setQueue(data.queue ?? []);
-    }
-  }, []);
+  const { data: currentlyPlaying = null, isPending: isPlayingPending } = useQuery({
+    queryKey: queryKeys.games.playing(),
+    queryFn: fetchPlayingGame,
+    staleTime: 30 * 1000,
+  });
 
-  const runRefresh = useCallback(async () => {
-    try {
-      const res = await fetch('/api/steam/refresh', { method: 'POST' });
-      if (!res.ok) return;
-      const data = await res.json();
-      localStorage.setItem('playtime_refresh_at', Date.now().toString());
-      if (data.newGames > 0) {
-        window.location.reload();
-        return;
-      }
-      // No new games — just re-fetch the now playing game to update playtime
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: playingGame } = await supabase
-          .from('games')
-          .select(
-            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
-          )
-          .eq('user_id', user.id)
-          .eq('status', 'playing')
-          .single();
-        if (playingGame && !isStatusLoadingRef.current) setCurrentlyPlaying(playingGame);
-      }
-    } catch (err) {
-      console.error('Failed to refresh library:', err);
-    }
-  }, []);
+  const { data: queue = [], isPending: isQueuePending } = useQuery({
+    queryKey: queryKeys.queue.list(),
+    queryFn: fetchQueue,
+    staleTime: 2 * 60 * 1000,
+  });
 
+  const isLoading = isPlayingPending || isQueuePending;
+
+  // Auto-refresh playtime if stale
   useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    if (isLoading) return;
+    const lastRefresh = localStorage.getItem('playtime_refresh_at');
+    if (lastRefresh && Date.now() - parseInt(lastRefresh) <= ONE_HOUR_MS) return;
 
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      const [{ data: playingGame }, queueRes] = await Promise.all([
-        supabase
-          .from('games')
-          .select(
-            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
-          )
-          .eq('user_id', user.id)
-          .eq('status', 'playing')
-          .single(),
-        fetch('/api/queue'),
-      ]);
-
-      if (playingGame) {
-        setCurrentlyPlaying(playingGame);
-      }
-
-      if (queueRes.ok) {
-        const data = await queueRes.json();
-        setQueue(data.queue ?? []);
-      }
-
-      setIsLoading(false);
-
-      // Auto-refresh playtime if it's been more than 1 hour (same logic as home page)
-      const lastRefresh = localStorage.getItem('playtime_refresh_at');
-      if (!lastRefresh || Date.now() - parseInt(lastRefresh) > ONE_HOUR_MS) {
-        runRefresh();
+    async function runRefresh() {
+      try {
+        const res = await fetch('/api/steam/refresh', { method: 'POST' });
+        if (!res.ok) return;
+        const data = await res.json();
+        localStorage.setItem('playtime_refresh_at', Date.now().toString());
+        if (data.newGames > 0) {
+          window.location.reload();
+          return;
+        }
+        if (!isStatusLoadingRef.current) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.games.playing() });
+        }
+      } catch (err) {
+        console.error('Failed to refresh library:', err);
       }
     }
 
-    load();
-  }, [runRefresh]);
+    runRefresh();
+  }, [isLoading, queryClient]);
+
+  // ─── Mutations ──────────────────────────────────────────────────────────────
+
+  const removeMutation = useMutation({
+    mutationFn: async (appId: number) => {
+      await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+    },
+    onMutate: async (appId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.queue.list() });
+      const previous = queryClient.getQueryData<QueueItem[]>(queryKeys.queue.list());
+      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
+        (old ?? []).filter((q) => q.app_id !== appId),
+      );
+      return { previous };
+    },
+    onError: (_err, _appId, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.queue.list(), context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.queue.list() }),
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (appIds: number[]) => {
+      await fetch('/api/queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: appIds }),
+      });
+    },
+    onMutate: async (appIds) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.queue.list() });
+      const previous = queryClient.getQueryData<QueueItem[]>(queryKeys.queue.list());
+      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => {
+        if (!old) return old;
+        const byId = new Map(old.map((q) => [q.app_id, q]));
+        return appIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
+      });
+      return { previous };
+    },
+    onError: (_err, _appIds, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.queue.list(), context.previous);
+    },
+  });
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const handleFinish = useCallback(() => {
     if (!currentlyPlaying) return;
@@ -151,15 +181,14 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     if (!currentlyPlaying) return;
     const game = currentlyPlaying;
 
-    // Optimistic update: immediately remove from now playing and append to queue
-    setStatusLoading(true);
-    setCurrentlyPlaying(null);
-    setQueue((prev) => [
-      ...prev,
+    setStatusLoadingBoth(true);
+    queryClient.setQueryData(queryKeys.games.playing(), null);
+    queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
+      ...(old ?? []),
       {
         id: -1,
         app_id: game.app_id,
-        position: prev.length,
+        position: (old ?? []).length,
         game: {
           name: game.name,
           header_image: game.header_image,
@@ -181,23 +210,24 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId: game.app_id }),
       });
-      await fetchQueue();
+      invalidateGameQueries();
     } catch (err) {
       console.error('Failed to move game to queue:', err);
-      // Revert
-      setCurrentlyPlaying(game);
-      setQueue((prev) => prev.filter((q) => q.app_id !== game.app_id));
+      queryClient.setQueryData(queryKeys.games.playing(), game);
+      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
+        (old ?? []).filter((q) => q.app_id !== game.app_id),
+      );
     } finally {
-      setStatusLoading(false);
+      setStatusLoadingBoth(false);
     }
-  }, [currentlyPlaying, fetchQueue, setStatusLoading]);
+  }, [currentlyPlaying, queryClient, setStatusLoadingBoth, invalidateGameQueries]);
 
   const handleConfirm = useCallback(
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!currentlyPlaying) return;
       const finishedGame = currentlyPlaying;
       setStatusModal(null);
-      setStatusLoading(true);
+      setStatusLoadingBoth(true);
       try {
         await fetch('/api/games/status', {
           method: 'POST',
@@ -244,7 +274,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           totalGames = totalCount ?? 0;
         }
 
-        setCurrentlyPlaying(promoted);
+        queryClient.setQueryData(queryKeys.games.playing(), promoted);
 
         if (status === 'finished') {
           setGameSummary({
@@ -263,43 +293,20 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           celebrateGameFinished();
         }
 
-        await fetchQueue();
+        invalidateGameQueries();
       } catch (err) {
         console.error(`Failed to ${status} game:`, err);
       }
-      setStatusLoading(false);
+      setStatusLoadingBoth(false);
     },
-    [currentlyPlaying, fetchQueue, setStatusLoading],
+    [currentlyPlaying, queryClient, setStatusLoadingBoth, invalidateGameQueries],
   );
 
-  const handleRemoveFromQueue = useCallback(async (appId: number) => {
-    try {
-      await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
-      setQueue((prev) => prev.filter((q) => q.app_id !== appId));
-    } catch (err) {
-      console.error('Failed to remove from queue:', err);
-    }
-  }, []);
-
-  const handleReorder = useCallback(
-    async (appIds: number[]) => {
-      const previous = queue;
-      setQueue((prev) => {
-        const byId = new Map(prev.map((q) => [q.app_id, q]));
-        return appIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
-      });
-      try {
-        await fetch('/api/queue', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order: appIds }),
-        });
-      } catch (err) {
-        console.error('Failed to reorder queue:', err);
-        setQueue(previous);
-      }
+  const handleRemoveFromQueue = useCallback(
+    async (appId: number) => {
+      removeMutation.mutate(appId);
     },
-    [queue],
+    [removeMutation],
   );
 
   const handlePickFromQueue = useCallback(
@@ -307,9 +314,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       const item = queue.find((q) => q.app_id === appId);
       if (!item) return;
 
-      // Optimistic update: immediately show as now playing
-      setStatusLoading(true);
-      setCurrentlyPlaying({
+      setStatusLoadingBoth(true);
+      queryClient.setQueryData(queryKeys.games.playing(), {
         app_id: item.app_id,
         name: item.game.name,
         header_image: item.game.header_image,
@@ -317,7 +323,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         playtime_forever: item.game.playtime_forever,
         started_at: null,
       });
-      setQueue((prev) => prev.filter((q) => q.app_id !== appId));
+      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
+        (old ?? []).filter((q) => q.app_id !== appId),
+      );
 
       try {
         await fetch('/api/games/status', {
@@ -327,7 +335,6 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         });
         await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
 
-        // Fetch real game data to get accurate started_at
         const supabase = createClient();
         const {
           data: { user },
@@ -341,18 +348,28 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
             .eq('user_id', user.id)
             .eq('app_id', appId)
             .single();
-          if (game) setCurrentlyPlaying(game);
+          if (game) queryClient.setQueryData(queryKeys.games.playing(), game);
         }
+        invalidateGameQueries();
       } catch (err) {
         console.error('Failed to pick game from queue:', err);
-        // Revert
-        setCurrentlyPlaying(null);
-        setQueue((prev) => [...prev, item]);
+        queryClient.setQueryData(queryKeys.games.playing(), null);
+        queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
+          ...(old ?? []),
+          item,
+        ]);
       } finally {
-        setStatusLoading(false);
+        setStatusLoadingBoth(false);
       }
     },
-    [queue, setStatusLoading],
+    [queue, queryClient, setStatusLoadingBoth, invalidateGameQueries],
+  );
+
+  const handleReorder = useCallback(
+    async (appIds: number[]) => {
+      reorderMutation.mutate(appIds);
+    },
+    [reorderMutation],
   );
 
   return {

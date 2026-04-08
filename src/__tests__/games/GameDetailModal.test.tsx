@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 
 jest.mock('next/image', () => ({
@@ -232,23 +232,27 @@ describe('GameDetailModal', () => {
       expect(screen.getByTestId('detail-date')).toBeInTheDocument();
     });
 
-    it('should pass empty string for date when unchecked', () => {
+    it('should pass empty string for date when unchecked', async () => {
       render(
         <GameDetailModal {...defaultProps} initialStatus="finished" initialDate="2024-06-15" />,
       );
 
       fireEvent.click(screen.getByLabelText(/finished on/i));
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
     });
 
-    it('should pass the date when checked', () => {
+    it('should pass the date when checked', async () => {
       render(
         <GameDetailModal {...defaultProps} initialStatus="finished" initialDate="2024-06-15" />,
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', '', null);
     });
@@ -277,19 +281,23 @@ describe('GameDetailModal', () => {
       expect(dateButton).not.toHaveTextContent('Invalid Date');
     });
 
-    it('should pass empty string when saving without checking the date (null initialDate)', () => {
+    it('should pass empty string when saving without checking the date (null initialDate)', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
     });
 
-    it("should pass today's date when checking then saving with null initialDate", () => {
+    it("should pass today's date when checking then saving with null initialDate", async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
       fireEvent.click(screen.getByRole('checkbox'));
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       const today = new Date().toISOString().slice(0, 10);
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', today, '', null);
@@ -297,7 +305,7 @@ describe('GameDetailModal', () => {
   });
 
   describe('onConfirm callback', () => {
-    it('should call onConfirm with current status, date, notes and rating', () => {
+    it('should call onConfirm with current status, date, notes and rating', async () => {
       render(
         <GameDetailModal
           {...defaultProps}
@@ -308,33 +316,41 @@ describe('GameDetailModal', () => {
         />,
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', 'Good game', 9);
     });
 
-    it('should call onConfirm with null rating when field is empty', () => {
+    it('should call onConfirm with null rating when field is empty', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
     });
 
-    it('should call onConfirm with updated status after switching', () => {
+    it('should call onConfirm with updated status after switching', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.click(screen.getByRole('button', { name: /finished/i }));
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', null);
     });
 
-    it('should call onConfirm with updated notes', () => {
+    it('should call onConfirm with updated notes', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: 'Amazing!' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith(
         'backlog',
@@ -346,31 +362,37 @@ describe('GameDetailModal', () => {
   });
 
   describe('rating validation', () => {
-    it('should block save and show error when rating is above 10', () => {
+    it('should block save and show error when rating is above 10', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
       expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
     });
 
-    it('should block save and show error when rating is below 0', () => {
+    it('should block save and show error when rating is below 0', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '-1' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
       expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
     });
 
-    it('should clear the error when the rating is corrected', () => {
+    it('should clear the error when the rating is corrected', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
 
@@ -379,20 +401,24 @@ describe('GameDetailModal', () => {
       expect(screen.queryByText('Rating must be between 0 and 10')).not.toBeInTheDocument();
     });
 
-    it('should allow save with rating of 0', () => {
+    it('should allow save with rating of 0', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '0' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', 0);
     });
 
-    it('should allow save with rating of 10', () => {
+    it('should allow save with rating of 10', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '10' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', 10);
     });
@@ -405,19 +431,23 @@ describe('GameDetailModal', () => {
       expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
     });
 
-    it('should select playing when the pill is clicked', () => {
+    it('should select playing when the pill is clicked', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       fireEvent.click(screen.getByRole('button', { name: /^playing$/i }));
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
     });
 
-    it('should pre-select playing when initialStatus is playing', () => {
+    it('should pre-select playing when initialStatus is playing', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="playing" />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
     });
