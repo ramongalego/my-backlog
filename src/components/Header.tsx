@@ -144,8 +144,8 @@ function HeaderInner() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
-              <Gamepad2 className="w-6 h-6 text-violet-400" />
-              <span className="text-xl font-bold text-zinc-100">MyBacklog</span>
+              <Gamepad2 className="w-6 h-6 text-violet-400 shrink-0" />
+              <span className="text-xl font-bold text-zinc-100 leading-none">MyBacklog</span>
             </Link>
             {isLoading && (
               <div className="hidden md:flex items-center gap-6">
