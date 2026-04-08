@@ -1,6 +1,5 @@
-import confetti from 'canvas-confetti';
-
-export function celebrateGameFinished() {
+export async function celebrateGameFinished() {
+  const { default: confetti } = await import('canvas-confetti');
   const colors = ['#a855f7', '#d946ef', '#fbbf24', '#f59e0b', '#ffffff'];
 
   // Single satisfying burst from center

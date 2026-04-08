@@ -1,6 +1,5 @@
 'use client';
 
-import { memo } from 'react';
 import type { QuestionOption } from '@/lib/suggest/questions';
 
 interface QuestionStepProps<T> {
@@ -9,7 +8,7 @@ interface QuestionStepProps<T> {
   onSelect: (value: T) => void;
 }
 
-function QuestionStepInner<T>({ title, options, onSelect }: QuestionStepProps<T>) {
+export function QuestionStep<T>({ title, options, onSelect }: QuestionStepProps<T>) {
   return (
     <div className="flex flex-col items-center">
       <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 text-center mb-8">{title}</h2>
@@ -36,5 +35,3 @@ function QuestionStepInner<T>({ title, options, onSelect }: QuestionStepProps<T>
     </div>
   );
 }
-
-export const QuestionStep = memo(QuestionStepInner) as typeof QuestionStepInner;

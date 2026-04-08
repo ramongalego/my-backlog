@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
@@ -105,7 +104,7 @@ export function useStats() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const stats = useMemo((): Stats | null => {
+  const stats: Stats | null = (() => {
     if (games.length === 0) return null;
 
     const total = games.length;
@@ -235,7 +234,7 @@ export function useStats() {
       ratingDistribution,
       mostPlayedUnfinished,
     };
-  }, [games]);
+  })();
 
   return { stats, loading: isPending };
 }

@@ -8,7 +8,11 @@ export async function GET(
   const { steamId } = await params;
 
   const cached = getCachedRoast(steamId);
-  if (cached) return NextResponse.json(cached);
+  if (cached) {
+    return NextResponse.json(cached, {
+      headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' },
+    });
+  }
 
   // Not in cache — client should POST to /api/roast to generate
   return NextResponse.json({ error: 'Roast not found or expired' }, { status: 404 });

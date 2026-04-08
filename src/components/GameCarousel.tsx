@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
@@ -20,25 +20,27 @@ interface GameCarouselProps {
   title: string;
   games: Game[];
   onOpenDetail?: (game: Game) => void;
+  /** Mark this carousel as above the fold so the first images get priority loading. */
+  priority?: boolean;
 }
 
-export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) {
+export function GameCarousel({ title, games, onOpenDetail, priority = false }: GameCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const isAnimatingRef = useRef(false);
 
-  const syncButtons = useCallback(() => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-    }
-  }, []);
-
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+
+    function syncButtons() {
+      if (el) {
+        const { scrollLeft, scrollWidth, clientWidth } = el;
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
+      }
+    }
 
     syncButtons();
 
@@ -61,7 +63,7 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
       el.removeEventListener('scrollend', handleScrollEnd);
       window.removeEventListener('resize', syncButtons);
     };
-  }, [syncButtons, games]);
+  }, [games]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -118,7 +120,7 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
           className="flex gap-4 overflow-x-auto pb-4"
           style={{ scrollbarWidth: 'none' }}
         >
-          {games.map((game) => (
+          {games.map((game, i) => (
             <div
               key={game.app_id}
               className="group shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-colors relative"
@@ -133,6 +135,7 @@ export function GameCarousel({ title, games, onOpenDetail }: GameCarouselProps) 
                     src={game.header_image}
                     alt={game.name}
                     fill
+                    priority={priority && i < 4}
                     className="object-cover"
                     sizes="256px"
                     draggable={false}

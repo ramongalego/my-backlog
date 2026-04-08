@@ -1,6 +1,5 @@
 'use client';
 
-import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { fetchQueuedAppIds } from '@/lib/games/queue';
@@ -17,13 +16,13 @@ async function fetchLibraryMeta(userId: string): Promise<LibraryMetaData> {
   const [{ count: total }, { count: finishedOrDropped }, queueIds] = await Promise.all([
     supabase
       .from('games')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('type', 'game')
       .neq('status', 'hidden'),
     supabase
       .from('games')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('type', 'game')
       .in('status', ['finished', 'dropped']),
@@ -47,19 +46,13 @@ export function useLibraryMeta(userId: string | null) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const addQueuedAppId = useCallback(
-    (appId: number) => {
-      if (!userId) return;
-      queryClient.setQueryData(
-        queryKeys.library.meta(userId),
-        (old: LibraryMetaData | undefined) => {
-          if (!old) return old;
-          return { ...old, queuedAppIds: new Set([...old.queuedAppIds, appId]) };
-        },
-      );
-    },
-    [userId, queryClient],
-  );
+  const addQueuedAppId = (appId: number) => {
+    if (!userId) return;
+    queryClient.setQueryData(queryKeys.library.meta(userId), (old: LibraryMetaData | undefined) => {
+      if (!old) return old;
+      return { ...old, queuedAppIds: new Set([...old.queuedAppIds, appId]) };
+    });
+  };
 
   return {
     gameCount: data?.gameCount ?? 0,

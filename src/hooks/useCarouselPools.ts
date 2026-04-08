@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import type { GameWithImage } from '@/types/games';
 
 export function useCarouselPools() {
@@ -11,11 +11,11 @@ export function useCarouselPools() {
   const [recentlyAddedPool, setRecentlyAddedPool] = useState<GameWithImage[]>([]);
   const [carouselsLoading, setCarouselsLoading] = useState(true);
 
-  const shortGames = useMemo(() => shortGamesPool.slice(0, 10), [shortGamesPool]);
-  const weekendGames = useMemo(() => weekendGamesPool.slice(0, 10), [weekendGamesPool]);
+  const shortGames = shortGamesPool.slice(0, 10);
+  const weekendGames = weekendGamesPool.slice(0, 10);
 
   // Build a running exclusion set so no game appears in two carousels
-  const { highlyRatedGames, hiddenGems, recentlyAdded } = useMemo(() => {
+  const { highlyRatedGames, hiddenGems, recentlyAdded } = (() => {
     const shown = new Set([
       ...shortGames.map((g) => g.app_id),
       ...weekendGames.map((g) => g.app_id),
@@ -30,23 +30,23 @@ export function useCarouselPools() {
     const recent = recentlyAddedPool.filter((g) => !shown.has(g.app_id)).slice(0, 10);
 
     return { highlyRatedGames: rated, hiddenGems: gems, recentlyAdded: recent };
-  }, [highlyRatedGamesPool, hiddenGemsPool, recentlyAddedPool, shortGames, weekendGames]);
+  })();
 
-  const removeFromPools = useCallback((appId: number) => {
+  const removeFromPools = (appId: number) => {
     setShortGamesPool((prev) => prev.filter((g) => g.app_id !== appId));
     setWeekendGamesPool((prev) => prev.filter((g) => g.app_id !== appId));
     setHighlyRatedGamesPool((prev) => prev.filter((g) => g.app_id !== appId));
     setHiddenGemsPool((prev) => prev.filter((g) => g.app_id !== appId));
     setRecentlyAddedPool((prev) => prev.filter((g) => g.app_id !== appId));
-  }, []);
+  };
 
-  const addBackToPool = useCallback((game: GameWithImage) => {
+  const addBackToPool = (game: GameWithImage) => {
     if (game.main_story_hours <= 5) {
       setShortGamesPool((prev) => [...prev, game]);
     } else if (game.main_story_hours <= 12) {
       setWeekendGamesPool((prev) => [...prev, game]);
     }
-  }, []);
+  };
 
   return {
     shortGames,

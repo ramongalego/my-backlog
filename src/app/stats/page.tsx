@@ -18,7 +18,7 @@ import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { useStats } from '@/hooks/useStats';
 import { addToQueue } from '@/lib/games/queue';
-import { useInvalidateGameQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
 
@@ -374,7 +374,7 @@ function MostPlayedUnfinished({
 
 export default function StatsPage() {
   const { stats, loading } = useStats();
-  const invalidateGameQueries = useInvalidateGameQueries();
+  const { games: invalidateGames } = useInvalidateQueries();
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
   const statusMutation = useMutation({
@@ -398,7 +398,7 @@ export default function StatsPage() {
         }),
       });
     },
-    onSettled: () => invalidateGameQueries(),
+    onSettled: () => invalidateGames(),
   });
 
   const handleEdit = (

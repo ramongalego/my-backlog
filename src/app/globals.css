@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import 'react-day-picker/style.css';
 
 /* Dark theme overrides for react-day-picker */
 .rdp-root {

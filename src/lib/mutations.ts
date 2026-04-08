@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
 import { queryKeys } from '@/lib/query-keys';
 
 /**
@@ -9,9 +8,35 @@ import { queryKeys } from '@/lib/query-keys';
 export function useInvalidateGameQueries() {
   const queryClient = useQueryClient();
 
-  return useCallback(() => {
+  return () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
     queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
     queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
-  }, [queryClient]);
+  };
+}
+
+/**
+ * Returns targeted invalidation functions for specific query groups.
+ * Use these instead of the blanket invalidateGameQueries where possible.
+ */
+export function useInvalidateQueries() {
+  const queryClient = useQueryClient();
+
+  return {
+    /** Invalidate game list + stats + diary (after status change) */
+    games: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
+    },
+    /** Invalidate only the queue list */
+    queue: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
+    },
+    /** Invalidate games + queue (after pick/cancel that affects both) */
+    gamesAndQueue: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
+    },
+  };
 }

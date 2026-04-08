@@ -40,6 +40,7 @@ export function CurrentlyPlaying({
               src={game.header_image}
               alt={game.name}
               fill
+              priority
               className="object-cover"
               sizes="448px"
             />

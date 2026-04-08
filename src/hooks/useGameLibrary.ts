@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from './useAuth';
 import { useGameSync } from './useGameSync';
@@ -166,9 +166,9 @@ export function useGameLibrary() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authResolved, user?.id, steamConnected]);
 
-  const handleConnectSteam = useCallback(() => {
+  const handleConnectSteam = () => {
     window.location.href = '/api/steam/auth';
-  }, []);
+  };
 
   return {
     // Auth

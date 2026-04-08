@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Gamepad2, Menu, X } from 'lucide-react';
@@ -71,7 +71,7 @@ function HeaderInner() {
 
         const { count } = await supabase
           .from('games')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .eq('type', 'game')
           .neq('status', 'hidden');
@@ -98,7 +98,7 @@ function HeaderInner() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleRefreshLibrary = useCallback(async () => {
+  const handleRefreshLibrary = async () => {
     setIsRefreshing(true);
     try {
       const res = await fetch('/api/steam/refresh', { method: 'POST' });
@@ -114,7 +114,7 @@ function HeaderInner() {
       console.error('Failed to refresh library:', err);
     }
     setIsRefreshing(false);
-  }, []);
+  };
 
   const openAuthModal = (mode: AuthMode) => {
     setAuthMode(mode);
@@ -122,7 +122,7 @@ function HeaderInner() {
   };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const navLinks = [
     ...(user

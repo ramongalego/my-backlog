@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
@@ -56,160 +56,152 @@ export function useCurrentGame({
     staleTime: 30 * 1000,
   });
 
-  const setCurrentlyPlaying = useCallback(
-    (game: GameWithImage | null) => {
-      queryClient.setQueryData(queryKeys.games.playing(), game);
-    },
-    [queryClient],
-  );
+  const setCurrentlyPlaying = (game: GameWithImage | null) => {
+    queryClient.setQueryData(queryKeys.games.playing(), game);
+  };
 
   // ─── Actions ────────────────────────────────────────────────────────────────
 
-  const handlePickGame = useCallback(
-    async (game: GameWithImage) => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setIsStatusLoading(true);
-      try {
-        await updateGameStatus(game.app_id, 'playing');
-        setCurrentlyPlaying(game);
-        removeFromPools(game.app_id);
-      } catch (err) {
-        console.error('Failed to pick game:', err);
-      }
-      setIsStatusLoading(false);
-    },
-    [removeFromPools, setCurrentlyPlaying],
-  );
+  const handlePickGame = async (game: GameWithImage) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsStatusLoading(true);
+    try {
+      await updateGameStatus(game.app_id, 'playing');
+      setCurrentlyPlaying(game);
+      removeFromPools(game.app_id);
+    } catch (err) {
+      console.error('Failed to pick game:', err);
+    }
+    setIsStatusLoading(false);
+  };
 
-  const handleFinishGame = useCallback(() => {
+  const handleFinishGame = () => {
     if (!currentlyPlaying) return;
     setStatusModal({ action: 'finished' });
-  }, [currentlyPlaying]);
+  };
 
-  const handleDropGame = useCallback(() => {
+  const handleDropGame = () => {
     if (!currentlyPlaying) return;
     setStatusModal({ action: 'dropped' });
-  }, [currentlyPlaying]);
+  };
 
-  const handleQueueGame = useCallback(
-    async (game: GameWithImage) => {
-      const ok = await addToQueue(game.app_id);
-      if (ok) {
-        addQueuedAppId(game.app_id);
-        queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
-        toast.success(`${game.name} added to the queue!`);
-      }
-    },
-    [addQueuedAppId, queryClient],
-  );
+  const handleQueueGame = async (game: GameWithImage) => {
+    const ok = await addToQueue(game.app_id);
+    if (ok) {
+      addQueuedAppId(game.app_id);
+      queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
+      toast.success(`${game.name} added to the queue!`);
+    }
+  };
 
-  const handleOpenCarouselDetail = useCallback((game: GameWithImage) => {
+  const handleOpenCarouselDetail = (game: GameWithImage) => {
     setCarouselModal({ game });
-  }, []);
+  };
 
-  const handleCloseCarouselModal = useCallback(() => setCarouselModal(null), []);
+  const handleCloseCarouselModal = () => setCarouselModal(null);
 
-  const handleConfirmCarouselDetail = useCallback(
-    async (status: string, date: string, notes: string, rating: number | null) => {
-      if (!carouselModal) return;
-      const { game } = carouselModal;
-      setCarouselModal(null);
+  const handleConfirmCarouselDetail = async (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => {
+    if (!carouselModal) return;
+    const { game } = carouselModal;
+    setCarouselModal(null);
 
-      if (status === 'playing') {
-        await handlePickGame(game);
-        return;
+    if (status === 'playing') {
+      await handlePickGame(game);
+      return;
+    }
+
+    try {
+      await updateGameStatus(game.app_id, status, {
+        finishedAt: status === 'finished' ? date : undefined,
+        droppedAt: status === 'dropped' ? date : undefined,
+        notes,
+        rating,
+      });
+      removeFromPools(game.app_id);
+    } catch (err) {
+      console.error('Failed to update game status:', err);
+    }
+  };
+
+  const handleConfirmStatusChange = async (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => {
+    if (!currentlyPlaying) return;
+    const finishedGame = currentlyPlaying;
+    setIsStatusLoading(true);
+    try {
+      await updateGameStatus(finishedGame.app_id, status, {
+        finishedAt: status === 'finished' ? date : undefined,
+        droppedAt: status === 'dropped' ? date : undefined,
+        notes,
+        rating,
+      });
+
+      const supabase = createClient();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      let promoted: GameWithImage | null = null;
+      let gamesFinished = 0;
+      let totalGames = 0;
+
+      if (currentUser) {
+        const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all([
+          supabase
+            .from('games')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', currentUser.id)
+            .eq('type', 'game')
+            .eq('status', 'finished'),
+          supabase
+            .from('games')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', currentUser.id)
+            .eq('type', 'game')
+            .neq('status', 'hidden'),
+          promoteNextFromQueue(currentUser.id, supabase),
+        ]);
+        promoted = promotedGame;
+        gamesFinished = finishedCount ?? 0;
+        totalGames = totalCount ?? 0;
       }
 
-      try {
-        await updateGameStatus(game.app_id, status, {
-          finishedAt: status === 'finished' ? date : undefined,
-          droppedAt: status === 'dropped' ? date : undefined,
-          notes,
+      setCurrentlyPlaying(promoted);
+
+      if (status === 'finished') {
+        setGameSummary({
+          gameName: finishedGame.name,
+          headerImage: finishedGame.header_image,
+          playtimeMinutes: finishedGame.playtime_forever,
+          mainStoryHours: finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
           rating,
+          gamesFinished,
+          totalGames,
+          backlogHoursRemoved:
+            finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
+          nextGame: promoted?.name ?? null,
         });
-        removeFromPools(game.app_id);
-      } catch (err) {
-        console.error('Failed to update game status:', err);
+        celebrateGameFinished();
       }
-    },
-    [carouselModal, handlePickGame, removeFromPools],
-  );
+    } catch (err) {
+      console.error(`Failed to ${status} game:`, err);
+    }
+    setIsStatusLoading(false);
+  };
 
-  const handleConfirmStatusChange = useCallback(
-    async (status: string, date: string, notes: string, rating: number | null) => {
-      if (!currentlyPlaying) return;
-      const finishedGame = currentlyPlaying;
-      setIsStatusLoading(true);
-      try {
-        await updateGameStatus(finishedGame.app_id, status, {
-          finishedAt: status === 'finished' ? date : undefined,
-          droppedAt: status === 'dropped' ? date : undefined,
-          notes,
-          rating,
-        });
+  const handleCloseStatusModal = () => setStatusModal(null);
+  const handleCloseSummary = () => setGameSummary(null);
 
-        const supabase = createClient();
-        const {
-          data: { user: currentUser },
-        } = await supabase.auth.getUser();
-
-        let promoted: GameWithImage | null = null;
-        let gamesFinished = 0;
-        let totalGames = 0;
-
-        if (currentUser) {
-          const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all(
-            [
-              supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', currentUser.id)
-                .eq('type', 'game')
-                .eq('status', 'finished'),
-              supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', currentUser.id)
-                .eq('type', 'game')
-                .neq('status', 'hidden'),
-              promoteNextFromQueue(currentUser.id, supabase),
-            ],
-          );
-          promoted = promotedGame;
-          gamesFinished = finishedCount ?? 0;
-          totalGames = totalCount ?? 0;
-        }
-
-        setCurrentlyPlaying(promoted);
-
-        if (status === 'finished') {
-          setGameSummary({
-            gameName: finishedGame.name,
-            headerImage: finishedGame.header_image,
-            playtimeMinutes: finishedGame.playtime_forever,
-            mainStoryHours:
-              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-            rating,
-            gamesFinished,
-            totalGames,
-            backlogHoursRemoved:
-              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-            nextGame: promoted?.name ?? null,
-          });
-          celebrateGameFinished();
-        }
-      } catch (err) {
-        console.error(`Failed to ${status} game:`, err);
-      }
-      setIsStatusLoading(false);
-    },
-    [currentlyPlaying, setCurrentlyPlaying],
-  );
-
-  const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
-  const handleCloseSummary = useCallback(() => setGameSummary(null), []);
-
-  const handleCancelGame = useCallback(async () => {
+  const handleCancelGame = async () => {
     if (!currentlyPlaying) return;
     setIsStatusLoading(true);
     try {
@@ -220,9 +212,9 @@ export function useCurrentGame({
       console.error('Failed to cancel game:', err);
     }
     setIsStatusLoading(false);
-  }, [currentlyPlaying, addBackToPool, setCurrentlyPlaying]);
+  };
 
-  const handleRandomPick = useCallback(async () => {
+  const handleRandomPick = async () => {
     const supabase = createClient();
     const {
       data: { user: currentUser },
@@ -243,7 +235,7 @@ export function useCurrentGame({
 
     const randomIndex = Math.floor(Math.random() * eligibleGames.length);
     await handlePickGame(eligibleGames[randomIndex]);
-  }, [handlePickGame]);
+  };
 
   return {
     currentlyPlaying,

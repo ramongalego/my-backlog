@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateGameQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/lib/mutations';
 
 export interface DiaryEntry {
   app_id: number;
@@ -59,7 +59,7 @@ async function fetchDiaryEntries(): Promise<DiaryEntry[]> {
 
 export function useDiary(): UseDiaryReturn {
   const queryClient = useQueryClient();
-  const invalidateGameQueries = useInvalidateGameQueries();
+  const { games: invalidateGames } = useInvalidateQueries();
   const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
 
   const { data: entries = [], isPending } = useQuery({
@@ -124,36 +124,35 @@ export function useDiary(): UseDiaryReturn {
         queryClient.setQueryData(queryKeys.games.diary(), context.previous);
       }
     },
-    onSettled: () => invalidateGameQueries(),
+    onSettled: () => invalidateGames(),
   });
 
-  const handleOpenDetail = useCallback(
-    (appId: number) => {
-      const entry = entries.find((e) => e.app_id === appId);
-      if (!entry) return;
+  const handleOpenDetail = (appId: number) => {
+    const entry = entries.find((e) => e.app_id === appId);
+    if (!entry) return;
 
-      setDetailModal({
-        appId,
-        gameName: entry.name,
-        headerImage: entry.header_image,
-        initialStatus: 'finished',
-        initialDate: entry.finished_at?.slice(0, 10) ?? null,
-        initialNotes: entry.notes,
-        initialRating: entry.rating,
-      });
-    },
-    [entries],
-  );
+    setDetailModal({
+      appId,
+      gameName: entry.name,
+      headerImage: entry.header_image,
+      initialStatus: 'finished',
+      initialDate: entry.finished_at?.slice(0, 10) ?? null,
+      initialNotes: entry.notes,
+      initialRating: entry.rating,
+    });
+  };
 
-  const handleCloseDetail = useCallback(() => setDetailModal(null), []);
+  const handleCloseDetail = () => setDetailModal(null);
 
-  const handleConfirmDetail = useCallback(
-    async (status: string, date: string, notes: string, rating: number | null) => {
-      if (!detailModal) return;
-      diaryMutation.mutate({ appId: detailModal.appId, status, date, notes, rating });
-    },
-    [detailModal, diaryMutation],
-  );
+  const handleConfirmDetail = async (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => {
+    if (!detailModal) return;
+    diaryMutation.mutate({ appId: detailModal.appId, status, date, notes, rating });
+  };
 
   return {
     entries,

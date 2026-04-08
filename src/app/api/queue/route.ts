@@ -55,7 +55,7 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ queue });
+  return NextResponse.json({ queue }, { headers: { 'Cache-Control': 'private, no-cache' } });
 }
 
 export async function POST(request: NextRequest) {

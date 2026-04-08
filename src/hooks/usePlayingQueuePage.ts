@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateGameQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/lib/mutations';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
@@ -67,16 +67,16 @@ async function fetchQueue(): Promise<QueueItem[]> {
 
 export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   const queryClient = useQueryClient();
-  const invalidateGameQueries = useInvalidateGameQueries();
+  const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const isStatusLoadingRef = useRef(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
 
-  const setStatusLoadingBoth = useCallback((val: boolean) => {
+  const setStatusLoadingBoth = (val: boolean) => {
     isStatusLoadingRef.current = val;
     setIsStatusLoading(val);
-  }, []);
+  };
 
   const { data: currentlyPlaying = null, isPending: isPlayingPending } = useQuery({
     queryKey: queryKeys.games.playing(),
@@ -164,20 +164,20 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleFinish = useCallback(() => {
+  const handleFinish = () => {
     if (!currentlyPlaying) return;
     setStatusModal({ action: 'finished' });
-  }, [currentlyPlaying]);
+  };
 
-  const handleDrop = useCallback(() => {
+  const handleDrop = () => {
     if (!currentlyPlaying) return;
     setStatusModal({ action: 'dropped' });
-  }, [currentlyPlaying]);
+  };
 
-  const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
-  const handleCloseSummary = useCallback(() => setGameSummary(null), []);
+  const handleCloseStatusModal = () => setStatusModal(null);
+  const handleCloseSummary = () => setGameSummary(null);
 
-  const handleCancel = useCallback(async () => {
+  const handleCancel = async () => {
     if (!currentlyPlaying) return;
     const game = currentlyPlaying;
 
@@ -210,7 +210,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId: game.app_id }),
       });
-      invalidateGameQueries();
+      invalidateGamesAndQueue();
     } catch (err) {
       console.error('Failed to move game to queue:', err);
       queryClient.setQueryData(queryKeys.games.playing(), game);
@@ -220,157 +220,147 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     } finally {
       setStatusLoadingBoth(false);
     }
-  }, [currentlyPlaying, queryClient, setStatusLoadingBoth, invalidateGameQueries]);
+  };
 
-  const handleConfirm = useCallback(
-    async (status: string, date: string, notes: string, rating: number | null) => {
-      if (!currentlyPlaying) return;
-      const finishedGame = currentlyPlaying;
-      setStatusModal(null);
-      setStatusLoadingBoth(true);
-      try {
-        await fetch('/api/games/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            appId: finishedGame.app_id,
-            status,
-            ...(status === 'finished' ? { finishedAt: date } : {}),
-            ...(status === 'dropped' ? { droppedAt: date } : {}),
-            notes,
-            rating,
-          }),
-        });
-
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        let promoted: GameWithImage | null = null;
-        let gamesFinished = 0;
-        let totalGames = 0;
-
-        if (user) {
-          const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all(
-            [
-              supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .eq('type', 'game')
-                .eq('status', 'finished'),
-              supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .eq('type', 'game')
-                .neq('status', 'hidden'),
-              promoteNextFromQueue(user.id, supabase),
-            ],
-          );
-          promoted = promotedGame;
-          gamesFinished = finishedCount ?? 0;
-          totalGames = totalCount ?? 0;
-        }
-
-        queryClient.setQueryData(queryKeys.games.playing(), promoted);
-
-        if (status === 'finished') {
-          setGameSummary({
-            gameName: finishedGame.name,
-            headerImage: finishedGame.header_image,
-            playtimeMinutes: finishedGame.playtime_forever,
-            mainStoryHours:
-              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-            rating,
-            gamesFinished,
-            totalGames,
-            backlogHoursRemoved:
-              finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-            nextGame: promoted?.name ?? null,
-          });
-          celebrateGameFinished();
-        }
-
-        invalidateGameQueries();
-      } catch (err) {
-        console.error(`Failed to ${status} game:`, err);
-      }
-      setStatusLoadingBoth(false);
-    },
-    [currentlyPlaying, queryClient, setStatusLoadingBoth, invalidateGameQueries],
-  );
-
-  const handleRemoveFromQueue = useCallback(
-    async (appId: number) => {
-      removeMutation.mutate(appId);
-    },
-    [removeMutation],
-  );
-
-  const handlePickFromQueue = useCallback(
-    async (appId: number) => {
-      const item = queue.find((q) => q.app_id === appId);
-      if (!item) return;
-
-      setStatusLoadingBoth(true);
-      queryClient.setQueryData(queryKeys.games.playing(), {
-        app_id: item.app_id,
-        name: item.game.name,
-        header_image: item.game.header_image,
-        main_story_hours: item.game.main_story_hours ?? 0,
-        playtime_forever: item.game.playtime_forever,
-        started_at: null,
+  const handleConfirm = async (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => {
+    if (!currentlyPlaying) return;
+    const finishedGame = currentlyPlaying;
+    setStatusModal(null);
+    setStatusLoadingBoth(true);
+    try {
+      await fetch('/api/games/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: finishedGame.app_id,
+          status,
+          ...(status === 'finished' ? { finishedAt: date } : {}),
+          ...(status === 'dropped' ? { droppedAt: date } : {}),
+          notes,
+          rating,
+        }),
       });
-      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
-        (old ?? []).filter((q) => q.app_id !== appId),
-      );
 
-      try {
-        await fetch('/api/games/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ appId, status: 'playing' }),
-        });
-        await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          const { data: game } = await supabase
+      let promoted: GameWithImage | null = null;
+      let gamesFinished = 0;
+      let totalGames = 0;
+
+      if (user) {
+        const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all([
+          supabase
             .from('games')
-            .select(
-              'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
-            )
+            .select('id', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .eq('app_id', appId)
-            .single();
-          if (game) queryClient.setQueryData(queryKeys.games.playing(), game);
-        }
-        invalidateGameQueries();
-      } catch (err) {
-        console.error('Failed to pick game from queue:', err);
-        queryClient.setQueryData(queryKeys.games.playing(), null);
-        queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
-          ...(old ?? []),
-          item,
+            .eq('type', 'game')
+            .eq('status', 'finished'),
+          supabase
+            .from('games')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('type', 'game')
+            .neq('status', 'hidden'),
+          promoteNextFromQueue(user.id, supabase),
         ]);
-      } finally {
-        setStatusLoadingBoth(false);
+        promoted = promotedGame;
+        gamesFinished = finishedCount ?? 0;
+        totalGames = totalCount ?? 0;
       }
-    },
-    [queue, queryClient, setStatusLoadingBoth, invalidateGameQueries],
-  );
 
-  const handleReorder = useCallback(
-    async (appIds: number[]) => {
-      reorderMutation.mutate(appIds);
-    },
-    [reorderMutation],
-  );
+      queryClient.setQueryData(queryKeys.games.playing(), promoted);
+
+      if (status === 'finished') {
+        setGameSummary({
+          gameName: finishedGame.name,
+          headerImage: finishedGame.header_image,
+          playtimeMinutes: finishedGame.playtime_forever,
+          mainStoryHours: finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
+          rating,
+          gamesFinished,
+          totalGames,
+          backlogHoursRemoved:
+            finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
+          nextGame: promoted?.name ?? null,
+        });
+        celebrateGameFinished();
+      }
+
+      invalidateGamesAndQueue();
+    } catch (err) {
+      console.error(`Failed to ${status} game:`, err);
+    }
+    setStatusLoadingBoth(false);
+  };
+
+  const handleRemoveFromQueue = async (appId: number) => {
+    removeMutation.mutate(appId);
+  };
+
+  const handlePickFromQueue = async (appId: number) => {
+    const item = queue.find((q) => q.app_id === appId);
+    if (!item) return;
+
+    setStatusLoadingBoth(true);
+    queryClient.setQueryData(queryKeys.games.playing(), {
+      app_id: item.app_id,
+      name: item.game.name,
+      header_image: item.game.header_image,
+      main_story_hours: item.game.main_story_hours ?? 0,
+      playtime_forever: item.game.playtime_forever,
+      started_at: null,
+    });
+    queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
+      (old ?? []).filter((q) => q.app_id !== appId),
+    );
+
+    try {
+      await fetch('/api/games/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId, status: 'playing' }),
+      });
+      await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: game } = await supabase
+          .from('games')
+          .select(
+            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
+          )
+          .eq('user_id', user.id)
+          .eq('app_id', appId)
+          .single();
+        if (game) queryClient.setQueryData(queryKeys.games.playing(), game);
+      }
+      invalidateGamesAndQueue();
+    } catch (err) {
+      console.error('Failed to pick game from queue:', err);
+      queryClient.setQueryData(queryKeys.games.playing(), null);
+      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
+        ...(old ?? []),
+        item,
+      ]);
+    } finally {
+      setStatusLoadingBoth(false);
+    }
+  };
+
+  const handleReorder = async (appIds: number[]) => {
+    reorderMutation.mutate(appIds);
+  };
 
   return {
     currentlyPlaying,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import type { Game, SyncProgress } from '@/types/games';
 
 export function useGameSync() {
@@ -9,7 +9,7 @@ export function useGameSync() {
   const [syncingGames, setSyncingGames] = useState<Game[]>([]);
   const syncingRef = useRef(false);
 
-  const startSync = useCallback(async (games: Game[]) => {
+  const startSync = async (games: Game[]) => {
     if (syncingRef.current) return;
     syncingRef.current = true;
     setIsSyncing(true);
@@ -54,7 +54,7 @@ export function useGameSync() {
     setIsSyncing(false);
     setSyncingGames([]);
     syncingRef.current = false;
-  }, []);
+  };
 
   return { isSyncing, syncProgress, syncingGames, startSync };
 }

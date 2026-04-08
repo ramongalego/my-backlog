@@ -22,12 +22,15 @@ const roastCache = new Map<string, CachedRoast>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 // Clean up expired entries every 10 minutes
-const cleanupInterval = setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of roastCache) {
-    if (entry.expiresAt < now) roastCache.delete(key);
-  }
-}, 10 * 60 * 1000);
+const cleanupInterval = setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, entry] of roastCache) {
+      if (entry.expiresAt < now) roastCache.delete(key);
+    }
+  },
+  10 * 60 * 1000,
+);
 cleanupInterval.unref();
 
 export function getCachedRoast(steamId: string): RoastResponse | null {

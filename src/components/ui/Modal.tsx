@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, ReactNode } from 'react';
+import { useEffect, ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -12,26 +12,23 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalProps) {
-  const handleEscape = useCallback(
-    (e: KeyboardEvent) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       }
-    },
-    [onClose],
-  );
+    };
 
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, handleEscape]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

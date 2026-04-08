@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type {
   SuggestionPreferences,
   SuggestionResult,
@@ -60,7 +60,7 @@ export function useSuggestion(): UseSuggestionReturn {
     };
   }, []);
 
-  const startCooldown = useCallback(() => {
+  const startCooldown = () => {
     setCooldownRemaining(COOLDOWN_SECONDS);
 
     if (cooldownIntervalRef.current) {
@@ -79,9 +79,9 @@ export function useSuggestion(): UseSuggestionReturn {
         return prev - 1;
       });
     }, 1000);
-  }, []);
+  };
 
-  const fetchSuggestion = useCallback(async (preferences: SuggestionPreferences) => {
+  const fetchSuggestion = async (preferences: SuggestionPreferences) => {
     setIsLoading(true);
     setError(null);
     setStep('loading');
@@ -116,40 +116,37 @@ export function useSuggestion(): UseSuggestionReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  const selectMood = useCallback((mood: MoodType) => {
+  const selectMood = (mood: MoodType) => {
     setAnswers((prev) => ({ ...prev, mood }));
     setStep('energy');
-  }, []);
+  };
 
-  const selectEnergy = useCallback((energy: EnergyLevel) => {
+  const selectEnergy = (energy: EnergyLevel) => {
     setAnswers((prev) => ({ ...prev, energy }));
     setStep('time');
-  }, []);
+  };
 
-  const selectTime = useCallback(
-    (time: TimeCommitment) => {
-      const newAnswers = { ...answers, time };
-      setAnswers(newAnswers);
+  const selectTime = (time: TimeCommitment) => {
+    const newAnswers = { ...answers, time };
+    setAnswers(newAnswers);
 
-      // All answers collected, fetch suggestion
-      if (newAnswers.mood && newAnswers.energy && newAnswers.time) {
-        fetchSuggestion(newAnswers as SuggestionPreferences);
-      }
-    },
-    [answers, fetchSuggestion],
-  );
+    // All answers collected, fetch suggestion
+    if (newAnswers.mood && newAnswers.energy && newAnswers.time) {
+      fetchSuggestion(newAnswers as SuggestionPreferences);
+    }
+  };
 
-  const goBack = useCallback(() => {
+  const goBack = () => {
     if (step === 'energy') {
       setStep('mood');
     } else if (step === 'time') {
       setStep('energy');
     }
-  }, [step]);
+  };
 
-  const reroll = useCallback(async () => {
+  const reroll = async () => {
     if (cooldownRemaining > 0 || !suggestion || !answers.mood || !answers.energy || !answers.time) {
       return;
     }
@@ -171,9 +168,9 @@ export function useSuggestion(): UseSuggestionReturn {
 
     // Fetch new suggestion
     await fetchSuggestion(answers as SuggestionPreferences);
-  }, [cooldownRemaining, suggestion, answers, fetchSuggestion, startCooldown]);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setStep('mood');
     setAnswers({});
     setSuggestion(null);
@@ -187,7 +184,7 @@ export function useSuggestion(): UseSuggestionReturn {
       clearInterval(cooldownIntervalRef.current);
       cooldownIntervalRef.current = null;
     }
-  }, []);
+  };
 
   return {
     step,

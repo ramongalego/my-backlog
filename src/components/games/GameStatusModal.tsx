@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 
+import 'react-day-picker/style.css';
 const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.DayPicker), {
   ssr: false,
 });

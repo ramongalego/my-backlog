@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useSuggestion } from '@/hooks/useSuggestion';
 import { SuggestionWizard } from './SuggestionWizard';
@@ -43,11 +43,15 @@ export function SuggestionModal({
   } = useSuggestion();
 
   // Reset state when modal closes
+  const resetRef = useRef(reset);
+  useEffect(() => {
+    resetRef.current = reset;
+  });
   useEffect(() => {
     if (!isOpen) {
-      reset();
+      resetRef.current();
     }
-  }, [isOpen, reset]);
+  }, [isOpen]);
 
   // Handle escape key
   useEffect(() => {
@@ -75,7 +79,7 @@ export function SuggestionModal({
     };
   }, [isOpen]);
 
-  const handlePick = useCallback(() => {
+  const handlePick = () => {
     if (suggestion) {
       onPick(
         suggestion.game.app_id,
@@ -85,7 +89,7 @@ export function SuggestionModal({
       );
       onClose();
     }
-  }, [suggestion, onPick, onClose]);
+  };
 
   if (!isOpen) return null;
 

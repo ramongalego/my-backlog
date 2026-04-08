@@ -1,6 +1,5 @@
 'use client';
 
-import { memo } from 'react';
 import Image from 'next/image';
 import { Gamepad2, Pencil } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
@@ -31,7 +30,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardProps) {
+export function GameCard({ game, onOpenDetail }: GameCardProps) {
   const status = game.status ?? 'backlog';
 
   return (
@@ -79,4 +78,4 @@ export const GameCard = memo(function GameCard({ game, onOpenDetail }: GameCardP
       </div>
     </div>
   );
-});
+}

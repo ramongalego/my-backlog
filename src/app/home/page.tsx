@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -66,24 +66,21 @@ function HomeContent() {
     }
   }, [searchParams, router]);
 
-  const handleSuggestionAction = useCallback(
-    async (
-      appId: number,
-      name: string,
-      headerImage: string | null,
-      mainStoryHours: number | null,
-    ) => {
-      const game = {
-        app_id: appId,
-        name,
-        header_image: headerImage,
-        main_story_hours: mainStoryHours ?? 0,
-        playtime_forever: 0,
-      };
-      await (currentlyPlaying ? handleQueueGame(game) : handlePickGame(game));
-    },
-    [currentlyPlaying, handlePickGame, handleQueueGame],
-  );
+  const handleSuggestionAction = async (
+    appId: number,
+    name: string,
+    headerImage: string | null,
+    mainStoryHours: number | null,
+  ) => {
+    const game = {
+      app_id: appId,
+      name,
+      header_image: headerImage,
+      main_story_hours: mainStoryHours ?? 0,
+      playtime_forever: 0,
+    };
+    await (currentlyPlaying ? handleQueueGame(game) : handlePickGame(game));
+  };
 
   const isSteamConnected = profile?.steam_id != null;
   const showDashboard = user && isSteamConnected;
@@ -179,6 +176,7 @@ function HomeContent() {
                   title="Top-Rated Games Under 5 Hours"
                   games={shortGames}
                   onOpenDetail={handleOpenCarouselDetail}
+                  priority
                 />
               )}
               {highlyRatedGames.length > 0 && (

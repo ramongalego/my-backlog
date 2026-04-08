@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
   // Check for existing fresh metadata in shared table
   const { data: existingMetadata } = await supabase
     .from('game_metadata')
-    .select('*')
+    .select(
+      'app_id, type, name, genres, categories, main_story_hours, steam_review_score, steam_review_count, synced_at, tags, release_date, deck_compat',
+    )
     .eq('app_id', appId)
     .single();
 

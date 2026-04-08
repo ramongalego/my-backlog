@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useMemo, useDeferredValue } from 'react';
+import { useState, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateGameQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 
 export interface GameItem {
@@ -112,7 +112,7 @@ async function fetchGamesData(): Promise<GamesData> {
 
 export function useGamesPage(): UseGamesPageReturn {
   const queryClient = useQueryClient();
-  const invalidateGameQueries = useInvalidateGameQueries();
+  const { games: invalidateGames } = useInvalidateQueries();
 
   const { data, isPending } = useQuery({
     queryKey: queryKeys.games.list(),
@@ -120,8 +120,8 @@ export function useGamesPage(): UseGamesPageReturn {
     staleTime: 5 * 60 * 1000,
   });
 
-  const games = useMemo(() => data?.games ?? [], [data?.games]);
-  const queuedAppIds = useMemo(() => data?.queuedAppIds ?? new Set<number>(), [data?.queuedAppIds]);
+  const games = data?.games ?? [];
+  const queuedAppIds = data?.queuedAppIds ?? new Set<number>();
 
   const [filter, setFilter] = useState<GameFilter>('all');
   const [sort, setSort] = useState<GameSort>('playtime');
@@ -182,7 +182,7 @@ export function useGamesPage(): UseGamesPageReturn {
         queryClient.setQueryData(queryKeys.games.list(), context.previous);
       }
     },
-    onSettled: () => invalidateGameQueries(),
+    onSettled: () => invalidateGames(),
   });
 
   const queueMutation = useMutation({
@@ -202,61 +202,57 @@ export function useGamesPage(): UseGamesPageReturn {
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.queue.all }),
   });
 
-  const handleOpenDetail = useCallback(
-    (appId: number) => {
-      const game = games.find((g) => g.app_id === appId);
-      if (!game) return;
+  const handleOpenDetail = (appId: number) => {
+    const game = games.find((g) => g.app_id === appId);
+    if (!game) return;
 
-      const status = (game.status ?? 'backlog') as
-        | 'backlog'
-        | 'playing'
-        | 'finished'
-        | 'dropped'
-        | 'hidden';
-      const initialDate =
-        status === 'finished'
-          ? (game.finished_at?.slice(0, 10) ?? null)
-          : status === 'dropped'
-            ? (game.dropped_at?.slice(0, 10) ?? null)
-            : null;
+    const status = (game.status ?? 'backlog') as
+      | 'backlog'
+      | 'playing'
+      | 'finished'
+      | 'dropped'
+      | 'hidden';
+    const initialDate =
+      status === 'finished'
+        ? (game.finished_at?.slice(0, 10) ?? null)
+        : status === 'dropped'
+          ? (game.dropped_at?.slice(0, 10) ?? null)
+          : null;
 
-      setStatusModal({
-        appId,
-        gameName: game.name,
-        headerImage: game.header_image,
-        initialStatus: status,
-        initialDate,
-        initialNotes: game.notes,
-        initialRating: game.rating,
-        mainStoryHours: game.main_story_hours,
-        steamReviewScore: game.steam_review_score,
-        steamReviewCount: game.steam_review_count,
-        playtimeMinutes: game.playtime_forever,
-        deckCompat: game.deck_compat,
-      });
-    },
-    [games],
-  );
+    setStatusModal({
+      appId,
+      gameName: game.name,
+      headerImage: game.header_image,
+      initialStatus: status,
+      initialDate,
+      initialNotes: game.notes,
+      initialRating: game.rating,
+      mainStoryHours: game.main_story_hours,
+      steamReviewScore: game.steam_review_score,
+      steamReviewCount: game.steam_review_count,
+      playtimeMinutes: game.playtime_forever,
+      deckCompat: game.deck_compat,
+    });
+  };
 
-  const handleConfirmDetail = useCallback(
-    async (status: string, date: string, notes: string, rating: number | null) => {
-      if (!statusModal) return;
-      statusMutation.mutate({ appId: statusModal.appId, status, date, notes, rating });
-    },
-    [statusModal, statusMutation],
-  );
+  const handleConfirmDetail = async (
+    status: string,
+    date: string,
+    notes: string,
+    rating: number | null,
+  ) => {
+    if (!statusModal) return;
+    statusMutation.mutate({ appId: statusModal.appId, status, date, notes, rating });
+  };
 
-  const handleCloseStatusModal = useCallback(() => setStatusModal(null), []);
+  const handleCloseStatusModal = () => setStatusModal(null);
 
-  const handleAddToQueue = useCallback(
-    async (appId: number, gameName: string) => {
-      queueMutation.mutate({ appId, gameName });
-    },
-    [queueMutation],
-  );
+  const handleAddToQueue = async (appId: number, gameName: string) => {
+    queueMutation.mutate({ appId, gameName });
+  };
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
-  const searchFilteredGames = useMemo(() => {
+  const searchFilteredGames = (() => {
     if (!deferredSearchQuery) return games;
     const searchLower = deferredSearchQuery.toLowerCase();
     return games.filter((game) => {
@@ -264,11 +260,10 @@ export function useGamesPage(): UseGamesPageReturn {
       const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
       return nameMatch || tagMatch;
     });
-  }, [games, deferredSearchQuery]);
+  })();
 
-  // Memoize filtered and sorted games to avoid recalculation on unrelated state changes
-  // Uses deferredSearchQuery so input stays responsive during large list filtering
-  const filteredGames = useMemo(() => {
+  // Filter and sort games — uses deferredSearchQuery so input stays responsive
+  const filteredGames = (() => {
     const filtered = searchFilteredGames.filter((game) => {
       if (filter === 'all' && game.status === 'hidden') return false;
       if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
@@ -276,7 +271,6 @@ export function useGamesPage(): UseGamesPageReturn {
       return true;
     });
 
-    // Sort the filtered results
     return filtered.sort((a, b) => {
       switch (sort) {
         case 'score':
@@ -288,25 +282,22 @@ export function useGamesPage(): UseGamesPageReturn {
           return b.playtime_forever - a.playtime_forever;
       }
     });
-  }, [searchFilteredGames, filter, sort]);
+  })();
 
-  const visibleGames = useMemo(
-    () => filteredGames.slice(0, visibleCount),
-    [filteredGames, visibleCount],
-  );
+  const visibleGames = filteredGames.slice(0, visibleCount);
 
   const hasMore = visibleCount < filteredGames.length;
 
-  const loadMore = useCallback(() => {
+  const loadMore = () => {
     setVisibleCount((prev) => prev + BATCH_SIZE);
-  }, []);
+  };
 
   // Derived directly from the full games array — not search-filtered — so a search query
   // for a backlog game never hides the now playing game from the count.
-  const hasPlayingGame = useMemo(() => games.some((g) => g.status === 'playing'), [games]);
+  const hasPlayingGame = games.some((g) => g.status === 'playing');
 
   // Single pass over search-filtered games to compute all counts at once
-  const counts = useMemo((): FilterCounts => {
+  const counts: FilterCounts = (() => {
     const result = { all: 0, playing: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
     for (const game of searchFilteredGames) {
       const s = game.status;
@@ -328,22 +319,22 @@ export function useGamesPage(): UseGamesPageReturn {
       }
     }
     return result;
-  }, [searchFilteredGames]);
+  })();
 
-  const setFilterAndReset = useCallback((f: GameFilter) => {
+  const setFilterAndReset = (f: GameFilter) => {
     setFilter(f);
     setVisibleCount(BATCH_SIZE);
-  }, []);
+  };
 
-  const setSortAndReset = useCallback((s: GameSort) => {
+  const setSortAndReset = (s: GameSort) => {
     setSort(s);
     setVisibleCount(BATCH_SIZE);
-  }, []);
+  };
 
-  const setSearchQueryAndReset = useCallback((q: string) => {
+  const setSearchQueryAndReset = (q: string) => {
     setSearchQuery(q);
     setVisibleCount(BATCH_SIZE);
-  }, []);
+  };
 
   return {
     games,
