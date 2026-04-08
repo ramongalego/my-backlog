@@ -127,7 +127,6 @@ export function useCurrentGame({
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!currentlyPlaying) return;
       const finishedGame = currentlyPlaying;
-      setStatusModal(null);
       setIsStatusLoading(true);
       try {
         await updateGameStatus(finishedGame.app_id, status, {

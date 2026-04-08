@@ -165,7 +165,6 @@ export function useGamesPage(): UseGamesPageReturn {
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!statusModal) return;
       const { appId } = statusModal;
-      setStatusModal(null);
       try {
         await fetch('/api/games/status', {
           method: 'POST',

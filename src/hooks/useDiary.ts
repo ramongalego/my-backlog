@@ -91,8 +91,6 @@ export function useDiary(): UseDiaryReturn {
     async (status: string, date: string, notes: string, rating: number | null) => {
       if (!detailModal) return;
       const { appId } = detailModal;
-      setDetailModal(null);
-
       try {
         await fetch('/api/games/status', {
           method: 'POST',

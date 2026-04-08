@@ -17,7 +17,7 @@ type InternalStatus = GameStatus | 'queue';
 interface GameDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (status: string, date: string, notes: string, rating: number | null) => void;
+  onConfirm: (status: string, date: string, notes: string, rating: number | null) => void | Promise<void>;
   gameName: string;
   headerImage: string | null;
   initialStatus: GameStatus;
@@ -143,7 +143,9 @@ export function GameDetailModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [calendarOpen]);
 
-  function handleConfirm() {
+  const [saving, setSaving] = useState(false);
+
+  async function handleConfirm() {
     if (status === 'queue') {
       onAddToQueue?.();
       onClose();
@@ -155,7 +157,13 @@ export function GameDetailModal({
       return;
     }
     setRatingError(null);
-    onConfirm(status, hasDate ? date : '', notes, parsedRating);
+    setSaving(true);
+    try {
+      await onConfirm(status, hasDate ? date : '', notes, parsedRating);
+    } finally {
+      setSaving(false);
+    }
+    onClose();
   }
 
   return (
@@ -348,15 +356,17 @@ export function GameDetailModal({
         <div className="flex gap-3 pt-1">
           <button
             onClick={onClose}
-            className="cursor-pointer flex-1 py-2 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
+            disabled={saving}
+            className="cursor-pointer flex-1 py-2 px-4 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-300 text-sm font-medium rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+            disabled={saving}
+            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
           >
-            Save Changes
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>
