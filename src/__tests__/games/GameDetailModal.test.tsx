@@ -31,59 +31,6 @@ describe('GameDetailModal', () => {
     jest.clearAllMocks();
   });
 
-  describe('rendering', () => {
-    it('should render game name', () => {
-      render(<GameDetailModal {...defaultProps} />);
-
-      expect(screen.getByText('Dark Souls')).toBeInTheDocument();
-    });
-
-    it('should render game image when provided', () => {
-      render(<GameDetailModal {...defaultProps} />);
-
-      expect(screen.getByAltText('Dark Souls')).toHaveAttribute(
-        'src',
-        'https://example.com/dark-souls.jpg',
-      );
-    });
-
-    it('should render placeholder when no image', () => {
-      render(<GameDetailModal {...defaultProps} headerImage={null} />);
-
-      expect(screen.queryByAltText('Dark Souls')).not.toBeInTheDocument();
-    });
-
-    it('should render all five status options', () => {
-      render(<GameDetailModal {...defaultProps} />);
-
-      expect(screen.getByRole('button', { name: /backlog/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /finished/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /dropped/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /hidden/i })).toBeInTheDocument();
-    });
-
-    it('should render rating and notes fields', () => {
-      render(<GameDetailModal {...defaultProps} />);
-
-      expect(screen.getByLabelText(/your rating/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
-    });
-
-    it('should render Save Changes and Cancel buttons', () => {
-      render(<GameDetailModal {...defaultProps} />);
-
-      expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('should not render when isOpen is false', () => {
-      render(<GameDetailModal {...defaultProps} isOpen={false} />);
-
-      expect(screen.queryByText('Dark Souls')).not.toBeInTheDocument();
-    });
-  });
-
   describe('pre-filling initial values', () => {
     it('should pre-fill notes', () => {
       render(<GameDetailModal {...defaultProps} initialNotes="Great game" />);

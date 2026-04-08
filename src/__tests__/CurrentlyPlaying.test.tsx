@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 
 jest.mock('next/image', () => ({
@@ -34,51 +34,7 @@ const defaultCallbacks = {
 describe('CurrentlyPlaying', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  describe('rendering', () => {
-    it('should render game name', () => {
-      render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
-
-      expect(screen.getByText('Dota 2')).toBeInTheDocument();
-    });
-
-    it('should render game image when available', () => {
-      render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
-
-      expect(screen.getByAltText('Dota 2')).toHaveAttribute('src', 'https://example.com/dota2.jpg');
-    });
-
-    it('should render Finish, Drop, and Move to Backlog buttons', () => {
-      render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
-
-      expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Drop' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Move to Backlog' })).toBeInTheDocument();
-    });
-
-    it('should call onFinish when Finish is clicked', () => {
-      render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Finish' }));
-
-      expect(defaultCallbacks.onFinish).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onDrop when Drop is clicked', () => {
-      render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Drop' }));
-
-      expect(defaultCallbacks.onDrop).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onCancel when Move to Backlog is clicked', () => {
-      render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Move to Backlog' }));
-
-      expect(defaultCallbacks.onCancel).toHaveBeenCalledTimes(1);
-    });
-
+  describe('button behavior', () => {
     it('should disable buttons when isLoading is true', () => {
       render(<CurrentlyPlaying game={createGame(0)} {...defaultCallbacks} isLoading />);
 

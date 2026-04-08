@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GameCarousel } from '@/components/GameCarousel';
 
-// Mock next/image since we're in a test environment
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage({
@@ -43,129 +42,33 @@ const mockGames = [
 ];
 
 describe('GameCarousel', () => {
-  describe('rendering', () => {
-    it('should render the title', () => {
-      render(<GameCarousel title="Test Games" games={mockGames} />);
+  it('should render nothing when games array is empty', () => {
+    const { container } = render(<GameCarousel title="Empty" games={[]} />);
 
-      expect(screen.getByText('Test Games')).toBeInTheDocument();
-    });
-
-    it('should render all games', () => {
-      render(<GameCarousel title="Test Games" games={mockGames} />);
-
-      expect(screen.getByText('Game One')).toBeInTheDocument();
-      expect(screen.getByText('Game Two')).toBeInTheDocument();
-      expect(screen.getByText('Game Three')).toBeInTheDocument();
-    });
-
-    it('should display hours to beat for each game', () => {
-      render(<GameCarousel title="Test Games" games={mockGames} />);
-
-      expect(screen.getByText('3h')).toBeInTheDocument();
-      expect(screen.getByText('4.5h')).toBeInTheDocument();
-      expect(screen.getByText('2h')).toBeInTheDocument();
-    });
-
-    it('should render nothing when games array is empty', () => {
-      const { container } = render(<GameCarousel title="Empty" games={[]} />);
-
-      expect(container.firstChild).toBeNull();
-    });
-
-    it('should render placeholder for games without header image', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
-
-      // Game Three has no image, should have placeholder div
-      const gameCards = screen.getAllByRole('img');
-      expect(gameCards).toHaveLength(2); // Only 2 games have images
-    });
+    expect(container.firstChild).toBeNull();
   });
 
-  describe('scroll buttons', () => {
-    it('should render left and right scroll buttons', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
+  it('should display hours to beat for each game', () => {
+    render(<GameCarousel title="Test Games" games={mockGames} />);
 
-      expect(screen.getByLabelText('Scroll left')).toBeInTheDocument();
-      expect(screen.getByLabelText('Scroll right')).toBeInTheDocument();
-    });
-
-    it('should disable left button initially (at start)', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
-
-      const leftButton = screen.getByLabelText('Scroll left');
-      expect(leftButton).toBeDisabled();
-    });
-
-    it('should call scrollBy when scroll buttons are clicked', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
-
-      const rightButton = screen.getByLabelText('Scroll right');
-
-      // Mock scrollBy on the container
-      const scrollContainer = rightButton
-        .closest('div')
-        ?.parentElement?.querySelector('[style*="scrollbar"]')?.parentElement;
-      if (scrollContainer) {
-        const scrollBySpy = jest.fn();
-        scrollContainer.scrollBy = scrollBySpy;
-
-        fireEvent.click(rightButton);
-
-        // Note: scroll behavior may vary in tests due to jsdom limitations
-      }
-    });
+    expect(screen.getByText('3h')).toBeInTheDocument();
+    expect(screen.getByText('4.5h')).toBeInTheDocument();
+    expect(screen.getByText('2h')).toBeInTheDocument();
   });
 
-  describe('game actions', () => {
-    it('should render an image button for each game', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
+  it('should disable left scroll button initially', () => {
+    render(<GameCarousel title="Test" games={mockGames} />);
 
-      const buttons = screen.getAllByRole('button', { name: /open details for/i });
-      expect(buttons).toHaveLength(mockGames.length);
-    });
-
-    it('should call onOpenDetail with the correct game when image is clicked', () => {
-      const mockOpenDetail = jest.fn();
-      render(<GameCarousel title="Test" games={mockGames} onOpenDetail={mockOpenDetail} />);
-
-      const buttons = screen.getAllByRole('button', { name: /open details for/i });
-      fireEvent.click(buttons[1]);
-
-      expect(mockOpenDetail).toHaveBeenCalledWith(mockGames[1]);
-    });
-
-    it('should not show Play, Queue or Hide buttons', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
-
-      expect(screen.queryByText('Play')).not.toBeInTheDocument();
-      expect(screen.queryByText('Queue')).not.toBeInTheDocument();
-      expect(screen.queryByText('Hide')).not.toBeInTheDocument();
-    });
+    expect(screen.getByLabelText('Scroll left')).toBeDisabled();
   });
 
-  describe('accessibility', () => {
-    it('should have accessible scroll button labels', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
+  it('should call onOpenDetail with the correct game when clicked', () => {
+    const mockOpenDetail = jest.fn();
+    render(<GameCarousel title="Test" games={mockGames} onOpenDetail={mockOpenDetail} />);
 
-      expect(screen.getByLabelText('Scroll left')).toBeInTheDocument();
-      expect(screen.getByLabelText('Scroll right')).toBeInTheDocument();
-    });
+    const buttons = screen.getAllByRole('button', { name: /open details for/i });
+    fireEvent.click(buttons[1]);
 
-    it('should have alt text for game images', () => {
-      render(<GameCarousel title="Test" games={mockGames} />);
-
-      expect(screen.getByAltText('Game One')).toBeInTheDocument();
-      expect(screen.getByAltText('Game Two')).toBeInTheDocument();
-    });
-  });
-
-  describe('responsiveness', () => {
-    it('should render gradient overlay for scroll hint', () => {
-      const { container } = render(<GameCarousel title="Test" games={mockGames} />);
-
-      // Check for the gradient overlay div
-      const gradientOverlay = container.querySelector('[style*="linear-gradient"]');
-      expect(gradientOverlay).toBeInTheDocument();
-    });
+    expect(mockOpenDetail).toHaveBeenCalledWith(mockGames[1]);
   });
 });

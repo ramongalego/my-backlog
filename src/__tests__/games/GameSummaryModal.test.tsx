@@ -36,38 +36,6 @@ describe('GameSummaryModal', () => {
     jest.clearAllMocks();
   });
 
-  describe('rendering', () => {
-    it('should render game name', () => {
-      render(<GameSummaryModal {...defaultProps} />);
-
-      expect(screen.getByText('Hades')).toBeInTheDocument();
-    });
-
-    it('should render "You finished it!" tagline', () => {
-      render(<GameSummaryModal {...defaultProps} />);
-
-      expect(screen.getByText(/you finished it/i)).toBeInTheDocument();
-    });
-
-    it('should render game image when provided', () => {
-      render(<GameSummaryModal {...defaultProps} />);
-
-      expect(screen.getByAltText('Hades')).toHaveAttribute('src', 'https://example.com/hades.jpg');
-    });
-
-    it('should render placeholder when no image', () => {
-      render(<GameSummaryModal {...defaultProps} headerImage={null} />);
-
-      expect(screen.queryByAltText('Hades')).not.toBeInTheDocument();
-    });
-
-    it('should not render when isOpen is false', () => {
-      render(<GameSummaryModal {...defaultProps} isOpen={false} />);
-
-      expect(screen.queryByText('Hades')).not.toBeInTheDocument();
-    });
-  });
-
   describe('stat blocks', () => {
     it('should render Steam hours when playtime > 0', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={1440} />);

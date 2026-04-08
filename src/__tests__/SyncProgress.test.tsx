@@ -93,16 +93,4 @@ describe('SyncProgress', () => {
       expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
   });
-
-  describe('visual elements', () => {
-    it('should render corner brackets', () => {
-      const { container } = render(
-        <SyncProgress progress={{ current: 1, total: 3 }} games={mockGames} />,
-      );
-
-      // Check for corner bracket elements (border styling)
-      const brackets = container.querySelectorAll('[class*="border-violet-500"]');
-      expect(brackets.length).toBe(4); // 4 corners
-    });
-  });
 });

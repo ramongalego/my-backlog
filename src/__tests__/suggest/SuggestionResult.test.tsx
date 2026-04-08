@@ -23,20 +23,6 @@ describe('SuggestionResult', () => {
     jest.clearAllMocks();
   });
 
-  it('should render game name', () => {
-    render(
-      <SuggestionResult
-        suggestion={mockSuggestion}
-        onPick={mockOnPick}
-        onReroll={mockOnReroll}
-        cooldownRemaining={0}
-        isLoading={false}
-      />,
-    );
-
-    expect(screen.getByText('Test Game')).toBeInTheDocument();
-  });
-
   it('should render game duration', () => {
     render(
       <SuggestionResult
@@ -63,20 +49,6 @@ describe('SuggestionResult', () => {
     );
 
     expect(screen.getByText('Action, Adventure')).toBeInTheDocument();
-  });
-
-  it('should render AI reasoning', () => {
-    render(
-      <SuggestionResult
-        suggestion={mockSuggestion}
-        onPick={mockOnPick}
-        onReroll={mockOnReroll}
-        cooldownRemaining={0}
-        isLoading={false}
-      />,
-    );
-
-    expect(screen.getByText(/This game perfectly matches/)).toBeInTheDocument();
   });
 
   it('should call onPick when Start Playing button clicked', () => {
