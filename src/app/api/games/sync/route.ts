@@ -4,7 +4,7 @@ import {
   getGameDetails,
   extractGameMetadata,
   getSteamReviewData,
-  getSteamSpyTags,
+  getSteamTags,
   getSteamDeckCompat,
 } from '@/lib/steam/store-api';
 import { getMainStoryHours } from '@/lib/hltb/api';
@@ -99,15 +99,15 @@ export async function POST(request: NextRequest) {
     if (extractedMetadata) {
       const isGame = extractedMetadata.type === 'game';
 
-      // Only fetch HLTB, Steam reviews, and Deck compat for actual games; tags from SteamSpy for all
+      // Only fetch enriched data for actual games — skip DLC, software, etc.
       const [mainStoryHours, steamReviewData, tags, deckCompat] = isGame
         ? await Promise.all([
             getMainStoryHours(libraryName || details?.data?.name || ''),
             getSteamReviewData(appId),
-            getSteamSpyTags(appId),
+            getSteamTags(appId),
             getSteamDeckCompat(appId),
           ])
-        : [null, null, await getSteamSpyTags(appId), null];
+        : [null, null, null, null];
 
       // Calculate weighted score using Bayesian average
       const weightedScore = steamReviewData

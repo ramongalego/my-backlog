@@ -8,7 +8,7 @@ import {
   getSteamLevel,
   getWishlistCount,
 } from '@/lib/steam/api';
-import { getSteamSpyTags } from '@/lib/steam/store-api';
+import { getSteamTags } from '@/lib/steam/store-api';
 import { getSteamApiKey, getOpenAIApiKey } from '@/lib/env.server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 import { buildRoastPrompt } from '@/lib/roast/prompt';
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
   // Fetch tags for top 10 most-played games
   const top10 = [...games].sort((a, b) => b.playtime_forever - a.playtime_forever).slice(0, 10);
-  const tagResults = await Promise.all(top10.map((g) => getSteamSpyTags(g.appid)));
+  const tagResults = await Promise.all(top10.map((g) => getSteamTags(g.appid)));
 
   const tagCounts = new Map<string, number>();
   for (const tags of tagResults) {

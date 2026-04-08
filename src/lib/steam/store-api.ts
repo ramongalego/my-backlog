@@ -61,28 +61,87 @@ export function extractGameMetadata(details: SteamGameDetails) {
   };
 }
 
-export async function getSteamSpyTags(appId: number): Promise<string[] | null> {
+// ─── Steam Tag Resolution ─────────────────────────────────────────────────────
+// Uses Steam's official IStoreService/GetTagList + IStoreBrowseService/GetItems
+// instead of SteamSpy, which is rate-limited and unreliable.
+
+let cachedTagMap: Map<number, string> | null = null;
+let tagMapTimestamp = 0;
+const TAG_MAP_CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours — tag names rarely change
+
+async function getTagNameMap(): Promise<Map<number, string> | null> {
+  if (cachedTagMap && Date.now() - tagMapTimestamp < TAG_MAP_CACHE_DURATION) {
+    return cachedTagMap;
+  }
+
   try {
     const response = await fetchWithTimeout(
-      `https://steamspy.com/api.php?request=appdetails&appid=${appId}`,
+      'https://api.steampowered.com/IStoreService/GetTagList/v1/?language=english',
+      {},
+      TIMEOUTS.STEAM_STORE,
+    );
+
+    if (!response.ok) {
+      console.error(`[Steam Tags] Failed to fetch tag list: HTTP ${response.status}`);
+      return cachedTagMap; // Return stale cache if available
+    }
+
+    const data = await response.json();
+    const tags: { tagid: number; name: string }[] = data?.response?.tags ?? [];
+
+    if (tags.length === 0) {
+      console.error('[Steam Tags] Tag list returned empty');
+      return cachedTagMap;
+    }
+
+    cachedTagMap = new Map(tags.map((t) => [t.tagid, t.name]));
+    tagMapTimestamp = Date.now();
+    console.log(`[Steam Tags] Tag map refreshed: ${cachedTagMap.size} tags`);
+    return cachedTagMap;
+  } catch (error) {
+    console.error('[Steam Tags] Exception fetching tag list:', error);
+    return cachedTagMap;
+  }
+}
+
+export async function getSteamTags(appId: number): Promise<string[] | null> {
+  try {
+    const tagMap = await getTagNameMap();
+    if (!tagMap) return null;
+
+    const params = JSON.stringify({
+      ids: [{ appid: appId }],
+      context: { language: 'english', country_code: 'US' },
+      data_request: { include_tag_count: 20 },
+    });
+
+    const response = await fetchWithTimeout(
+      `https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=${encodeURIComponent(params)}`,
       { next: { revalidate: 86400 } } as RequestInit,
       TIMEOUTS.STEAM_STORE,
     );
 
     if (!response.ok) {
+      console.error(`[Steam Tags] GetItems failed for appId=${appId}: HTTP ${response.status}`);
       return null;
     }
 
     const data = await response.json();
-    if (!data.tags || typeof data.tags !== 'object') {
+    const items: { tagids?: number[] }[] = data?.response?.store_items ?? [];
+
+    if (!items.length || !items[0].tagids?.length) {
+      console.warn(`[Steam Tags] No tags returned for appId=${appId}`);
       return null;
     }
 
-    // Tags come as { "Action": 1234, "RPG": 567 }, sorted by vote count descending
-    return Object.entries(data.tags as Record<string, number>)
-      .sort(([, a], [, b]) => b - a)
-      .map(([tag]) => tag);
-  } catch {
+    // Tag IDs are already sorted by weight (most voted first)
+    const tagNames = items[0].tagids
+      .map((id) => tagMap.get(id))
+      .filter((name): name is string => !!name);
+
+    return tagNames.length > 0 ? tagNames : null;
+  } catch (error) {
+    console.error(`[Steam Tags] Exception for appId=${appId}:`, error);
     return null;
   }
 }
