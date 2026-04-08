@@ -1,3 +1,6 @@
+/**
+ * @jest-environment node
+ */
 import { getCachedRoast, setCachedRoast, type RoastResponse } from '@/lib/roast/cache';
 
 const mockRoast: RoastResponse = {
