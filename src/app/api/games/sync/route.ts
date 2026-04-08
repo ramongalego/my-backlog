@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
   const { data: existingMetadata } = await supabase
     .from('game_metadata')
     .select(
-      'app_id, type, name, genres, categories, main_story_hours, steam_review_score, steam_review_count, synced_at, tags, release_date, deck_compat',
+      'app_id, platform, type, name, genres, categories, description, release_date, header_image, steam_review_score, steam_review_count, steam_review_weighted, main_story_hours, deck_compat, tags, synced_at',
     )
     .eq('app_id', appId)
     .single();
