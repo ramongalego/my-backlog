@@ -117,22 +117,22 @@ describe('sync route behavior (integration)', () => {
       jest.useRealTimers();
     });
 
-    it('should consider metadata fresh within 30 days', () => {
-      const now = new Date('2026-03-15T12:00:00Z');
+    it('should consider metadata fresh within 90 days', () => {
+      const now = new Date('2026-05-01T12:00:00Z');
       jest.setSystemTime(now);
 
-      // 3 days ago - should be fresh
-      const threeDaysAgo = new Date('2026-03-12T12:00:00Z').toISOString();
-      expect(isMetadataFresh(threeDaysAgo)).toBe(true);
+      // 60 days ago - should be fresh
+      const sixtyDaysAgo = new Date('2026-03-02T12:00:00Z').toISOString();
+      expect(isMetadataFresh(sixtyDaysAgo)).toBe(true);
     });
 
-    it('should consider metadata stale after 30 days', () => {
-      const now = new Date('2026-04-15T12:00:00Z');
+    it('should consider metadata stale after 90 days', () => {
+      const now = new Date('2026-06-15T12:00:00Z');
       jest.setSystemTime(now);
 
-      // 31 days ago - should be stale
-      const thirtyOneDaysAgo = new Date('2026-03-15T12:00:00Z').toISOString();
-      expect(isMetadataFresh(thirtyOneDaysAgo)).toBe(false);
+      // 91 days ago - should be stale
+      const ninetyOneDaysAgo = new Date('2026-03-16T12:00:00Z').toISOString();
+      expect(isMetadataFresh(ninetyOneDaysAgo)).toBe(false);
     });
   });
 

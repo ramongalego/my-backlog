@@ -8,6 +8,8 @@ const BASE_URL = 'https://howlongtobeat.com';
 interface HLTBConfig {
   searchEndpoint: string;
   authToken: string;
+  hpKey: string;
+  hpVal: string;
 }
 
 // Cache both the endpoint and token together — they come from the same JS bundle
@@ -51,10 +53,13 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
       }
     }
 
-    if (!searchEndpoint) return null;
+    if (!searchEndpoint) {
+      console.error('[HLTB] Could not find search endpoint in any JS chunk');
+      return null;
+    }
 
     // Derive the token endpoint from the search endpoint — same pattern the Python API uses
-    // e.g. /api/finder → GET /api/finder/init?t=timestamp
+    // e.g. /api/find → GET /api/find/init?t=timestamp
     const initRes = await fetchWithTimeout(
       `${BASE_URL}${searchEndpoint}/init?t=${Date.now()}`,
       { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
@@ -62,10 +67,21 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
     );
     const initData = await initRes.json();
     const authToken = initData?.token;
+    const hpKey = initData?.hpKey;
+    const hpVal = initData?.hpVal;
 
-    if (!authToken) return null;
+    if (!authToken || !hpKey || !hpVal) {
+      console.error('[HLTB] Init response missing required fields:', {
+        hasToken: !!authToken,
+        hasHpKey: !!hpKey,
+        hasHpVal: !!hpVal,
+      });
+      return null;
+    }
 
-    cachedConfig = { searchEndpoint, authToken };
+    console.log('[HLTB] Config refreshed:', { searchEndpoint, hpKey });
+
+    cachedConfig = { searchEndpoint, authToken, hpKey, hpVal };
     cacheTimestamp = Date.now();
     return cachedConfig;
   } catch {
@@ -86,7 +102,7 @@ function toSearchTerms(name: string): string[] {
 }
 
 async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number | null> {
-  const payload = {
+  const payload: Record<string, unknown> = {
     searchType: 'games',
     searchTerms: toSearchTerms(gameName),
     searchPage: 1,
@@ -111,6 +127,9 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
     useCache: true,
   };
 
+  // HLTB requires an anti-bot key injected into both body and headers
+  payload[config.hpKey] = config.hpVal;
+
   const res = await fetchWithTimeout(
     BASE_URL + config.searchEndpoint,
     {
@@ -120,13 +139,25 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
         'User-Agent': USER_AGENT,
         Referer: BASE_URL,
         'x-auth-token': config.authToken,
+        'x-hp-key': config.hpKey,
+        'x-hp-val': config.hpVal,
       },
       body: JSON.stringify(payload),
     },
     TIMEOUTS.HLTB,
   );
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    if (res.status === 403) {
+      console.error(
+        `[HLTB] 403 Forbidden for "${gameName}" — token/hp credentials likely expired, clearing cache`,
+      );
+      cachedConfig = null;
+    } else {
+      console.error(`[HLTB] Search failed for "${gameName}": HTTP ${res.status}`);
+    }
+    return null;
+  }
 
   const data = await res.json();
   const results: { comp_main: number }[] = data?.data ?? [];

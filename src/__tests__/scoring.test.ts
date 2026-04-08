@@ -29,28 +29,28 @@ describe('isMetadataFresh', () => {
     expect(isMetadataFresh(sixDaysAgo)).toBe(true);
   });
 
-  it('should return false for metadata synced exactly 30 days ago', () => {
-    const now = new Date('2026-04-15T12:00:00Z');
+  it('should return false for metadata synced exactly 90 days ago', () => {
+    const now = new Date('2026-06-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const thirtyDaysAgo = new Date('2026-03-16T12:00:00Z').toISOString();
-    expect(isMetadataFresh(thirtyDaysAgo)).toBe(false);
+    const ninetyDaysAgo = new Date('2026-03-17T12:00:00Z').toISOString();
+    expect(isMetadataFresh(ninetyDaysAgo)).toBe(false);
   });
 
-  it('should return false for metadata synced 31 days ago', () => {
-    const now = new Date('2026-04-15T12:00:00Z');
+  it('should return false for metadata synced 91 days ago', () => {
+    const now = new Date('2026-06-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    const thirtyOneDaysAgo = new Date('2026-03-15T12:00:00Z').toISOString();
-    expect(isMetadataFresh(thirtyOneDaysAgo)).toBe(false);
+    const ninetyOneDaysAgo = new Date('2026-03-16T12:00:00Z').toISOString();
+    expect(isMetadataFresh(ninetyOneDaysAgo)).toBe(false);
   });
 
-  it('should handle boundary case just under 30 days', () => {
-    const now = new Date('2026-04-15T12:00:00Z');
+  it('should handle boundary case just under 90 days', () => {
+    const now = new Date('2026-06-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    // 29 days, 23 hours, 59 minutes ago - should be fresh
-    const justUnder = new Date('2026-03-16T12:01:00Z').toISOString();
+    // 89 days, 23 hours, 59 minutes ago - should be fresh
+    const justUnder = new Date('2026-03-17T12:01:00Z').toISOString();
     expect(isMetadataFresh(justUnder)).toBe(true);
   });
 
@@ -70,8 +70,8 @@ describe('isMetadataFresh', () => {
     expect(isMetadataFresh(oneYearAgo)).toBe(false);
   });
 
-  it('should confirm METADATA_FRESHNESS_DAYS constant is 30', () => {
-    expect(METADATA_FRESHNESS_DAYS).toBe(30);
+  it('should confirm METADATA_FRESHNESS_DAYS constant is 90', () => {
+    expect(METADATA_FRESHNESS_DAYS).toBe(90);
   });
 });
 

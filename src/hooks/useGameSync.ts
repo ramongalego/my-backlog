@@ -16,8 +16,32 @@ export function useGameSync() {
     setSyncingGames(games);
     setSyncProgress({ current: 0, total: games.length });
 
-    const BATCH_SIZE = 3;
+    const BATCH_SIZE = 6;
     let completed = 0;
+
+    // Step 1: Bulk-resolve cache hits in a single request
+    let remainingAppIds: Set<number>;
+    try {
+      const bulkResponse = await fetch('/api/games/sync/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appIds: games.map((g) => g.app_id) }),
+      });
+
+      if (bulkResponse.ok) {
+        const bulkData = await bulkResponse.json();
+        completed = bulkData.synced;
+        setSyncProgress({ current: completed, total: games.length });
+        remainingAppIds = new Set(bulkData.remaining as number[]);
+      } else {
+        remainingAppIds = new Set(games.map((g) => g.app_id));
+      }
+    } catch {
+      remainingAppIds = new Set(games.map((g) => g.app_id));
+    }
+
+    // Step 2: Individually sync only cache misses
+    const remainingGames = games.filter((g) => remainingAppIds.has(g.app_id));
 
     const syncOne = async (game: Game): Promise<void> => {
       let attempts = 0;
@@ -46,8 +70,8 @@ export function useGameSync() {
       setSyncProgress({ current: completed, total: games.length });
     };
 
-    for (let i = 0; i < games.length; i += BATCH_SIZE) {
-      const batch = games.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < remainingGames.length; i += BATCH_SIZE) {
+      const batch = remainingGames.slice(i, i + BATCH_SIZE);
       await Promise.all(batch.map(syncOne));
     }
 

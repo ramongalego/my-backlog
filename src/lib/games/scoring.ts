@@ -1,4 +1,4 @@
-export const METADATA_FRESHNESS_DAYS = 30;
+export const METADATA_FRESHNESS_DAYS = 90;
 
 // Bump this date whenever a new column is added to game_metadata so that
 // stale cached rows (which lack the new field) are automatically re-fetched.
