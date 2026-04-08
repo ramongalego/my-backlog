@@ -66,6 +66,15 @@ body {
   color: var(--foreground);
 }
 
+/* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */
+@media screen and (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Custom scrollbar for dark mode */
 ::-webkit-scrollbar {
   width: 8px;

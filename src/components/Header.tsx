@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Gamepad2 } from 'lucide-react';
+import { Gamepad2, Menu, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -118,76 +118,61 @@ function HeaderInner() {
     setIsAuthModalOpen(true);
   };
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  const navLinks = [
+    ...(user
+      ? [
+          { href: '/home', label: 'Home' },
+          { href: '/games', label: 'Games' },
+          { href: '/playing-queue', label: 'Queue' },
+          { href: '/diary', label: 'Diary' },
+          { href: '/stats', label: 'Stats' },
+        ]
+      : []),
+    { href: '/roast', label: 'Roast' },
+  ];
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
               <Gamepad2 className="w-6 h-6 text-violet-400" />
-              <span className="text-xl font-bold text-zinc-100 -ml-1">MyBacklog</span>
+              <span className="text-xl font-bold text-zinc-100">MyBacklog</span>
             </Link>
             {isLoading && (
-              <>
+              <div className="hidden md:flex items-center gap-6">
                 <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-12 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-11 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-9 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
-              </>
-            )}
-            {!isLoading && user && (
-              <Link
-                href="/home"
-                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/home' ? 'text-zinc-100' : 'text-zinc-400'}`}
-              >
-                Home
-              </Link>
-            )}
-            {!isLoading && user && (
-              <Link
-                href="/games"
-                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/games' ? 'text-zinc-100' : 'text-zinc-400'}`}
-              >
-                Games
-              </Link>
-            )}
-            {!isLoading && user && (
-              <Link
-                href="/playing-queue"
-                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/playing-queue' ? 'text-zinc-100' : 'text-zinc-400'}`}
-              >
-                Queue
-              </Link>
-            )}
-            {!isLoading && user && (
-              <Link
-                href="/diary"
-                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/diary' ? 'text-zinc-100' : 'text-zinc-400'}`}
-              >
-                Diary
-              </Link>
-            )}
-            {!isLoading && user && (
-              <Link
-                href="/stats"
-                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/stats' ? 'text-zinc-100' : 'text-zinc-400'}`}
-              >
-                Stats
-              </Link>
+              </div>
             )}
             {!isLoading && (
-              <Link
-                href="/roast"
-                className={`text-sm transition-colors hover:text-zinc-100 ${pathname === '/roast' ? 'text-zinc-100' : 'text-zinc-400'}`}
-              >
-                Roast
-              </Link>
+              <nav className="hidden md:flex items-center gap-6">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`text-sm transition-colors hover:text-zinc-100 ${pathname === link.href ? 'text-zinc-100' : 'text-zinc-400'}`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
             )}
           </div>
 
-          <nav className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             {isLoading ? (
               <div className="w-10 h-10 bg-zinc-800 rounded animate-pulse" />
             ) : user ? (
@@ -210,8 +195,34 @@ function HeaderInner() {
                 </Button>
               </>
             )}
-          </nav>
+            {!isLoading && (
+              <button
+                onClick={() => setMobileMenuOpen((o) => !o)}
+                className="md:hidden p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Mobile nav */}
+        {mobileMenuOpen && !isLoading && (
+          <nav className="md:hidden border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? 'text-zinc-100 bg-zinc-800' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'}`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
 
       <AuthModal

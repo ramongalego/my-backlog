@@ -278,7 +278,7 @@ export function GameDetailModal({
                 </button>
 
                 {calendarOpen && (
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl px-4 py-2">
+                  <div className="absolute left-0 top-full mt-2 sm:left-full sm:top-1/2 sm:-translate-y-1/2 sm:mt-0 sm:ml-2 z-50 bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl px-4 py-2">
                     <DayPicker
                       mode="single"
                       captionLayout="dropdown"
@@ -364,7 +364,7 @@ export function GameDetailModal({
           <button
             onClick={handleConfirm}
             disabled={saving}
-            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Save Changes'}
           </button>

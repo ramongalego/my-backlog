@@ -13,9 +13,10 @@ interface DropdownProps<T extends string> {
   options: DropdownOption<T>[];
   onChange: (value: T) => void;
   icon?: ReactNode;
+  align?: 'left' | 'right';
 }
 
-export function Dropdown<T extends string>({ value, options, onChange, icon }: DropdownProps<T>) {
+export function Dropdown<T extends string>({ value, options, onChange, icon, align = 'right' }: DropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,7 +46,7 @@ export function Dropdown<T extends string>({ value, options, onChange, icon }: D
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg z-10 min-w-[140px]"
+          className={`absolute top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg z-10 min-w-[140px] ${align === 'left' ? 'left-0' : 'right-0'}`}
         >
           {options.map((option) => (
             <li key={option.value} role="option" aria-selected={value === option.value}>

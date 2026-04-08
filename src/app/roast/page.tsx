@@ -50,7 +50,7 @@ export default function RoastPage() {
     <div className="min-h-screen bg-zinc-950">
 
       <main className="pt-24 pb-16">
-        <div className="max-w-3xl mx-auto px-6">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
           {/* Header */}
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-violet-500/10 rounded-2xl mb-4">

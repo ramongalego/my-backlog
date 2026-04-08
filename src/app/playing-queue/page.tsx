@@ -270,7 +270,7 @@ export default function PlayingQueuePage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <main className="pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-zinc-100">Playing Queue</h1>
             <p className="text-zinc-500 text-sm mt-1">Your upcoming games</p>

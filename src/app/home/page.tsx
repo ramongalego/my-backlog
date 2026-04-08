@@ -99,7 +99,7 @@ function HomeContent() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
       <main className="pt-16 flex-1">
-        <section className="max-w-7xl mx-auto px-6 pt-12 pb-20">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-20">
           <div className="flex flex-col items-center text-center">
             {/* Main content area */}
             {isSyncing ? (
@@ -173,7 +173,7 @@ function HomeContent() {
             highlyRatedGames.length > 0 ||
             hiddenGems.length > 0 ||
             recentlyAdded.length > 0) && (
-            <section className="max-w-7xl mx-auto px-6 pb-24 space-y-16">
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 space-y-16">
               {shortGames.length > 0 && (
                 <GameCarousel
                   title="Top-Rated Games Under 5 Hours"
@@ -214,7 +214,7 @@ function HomeContent() {
       </main>
 
       <footer className="py-6 border-t border-zinc-800">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-sm text-zinc-500">MyBacklog</p>
         </div>
       </footer>

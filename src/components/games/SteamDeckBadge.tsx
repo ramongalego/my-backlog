@@ -16,7 +16,7 @@ export function SteamDeckBadge({ deckCompat }: SteamDeckBadgeProps) {
   if (!config) return null;
 
   return (
-    <span className="relative group/deck inline-flex items-center">
+    <span className="relative group/deck hidden sm:inline-flex items-center">
       <Info className="w-3 h-3" />
       <span className="invisible group-hover/deck:visible pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-zinc-800 border border-zinc-700 text-xs rounded whitespace-nowrap z-20">
         <span className={config.color}>{config.label}</span>

@@ -178,7 +178,7 @@ export default function DiaryPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <main className="pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Page heading */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-zinc-100">Diary</h1>

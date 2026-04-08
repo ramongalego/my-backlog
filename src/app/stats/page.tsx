@@ -137,7 +137,7 @@ function TopTags({ stats }: { stats: Stats }) {
       <div className="space-y-3">
         {stats.topTags.map(({ tag, count }) => (
           <div key={tag} className="flex items-center gap-3">
-            <span className="text-sm text-zinc-400 w-32 truncate shrink-0">{tag}</span>
+            <span className="text-sm text-zinc-400 w-20 sm:w-32 truncate shrink-0">{tag}</span>
             <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
               <div
                 className="h-full bg-violet-500 rounded-full"
@@ -354,7 +354,7 @@ function MostPlayedUnfinished({
                         style={{ width: `${barPct}%` }}
                       />
                     </div>
-                    <span className="text-xs text-zinc-500 shrink-0">
+                    <span className="text-xs text-zinc-500 shrink-0 w-20 text-right tabular-nums">
                       {hours}h{main_story_hours ? ` / ${main_story_hours}h` : ' played'}
                     </span>
                   </div>
@@ -417,7 +417,7 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <main className="pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="mb-10">
             <h1 className="text-2xl font-bold text-zinc-100">Stats</h1>
             <p className="text-zinc-500 text-sm mt-1">
