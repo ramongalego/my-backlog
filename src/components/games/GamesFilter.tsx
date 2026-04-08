@@ -11,12 +11,12 @@ interface GamesFilterProps {
 }
 
 const FILTER_CONFIG: Record<GameFilter, { label: string; icon: ReactNode }> = {
-  all: { label: 'All', icon: <Layers className="w-3.5 h-3.5" /> },
-  playing: { label: 'Playing', icon: <Play className="w-3.5 h-3.5" /> },
-  backlog: { label: 'Backlog', icon: <Inbox className="w-3.5 h-3.5" /> },
-  finished: { label: 'Finished', icon: <Trophy className="w-3.5 h-3.5" /> },
-  dropped: { label: 'Dropped', icon: <X className="w-3.5 h-3.5" /> },
-  hidden: { label: 'Hidden', icon: <EyeOff className="w-3.5 h-3.5" /> },
+  all: { label: 'All', icon: <Layers className="w-3.5 h-3.5 shrink-0" /> },
+  playing: { label: 'Playing', icon: <Play className="w-3.5 h-3.5 shrink-0" /> },
+  backlog: { label: 'Backlog', icon: <Inbox className="w-3.5 h-3.5 shrink-0" /> },
+  finished: { label: 'Finished', icon: <Trophy className="w-3.5 h-3.5 shrink-0" /> },
+  dropped: { label: 'Dropped', icon: <X className="w-3.5 h-3.5 shrink-0" /> },
+  hidden: { label: 'Hidden', icon: <EyeOff className="w-3.5 h-3.5 shrink-0" /> },
 };
 
 const FILTERS: GameFilter[] = ['all', 'playing', 'backlog', 'finished', 'dropped', 'hidden'];
@@ -32,7 +32,7 @@ export function GamesFilter({ filter, counts, onFilterChange }: GamesFilterProps
           <button
             key={f}
             onClick={() => onFilterChange(f)}
-            className={`shrink-0 px-3 py-1.5 text-sm rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+            className={`shrink-0 px-3 py-1.5 text-sm leading-none rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               filter === f
                 ? 'bg-zinc-100 text-zinc-900'
                 : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100'
