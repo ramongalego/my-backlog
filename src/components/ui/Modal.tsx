@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, ReactNode } from 'react';
+import { useEffect, useRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -15,8 +15,21 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  const trapFocus = useCallback(
-    (e: KeyboardEvent) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    document.body.style.overflow = 'hidden';
+
+    // Focus the first focusable element in the dialog
+    requestAnimationFrame(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      first?.focus();
+    });
+
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         onClose?.();
         return;
@@ -39,32 +52,16 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
         e.preventDefault();
         first.focus();
       }
-    },
-    [onClose],
-  );
+    }
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    document.body.style.overflow = 'hidden';
-
-    // Focus the first focusable element in the dialog
-    requestAnimationFrame(() => {
-      const first = dialogRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      first?.focus();
-    });
-
-    document.addEventListener('keydown', trapFocus);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', trapFocus);
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
       previousFocusRef.current?.focus();
     };
-  }, [isOpen, trapFocus]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
