@@ -84,22 +84,29 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
       <div className="flex items-center justify-center gap-4">
         <button
           onClick={handleReddit}
+          aria-label="Share on Reddit"
           className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
         >
-          <RedditIcon className="w-3.5 h-3.5" />
+          <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Reddit
         </button>
-        <span className="text-zinc-700">&middot;</span>
+        <span className="text-zinc-700" aria-hidden="true">
+          &middot;
+        </span>
         <button
           onClick={handleTwitter}
+          aria-label="Share on Twitter"
           className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
         >
-          <TwitterIcon className="w-3.5 h-3.5" />
+          <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Twitter
         </button>
-        <span className="text-zinc-700">&middot;</span>
+        <span className="text-zinc-700" aria-hidden="true">
+          &middot;
+        </span>
         <button
           onClick={handleCopyLink}
+          aria-label="Copy share link"
           className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
         >
           {copied ? (

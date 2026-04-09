@@ -66,12 +66,35 @@ export function UserMenu({
     window.location.reload();
   };
 
+  const handleMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && open) {
+      setOpen(false);
+      return;
+    }
+    if (!open) return;
+
+    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+    if (!items?.length) return;
+
+    const focused = Array.from(items).indexOf(document.activeElement as HTMLButtonElement);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      items[(focused + 1) % items.length].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[(focused - 1 + items.length) % items.length].focus();
+    }
+  };
+
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative" ref={menuRef} onKeyDown={handleMenuKeyDown}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="cursor-pointer block rounded overflow-hidden hover:ring-2 hover:ring-zinc-600 transition-all"
         aria-label="Open user menu"
+        aria-haspopup="true"
+        aria-expanded={open}
       >
         {steamAvatar ? (
           <Image
@@ -89,7 +112,10 @@ export function UserMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-900 p-2 shadow-2xl">
+        <div
+          className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-900 p-2 shadow-2xl"
+          role="menu"
+        >
           <div className="px-3 py-2 mb-1 border-b border-zinc-800">
             <p className="text-sm font-medium text-zinc-100 truncate">
               {steamUsername ?? user.email}
@@ -99,11 +125,15 @@ export function UserMenu({
 
           {onRefresh && (
             <button
+              role="menuitem"
               onClick={onRefresh}
               disabled={isRefreshing || isRefreshDisabled}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                aria-hidden="true"
+              />
               {isRefreshing
                 ? 'Refreshing...'
                 : isRefreshDisabled
@@ -113,21 +143,23 @@ export function UserMenu({
           )}
 
           <button
+            role="menuitem"
             onClick={() => {
               setOpen(false);
               setIsReportOpen(true);
             }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            <Bug className="w-4 h-4" />
+            <Bug className="w-4 h-4" aria-hidden="true" />
             Report an issue
           </button>
 
           <button
+            role="menuitem"
             onClick={handleSignOut}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
             Sign Out
           </button>
         </div>

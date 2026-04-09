@@ -56,7 +56,10 @@ export function CurrentlyPlaying({
             className="group/title inline-flex items-center gap-1.5 text-xl font-semibold text-zinc-100 mb-1 hover:text-white transition-colors cursor-pointer"
           >
             {game.name}
-            <ExternalLink className="w-4 h-4 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity" />
+            <ExternalLink
+              className="w-4 h-4 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity"
+              aria-hidden="true"
+            />
           </a>
           {game.main_story_hours > 0 && (
             <div className="mb-5">
@@ -92,12 +95,12 @@ export function CurrentlyPlaying({
               ) : (
                 <div className="flex items-center justify-center gap-3 text-sm text-zinc-500">
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                    <Clock className="w-3 h-3" aria-hidden="true" />
                     {game.main_story_hours}h
                   </span>
                   {game.steam_review_score != null && (
                     <span className="flex items-center gap-1">
-                      <Star className="w-3 h-3" />
+                      <Star className="w-3 h-3" aria-hidden="true" />
                       {(game.steam_review_score / 10).toFixed(1)}
                     </span>
                   )}

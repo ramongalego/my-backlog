@@ -287,6 +287,7 @@ export function GameDetailModal({
                 <button
                   data-testid="detail-date"
                   onClick={() => setCalendarOpen((o) => !o)}
+                  aria-expanded={calendarOpen}
                   className="cursor-pointer flex items-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 rounded-lg px-2.5 py-1 text-sm text-zinc-100 transition-colors"
                 >
                   <CalendarDays className="w-3.5 h-3.5 text-zinc-400" />
@@ -335,9 +336,15 @@ export function GameDetailModal({
               setRatingError(null);
             }}
             placeholder="Unrated"
+            aria-invalid={ratingError ? true : undefined}
+            aria-describedby={ratingError ? 'detail-rating-error' : undefined}
             className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none placeholder:text-zinc-600 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-zinc-700 focus:border-zinc-500'}`}
           />
-          {ratingError && <p className="text-rose-400 text-xs mt-1">{ratingError}</p>}
+          {ratingError && (
+            <p id="detail-rating-error" className="text-rose-400 text-xs mt-1" role="alert">
+              {ratingError}
+            </p>
+          )}
         </div>
 
         {/* Notes */}
@@ -351,7 +358,8 @@ export function GameDetailModal({
             </label>
             {notes.length > 0 && (
               <span
-                className={`text-xs ${notes.length >= 1000 ? 'text-rose-400' : 'text-zinc-600'}`}
+                id="detail-notes-count"
+                className={`text-xs ${notes.length >= 1000 ? 'text-rose-400' : 'text-zinc-500'}`}
               >
                 {notes.length}/1000
               </span>
@@ -359,6 +367,7 @@ export function GameDetailModal({
           </div>
           <textarea
             id="detail-notes"
+            aria-describedby={notes.length > 0 ? 'detail-notes-count' : undefined}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Any thoughts?"

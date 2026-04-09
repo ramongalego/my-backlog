@@ -23,7 +23,7 @@ export function GameMetaRow({
     <div className="flex items-center gap-3 text-xs text-zinc-500">
       {mainStoryHours ? (
         <span className="flex items-center gap-1" title="Time to beat">
-          <Clock className="w-3 h-3" />
+          <Clock className="w-3 h-3" aria-hidden="true" />
           {mainStoryHours}h
         </span>
       ) : null}
@@ -32,7 +32,7 @@ export function GameMetaRow({
           className="flex items-center gap-1"
           title={`Steam reviews${steamReviewCount ? ` (${steamReviewCount.toLocaleString()} reviews)` : ''}`}
         >
-          <Star className="w-3 h-3" />
+          <Star className="w-3 h-3" aria-hidden="true" />
           {(steamReviewScore / 10).toFixed(1)}
         </span>
       ) : null}
@@ -78,7 +78,10 @@ export function GameCardInfo({
         className="group/title flex items-center gap-1 text-zinc-200 font-medium hover:text-white transition-colors cursor-pointer"
       >
         <span className="truncate min-w-0">{name}</span>
-        <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
+        <ExternalLink
+          className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
+          aria-hidden="true"
+        />
       </a>
       <div className="mt-2">
         <GameMetaRow

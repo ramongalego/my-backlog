@@ -94,7 +94,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
             className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-zinc-800"
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-5 h-5 text-zinc-300" />
+            <ChevronLeft className="w-5 h-5 text-zinc-300" aria-hidden="true" />
           </button>
           <button
             onClick={() => scroll('right')}
@@ -102,14 +102,15 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
             className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-zinc-800"
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-5 h-5 text-zinc-300" />
+            <ChevronRight className="w-5 h-5 text-zinc-300" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden" role="region" aria-label={title}>
         <div
           className="absolute right-0 top-0 bottom-4 w-24 z-10 pointer-events-none"
+          aria-hidden="true"
           style={{
             background: 'linear-gradient(to right, transparent, rgb(9, 9, 11))',
           }}
@@ -144,7 +145,10 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                   <div className="w-full h-full bg-zinc-800" />
                 )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                  <Pencil className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                  <Pencil
+                    className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
+                    aria-hidden="true"
+                  />
                 </div>
               </button>
               <div className="px-3 py-4">

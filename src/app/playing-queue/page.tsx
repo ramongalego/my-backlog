@@ -188,10 +188,10 @@ function QueueItemRow({
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1.5 text-zinc-600 hover:text-zinc-400 transition-colors rounded"
-          tabIndex={-1}
+          className="cursor-grab active:cursor-grabbing p-1.5 text-zinc-500 hover:text-zinc-400 transition-colors rounded"
+          aria-label={`Reorder ${item.game.name}`}
         >
-          <GripVertical className="w-4 h-4" />
+          <GripVertical className="w-4 h-4" aria-hidden="true" />
         </button>
         <button
           onClick={() => onRemove(item.app_id)}
@@ -274,7 +274,7 @@ export default function PlayingQueuePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <main className="pt-24 pb-16">
+      <main id="main-content" className="pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-zinc-100">Playing Queue</h1>
@@ -285,9 +285,9 @@ export default function PlayingQueuePage() {
             <QueueLoadingSkeleton />
           ) : isEmpty ? (
             <div className="text-center py-16">
-              <ListOrdered className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+              <ListOrdered className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
               <p className="text-zinc-500">Your queue is empty.</p>
-              <p className="text-zinc-600 text-sm mt-1">
+              <p className="text-zinc-500 text-sm mt-1">
                 Pick a game to play first, then queue up what&apos;s next from your library.
               </p>
             </div>

@@ -7,7 +7,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-zinc-500">
-            <Gamepad2 className="w-4 h-4 text-violet-400" />
+            <Gamepad2 className="w-4 h-4 text-violet-400" aria-hidden="true" />
             <span className="text-sm font-medium">MyBacklog</span>
           </div>
 
@@ -16,7 +16,7 @@ export function Footer() {
               href="/roast"
               className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
             >
-              <Flame className="w-3.5 h-3.5" />
+              <Flame className="w-3.5 h-3.5" aria-hidden="true" />
               Roast My Steam
             </Link>
           </nav>

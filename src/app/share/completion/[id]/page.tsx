@@ -53,7 +53,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <main className="pt-16 pb-16">
+      <main id="main-content" className="pt-16 pb-16">
         <div className="max-w-lg mx-auto px-6">
           {/* Card */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, ReactNode } from 'react';
+import { useEffect, useRef, useCallback, ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -12,23 +12,59 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  const trapFocus = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+        return;
+      }
+
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    },
+    [onClose],
+  );
+
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose?.();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
+    previousFocusRef.current = document.activeElement as HTMLElement;
     document.body.style.overflow = 'hidden';
 
+    // Focus the first focusable element in the dialog
+    requestAnimationFrame(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      first?.focus();
+    });
+
+    document.addEventListener('keydown', trapFocus);
+
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', trapFocus);
       document.body.style.overflow = 'unset';
+      previousFocusRef.current?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, trapFocus]);
 
   if (!isOpen) return null;
 
@@ -41,6 +77,7 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
           aria-hidden="true"
         />
         <div
+          ref={dialogRef}
           className={`relative z-10 w-full ${size === 'lg' ? 'max-w-lg' : 'max-w-md'} bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800`}
           role="dialog"
           aria-modal="true"

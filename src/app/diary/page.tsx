@@ -38,7 +38,7 @@ function DiaryLoadingSkeleton() {
 function EmptyState() {
   return (
     <div className="text-center py-20">
-      <Trophy className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+      <Trophy className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
       <p className="text-zinc-500">No finished games yet</p>
     </div>
   );
@@ -47,7 +47,10 @@ function EmptyState() {
 function NotesTooltip({ text }: { text: string }) {
   return (
     <div className="relative group/notes">
-      <MessageCircle className="w-4 h-4 text-zinc-600 hover:text-zinc-400 transition-colors cursor-default" />
+      <MessageCircle
+        className="w-4 h-4 text-zinc-500 hover:text-zinc-400 transition-colors cursor-default"
+        aria-hidden="true"
+      />
       <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 hidden group-hover/notes:block z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 w-72 whitespace-normal shadow-xl">
         {text}
       </div>
@@ -208,7 +211,7 @@ export default function DiaryPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <main className="pt-24 pb-12">
+      <main id="main-content" className="pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Page heading */}
           <div className="flex items-end justify-between mb-8">

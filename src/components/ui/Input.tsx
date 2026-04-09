@@ -10,6 +10,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export function Input({ className = '', label, error, id, ref, ...props }: InputProps) {
   const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const errorId = error ? `${inputId}-error` : undefined;
 
   return (
     <div className="w-full">
@@ -21,6 +22,8 @@ export function Input({ className = '', label, error, id, ref, ...props }: Input
       <input
         ref={ref}
         id={inputId}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId}
         className={`
             w-full px-4 py-2.5 bg-zinc-800 border rounded-lg text-zinc-100
             placeholder:text-zinc-500 transition-colors
@@ -31,7 +34,7 @@ export function Input({ className = '', label, error, id, ref, ...props }: Input
         {...props}
       />
       {error && (
-        <p className="mt-1.5 text-sm text-red-400" role="alert">
+        <p id={errorId} className="mt-1.5 text-sm text-red-400" role="alert">
           {error}
         </p>
       )}

@@ -58,7 +58,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <main className="pt-16 flex-1">
+      <main id="main-content" className="pt-16 flex-1">
         {/* ── Hero ── */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

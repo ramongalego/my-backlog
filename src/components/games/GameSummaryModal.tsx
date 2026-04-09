@@ -284,20 +284,23 @@ export function GameSummaryModal({
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={handleReddit}
+                aria-label="Share on Reddit"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
               >
-                <RedditIcon className="w-3.5 h-3.5" />
+                <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 Reddit
               </button>
               <button
                 onClick={handleTwitter}
+                aria-label="Share on Twitter"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
               >
-                <TwitterIcon className="w-3.5 h-3.5" />
+                <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 Twitter
               </button>
               <button
                 onClick={handleCopyLink}
+                aria-label="Copy share link"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
               >
                 {copied ? (

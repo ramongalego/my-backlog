@@ -95,8 +95,9 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <main className="pt-16 flex-1">
+      <main id="main-content" className="pt-16 flex-1">
         <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-20">
+          <h1 className="sr-only">Home</h1>
           <div className="flex flex-col items-center text-center">
             {/* Main content area */}
             {isSyncing ? (

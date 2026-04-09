@@ -431,7 +431,7 @@ export default function StatsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <main className="pt-24 pb-16">
+      <main id="main-content" className="pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="mb-10">
             <h1 className="text-2xl font-bold text-zinc-100">Stats</h1>

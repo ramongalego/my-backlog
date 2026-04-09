@@ -43,6 +43,7 @@ export function Button({
       ref={ref}
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled || isLoading}
+      aria-busy={isLoading || undefined}
       {...props}
     >
       {isLoading ? (

@@ -29,7 +29,7 @@ function GamesLoadingSkeleton() {
 function EmptyState() {
   return (
     <div className="text-center py-16">
-      <Gamepad2 className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+      <Gamepad2 className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
       <p className="text-zinc-500">No games found</p>
     </div>
   );
@@ -87,13 +87,17 @@ export default function GamesPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <main className="pt-24 pb-12">
+      <main id="main-content" className="pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col gap-4 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="shrink-0">
                 <h1 className="text-2xl font-bold text-zinc-100">My Games</h1>
-                <p className="flex items-center gap-1 text-zinc-500 text-sm mt-1">
+                <p
+                  className="flex items-center gap-1 text-zinc-500 text-sm mt-1"
+                  role="status"
+                  aria-live="polite"
+                >
                   <span>{counts[filter]}</span>
                   {searchQuery && (
                     <span className="text-violet-400 font-medium">{searchQuery}</span>

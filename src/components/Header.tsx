@@ -142,7 +142,7 @@ function HeaderInner() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
-              <Gamepad2 className="w-6 h-6 text-violet-400 shrink-0" />
+              <Gamepad2 className="w-6 h-6 text-violet-400 shrink-0" aria-hidden="true" />
               <span className="text-lg font-semibold text-zinc-100">MyBacklog</span>
             </Link>
             {isLoading && (
@@ -156,7 +156,7 @@ function HeaderInner() {
               </div>
             )}
             {!isLoading && (
-              <nav className="hidden md:flex items-center gap-6">
+              <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -207,7 +207,10 @@ function HeaderInner() {
 
         {/* Mobile nav */}
         {mobileMenuOpen && !isLoading && (
-          <nav className="md:hidden border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md">
+          <nav
+            className="md:hidden border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md"
+            aria-label="Mobile navigation"
+          >
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
