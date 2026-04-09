@@ -82,9 +82,9 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
           target="_blank"
           rel="noopener noreferrer"
           title={entry.name}
-          className="group/title inline-flex items-center gap-1 font-medium text-zinc-100 hover:text-white transition-colors truncate max-w-full text-base"
+          className="group/title inline-flex items-center gap-1 font-medium text-zinc-100 hover:text-white transition-colors sm:truncate max-w-full text-base"
         >
-          <span className="truncate min-w-0">{entry.name}</span>
+          <span className="sm:truncate min-w-0">{entry.name}</span>
           <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
         </a>
         {entry.rating != null && (

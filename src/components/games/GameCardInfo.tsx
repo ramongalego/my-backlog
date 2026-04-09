@@ -7,6 +7,7 @@ interface GameMetaRowProps {
   steamReviewCount?: number | null;
   playtimeMinutes?: number;
   deckCompat?: number | null;
+  hidePlaytimeOnMobile?: boolean;
 }
 
 export function GameMetaRow({
@@ -15,6 +16,7 @@ export function GameMetaRow({
   steamReviewCount,
   playtimeMinutes = 0,
   deckCompat,
+  hidePlaytimeOnMobile,
 }: GameMetaRowProps) {
   if (!mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat) return null;
   return (
@@ -35,7 +37,7 @@ export function GameMetaRow({
         </span>
       ) : null}
       {playtimeMinutes >= 60 ? (
-        <span className="text-zinc-600" title="Time played">
+        <span className={`text-zinc-600${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`} title="Time played">
           {Math.round(playtimeMinutes / 60)}h played
         </span>
       ) : null}

@@ -185,7 +185,7 @@ export function GameDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       {/* Hero image */}
-      <div className="relative -mx-6 -mt-6 h-44 overflow-hidden rounded-t-2xl">
+      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
         {headerImage ? (
           <Image
             src={headerImage}
@@ -200,7 +200,7 @@ export function GameDetailModal({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
-        <h2 className="absolute bottom-2 left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
+        <h2 className="absolute bottom-2 left-4 sm:left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
           {gameName}
         </h2>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from './useAuth';
 import { useGameSync } from './useGameSync';
@@ -158,6 +159,7 @@ export function useGameLibrary() {
           }
         } catch (err) {
           console.error('Failed to refresh library:', err);
+          toast.error('Failed to refresh library');
         }
       }
     }

@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   children: ReactNode;
   title?: string;
   size?: 'md' | 'lg';
@@ -17,7 +17,7 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onClose?.();
       }
     };
 
@@ -46,21 +46,23 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
           aria-modal="true"
           aria-labelledby={title ? 'modal-title' : undefined}
         >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors z-10"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" aria-hidden="true" />
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors z-10"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" aria-hidden="true" />
+            </button>
+          )}
           {title && (
-            <div className="p-6 pb-0">
+            <div className="p-4 sm:p-6 pb-0 sm:pb-0">
               <h2 id="modal-title" className="text-xl font-semibold text-zinc-100">
                 {title}
               </h2>
             </div>
           )}
-          <div className="p-6">{children}</div>
+          <div className="p-4 sm:p-6">{children}</div>
         </div>
       </div>
     </div>

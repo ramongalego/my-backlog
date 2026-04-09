@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Gamepad2, Menu, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -112,6 +113,7 @@ function HeaderInner() {
       }
     } catch (err) {
       console.error('Failed to refresh library:', err);
+      toast.error('Failed to refresh library');
     }
     setIsRefreshing(false);
   };

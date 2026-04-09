@@ -7,6 +7,7 @@ import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
+import { toast } from 'sonner';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
@@ -113,6 +114,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         }
       } catch (err) {
         console.error('Failed to refresh library:', err);
+        toast.error('Failed to refresh library');
       }
     }
 
@@ -135,6 +137,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     },
     onError: (_err, _appId, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.queue.list(), context.previous);
+      toast.error('Failed to remove game from queue');
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.queue.list() }),
   });
@@ -159,6 +162,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     },
     onError: (_err, _appIds, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.queue.list(), context.previous);
+      toast.error('Failed to reorder queue');
     },
   });
 
@@ -213,6 +217,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       invalidateGamesAndQueue();
     } catch (err) {
       console.error('Failed to move game to queue:', err);
+      toast.error('Failed to move game to queue');
       queryClient.setQueryData(queryKeys.games.playing(), game);
       queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
         (old ?? []).filter((q) => q.app_id !== game.app_id),
@@ -297,6 +302,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       invalidateGamesAndQueue();
     } catch (err) {
       console.error(`Failed to ${status} game:`, err);
+      toast.error(`Failed to ${status} game`);
     }
     setStatusLoadingBoth(false);
   };
@@ -348,6 +354,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       invalidateGamesAndQueue();
     } catch (err) {
       console.error('Failed to pick game from queue:', err);
+      toast.error('Failed to start playing');
       queryClient.setQueryData(queryKeys.games.playing(), null);
       queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
         ...(old ?? []),

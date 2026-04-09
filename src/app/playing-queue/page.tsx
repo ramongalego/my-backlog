@@ -32,7 +32,9 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
     return (
-      <Image src={src} alt={alt} width={96} height={60} className="rounded object-cover shrink-0" />
+      <div className="relative w-24 h-[60px] rounded overflow-hidden shrink-0">
+        <Image src={src} alt={alt} fill className="object-cover" sizes="96px" />
+      </div>
     );
   }
   return (
@@ -57,38 +59,40 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
     playedHours && estimateHours ? Math.min((playedHours / estimateHours) * 100, 100) : null;
 
   return (
-    <div className="flex items-center gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-4">
-      <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
-        <Play className="w-3.5 h-3.5 fill-sky-400" />
-      </span>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-4">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
+          <Play className="w-3.5 h-3.5 fill-sky-400" />
+        </span>
 
-      <GameThumbnail src={game.header_image} alt={game.name} />
+        <GameThumbnail src={game.header_image} alt={game.name} />
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-100 truncate mb-1">{game.name}</p>
-        {progressPct !== null ? (
-          <>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              {playedHours}h played · ~{estimateHours}h to beat
-            </p>
-            <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-2 w-32">
-              <div
-                className="h-full bg-sky-500 rounded-full"
-                style={{ width: `${progressPct}%` }}
-              />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-zinc-100 sm:truncate mb-1">{game.name}</p>
+          {progressPct !== null ? (
+            <div className="w-fit">
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {playedHours}h played · ~{estimateHours}h to beat
+              </p>
+              <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-sky-500 rounded-full"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             </div>
-          </>
-        ) : (
-          <GameMetaRow
-            mainStoryHours={estimateHours}
-            steamReviewScore={game.steam_review_score}
-            playtimeMinutes={game.playtime_forever}
-            deckCompat={game.deck_compat}
-          />
-        )}
+          ) : (
+            <GameMetaRow
+              mainStoryHours={estimateHours}
+              steamReviewScore={game.steam_review_score}
+              playtimeMinutes={game.playtime_forever}
+              deckCompat={game.deck_compat}
+            />
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center justify-center sm:justify-start gap-2 shrink-0">
         <button
           onClick={onFinish}
           disabled={isLoading}
@@ -166,6 +170,7 @@ function QueueItemRow({
           steamReviewScore={item.game.steam_review_score}
           playtimeMinutes={item.game.playtime_forever}
           deckCompat={item.game.deck_compat}
+          hidePlaytimeOnMobile
         />
       </div>
 

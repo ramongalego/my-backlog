@@ -71,6 +71,7 @@ export function useCurrentGame({
       removeFromPools(game.app_id);
     } catch (err) {
       console.error('Failed to pick game:', err);
+      toast.error('Failed to start playing');
     }
     setIsStatusLoading(false);
   };
@@ -125,6 +126,7 @@ export function useCurrentGame({
       removeFromPools(game.app_id);
     } catch (err) {
       console.error('Failed to update game status:', err);
+      toast.error('Failed to update game status');
     }
   };
 
@@ -194,6 +196,7 @@ export function useCurrentGame({
       }
     } catch (err) {
       console.error(`Failed to ${status} game:`, err);
+      toast.error(`Failed to ${status} game`);
     }
     setIsStatusLoading(false);
   };
@@ -210,6 +213,7 @@ export function useCurrentGame({
       setCurrentlyPlaying(null);
     } catch (err) {
       console.error('Failed to cancel game:', err);
+      toast.error('Failed to move game to backlog');
     }
     setIsStatusLoading(false);
   };

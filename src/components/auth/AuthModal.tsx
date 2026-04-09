@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { LoginForm } from './LoginForm';
 import { SignUpForm } from './SignUpForm';
@@ -28,6 +29,15 @@ function AuthModalContent({ initialMode, onSuccess }: AuthModalContentProps) {
   );
 }
 
+function SigningInContent() {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 gap-3">
+      <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+      <p className="text-sm text-zinc-400">Signing in…</p>
+    </div>
+  );
+}
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,15 +45,21 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
   const handleSuccess = () => {
-    onClose();
+    setIsSigningIn(true);
     window.location.reload();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={isSigningIn ? undefined : onClose}>
       {isOpen && (
-        <AuthModalContent key={initialMode} initialMode={initialMode} onSuccess={handleSuccess} />
+        isSigningIn ? (
+          <SigningInContent />
+        ) : (
+          <AuthModalContent key={initialMode} initialMode={initialMode} onSuccess={handleSuccess} />
+        )
       )}
     </Modal>
   );
