@@ -94,11 +94,24 @@ export default function GamesPage() {
               <div className="shrink-0">
                 <h1 className="text-2xl font-bold text-zinc-100">My Games</h1>
                 <p className="flex items-center gap-1 text-zinc-500 text-sm mt-1">
-                  <span>{counts.all}</span>
+                  <span>{counts[filter]}</span>
                   {searchQuery && (
                     <span className="text-violet-400 font-medium">{searchQuery}</span>
                   )}
-                  <span>games in library</span>
+                  <span>
+                    {counts[filter] === 1 ? 'game' : 'games'}{' '}
+                    {filter === 'all'
+                      ? 'in library'
+                      : filter === 'backlog'
+                        ? 'in the backlog'
+                        : filter === 'playing'
+                          ? 'playing'
+                          : filter === 'finished'
+                            ? 'finished'
+                            : filter === 'dropped'
+                              ? 'dropped'
+                              : 'hidden'}
+                  </span>
                 </p>
               </div>
 
