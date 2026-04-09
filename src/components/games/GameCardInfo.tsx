@@ -37,7 +37,10 @@ export function GameMetaRow({
         </span>
       ) : null}
       {playtimeMinutes >= 60 ? (
-        <span className={`text-zinc-600${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`} title="Time played">
+        <span
+          className={`text-zinc-600${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}
+          title="Time played"
+        >
           {Math.round(playtimeMinutes / 60)}h played
         </span>
       ) : null}

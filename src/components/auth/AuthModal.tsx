@@ -54,13 +54,12 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
 
   return (
     <Modal isOpen={isOpen} onClose={isSigningIn ? undefined : onClose}>
-      {isOpen && (
-        isSigningIn ? (
+      {isOpen &&
+        (isSigningIn ? (
           <SigningInContent />
         ) : (
           <AuthModalContent key={initialMode} initialMode={initialMode} onSuccess={handleSuccess} />
-        )
-      )}
+        ))}
     </Modal>
   );
 }

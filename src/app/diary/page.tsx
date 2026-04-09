@@ -1,9 +1,19 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, Gamepad2, Pencil, Trophy, Star, MessageCircle } from 'lucide-react';
+import { useState } from 'react';
+import {
+  ExternalLink,
+  Gamepad2,
+  Pencil,
+  Trophy,
+  Star,
+  MessageCircle,
+  CalendarDays,
+} from 'lucide-react';
 
 import { GameDetailModal } from '@/components/games/GameStatusModal';
+import { Dropdown } from '@/components/ui/Dropdown';
 import { useDiary } from '@/hooks/useDiary';
 import type { DiaryEntry } from '@/hooks/useDiary';
 import { getMonthKey, formatMonthLabel, formatDay } from '@/lib/diary/date-utils';
@@ -144,15 +154,30 @@ export default function DiaryPage() {
     handleConfirmDetail,
   } = useDiary();
 
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+
   // Split into dated and undated
   const datedEntries = entries.filter((e) => e.finished_at);
   const undatedEntries = entries
     .filter((e) => !e.finished_at)
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // Collect available years (descending)
+  const availableYears = [...new Set(datedEntries.map((e) => e.finished_at!.slice(0, 4)))].sort(
+    (a, b) => b.localeCompare(a),
+  );
+
+  // Filter entries by selected year
+  const filteredDated =
+    selectedYear === 'all'
+      ? datedEntries
+      : datedEntries.filter((e) => e.finished_at!.startsWith(selectedYear));
+  const filteredUndated = selectedYear === 'all' ? undatedEntries : [];
+  const filteredEntries = selectedYear === 'all' ? entries : filteredDated;
+
   // Build year → month hierarchy
   const yearGroups: YearGroup[] = [];
-  for (const entry of datedEntries) {
+  for (const entry of filteredDated) {
     const year = entry.finished_at!.slice(0, 4);
     const monthKey = getMonthKey(entry.finished_at!);
 
@@ -171,23 +196,36 @@ export default function DiaryPage() {
     mg.entries.push(entry);
   }
 
-  const thisYearCount = entries.filter((e) =>
-    e.finished_at?.startsWith(String(new Date().getFullYear())),
-  ).length;
+  const summaryText = (() => {
+    if (filteredEntries.length === 0) return "You haven't finished any games yet";
+    const count = `${filteredEntries.length} game${filteredEntries.length === 1 ? '' : 's'} finished`;
+    if (selectedYear !== 'all') return `${count} in ${selectedYear}`;
+    const thisYearCount = entries.filter((e) =>
+      e.finished_at?.startsWith(String(new Date().getFullYear())),
+    ).length;
+    return thisYearCount > 0 ? `${count} · ${thisYearCount} this year` : count;
+  })();
 
   return (
     <div className="min-h-screen bg-zinc-950">
       <main className="pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Page heading */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-zinc-100">Diary</h1>
-            {!loading && (
-              <p className="text-zinc-500 text-sm mt-1">
-                {entries.length === 0
-                  ? "You haven't finished any games yet"
-                  : `${entries.length} game${entries.length === 1 ? '' : 's'} finished${thisYearCount > 0 ? ` · ${thisYearCount} this year` : ''}`}
-              </p>
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h1 className="text-2xl font-bold text-zinc-100">Diary</h1>
+              {!loading && <p className="text-zinc-500 text-sm mt-1">{summaryText}</p>}
+            </div>
+            {!loading && availableYears.length >= 2 && entries.length >= 5 && (
+              <Dropdown
+                value={selectedYear}
+                onChange={setSelectedYear}
+                icon={<CalendarDays className="w-4 h-4" />}
+                options={[
+                  { value: 'all', label: 'All years' },
+                  ...availableYears.map((year) => ({ value: year, label: year })),
+                ]}
+              />
             )}
           </div>
 
@@ -200,16 +238,20 @@ export default function DiaryPage() {
               {/* Dated entries grouped by year → month */}
               {yearGroups.map((yg, yi) => (
                 <div key={yg.year}>
-                  <h2
-                    className={`text-lg font-bold text-zinc-100 pb-1 border-b border-zinc-800 ${yi === 0 ? 'mt-2' : 'mt-10'}`}
-                  >
-                    {yg.year}
-                  </h2>
+                  {selectedYear === 'all' && (
+                    <h2
+                      className={`text-lg font-bold text-zinc-100 pb-1 border-b border-zinc-800 ${yi === 0 ? 'mt-2' : 'mt-10'}`}
+                    >
+                      {yg.year}
+                    </h2>
+                  )}
                   {yg.months.map((mg) => {
                     const { month } = formatMonthLabel(mg.entries[0].finished_at!);
                     return (
                       <div key={mg.key}>
-                        <p className="text-sm font-semibold text-zinc-400 tracking-wide pt-5 pb-2">
+                        <p
+                          className={`text-sm font-semibold text-zinc-400 tracking-wide pb-2 ${selectedYear !== 'all' && yi === 0 ? 'pt-2' : 'pt-5'}`}
+                        >
                           {month}
                         </p>
                         {mg.entries.map((entry) => (
@@ -222,10 +264,10 @@ export default function DiaryPage() {
               ))}
 
               {/* Undated entries */}
-              {undatedEntries.length > 0 && (
+              {filteredUndated.length > 0 && (
                 <div className="mt-8">
                   <p className="text-xs text-zinc-600 uppercase tracking-wider mb-3">No date</p>
-                  {undatedEntries.map((entry) => (
+                  {filteredUndated.map((entry) => (
                     <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
                   ))}
                 </div>

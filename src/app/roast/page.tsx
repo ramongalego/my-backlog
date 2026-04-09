@@ -99,12 +99,12 @@ export default function RoastPage() {
               <Button type="submit" disabled={roastMutation.isPending || !input.trim()}>
                 {roastMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Roasting...
                   </>
                 ) : (
                   <>
-                    <Flame className="w-4 h-4 mr-1.5" />
+                    <Flame className="w-4 h-4" />
                     Roast
                   </>
                 )}

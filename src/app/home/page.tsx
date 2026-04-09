@@ -116,7 +116,7 @@ function HomeContent() {
                     className="cursor-pointer"
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
-                    <Sparkles className="w-5 h-5 mr-1.5" />
+                    <Sparkles className="w-5 h-5" />
                     Pick My Next Game
                   </Button>
                   <p className="mt-1 text-xs text-zinc-500">
@@ -141,7 +141,7 @@ function HomeContent() {
                     className="cursor-pointer"
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
-                    <Sparkles className="w-5 h-5 mr-1.5" />
+                    <Sparkles className="w-5 h-5" />
                     Pick My Game
                   </Button>
                   <Button
@@ -151,7 +151,7 @@ function HomeContent() {
                     className="cursor-pointer"
                     title="Pick a random game"
                   >
-                    <Dices className="w-5 h-5 mr-1.5" />
+                    <Dices className="w-5 h-5" />
                     Random
                   </Button>
                 </div>

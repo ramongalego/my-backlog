@@ -113,7 +113,7 @@ export function CurrentlyPlaying({
               variant="success"
               className="flex-1 cursor-pointer"
             >
-              <Check className="w-3.5 h-3.5 mr-1.5" />
+              <Check className="w-3.5 h-3.5" />
               Finish
             </Button>
             <Button

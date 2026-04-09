@@ -42,7 +42,7 @@ export function Dropdown<T extends string>({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 text-zinc-400 text-sm hover:text-zinc-200 transition-colors"
+        className="flex items-center gap-2 text-zinc-400 text-base hover:text-zinc-200 transition-colors"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
