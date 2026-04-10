@@ -31,11 +31,15 @@ function validatePreferences(body: unknown): SuggestionPreferences | null {
   return { mood, energy, time } as SuggestionPreferences;
 }
 
+const MAX_EXCLUDE_APP_IDS = 200;
+const MAX_PREVIOUS_REASONINGS = 5;
+const MAX_REASONING_LENGTH = 500;
+
 function validateExcludeAppIds(value: unknown): number[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(
-    (id): id is number => typeof id === 'number' && Number.isInteger(id) && id > 0,
-  );
+  return value
+    .filter((id): id is number => typeof id === 'number' && Number.isInteger(id) && id > 0)
+    .slice(0, MAX_EXCLUDE_APP_IDS);
 }
 
 export async function POST(request: NextRequest) {
@@ -90,10 +94,12 @@ export async function POST(request: NextRequest) {
   }
 
   const excludeAppIds = validateExcludeAppIds((body as Record<string, unknown>).excludeAppIds);
-  const previousReasonings = Array.isArray((body as Record<string, unknown>).previousReasonings)
-    ? ((body as Record<string, unknown>).previousReasonings as string[]).filter(
-        (r) => typeof r === 'string',
-      )
+  const rawReasonings = (body as Record<string, unknown>).previousReasonings;
+  const previousReasonings = Array.isArray(rawReasonings)
+    ? (rawReasonings as unknown[])
+        .filter((r): r is string => typeof r === 'string')
+        .slice(0, MAX_PREVIOUS_REASONINGS)
+        .map((r) => r.slice(0, MAX_REASONING_LENGTH))
     : [];
 
   // Fetch queued games to exclude from suggestions

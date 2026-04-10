@@ -4,8 +4,28 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
 
 const protectedRoutes = ['/home', '/games', '/diary', '/stats', '/playing-queue'];
 const publicOnlyRoutes = ['/'];
+const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 export async function proxy(request: NextRequest) {
+  // CSRF defense: reject cross-origin mutating API requests. Browsers reliably
+  // send Origin on POST/PATCH/DELETE, so an attacker site can't forge a match.
+  // Missing Origin (server-to-server, curl) is allowed — those clients don't
+  // carry session cookies anyway.
+  if (request.nextUrl.pathname.startsWith('/api/') && MUTATING_METHODS.has(request.method)) {
+    const origin = request.headers.get('origin');
+    if (origin) {
+      try {
+        const originHost = new URL(origin).host;
+        const host = request.headers.get('host');
+        if (originHost !== host) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      } catch {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

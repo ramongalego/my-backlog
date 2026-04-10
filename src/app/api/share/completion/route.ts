@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+
+const shareSchema = z.object({
+  gameName: z.string().min(1).max(200),
+  headerImage: z.string().max(1000).nullish(),
+  playtimeMinutes: z.number().int().min(0).max(10_000_000).default(0),
+  mainStoryHours: z.number().min(0).max(10_000).nullish(),
+  rating: z.number().int().min(0).max(10).nullish(),
+  gamesFinished: z.number().int().min(0).max(1_000_000).default(0),
+  totalGames: z.number().int().min(0).max(1_000_000).default(0),
+  backlogHoursRemoved: z.number().min(0).max(1_000_000).nullish(),
+  nextGame: z.string().max(200).nullish(),
+});
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
@@ -27,38 +41,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const {
-    gameName,
-    headerImage,
-    playtimeMinutes,
-    mainStoryHours,
-    rating,
-    gamesFinished,
-    totalGames,
-    backlogHoursRemoved,
-    nextGame,
-  } = body;
-
-  if (!gameName || typeof gameName !== 'string') {
-    return NextResponse.json({ error: 'Game name is required' }, { status: 400 });
+  const parsed = shareSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  const id = nanoid(10);
+  const id = nanoid(21);
 
   const { error } = await supabase.from('shared_completions').insert({
     id,
-    game_name: gameName,
-    header_image: headerImage ?? null,
-    playtime_minutes: playtimeMinutes ?? 0,
-    main_story_hours: mainStoryHours ?? null,
-    rating: rating ?? null,
-    games_finished: gamesFinished ?? 0,
-    total_games: totalGames ?? 0,
-    backlog_hours_removed: backlogHoursRemoved ?? null,
-    next_game: nextGame ?? null,
+    user_id: user.id,
+    game_name: parsed.data.gameName,
+    header_image: parsed.data.headerImage ?? null,
+    playtime_minutes: parsed.data.playtimeMinutes,
+    main_story_hours: parsed.data.mainStoryHours ?? null,
+    rating: parsed.data.rating ?? null,
+    games_finished: parsed.data.gamesFinished,
+    total_games: parsed.data.totalGames,
+    backlog_hours_removed: parsed.data.backlogHoursRemoved ?? null,
+    next_game: parsed.data.nextGame ?? null,
   });
 
   if (error) {
+    Sentry.captureException(error);
     console.error('Failed to save shared completion:', error);
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
   }

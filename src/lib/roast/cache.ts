@@ -19,7 +19,7 @@ interface CachedRoast {
 }
 
 const roastCache = new Map<string, CachedRoast>();
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days — roasts don't go stale
 
 // Clean up expired entries every 10 minutes
 const cleanupInterval = setInterval(

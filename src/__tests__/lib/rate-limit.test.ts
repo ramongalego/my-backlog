@@ -100,7 +100,7 @@ describe('getClientIp', () => {
     expect(ip).toBe('192.168.1.1');
   });
 
-  it('should prefer x-forwarded-for over other headers', () => {
+  it('should prefer x-vercel-forwarded-for over other headers (unspoofable on Vercel)', () => {
     const ip = getClientIp(
       makeRequest({
         'x-forwarded-for': '1.1.1.1',
@@ -109,7 +109,7 @@ describe('getClientIp', () => {
       }),
     );
 
-    expect(ip).toBe('1.1.1.1');
+    expect(ip).toBe('3.3.3.3');
   });
 
   it('should return "unknown" when no IP headers present', () => {

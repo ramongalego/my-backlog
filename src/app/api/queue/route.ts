@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
@@ -19,7 +20,8 @@ export async function GET() {
     .order('position', { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    return NextResponse.json({ error: 'Failed to load queue' }, { status: 500 });
   }
 
   if (!queueRows || queueRows.length === 0) {
@@ -103,7 +105,8 @@ export async function POST(request: NextRequest) {
       // Unique constraint violation — game already in queue
       return NextResponse.json({ error: 'Game already in queue' }, { status: 409 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    return NextResponse.json({ error: 'Failed to add to queue' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
@@ -143,7 +146,8 @@ export async function PATCH(request: NextRequest) {
   const results = await Promise.all(updates);
   const failed = results.find((r) => r.error);
   if (failed?.error) {
-    return NextResponse.json({ error: failed.error.message }, { status: 500 });
+    Sentry.captureException(failed.error);
+    return NextResponse.json({ error: 'Failed to reorder queue' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
@@ -178,7 +182,8 @@ export async function DELETE(request: NextRequest) {
     .eq('app_id', appId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    Sentry.captureException(error);
+    return NextResponse.json({ error: 'Failed to remove from queue' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

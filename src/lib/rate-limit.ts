@@ -67,21 +67,22 @@ export function checkRateLimit(identifier: string, config: RateLimitConfig): Rat
 }
 
 export function getClientIp(request: Request): string {
-  // Check common proxy headers
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
+  // On Vercel, this header is set server-side and cannot be spoofed by clients.
+  // Prefer it over x-forwarded-for, which is client-controllable.
+  const vercelIp = request.headers.get('x-vercel-forwarded-for');
+  if (vercelIp) {
+    return vercelIp.split(',')[0].trim();
   }
 
+  // Fallbacks for non-Vercel environments (local dev, tests)
   const realIp = request.headers.get('x-real-ip');
   if (realIp) {
     return realIp;
   }
 
-  // Fallback for Vercel
-  const vercelIp = request.headers.get('x-vercel-forwarded-for');
-  if (vercelIp) {
-    return vercelIp.split(',')[0].trim();
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
   }
 
   return 'unknown';
@@ -101,4 +102,7 @@ export const RATE_LIMITS = {
   suggestion: { limit: 20, windowMs: 60 * 1000 },
   // 3 roasts per hour per IP (public, uses OpenAI)
   roast: { limit: 3, windowMs: 60 * 60 * 1000 },
+  // Global circuit breaker: cap fresh roast generations across all users per day.
+  // Bounds worst-case OpenAI spend if the per-IP limit is distributed across many IPs.
+  roastGlobal: { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
 } as const;

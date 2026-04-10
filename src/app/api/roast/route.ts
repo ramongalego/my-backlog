@@ -78,6 +78,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Global circuit breaker on fresh generations — bounds worst-case OpenAI spend
+  // even if per-IP limits are bypassed by a distributed attacker. Cache hits above
+  // already skipped this check.
+  const globalLimit = checkRateLimit('roast:global', RATE_LIMITS.roastGlobal);
+  if (!globalLimit.success) {
+    return NextResponse.json(
+      { error: 'Roasts are temporarily unavailable — try again tomorrow' },
+      { status: 429 },
+    );
+  }
+
   // Fetch Steam data — all in parallel
   let profile;
   let games;

@@ -1,6 +1,27 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+  : '*.supabase.co';
+
+const isDev = process.env.NODE_ENV !== 'production';
+
+const csp = [
+  "default-src 'self'",
+  // 'unsafe-inline' is required for Next.js inline scripts (hydration, JSON-LD).
+  // 'unsafe-eval' is only needed in dev for React Refresh / HMR.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com",
+  "font-src 'self' data:",
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost}`,
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ');
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   compiler: {
@@ -29,6 +50,7 @@ const nextConfig: NextConfig = {
     {
       source: '/(.*)',
       headers: [
+        { key: 'Content-Security-Policy', value: csp },
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'X-XSS-Protection', value: '1; mode=block' },
