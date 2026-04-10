@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
@@ -224,6 +225,7 @@ export async function POST(request: NextRequest) {
   try {
     prompt = buildSuggestionPrompt(context);
   } catch (err) {
+    Sentry.captureException(err);
     console.error('Failed to build prompt:', err);
     return NextResponse.json(
       { success: false, error: 'Failed to build suggestion request' },
@@ -244,6 +246,7 @@ export async function POST(request: NextRequest) {
 
     aiResponse = completion.choices[0]?.message?.content ?? '';
   } catch (err) {
+    Sentry.captureException(err);
     console.error('OpenAI API error:', err);
     return NextResponse.json(
       { success: false, error: 'AI service temporarily unavailable' },
@@ -256,6 +259,7 @@ export async function POST(request: NextRequest) {
   try {
     parsedResponse = parseAIResponse(aiResponse);
   } catch (err) {
+    Sentry.captureException(err, { extra: { aiResponse } });
     console.error('Failed to parse AI response:', err, aiResponse);
     return NextResponse.json(
       { success: false, error: 'Failed to parse AI suggestion' },

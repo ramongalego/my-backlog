@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
@@ -113,6 +114,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
           queryClient.invalidateQueries({ queryKey: queryKeys.games.playing() });
         }
       } catch (err) {
+        Sentry.captureException(err);
         console.error('Failed to refresh library:', err);
         toast.error('Failed to refresh library');
       }
@@ -216,6 +218,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       });
       invalidateGamesAndQueue();
     } catch (err) {
+      Sentry.captureException(err);
       console.error('Failed to move game to queue:', err);
       toast.error('Failed to move game to queue');
       queryClient.setQueryData(queryKeys.games.playing(), game);
@@ -301,6 +304,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
 
       invalidateGamesAndQueue();
     } catch (err) {
+      Sentry.captureException(err);
       console.error(`Failed to ${status} game:`, err);
       toast.error(`Failed to ${status} game`);
     }
@@ -353,6 +357,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       }
       invalidateGamesAndQueue();
     } catch (err) {
+      Sentry.captureException(err);
       console.error('Failed to pick game from queue:', err);
       toast.error('Failed to start playing');
       queryClient.setQueryData(queryKeys.games.playing(), null);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
 import { Gamepad2, Menu, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -112,6 +113,7 @@ function HeaderInner() {
         }
       }
     } catch (err) {
+      Sentry.captureException(err);
       console.error('Failed to refresh library:', err);
       toast.error('Failed to refresh library');
     }

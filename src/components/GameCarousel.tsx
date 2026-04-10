@@ -136,7 +136,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                     src={game.header_image}
                     alt={game.name}
                     fill
-                    priority={priority && i < 4}
+                    priority={priority && i < 4 ? true : undefined}
                     className="object-cover"
                     sizes="256px"
                     draggable={false}

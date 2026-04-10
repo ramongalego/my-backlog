@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
@@ -70,6 +71,7 @@ export function useCurrentGame({
       setCurrentlyPlaying(game);
       removeFromPools(game.app_id);
     } catch (err) {
+      Sentry.captureException(err);
       console.error('Failed to pick game:', err);
       toast.error('Failed to start playing');
     }
@@ -125,6 +127,7 @@ export function useCurrentGame({
       });
       removeFromPools(game.app_id);
     } catch (err) {
+      Sentry.captureException(err);
       console.error('Failed to update game status:', err);
       toast.error('Failed to update game status');
     }
@@ -195,6 +198,7 @@ export function useCurrentGame({
         celebrateGameFinished();
       }
     } catch (err) {
+      Sentry.captureException(err);
       console.error(`Failed to ${status} game:`, err);
       toast.error(`Failed to ${status} game`);
     }
@@ -212,6 +216,7 @@ export function useCurrentGame({
       addBackToPool(currentlyPlaying);
       setCurrentlyPlaying(null);
     } catch (err) {
+      Sentry.captureException(err);
       console.error('Failed to cancel game:', err);
       toast.error('Failed to move game to backlog');
     }

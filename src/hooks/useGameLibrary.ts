@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from './useAuth';
@@ -158,6 +159,7 @@ export function useGameLibrary() {
             if (refreshedGame) currentGame.setCurrentlyPlaying(refreshedGame);
           }
         } catch (err) {
+          Sentry.captureException(err);
           console.error('Failed to refresh library:', err);
           toast.error('Failed to refresh library');
         }
