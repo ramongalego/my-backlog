@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          'Could not find that Steam profile. Try pasting the full profile URL from your browser — display names and vanity URLs are not the same thing.',
+          'Could not find that Steam profile. Try pasting the full profile URL from your browser, display names and vanity URLs are not the same thing.',
       },
       { status: 404 },
     );
