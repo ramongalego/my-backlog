@@ -29,6 +29,7 @@ const defaultCallbacks = {
   onFinish: jest.fn(),
   onDrop: jest.fn(),
   onCancel: jest.fn(),
+  onMoveToQueue: jest.fn(),
 };
 
 describe('CurrentlyPlaying', () => {

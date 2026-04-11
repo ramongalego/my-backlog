@@ -78,7 +78,7 @@ interface ConfirmResult {
 
 export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   const queryClient = useQueryClient();
-  const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
+  const { gamesAndQueue: invalidateGamesAndQueue, queue: invalidateQueue } = useInvalidateQueries();
   const { refreshIfStale } = useLibraryRefresh();
   const { user, authResolved } = useAuth();
   const userId = user?.id ?? null;
@@ -125,7 +125,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to remove game from queue');
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queueKey }),
+    onSettled: () => invalidateQueue(),
   });
 
   const reorderMutation = useMutation({

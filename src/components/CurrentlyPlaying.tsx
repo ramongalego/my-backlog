@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, Archive, Check, Star, Clock } from 'lucide-react';
+import { ExternalLink, Archive, Check, Star, Clock, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 
@@ -20,6 +20,7 @@ interface CurrentlyPlayingProps {
   onFinish: () => void;
   onDrop: () => void;
   onCancel: () => void;
+  onMoveToQueue: () => void;
   isLoading?: boolean;
 }
 
@@ -28,6 +29,7 @@ export function CurrentlyPlaying({
   onFinish,
   onDrop,
   onCancel,
+  onMoveToQueue,
   isLoading,
 }: CurrentlyPlayingProps) {
   return (
@@ -128,14 +130,24 @@ export function CurrentlyPlaying({
               Drop
             </Button>
           </div>
-          <button
-            onClick={onCancel}
-            disabled={isLoading}
-            className="mt-5 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            <Archive className="w-3.5 h-3.5" />
-            Move to Backlog
-          </button>
+          <div className="mt-5 flex items-center justify-center gap-6">
+            <button
+              onClick={onMoveToQueue}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <ListOrdered className="w-3.5 h-3.5" />
+              Move to Queue
+            </button>
+            <button
+              onClick={onCancel}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Move to Backlog
+            </button>
+          </div>
         </div>
       </div>
     </div>

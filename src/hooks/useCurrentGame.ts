@@ -10,6 +10,7 @@ import { addToQueue } from '@/lib/games/queue';
 import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
+import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
@@ -34,6 +35,7 @@ export function useCurrentGame({
   addQueuedAppId,
 }: UseCurrentGameOpts) {
   const queryClient = useQueryClient();
+  const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
@@ -122,6 +124,7 @@ export function useCurrentGame({
       console.error('Failed to update game status:', err);
       toast.error('Failed to update game status');
     }
+    invalidateGamesAndQueue();
   };
 
   const handleConfirmStatusChange = async (
@@ -173,10 +176,8 @@ export function useCurrentGame({
 
       setCurrentlyPlaying(promoted);
       if (promoted && userId) {
-        queryClient.setQueryData(
-          queryKeys.queue.list(userId),
-          (old: QueueItem[] | undefined) =>
-            (old ?? []).filter((q) => q.app_id !== promoted.app_id),
+        queryClient.setQueryData(queryKeys.queue.list(userId), (old: QueueItem[] | undefined) =>
+          (old ?? []).filter((q) => q.app_id !== promoted.app_id),
         );
       }
 
@@ -200,6 +201,7 @@ export function useCurrentGame({
       console.error(`Failed to ${status} game:`, err);
       toast.error(`Failed to ${status} game`);
     }
+    invalidateGamesAndQueue();
     setIsStatusLoading(false);
   };
 
@@ -217,6 +219,25 @@ export function useCurrentGame({
       Sentry.captureException(err);
       console.error('Failed to cancel game:', err);
       toast.error('Failed to move game to backlog');
+    }
+    setIsStatusLoading(false);
+  };
+
+  const handleMoveCurrentToQueue = async () => {
+    if (!currentlyPlaying) return;
+    const game = currentlyPlaying;
+    setIsStatusLoading(true);
+    try {
+      await updateGameStatus(game.app_id, 'backlog');
+      const ok = await addToQueue(game.app_id);
+      if (!ok) throw new Error('Failed to add to queue');
+      setCurrentlyPlaying(null);
+      addQueuedAppId(game.app_id);
+      invalidateGamesAndQueue();
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('Failed to move game to queue:', err);
+      toast.error('Failed to move game to queue');
     }
     setIsStatusLoading(false);
   };
@@ -262,6 +283,7 @@ export function useCurrentGame({
     handleCloseStatusModal,
     handleCloseSummary,
     handleCancelGame,
+    handleMoveCurrentToQueue,
     handleRandomPick,
   };
 }

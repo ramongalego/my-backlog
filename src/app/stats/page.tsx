@@ -15,7 +15,6 @@ import {
 
 import { useMutation } from '@tanstack/react-query';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
-import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { useStats } from '@/hooks/useStats';
 import { addToQueue } from '@/lib/games/queue';
 import { useInvalidateQueries } from '@/lib/mutations';
@@ -345,10 +344,7 @@ function MostPlayedUnfinished({
                   </div>
                 </button>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
-                    <SteamDeckBadge deckCompat={deck_compat} />
-                  </div>
+                  <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
@@ -374,7 +370,7 @@ function MostPlayedUnfinished({
 
 export default function StatsPage() {
   const { stats, loading } = useStats();
-  const { games: invalidateGames } = useInvalidateQueries();
+  const { games: invalidateGames, queue: invalidateQueue } = useInvalidateQueries();
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
   const statusMutation = useMutation({
@@ -414,7 +410,10 @@ export default function StatsPage() {
 
   const handleAddToQueue = async (appId: number) => {
     const ok = await addToQueue(appId);
-    if (ok) toast.success(`${editModal?.gameName} added to the queue!`);
+    if (ok) {
+      invalidateQueue();
+      toast.success(`${editModal?.gameName} added to the queue!`);
+    }
     setEditModal(null);
   };
 

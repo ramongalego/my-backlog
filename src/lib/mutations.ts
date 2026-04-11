@@ -28,9 +28,16 @@ export function useInvalidateQueries() {
       queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
     },
-    /** Invalidate only the queue list */
+    /**
+     * Invalidate after a queue change (add/remove). Also invalidates games +
+     * library because `queuedAppIds` is packaged inside the games.list and
+     * library.meta queries, so removing/adding to the queue must refresh them
+     * to keep "queued" badges accurate.
+     */
     queue: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
     },
     /** Invalidate games + queue + carousels (after pick/cancel or library refresh) */
     gamesAndQueue: () => {

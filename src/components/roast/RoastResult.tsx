@@ -87,10 +87,7 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
           role="group"
           aria-labelledby="roast-share-heading"
         >
-          <h2
-            id="roast-share-heading"
-            className="text-xs uppercase tracking-wider text-zinc-600"
-          >
+          <h2 id="roast-share-heading" className="text-xs uppercase tracking-wider text-zinc-600">
             Share
           </h2>
           <div className="flex items-center gap-4">

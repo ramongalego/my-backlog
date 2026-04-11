@@ -73,6 +73,7 @@ const baseLibrary = {
     handleConfirmCarouselDetail: jest.fn(),
     handleCloseCarouselModal: jest.fn(),
     handleCancelGame: jest.fn(),
+    handleMoveCurrentToQueue: jest.fn(),
     handleRandomPick: jest.fn(),
     handleConfirmStatusChange: jest.fn(),
     handleCloseStatusModal: jest.fn(),

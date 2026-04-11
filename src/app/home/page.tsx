@@ -45,6 +45,7 @@ function HomeContent() {
     handleConfirmCarouselDetail,
     handleCloseCarouselModal,
     handleCancelGame,
+    handleMoveCurrentToQueue,
     handleRandomPick,
     handleConfirmStatusChange,
     handleCloseStatusModal,
@@ -100,6 +101,7 @@ function HomeContent() {
                   onFinish={handleFinishGame}
                   onDrop={handleDropGame}
                   onCancel={handleCancelGame}
+                  onMoveToQueue={handleMoveCurrentToQueue}
                   isLoading={isStatusLoading}
                 />
                 <div className="flex flex-col items-center gap-1.5 mt-10">
