@@ -102,8 +102,10 @@ describe('LoginForm', () => {
     });
   });
 
-  it('should display server error when authentication fails', async () => {
-    const mockSignIn = jest.fn().mockResolvedValue({ error: { message: 'Invalid credentials' } });
+  it('should show a generic error for invalid credentials', async () => {
+    const mockSignIn = jest.fn().mockResolvedValue({
+      error: { code: 'invalid_credentials', message: 'Invalid login credentials' },
+    });
     mockCreateClient.mockReturnValue({
       auth: { signInWithPassword: mockSignIn },
     });
@@ -116,7 +118,27 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
+      expect(screen.getByText('Invalid email or password.')).toBeInTheDocument();
+    });
+  });
+
+  it('should prompt email confirmation when account is unconfirmed', async () => {
+    const mockSignIn = jest.fn().mockResolvedValue({
+      error: { code: 'email_not_confirmed', message: 'Email not confirmed' },
+    });
+    mockCreateClient.mockReturnValue({
+      auth: { signInWithPassword: mockSignIn },
+    });
+
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/confirm your email/i)).toBeInTheDocument();
     });
   });
 

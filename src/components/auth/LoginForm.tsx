@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AuthError } from '@supabase/supabase-js';
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
@@ -9,9 +10,25 @@ import { Input } from '@/components/ui/Input';
 interface LoginFormProps {
   onSuccess?: () => void;
   onSwitchToSignUp?: () => void;
+  onSwitchToForgotPassword?: () => void;
 }
 
-export function LoginForm({ onSuccess, onSwitchToSignUp }: LoginFormProps) {
+function mapLoginError(error: AuthError): string {
+  // Avoid leaking whether an email is registered — collapse credential errors to one message.
+  if (error.code === 'invalid_credentials') {
+    return 'Invalid email or password.';
+  }
+  if (error.code === 'email_not_confirmed') {
+    return 'Please confirm your email before signing in. Check your inbox for the confirmation link.';
+  }
+  return 'Something went wrong. Please try again.';
+}
+
+export function LoginForm({
+  onSuccess,
+  onSwitchToSignUp,
+  onSwitchToForgotPassword,
+}: LoginFormProps) {
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -58,7 +75,7 @@ export function LoginForm({ onSuccess, onSwitchToSignUp }: LoginFormProps) {
       });
 
       if (error) {
-        setServerError(error.message);
+        setServerError(mapLoginError(error));
         return;
       }
 
@@ -92,16 +109,29 @@ export function LoginForm({ onSuccess, onSwitchToSignUp }: LoginFormProps) {
         autoComplete="email"
       />
 
-      <Input
-        label="Password"
-        type="password"
-        name="password"
-        value={formData.password}
-        onChange={handleChange}
-        placeholder="Enter your password"
-        error={errors.password}
-        autoComplete="current-password"
-      />
+      <div>
+        <Input
+          label="Password"
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Enter your password"
+          error={errors.password}
+          autoComplete="current-password"
+        />
+        {onSwitchToForgotPassword && (
+          <div className="mt-1.5 text-right">
+            <button
+              type="button"
+              onClick={onSwitchToForgotPassword}
+              className="text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors"
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
+      </div>
 
       <Button type="submit" className="w-full" isLoading={isLoading}>
         Sign In

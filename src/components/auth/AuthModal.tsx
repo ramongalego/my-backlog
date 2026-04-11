@@ -5,25 +5,36 @@ import { Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { LoginForm } from './LoginForm';
 import { SignUpForm } from './SignUpForm';
+import { ForgotPasswordForm } from './ForgotPasswordForm';
 import type { AuthMode } from '@/types/auth';
 
 interface AuthModalContentProps {
   initialMode: AuthMode;
-  onSuccess: () => void;
+  onLoginSuccess: () => void;
 }
 
-function AuthModalContent({ initialMode, onSuccess }: AuthModalContentProps) {
-  const [mode, setMode] = useState<AuthMode>(initialMode);
+const TITLES: Record<AuthMode, string> = {
+  login: 'Welcome Back',
+  signup: 'Create Account',
+  'forgot-password': 'Reset Password',
+};
 
-  const title = mode === 'login' ? 'Welcome Back' : 'Create Account';
+function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-zinc-100 mb-6">{title}</h2>
-      {mode === 'login' ? (
-        <LoginForm onSuccess={onSuccess} onSwitchToSignUp={() => setMode('signup')} />
-      ) : (
-        <SignUpForm onSuccess={onSuccess} onSwitchToLogin={() => setMode('login')} />
+      <h2 className="text-xl font-semibold text-zinc-100 mb-6">{TITLES[mode]}</h2>
+      {mode === 'login' && (
+        <LoginForm
+          onSuccess={onLoginSuccess}
+          onSwitchToSignUp={() => setMode('signup')}
+          onSwitchToForgotPassword={() => setMode('forgot-password')}
+        />
+      )}
+      {mode === 'signup' && <SignUpForm onSwitchToLogin={() => setMode('login')} />}
+      {mode === 'forgot-password' && (
+        <ForgotPasswordForm onSwitchToLogin={() => setMode('login')} />
       )}
     </>
   );
@@ -47,7 +58,7 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const handleSuccess = () => {
+  const handleLoginSuccess = () => {
     setIsSigningIn(true);
     window.location.reload();
   };
@@ -58,7 +69,11 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         (isSigningIn ? (
           <SigningInContent />
         ) : (
-          <AuthModalContent key={initialMode} initialMode={initialMode} onSuccess={handleSuccess} />
+          <AuthModalContent
+            key={initialMode}
+            initialMode={initialMode}
+            onLoginSuccess={handleLoginSuccess}
+          />
         ))}
     </Modal>
   );

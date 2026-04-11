@@ -154,7 +154,6 @@ function HeaderInner() {
                 <div className="h-4 w-11 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
                 <div className="h-4 w-9 bg-zinc-800 rounded animate-pulse" />
-                <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
               </div>
             )}
             {!isLoading && (

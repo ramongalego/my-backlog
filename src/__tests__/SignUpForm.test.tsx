@@ -16,14 +16,13 @@ import { createClient } from '@/lib/supabase/client';
 const mockCreateClient = createClient as jest.Mock;
 
 describe('SignUpForm', () => {
-  const mockOnSuccess = jest.fn();
   const mockOnSwitchToLogin = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockCreateClient.mockReturnValue({
       auth: {
-        signUp: jest.fn().mockResolvedValue({ error: null }),
+        signUp: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
       },
     });
   });
@@ -77,14 +76,14 @@ describe('SignUpForm', () => {
     });
   });
 
-  it('should call Supabase signUp and onSuccess on valid submission', async () => {
-    const mockSignUp = jest.fn().mockResolvedValue({ error: null });
+  it('should call Supabase signUp and show the check-your-email state on valid submission', async () => {
+    const mockSignUp = jest.fn().mockResolvedValue({ data: { session: null }, error: null });
     mockCreateClient.mockReturnValue({
       auth: { signUp: mockSignUp },
     });
 
     const user = userEvent.setup();
-    render(<SignUpForm onSuccess={mockOnSuccess} />);
+    render(<SignUpForm />);
 
     await user.type(screen.getByLabelText(/^email$/i), 'test@example.com');
     await user.type(screen.getByLabelText(/^password$/i), 'Password123');
@@ -92,18 +91,22 @@ describe('SignUpForm', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {
-      expect(mockSignUp).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'Password123',
-      });
-      expect(mockOnSuccess).toHaveBeenCalled();
+      expect(mockSignUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'test@example.com',
+          password: 'Password123',
+        }),
+      );
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+      expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
     });
   });
 
   it('should display server error when sign up fails', async () => {
-    const mockSignUp = jest
-      .fn()
-      .mockResolvedValue({ error: { message: 'Email already registered' } });
+    const mockSignUp = jest.fn().mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Email already registered' },
+    });
     mockCreateClient.mockReturnValue({
       auth: { signUp: mockSignUp },
     });

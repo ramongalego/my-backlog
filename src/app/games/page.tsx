@@ -6,25 +6,10 @@ import { Gamepad2 } from 'lucide-react';
 import { GameCard } from '@/components/games/GameCard';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
+import { GamesPageSkeleton } from '@/components/games/GamesPageSkeleton';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage } from '@/hooks/useGamesPage';
-
-function GamesLoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {[...Array(10)].map((_, i) => (
-        <div key={i} className="bg-zinc-900 rounded-lg overflow-hidden animate-pulse">
-          <div className="h-40 sm:h-28 bg-zinc-800" />
-          <div className="p-3 space-y-2">
-            <div className="h-4 bg-zinc-800 rounded w-3/4" />
-            <div className="h-3 bg-zinc-800 rounded w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function EmptyState() {
   return (
@@ -74,15 +59,7 @@ export default function GamesPage() {
   }, [hasMore, loadMore]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950">
-        <div className="pt-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <GamesLoadingSkeleton />
-          </div>
-        </div>
-      </div>
-    );
+    return <GamesPageSkeleton />;
   }
 
   return (
