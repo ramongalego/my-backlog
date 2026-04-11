@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Strips HTML tags and trims whitespace to prevent stored XSS
 const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
 
-const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'hidden'] as const;
+const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
 
 export const gameStatusSchema = z.object({
   appId: z.number().int().positive(),

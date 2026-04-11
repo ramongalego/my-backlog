@@ -14,6 +14,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   finished: { label: 'Finished', className: 'bg-emerald-950/95 text-emerald-400' },
   playing: { label: 'Playing', className: 'bg-sky-950/95 text-sky-400' },
   dropped: { label: 'Dropped', className: 'bg-rose-950/95 text-rose-400' },
+  wont_play: { label: "Won't Play", className: 'bg-amber-950/95 text-amber-400' },
   hidden: { label: 'Hidden', className: 'bg-zinc-900/95 text-zinc-400' },
   backlog: { label: 'Backlog', className: 'bg-violet-950/95 text-violet-400' },
 };

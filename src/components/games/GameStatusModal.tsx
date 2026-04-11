@@ -10,6 +10,7 @@ import {
   EyeOff,
   Archive,
   Play,
+  Ban,
   CalendarDays,
   ListOrdered,
   Loader2,
@@ -22,7 +23,7 @@ const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.Day
 });
 import { GameMetaRow } from './GameCardInfo';
 
-type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';
+type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
 type InternalStatus = GameStatus | 'queue';
 
 interface GameDetailModalProps {
@@ -78,6 +79,12 @@ const STATUS_OPTIONS: {
     label: 'Dropped',
     icon: <X className="w-3.5 h-3.5" />,
     activeClass: 'bg-rose-600 text-white border-rose-600',
+  },
+  {
+    value: 'wont_play',
+    label: "Won't Play",
+    icon: <Ban className="w-3.5 h-3.5" />,
+    activeClass: 'bg-amber-600 text-white border-amber-600',
   },
   {
     value: 'hidden',
@@ -183,7 +190,7 @@ export function GameDetailModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} size="xl">
       {/* Hero image */}
       <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
         {headerImage ? (
@@ -220,7 +227,9 @@ export function GameDetailModal({
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2.5">Status</p>
           <div
-            className={`grid gap-2 ${disablePlaying && !onAddToQueue ? 'grid-cols-4' : 'grid-cols-5'}`}
+            className={`grid gap-2 grid-cols-3 ${
+              disablePlaying && !onAddToQueue ? 'sm:grid-cols-5' : 'sm:grid-cols-6'
+            }`}
           >
             {STATUS_OPTIONS.map((opt) => {
               // Replace the Playing slot with Queue (or nothing) when playing is disabled
@@ -231,7 +240,7 @@ export function GameDetailModal({
                   <button
                     key="queue"
                     onClick={() => handleStatusChange('queue')}
-                    className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
+                    className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors whitespace-nowrap ${
                       isActive
                         ? 'bg-sky-600 text-white border-sky-600'
                         : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
@@ -246,7 +255,7 @@ export function GameDetailModal({
                 <button
                   key={opt.value}
                   onClick={() => handleStatusChange(opt.value)}
-                  className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors ${
+                  className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors whitespace-nowrap ${
                     status === opt.value
                       ? opt.activeClass
                       : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'

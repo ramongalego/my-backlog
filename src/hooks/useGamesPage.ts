@@ -26,15 +26,15 @@ export interface GameItem {
   deck_compat?: number | null;
 }
 
-export type GameFilter = 'all' | 'playing' | 'backlog' | 'finished' | 'dropped' | 'hidden';
+export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
 export type GameSort = 'playtime' | 'score' | 'recent';
 
 export interface FilterCounts {
   all: number;
-  playing: number;
   backlog: number;
   finished: number;
   dropped: number;
+  wont_play: number;
   hidden: number;
 }
 
@@ -42,7 +42,7 @@ interface GamesPageStatusModal {
   appId: number;
   gameName: string;
   headerImage: string | null;
-  initialStatus: 'backlog' | 'playing' | 'finished' | 'dropped' | 'hidden';
+  initialStatus: 'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
   initialDate: string | null;
   initialNotes: string | null;
   initialRating: number | null;
@@ -211,6 +211,7 @@ export function useGamesPage(): UseGamesPageReturn {
       | 'playing'
       | 'finished'
       | 'dropped'
+      | 'wont_play'
       | 'hidden';
     const initialDate =
       status === 'finished'
@@ -265,6 +266,12 @@ export function useGamesPage(): UseGamesPageReturn {
   // Filter and sort games — uses deferredSearchQuery so input stays responsive
   const filteredGames = (() => {
     const filtered = searchFilteredGames.filter((game) => {
+      // Playing games live on the home page's Currently Playing tile — they
+      // don't appear on the Games page at all, so the visible filter counts
+      // (backlog + finished + dropped + wont_play + hidden) sum cleanly.
+      if (game.status === 'playing') return false;
+      // "All" excludes only hidden — wont_play games are still part of the
+      // library and should appear under All alongside their own tab.
       if (filter === 'all' && game.status === 'hidden') return false;
       if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
       if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
@@ -296,22 +303,29 @@ export function useGamesPage(): UseGamesPageReturn {
   // for a backlog game never hides the now playing game from the count.
   const hasPlayingGame = games.some((g) => g.status === 'playing');
 
-  // Single pass over search-filtered games to compute all counts at once
+  // Single pass over search-filtered games to compute all counts at once.
+  // Playing games live on the home page and are excluded from the Games page
+  // entirely (see filteredGames above). `all` = backlog + finished + dropped
+  // + wont_play. Hidden and playing never contribute to `all`.
   const counts: FilterCounts = (() => {
-    const result = { all: 0, playing: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
+    const result = { all: 0, backlog: 0, finished: 0, dropped: 0, wont_play: 0, hidden: 0 };
     for (const game of searchFilteredGames) {
       const s = game.status;
+      if (s === 'playing') {
+        // Intentionally skipped — playing games don't appear on the Games page.
+        continue;
+      }
       if (s === 'hidden') {
         result.hidden++;
+      } else if (s === 'wont_play') {
+        result.all++;
+        result.wont_play++;
       } else if (s === 'finished') {
         result.all++;
         result.finished++;
       } else if (s === 'dropped') {
         result.all++;
         result.dropped++;
-      } else if (s === 'playing') {
-        result.all++;
-        result.playing++;
       } else {
         // null or 'backlog'
         result.all++;

@@ -92,7 +92,7 @@ async function fetchStatsGames(): Promise<GameForStats[]> {
     )
     .eq('user_id', user.id)
     .eq('type', 'game')
-    .neq('status', 'hidden');
+    .not('status', 'in', '(hidden,wont_play)');
 
   return (data || []) as GameForStats[];
 }

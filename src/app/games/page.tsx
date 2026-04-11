@@ -85,12 +85,12 @@ export default function GamesPage() {
                       ? 'in library'
                       : filter === 'backlog'
                         ? 'in the backlog'
-                        : filter === 'playing'
-                          ? 'playing'
-                          : filter === 'finished'
-                            ? 'finished'
-                            : filter === 'dropped'
-                              ? 'dropped'
+                        : filter === 'finished'
+                          ? 'finished'
+                          : filter === 'dropped'
+                            ? 'dropped'
+                            : filter === 'wont_play'
+                              ? "you won't play"
                               : 'hidden'}
                   </span>
                 </p>

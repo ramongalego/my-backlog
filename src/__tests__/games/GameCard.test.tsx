@@ -74,6 +74,7 @@ describe('GameCard', () => {
       ['hidden', 'Hidden'],
       ['backlog', 'Backlog'],
       ['playing', 'Playing'],
+      ['wont_play', "Won't Play"],
     ])('should show %s badge', (status, label) => {
       render(<GameCard game={createGame({ status })} onOpenDetail={mockOnOpenDetail} />);
 

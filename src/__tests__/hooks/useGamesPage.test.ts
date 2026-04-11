@@ -12,7 +12,10 @@ function filterAndSortGames(
   const searchLower = searchQuery.toLowerCase();
 
   const filtered = games.filter((game) => {
-    // Status filter
+    // Playing games live on the home page, never shown on the Games page.
+    if (game.status === 'playing') return false;
+    // Status filter — only hidden is excluded from "all"; wont_play still
+    // appears there since it's part of the library.
     if (filter === 'all' && game.status === 'hidden') return false;
     if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
     if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
@@ -94,10 +97,11 @@ describe('useGamesPage filtering logic', () => {
       expect(result[0].name).toBe('Mario Kart');
     });
 
-    it('should return all non-hidden games when search is empty', () => {
+    it('should return all library games when search is empty', () => {
       const result = filterGames(sampleGames, 'all', '');
 
-      expect(result).toHaveLength(5); // excludes hidden
+      // 6 games − 1 hidden − 1 playing = 4
+      expect(result).toHaveLength(4);
     });
 
     it('should return empty array when no matches', () => {
@@ -246,18 +250,36 @@ describe('useGamesPage filtering logic', () => {
       expect(result[0].name).toBe('Dark Souls');
     });
 
-    it('should filter by playing status', () => {
-      const result = filterGames(sampleGames, 'playing', '');
-
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Elden Ring');
+    it('should exclude playing games from the Games page entirely', () => {
+      // Playing games live on the home page's Currently Playing tile. The
+      // Games page lists the rest of the library, so filter counts sum cleanly.
+      const result = filterGames(sampleGames, 'all', '');
+      expect(result.map((g) => g.name)).not.toContain('Elden Ring');
     });
 
-    it('should show all non-hidden games with "all" filter', () => {
-      const result = filterGames(sampleGames, 'all', '');
+    it('should filter by wont_play status', () => {
+      const gamesWithWontPlay = [
+        ...sampleGames,
+        createGame({ app_id: 99, name: 'Boring Game', status: 'wont_play' }),
+      ];
+      const result = filterGames(gamesWithWontPlay, 'wont_play', '');
 
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Boring Game');
+    });
+
+    it('should show non-hidden / non-playing games (including wont_play) with "all" filter', () => {
+      const gamesWithWontPlay = [
+        ...sampleGames,
+        createGame({ app_id: 99, name: 'Boring Game', status: 'wont_play' }),
+      ];
+      const result = filterGames(gamesWithWontPlay, 'all', '');
+
+      // 7 games − 1 hidden − 1 playing = 5 (Zelda, FF, Mario, Dark Souls, Boring)
       expect(result).toHaveLength(5);
       expect(result.map((g) => g.name)).not.toContain('Hidden Gem');
+      expect(result.map((g) => g.name)).not.toContain('Elden Ring');
+      expect(result.map((g) => g.name)).toContain('Boring Game');
     });
   });
 
@@ -368,20 +390,21 @@ describe('useGamesPage filtering logic', () => {
 
 // Count computation extracted for independent testing
 function computeCounts(games: GameItem[]) {
-  const result = { all: 0, playing: 0, backlog: 0, finished: 0, dropped: 0, hidden: 0 };
+  const result = { all: 0, backlog: 0, finished: 0, dropped: 0, wont_play: 0, hidden: 0 };
   for (const game of games) {
     const s = game.status;
+    if (s === 'playing') continue; // Playing games aren't shown on the Games page.
     if (s === 'hidden') {
       result.hidden++;
+    } else if (s === 'wont_play') {
+      result.all++;
+      result.wont_play++;
     } else if (s === 'finished') {
       result.all++;
       result.finished++;
     } else if (s === 'dropped') {
       result.all++;
       result.dropped++;
-    } else if (s === 'playing') {
-      result.all++;
-      result.playing++;
     } else {
       result.all++;
       result.backlog++;
@@ -409,12 +432,15 @@ describe('useGamesPage count computation', () => {
     createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
     createGame({ app_id: 6, name: 'New Game', status: null }),
     createGame({ app_id: 7, name: 'Now Playing', status: 'playing' }),
+    createGame({ app_id: 8, name: 'Wont Bother', status: 'wont_play' }),
   ];
 
-  it('should exclude hidden games from all count', () => {
+  it('should exclude hidden and playing games from all count (wont_play is included)', () => {
     const counts = computeCounts(sampleGames);
-    expect(counts.all).toBe(6); // 7 games minus 1 hidden
+    // 8 games − 1 hidden − 1 playing = 6. wont_play IS included.
+    expect(counts.all).toBe(6);
     expect(counts.hidden).toBe(1);
+    expect(counts.wont_play).toBe(1);
   });
 
   it('should count null status as backlog', () => {
@@ -422,11 +448,11 @@ describe('useGamesPage count computation', () => {
     expect(counts.backlog).toBe(3); // Zelda + Mario + New Game (null)
   });
 
-  it('should count all statuses correctly in a single pass', () => {
+  it('should have all = backlog + finished + dropped + wont_play', () => {
     const counts = computeCounts(sampleGames);
-    expect(counts.finished).toBe(1);
-    expect(counts.dropped).toBe(1);
-    expect(counts.playing).toBe(1);
+    // The visible buckets must sum cleanly to `all` — this is the invariant
+    // that was broken when playing games used to contribute to `all`.
+    expect(counts.all).toBe(counts.backlog + counts.finished + counts.dropped + counts.wont_play);
   });
 
   it('should return dynamic counts when search query is active', () => {
@@ -436,7 +462,7 @@ describe('useGamesPage count computation', () => {
     expect(counts.backlog).toBe(1);
     expect(counts.finished).toBe(0);
     expect(counts.dropped).toBe(0);
-    expect(counts.playing).toBe(0);
+    expect(counts.wont_play).toBe(0);
     expect(counts.hidden).toBe(0);
   });
 
@@ -447,7 +473,7 @@ describe('useGamesPage count computation', () => {
     expect(counts.backlog).toBe(3);
     expect(counts.finished).toBe(1);
     expect(counts.dropped).toBe(1);
-    expect(counts.playing).toBe(1);
+    expect(counts.wont_play).toBe(1);
     expect(counts.hidden).toBe(1);
   });
 
@@ -465,7 +491,7 @@ describe('useGamesPage count computation', () => {
     expect(counts.backlog).toBe(0);
     expect(counts.finished).toBe(0);
     expect(counts.dropped).toBe(0);
-    expect(counts.playing).toBe(0);
+    expect(counts.wont_play).toBe(0);
     expect(counts.hidden).toBe(0);
   });
 });

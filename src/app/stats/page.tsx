@@ -436,7 +436,7 @@ export default function StatsPage() {
             <h1 className="text-2xl font-bold text-zinc-100">Stats</h1>
             <p className="text-zinc-500 text-sm mt-1">
               A look at your gaming library{' '}
-              <span className="text-zinc-600">· hidden games excluded</span>
+              <span className="text-zinc-600">· hidden and won&apos;t play games excluded</span>
             </p>
           </div>
 

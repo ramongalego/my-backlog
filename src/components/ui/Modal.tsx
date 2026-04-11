@@ -8,8 +8,16 @@ interface ModalProps {
   onClose?: () => void;
   children: ReactNode;
   title?: string;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | 'xl';
 }
+
+// xl is a custom 34rem (544px) — a nudge wider than lg (32rem) so a 6-column
+// status grid has a little breathing room without feeling oversized.
+const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-[34rem]',
+};
 
 export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -75,7 +83,7 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
         />
         <div
           ref={dialogRef}
-          className={`relative z-10 w-full ${size === 'lg' ? 'max-w-lg' : 'max-w-md'} bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800`}
+          className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? 'modal-title' : undefined}

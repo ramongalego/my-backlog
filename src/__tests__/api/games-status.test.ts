@@ -35,7 +35,14 @@ describe('gameStatusSchema', () => {
     });
 
     it('accepts all valid statuses', () => {
-      for (const status of ['backlog', 'playing', 'finished', 'dropped', 'hidden'] as const) {
+      for (const status of [
+        'backlog',
+        'playing',
+        'finished',
+        'dropped',
+        'wont_play',
+        'hidden',
+      ] as const) {
         expect(gameStatusSchema.safeParse({ ...valid, status }).success).toBe(true);
       }
     });
