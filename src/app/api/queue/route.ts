@@ -130,23 +130,23 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { order } = body;
-  if (!Array.isArray(order) || order.some((id) => typeof id !== 'number')) {
+  if (
+    !Array.isArray(order) ||
+    order.length === 0 ||
+    !order.every((id) => Number.isInteger(id) && id > 0)
+  ) {
     return NextResponse.json({ error: 'Invalid order' }, { status: 400 });
   }
 
-  // Update each item's position based on its index in the new order
-  const updates = order.map((appId: number, index: number) =>
-    supabase
-      .from('playing_queue')
-      .update({ position: index })
-      .eq('user_id', user.id)
-      .eq('app_id', appId),
-  );
+  const { error } = await supabase.rpc('reorder_playing_queue', { p_order: order });
 
-  const results = await Promise.all(updates);
-  const failed = results.find((r) => r.error);
-  if (failed?.error) {
-    Sentry.captureException(failed.error);
+  if (error) {
+    // Postgres raise_exception (P0001) for our validation errors → 400.
+    // Everything else is a real server problem → Sentry + 500.
+    if (error.code === 'P0001' || error.code === '22023') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    Sentry.captureException(error);
     return NextResponse.json({ error: 'Failed to reorder queue' }, { status: 500 });
   }
 

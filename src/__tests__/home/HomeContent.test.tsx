@@ -36,37 +36,49 @@ jest.mock('@/hooks/useGameLibrary', () => ({
 }));
 
 const baseLibrary = {
-  user: { id: 'user-1' },
-  profile: { steam_id: 'steam-123' },
-  isLoading: false,
-  shortGames: [],
-  weekendGames: [],
-  highlyRatedGames: [],
-  hiddenGems: [],
-  recentlyAdded: [],
-  currentlyPlaying: null,
-  isSyncing: false,
-  syncProgress: { current: 0, total: 0 },
-  syncingGames: [],
-  carouselsLoading: false,
-  isStatusLoading: false,
-  handlePickGame: jest.fn(),
-  handleFinishGame: jest.fn(),
-  handleDropGame: jest.fn(),
-  handleQueueGame: jest.fn(),
-  handleCancelGame: jest.fn(),
-  handleRandomPick: jest.fn(),
+  auth: {
+    user: { id: 'user-1' },
+    profile: { steam_id: 'steam-123' },
+    isLoading: false,
+  },
+  meta: {
+    gameCount: 0,
+    historyCount: 0,
+    queuedAppIds: new Set<number>(),
+  },
+  sync: {
+    isSyncing: false,
+    progress: { current: 0, total: 0 },
+    games: [],
+  },
+  carousels: {
+    shortGames: [],
+    weekendGames: [],
+    highlyRatedGames: [],
+    hiddenGems: [],
+    recentlyAdded: [],
+    loading: false,
+  },
+  currentGame: {
+    currentlyPlaying: null,
+    isStatusLoading: false,
+    statusModal: null,
+    gameSummary: null,
+    carouselModal: null,
+    handlePickGame: jest.fn(),
+    handleFinishGame: jest.fn(),
+    handleDropGame: jest.fn(),
+    handleQueueGame: jest.fn(),
+    handleOpenCarouselDetail: jest.fn(),
+    handleConfirmCarouselDetail: jest.fn(),
+    handleCloseCarouselModal: jest.fn(),
+    handleCancelGame: jest.fn(),
+    handleRandomPick: jest.fn(),
+    handleConfirmStatusChange: jest.fn(),
+    handleCloseStatusModal: jest.fn(),
+    handleCloseSummary: jest.fn(),
+  },
   handleConnectSteam: jest.fn(),
-  statusModal: null,
-  gameSummary: null,
-  queuedAppIds: new Set<number>(),
-  carouselModal: null,
-  handleOpenCarouselDetail: jest.fn(),
-  handleConfirmCarouselDetail: jest.fn(),
-  handleCloseCarouselModal: jest.fn(),
-  handleConfirmStatusChange: jest.fn(),
-  handleCloseStatusModal: jest.fn(),
-  handleCloseSummary: jest.fn(),
 };
 
 const mockGame: GameWithImage = {
@@ -106,7 +118,10 @@ describe('HomeContent — Pick My Game button', () => {
 
 describe('HomeContent — Pick My Next Game button', () => {
   beforeEach(() => {
-    mockUseGameLibrary.mockReturnValue({ ...baseLibrary, currentlyPlaying: mockGame });
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      currentGame: { ...baseLibrary.currentGame, currentlyPlaying: mockGame },
+    });
   });
 
   it('shows "Pick My Next Game" when a game is currently playing', () => {

@@ -25,8 +25,6 @@ export function useGameLibrary() {
   const isLoading = !authResolved || (steamConnected && !meta.loaded && !sync.isSyncing);
   const { refreshIfStale } = useLibraryRefresh();
 
-  // ─── Auto-refresh playtime if stale ─────────────────────────────────────────
-
   useEffect(() => {
     if (!authResolved || !user || !steamConnected || sync.isSyncing) return;
     refreshIfStale();
@@ -37,47 +35,48 @@ export function useGameLibrary() {
   };
 
   return {
-    // Auth
-    user,
-    profile,
-    isLoading,
-
-    // Library meta
-    gameCount: meta.gameCount,
-    historyCount: meta.historyCount,
-    queuedAppIds: meta.queuedAppIds,
-
-    // Sync
-    isSyncing: sync.isSyncing,
-    syncProgress: sync.syncProgress,
-    syncingGames: sync.syncingGames,
-
-    // Carousels
-    shortGames: carousels.shortGames,
-    weekendGames: carousels.weekendGames,
-    highlyRatedGames: carousels.highlyRatedGames,
-    hiddenGems: carousels.hiddenGems,
-    recentlyAdded: carousels.recentlyAdded,
-    carouselsLoading: carousels.carouselsLoading,
-
-    // Current game + actions
-    currentlyPlaying: currentGame.currentlyPlaying,
-    isStatusLoading: currentGame.isStatusLoading,
-    statusModal: currentGame.statusModal,
-    gameSummary: currentGame.gameSummary,
-    carouselModal: currentGame.carouselModal,
-    handlePickGame: currentGame.handlePickGame,
-    handleFinishGame: currentGame.handleFinishGame,
-    handleDropGame: currentGame.handleDropGame,
-    handleQueueGame: currentGame.handleQueueGame,
-    handleOpenCarouselDetail: currentGame.handleOpenCarouselDetail,
-    handleConfirmCarouselDetail: currentGame.handleConfirmCarouselDetail,
-    handleCloseCarouselModal: currentGame.handleCloseCarouselModal,
-    handleCancelGame: currentGame.handleCancelGame,
-    handleRandomPick: currentGame.handleRandomPick,
+    auth: {
+      user,
+      profile,
+      isLoading,
+    },
+    meta: {
+      gameCount: meta.gameCount,
+      historyCount: meta.historyCount,
+      queuedAppIds: meta.queuedAppIds,
+    },
+    sync: {
+      isSyncing: sync.isSyncing,
+      progress: sync.syncProgress,
+      games: sync.syncingGames,
+    },
+    carousels: {
+      shortGames: carousels.shortGames,
+      weekendGames: carousels.weekendGames,
+      highlyRatedGames: carousels.highlyRatedGames,
+      hiddenGems: carousels.hiddenGems,
+      recentlyAdded: carousels.recentlyAdded,
+      loading: carousels.carouselsLoading,
+    },
+    currentGame: {
+      currentlyPlaying: currentGame.currentlyPlaying,
+      isStatusLoading: currentGame.isStatusLoading,
+      statusModal: currentGame.statusModal,
+      gameSummary: currentGame.gameSummary,
+      carouselModal: currentGame.carouselModal,
+      handlePickGame: currentGame.handlePickGame,
+      handleFinishGame: currentGame.handleFinishGame,
+      handleDropGame: currentGame.handleDropGame,
+      handleQueueGame: currentGame.handleQueueGame,
+      handleOpenCarouselDetail: currentGame.handleOpenCarouselDetail,
+      handleConfirmCarouselDetail: currentGame.handleConfirmCarouselDetail,
+      handleCloseCarouselModal: currentGame.handleCloseCarouselModal,
+      handleCancelGame: currentGame.handleCancelGame,
+      handleRandomPick: currentGame.handleRandomPick,
+      handleConfirmStatusChange: currentGame.handleConfirmStatusChange,
+      handleCloseStatusModal: currentGame.handleCloseStatusModal,
+      handleCloseSummary: currentGame.handleCloseSummary,
+    },
     handleConnectSteam,
-    handleConfirmStatusChange: currentGame.handleConfirmStatusChange,
-    handleCloseStatusModal: currentGame.handleCloseStatusModal,
-    handleCloseSummary: currentGame.handleCloseSummary,
   };
 }

@@ -8,7 +8,7 @@ export async function updateGameStatus(
     rating?: number | null;
   },
 ): Promise<void> {
-  await fetch('/api/games/status', {
+  const res = await fetch('/api/games/status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -20,4 +20,15 @@ export async function updateGameStatus(
       rating: opts?.rating,
     }),
   });
+
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const body = await res.json();
+      detail = body?.error ? `: ${body.error}` : '';
+    } catch {
+      // response body wasn't JSON — ignore
+    }
+    throw new Error(`updateGameStatus failed (${res.status})${detail}`);
+  }
 }

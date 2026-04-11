@@ -25,40 +25,31 @@ function HomeContent() {
   const router = useRouter();
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
+  const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();
+  const { user, profile, isLoading } = auth;
+  const { historyCount, queuedAppIds } = meta;
+  const { isSyncing, progress: syncProgress, games: syncingGames } = sync;
+  const { shortGames, weekendGames, highlyRatedGames, hiddenGems, recentlyAdded } = carousels;
+  const carouselsLoading = carousels.loading;
   const {
-    user,
-    profile,
-    isLoading,
-    historyCount,
-    shortGames,
-    weekendGames,
-    highlyRatedGames,
-    hiddenGems,
-    recentlyAdded,
     currentlyPlaying,
-    isSyncing,
-    syncProgress,
-    syncingGames,
-    carouselsLoading,
     isStatusLoading,
+    statusModal,
+    gameSummary,
+    carouselModal,
     handlePickGame,
     handleFinishGame,
     handleDropGame,
     handleQueueGame,
-    handleCancelGame,
-    handleRandomPick,
-    handleConnectSteam,
-    statusModal,
-    gameSummary,
-    queuedAppIds,
-    carouselModal,
     handleOpenCarouselDetail,
     handleConfirmCarouselDetail,
     handleCloseCarouselModal,
+    handleCancelGame,
+    handleRandomPick,
     handleConfirmStatusChange,
     handleCloseStatusModal,
     handleCloseSummary,
-  } = useGameLibrary();
+  } = currentGame;
 
   useEffect(() => {
     if (searchParams.has('error')) {

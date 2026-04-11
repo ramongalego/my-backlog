@@ -9,6 +9,7 @@ import { celebrateGameFinished } from '@/lib/confetti';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
+import { updateGameStatus } from '@/lib/games/status';
 import { useLibraryRefresh } from './useLibraryRefresh';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -45,6 +46,18 @@ async function fetchQueue(): Promise<QueueItem[]> {
   if (!res.ok) return [];
   const data = await res.json();
   return data.queue ?? [];
+}
+
+async function assertOk(res: Response, action: string): Promise<void> {
+  if (res.ok) return;
+  let detail = '';
+  try {
+    const body = await res.json();
+    detail = body?.error ? `: ${body.error}` : '';
+  } catch {
+    // non-JSON body — ignore
+  }
+  throw new Error(`${action} failed (${res.status})${detail}`);
 }
 
 interface ConfirmInput {
@@ -96,7 +109,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
 
   const removeMutation = useMutation({
     mutationFn: async (appId: number) => {
-      await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+      await assertOk(res, 'Remove from queue');
     },
     onMutate: async (appId) => {
       await queryClient.cancelQueries({ queryKey: queueKey });
@@ -106,7 +120,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       );
       return { previous };
     },
-    onError: (_err, _appId, context) => {
+    onError: (err, _appId, context) => {
+      Sentry.captureException(err);
       if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to remove game from queue');
     },
@@ -115,11 +130,12 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
 
   const reorderMutation = useMutation({
     mutationFn: async (appIds: number[]) => {
-      await fetch('/api/queue', {
+      const res = await fetch('/api/queue', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order: appIds }),
       });
+      await assertOk(res, 'Reorder queue');
     },
     onMutate: async (appIds) => {
       await queryClient.cancelQueries({ queryKey: queueKey });
@@ -131,7 +147,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       });
       return { previous };
     },
-    onError: (_err, _appIds, context) => {
+    onError: (err, _appIds, context) => {
+      Sentry.captureException(err);
       if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to reorder queue');
     },
@@ -140,16 +157,13 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
 
   const cancelMutation = useMutation({
     mutationFn: async (game: GameWithImage) => {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: game.app_id, status: 'backlog' }),
-      });
-      await fetch('/api/queue', {
+      await updateGameStatus(game.app_id, 'backlog');
+      const res = await fetch('/api/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId: game.app_id }),
       });
+      await assertOk(res, 'Add to queue');
     },
     onMutate: async (game) => {
       await queryClient.cancelQueries({ queryKey: playingKey });
@@ -196,17 +210,11 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       if (!userId) throw new Error('Not authenticated');
       const finishedGame = currentlyPlaying;
 
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: finishedGame.app_id,
-          status,
-          ...(status === 'finished' ? { finishedAt: date } : {}),
-          ...(status === 'dropped' ? { droppedAt: date } : {}),
-          notes,
-          rating,
-        }),
+      await updateGameStatus(finishedGame.app_id, status, {
+        finishedAt: status === 'finished' ? date : undefined,
+        droppedAt: status === 'dropped' ? date : undefined,
+        notes,
+        rating,
       });
 
       const supabase = createClient();
@@ -266,12 +274,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     mutationFn: async (appId: number) => {
       if (!userId) throw new Error('Not authenticated');
 
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId, status: 'playing' }),
-      });
-      await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+      await updateGameStatus(appId, 'playing');
+      const res = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+      await assertOk(res, 'Remove from queue');
 
       return fetchCurrentlyPlaying(userId);
     },

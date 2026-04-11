@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Gamepad2, Menu, X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { UserMenu } from '@/components/UserMenu';
+import { useAuth } from '@/hooks/useAuth';
+import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, PLAYTIME_REFRESH_KEY } from '@/hooks/useLibraryRefresh';
-import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
@@ -26,13 +26,10 @@ export function Header() {
 }
 
 function HeaderInner() {
-  const [user, setUser] = useState<User | null>(null);
-  const [steamUsername, setSteamUsername] = useState<string | null>(null);
-  const [steamAvatar, setSteamAvatar] = useState<string | null>(null);
-  const [gameCount, setGameCount] = useState<number | null>(null);
+  const { user, profile, authResolved } = useAuth();
+  const { gameCount, loaded: libraryMetaLoaded } = useLibraryMeta(user?.id ?? null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
-  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -41,6 +38,10 @@ function HeaderInner() {
   });
   const { refresh } = useLibraryRefresh();
   const pathname = usePathname();
+
+  const isLoading = !authResolved;
+  const steamUsername = profile?.steam_username ?? null;
+  const steamAvatar = profile?.steam_avatar ?? null;
 
   // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
@@ -51,54 +52,6 @@ function HeaderInner() {
     const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
     return () => clearTimeout(id);
   }, [isRefreshDisabled]);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function loadUserData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('steam_username, steam_avatar')
-          .eq('id', user.id)
-          .single();
-
-        setSteamUsername(profile?.steam_username ?? null);
-        setSteamAvatar(profile?.steam_avatar ?? null);
-
-        const { count } = await supabase
-          .from('games')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('type', 'game')
-          .neq('status', 'hidden');
-
-        setGameCount(count ?? 0);
-      }
-
-      setIsLoading(false);
-    }
-
-    loadUserData();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        setSteamUsername(null);
-        setSteamAvatar(null);
-        setGameCount(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleRefreshLibrary = async () => {
     setIsRefreshing(true);
@@ -168,7 +121,7 @@ function HeaderInner() {
                 user={user}
                 steamUsername={steamUsername}
                 steamAvatar={steamAvatar}
-                gameCount={gameCount ?? undefined}
+                gameCount={libraryMetaLoaded ? gameCount : undefined}
                 onRefresh={handleRefreshLibrary}
                 isRefreshing={isRefreshing}
                 isRefreshDisabled={isRefreshDisabled}
