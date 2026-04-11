@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
@@ -8,6 +8,7 @@ import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
+import { useLibraryRefresh } from './useLibraryRefresh';
 import { toast } from 'sonner';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
@@ -39,8 +40,6 @@ interface UsePlayingQueuePageReturn {
   handleReorder: (appIds: number[]) => Promise<void>;
 }
 
-const ONE_HOUR_MS = 60 * 60 * 1000;
-
 async function fetchPlayingGame(): Promise<GameWithImage | null> {
   const supabase = createClient();
   const {
@@ -70,15 +69,10 @@ async function fetchQueue(): Promise<QueueItem[]> {
 export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   const queryClient = useQueryClient();
   const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
+  const { refreshIfStale } = useLibraryRefresh();
   const [isStatusLoading, setIsStatusLoading] = useState(false);
-  const isStatusLoadingRef = useRef(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
-
-  const setStatusLoadingBoth = (val: boolean) => {
-    isStatusLoadingRef.current = val;
-    setIsStatusLoading(val);
-  };
 
   const { data: currentlyPlaying = null, isPending: isPlayingPending } = useQuery({
     queryKey: queryKeys.games.playing(),
@@ -94,34 +88,10 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
 
   const isLoading = isPlayingPending || isQueuePending;
 
-  // Auto-refresh playtime if stale
   useEffect(() => {
     if (isLoading) return;
-    const lastRefresh = localStorage.getItem('playtime_refresh_at');
-    if (lastRefresh && Date.now() - parseInt(lastRefresh) <= ONE_HOUR_MS) return;
-
-    async function runRefresh() {
-      try {
-        const res = await fetch('/api/steam/refresh', { method: 'POST' });
-        if (!res.ok) return;
-        const data = await res.json();
-        localStorage.setItem('playtime_refresh_at', Date.now().toString());
-        if (data.newGames > 0) {
-          window.location.reload();
-          return;
-        }
-        if (!isStatusLoadingRef.current) {
-          queryClient.invalidateQueries({ queryKey: queryKeys.games.playing() });
-        }
-      } catch (err) {
-        Sentry.captureException(err);
-        console.error('Failed to refresh library:', err);
-        toast.error('Failed to refresh library');
-      }
-    }
-
-    runRefresh();
-  }, [isLoading, queryClient]);
+    refreshIfStale();
+  }, [isLoading, refreshIfStale]);
 
   // ─── Mutations ──────────────────────────────────────────────────────────────
 
@@ -187,7 +157,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     if (!currentlyPlaying) return;
     const game = currentlyPlaying;
 
-    setStatusLoadingBoth(true);
+    setIsStatusLoading(true);
     queryClient.setQueryData(queryKeys.games.playing(), null);
     queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
       ...(old ?? []),
@@ -226,7 +196,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         (old ?? []).filter((q) => q.app_id !== game.app_id),
       );
     } finally {
-      setStatusLoadingBoth(false);
+      setIsStatusLoading(false);
     }
   };
 
@@ -239,7 +209,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     if (!currentlyPlaying) return;
     const finishedGame = currentlyPlaying;
     setStatusModal(null);
-    setStatusLoadingBoth(true);
+    setIsStatusLoading(true);
     try {
       await fetch('/api/games/status', {
         method: 'POST',
@@ -308,7 +278,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       console.error(`Failed to ${status} game:`, err);
       toast.error(`Failed to ${status} game`);
     }
-    setStatusLoadingBoth(false);
+    setIsStatusLoading(false);
   };
 
   const handleRemoveFromQueue = async (appId: number) => {
@@ -319,7 +289,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     const item = queue.find((q) => q.app_id === appId);
     if (!item) return;
 
-    setStatusLoadingBoth(true);
+    setIsStatusLoading(true);
     queryClient.setQueryData(queryKeys.games.playing(), {
       app_id: item.app_id,
       name: item.game.name,
@@ -366,7 +336,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         item,
       ]);
     } finally {
-      setStatusLoadingBoth(false);
+      setIsStatusLoading(false);
     }
   };
 

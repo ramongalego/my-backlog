@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
-import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from './useAuth';
 import { useGameSync } from './useGameSync';
 import { useCarouselPools } from './useCarouselPools';
 import { useLibraryMeta } from './useLibraryMeta';
 import { useCurrentGame } from './useCurrentGame';
+import { useLibraryRefresh } from './useLibraryRefresh';
 
 export function useGameLibrary() {
   const { user, profile, authResolved } = useAuth();
@@ -24,17 +23,16 @@ export function useGameLibrary() {
 
   const steamConnected = !!profile?.steam_id;
   const isLoading = !authResolved || (steamConnected && !meta.loaded && !sync.isSyncing);
+  const { refreshIfStale } = useLibraryRefresh();
 
-  // ─── Post-auth initialization: sync check, carousel loading, auto-refresh ──
+  // ─── Post-auth initialization: sync check + carousel loading ────────────────
 
   useEffect(() => {
     if (!authResolved || !user || !steamConnected) return;
     const userId = user.id;
+    const supabase = createClient();
 
-    async function initializeLibrary() {
-      const supabase = createClient();
-
-      // Check for unsynced games
+    async function checkUnsynced() {
       const { data: allUnsyncedGames } = await supabase
         .from('games')
         .select('app_id, name, type, categories')
@@ -50,8 +48,9 @@ export function useGameLibrary() {
       if (unsyncedGames && unsyncedGames.length > 0) {
         await sync.startSync(unsyncedGames);
       }
+    }
 
-      // Load carousel pools in parallel
+    async function loadCarouselPools() {
       const carouselSelect =
         'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat';
 
@@ -133,42 +132,23 @@ export function useGameLibrary() {
       carousels.setHiddenGemsPool(hiddenGemsData || []);
       carousels.setRecentlyAddedPool(recentlyAddedData || []);
       carousels.setCarouselsLoading(false);
+    }
 
-      // Auto-refresh playtime if stale
-      const lastRefresh = localStorage.getItem('playtime_refresh_at');
-      const oneHour = 60 * 60 * 1000;
-      if (!lastRefresh || Date.now() - parseInt(lastRefresh) > oneHour) {
-        try {
-          const res = await fetch('/api/steam/refresh', { method: 'POST' });
-          if (res.ok) {
-            const data = await res.json();
-            localStorage.setItem('playtime_refresh_at', Date.now().toString());
-            if (data.newGames > 0) {
-              window.location.reload();
-              return;
-            }
-            // Re-fetch currently playing to show updated playtime
-            const { data: refreshedGame } = await supabase
-              .from('games')
-              .select(
-                'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
-              )
-              .eq('user_id', userId)
-              .eq('status', 'playing')
-              .single();
-            if (refreshedGame) currentGame.setCurrentlyPlaying(refreshedGame);
-          }
-        } catch (err) {
-          Sentry.captureException(err);
-          console.error('Failed to refresh library:', err);
-          toast.error('Failed to refresh library');
-        }
-      }
+    async function initializeLibrary() {
+      await checkUnsynced();
+      await loadCarouselPools();
     }
 
     initializeLibrary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authResolved, user?.id, steamConnected]);
+
+  // ─── Auto-refresh playtime if stale ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!authResolved || !user || !steamConnected || sync.isSyncing) return;
+    refreshIfStale();
+  }, [authResolved, user, steamConnected, sync.isSyncing, refreshIfStale]);
 
   const handleConnectSteam = () => {
     window.location.href = '/api/steam/auth';

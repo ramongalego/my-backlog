@@ -49,7 +49,7 @@ export default function SharedRoastPage() {
             <div className="inline-flex items-center justify-center w-14 h-14 bg-violet-500/10 rounded-2xl mb-4">
               <Flame className="w-7 h-7 text-violet-400" />
             </div>
-            <h1 className="text-3xl font-bold text-zinc-100 mb-2">Steam Profile Roaster</h1>
+            <h1 className="text-3xl font-bold text-zinc-100 mb-2">Steam Roast</h1>
           </div>
 
           {/* Loading */}

@@ -17,7 +17,7 @@ export function Footer() {
               className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
             >
               <Flame className="w-3.5 h-3.5" aria-hidden="true" />
-              Roast My Steam
+              Steam Roast
             </Link>
           </nav>
         </div>

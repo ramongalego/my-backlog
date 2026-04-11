@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import * as Sentry from '@sentry/nextjs';
 import { Gamepad2, Menu, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { UserMenu } from '@/components/UserMenu';
+import { useLibraryRefresh, PLAYTIME_REFRESH_KEY } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
@@ -37,17 +36,18 @@ function HeaderInner() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const last = localStorage.getItem('playtime_refresh_at');
-    return !!last && Date.now() - parseInt(last) < REFRESH_COOLDOWN_MS;
+    const last = localStorage.getItem(PLAYTIME_REFRESH_KEY);
+    return !!last && Date.now() - Number(last) < REFRESH_COOLDOWN_MS;
   });
+  const { refresh } = useLibraryRefresh();
   const pathname = usePathname();
 
   // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
     if (!isRefreshDisabled) return;
-    const last = localStorage.getItem('playtime_refresh_at');
+    const last = localStorage.getItem(PLAYTIME_REFRESH_KEY);
     if (!last) return;
-    const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - parseInt(last)));
+    const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - Number(last)));
     const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
     return () => clearTimeout(id);
   }, [isRefreshDisabled]);
@@ -102,20 +102,9 @@ function HeaderInner() {
 
   const handleRefreshLibrary = async () => {
     setIsRefreshing(true);
-    try {
-      const res = await fetch('/api/steam/refresh', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('playtime_refresh_at', Date.now().toString());
-        setIsRefreshDisabled(true);
-        if (data.newGames > 0 || data.updatedPlaytime > 0) {
-          window.location.reload();
-        }
-      }
-    } catch (err) {
-      Sentry.captureException(err);
-      console.error('Failed to refresh library:', err);
-      toast.error('Failed to refresh library');
+    const result = await refresh({ manual: true });
+    if (result.success) {
+      setIsRefreshDisabled(true);
     }
     setIsRefreshing(false);
   };
