@@ -35,7 +35,7 @@ export function useCurrentGame({
   addQueuedAppId,
 }: UseCurrentGameOpts) {
   const queryClient = useQueryClient();
-  const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
+  const { gamesAndQueue: invalidateGamesAndQueue, queue: invalidateQueue } = useInvalidateQueries();
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
@@ -61,6 +61,11 @@ export function useCurrentGame({
     setIsStatusLoading(true);
     try {
       await updateGameStatus(game.app_id, 'playing');
+      // Idempotent — the DELETE route is a no-op if the game isn't queued,
+      // so we can safely call it on every pick to handle the case where the
+      // user directly picks a game that happens to be in their queue.
+      const res = await fetch(`/api/queue?appId=${game.app_id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Failed to remove from queue (${res.status})`);
       setCurrentlyPlaying(game);
       removeFromPools(game.app_id);
     } catch (err) {
@@ -68,6 +73,7 @@ export function useCurrentGame({
       console.error('Failed to pick game:', err);
       toast.error('Failed to start playing');
     }
+    invalidateGamesAndQueue();
     setIsStatusLoading(false);
   };
 
@@ -85,7 +91,7 @@ export function useCurrentGame({
     const ok = await addToQueue(game.app_id);
     if (ok) {
       addQueuedAppId(game.app_id);
-      queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
+      invalidateQueue();
       toast.success(`${game.name} added to the queue!`);
     }
   };
@@ -220,6 +226,7 @@ export function useCurrentGame({
       console.error('Failed to cancel game:', err);
       toast.error('Failed to move game to backlog');
     }
+    invalidateGamesAndQueue();
     setIsStatusLoading(false);
   };
 

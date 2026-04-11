@@ -19,14 +19,20 @@ export async function promoteNextFromQueue(
   const appId = topItem.app_id;
 
   // Promote to playing
-  await fetch('/api/games/status', {
+  const promoteRes = await fetch('/api/games/status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ appId, status: 'playing' }),
   });
+  if (!promoteRes.ok) {
+    throw new Error(`Failed to promote queued game (${promoteRes.status})`);
+  }
 
   // Remove from queue
-  await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+  const removeRes = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+  if (!removeRes.ok) {
+    throw new Error(`Failed to remove promoted game from queue (${removeRes.status})`);
+  }
 
   // Fetch game details to return
   const { data: game } = await supabase

@@ -112,7 +112,7 @@ async function fetchGamesData(): Promise<GamesData> {
 
 export function useGamesPage(): UseGamesPageReturn {
   const queryClient = useQueryClient();
-  const { games: invalidateGames } = useInvalidateQueries();
+  const { games: invalidateGames, queue: invalidateQueue } = useInvalidateQueries();
 
   const { data, isPending } = useQuery({
     queryKey: queryKeys.games.list(),
@@ -199,7 +199,7 @@ export function useGamesPage(): UseGamesPageReturn {
         toast.success(`${vars.gameName} added to the queue!`);
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.queue.all }),
+    onSettled: () => invalidateQueue(),
   });
 
   const handleOpenDetail = (appId: number) => {
