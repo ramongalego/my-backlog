@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
 import { getBaseUrl } from '@/lib/url';
 import Providers from './providers';
 import './globals.css';
@@ -48,6 +49,7 @@ export default function RootLayout({
         </a>
         <Providers>
           <Header />
+          <LibrarySyncGuard />
           {children}
           <Footer />
           <Toaster richColors position="bottom-right" />
