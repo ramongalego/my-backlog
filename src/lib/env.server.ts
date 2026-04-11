@@ -20,3 +20,7 @@ export function getOpenAIApiKey(): string {
 export function getCronSecret(): string {
   return required('CRON_SECRET');
 }
+
+export function getSupabaseServiceRoleKey(): string {
+  return required('SUPABASE_SERVICE_ROLE_KEY');
+}

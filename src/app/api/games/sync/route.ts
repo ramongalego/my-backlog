@@ -1,34 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import {
-  getGameDetails,
-  extractGameMetadata,
-  getSteamReviewData,
-  getSteamTags,
-  getSteamDeckCompat,
-} from '@/lib/steam/store-api';
-import { getMainStoryHours } from '@/lib/hltb/api';
-import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
+import { isMetadataFresh } from '@/lib/games/scoring';
+import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-
-interface GameMetadata {
-  app_id: number;
-  platform: string;
-  type: string | null;
-  name: string | null;
-  genres: string[] | null;
-  categories: string[] | null;
-  description: string | null;
-  release_date: string | null;
-  header_image: string | null;
-  steam_review_score: number | null;
-  steam_review_count: number | null;
-  steam_review_weighted: number | null;
-  main_story_hours: number | null;
-  deck_compat: number | null;
-  tags: string[] | null;
-  synced_at: string;
-}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -88,52 +62,11 @@ export async function POST(request: NextRequest) {
     (existingMetadata.type !== 'game' || existingMetadata.main_story_hours !== null);
 
   if (cacheIsUsable) {
-    // Use cached metadata
     metadata = existingMetadata as GameMetadata;
     fromCache = true;
   } else {
-    // Fetch from APIs
-    const details = await getGameDetails(appId);
-    const extractedMetadata = details ? extractGameMetadata(details) : null;
-
-    if (extractedMetadata) {
-      const isGame = extractedMetadata.type === 'game';
-
-      // Only fetch enriched data for actual games — skip DLC, software, etc.
-      const [mainStoryHours, steamReviewData, tags, deckCompat] = isGame
-        ? await Promise.all([
-            getMainStoryHours(libraryName || details?.data?.name || ''),
-            getSteamReviewData(appId),
-            getSteamTags(appId),
-            getSteamDeckCompat(appId),
-          ])
-        : [null, null, null, null];
-
-      // Calculate weighted score using Bayesian average
-      const weightedScore = steamReviewData
-        ? calculateBayesianScore(steamReviewData.score, steamReviewData.count)
-        : null;
-
-      metadata = {
-        app_id: appId,
-        platform: 'PC',
-        type: extractedMetadata.type,
-        name: details?.data?.name ?? null,
-        genres: extractedMetadata.genres,
-        categories: extractedMetadata.categories,
-        description: extractedMetadata.description,
-        release_date: extractedMetadata.release_date,
-        header_image: extractedMetadata.header_image,
-        steam_review_score: steamReviewData?.score ?? null,
-        steam_review_count: steamReviewData?.count ?? null,
-        steam_review_weighted: weightedScore,
-        main_story_hours: mainStoryHours,
-        deck_compat: deckCompat,
-        tags: tags,
-        synced_at: new Date().toISOString(),
-      };
-
-      // Upsert into shared game_metadata table
+    metadata = await fetchGameMetadata(appId, libraryName);
+    if (metadata) {
       await supabase.from('game_metadata').upsert(metadata, { onConflict: 'app_id' });
     }
   }

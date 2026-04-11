@@ -3,6 +3,10 @@
     {
       "path": "/api/internal/hltb-health",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/internal/refresh-metadata",
+      "schedule": "0 3 * * 0"
     }
   ]
 }
