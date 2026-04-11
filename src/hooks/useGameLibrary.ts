@@ -12,10 +12,11 @@ import { useLibraryRefresh } from './useLibraryRefresh';
 export function useGameLibrary() {
   const { user, profile, authResolved } = useAuth();
   const sync = useGameSync();
-  const carousels = useCarouselPools();
-  const meta = useLibraryMeta(profile?.steam_id ? (user?.id ?? null) : null);
+  const scopedUserId = profile?.steam_id ? (user?.id ?? null) : null;
+  const carousels = useCarouselPools(scopedUserId);
+  const meta = useLibraryMeta(scopedUserId);
   const currentGame = useCurrentGame({
-    userId: profile?.steam_id ? (user?.id ?? null) : null,
+    userId: scopedUserId,
     removeFromPools: carousels.removeFromPools,
     addBackToPool: carousels.addBackToPool,
     addQueuedAppId: meta.addQueuedAppId,
@@ -25,14 +26,14 @@ export function useGameLibrary() {
   const isLoading = !authResolved || (steamConnected && !meta.loaded && !sync.isSyncing);
   const { refreshIfStale } = useLibraryRefresh();
 
-  // ─── Post-auth initialization: sync check + carousel loading ────────────────
+  // ─── Check for unsynced games and kick off metadata sync ────────────────────
 
   useEffect(() => {
     if (!authResolved || !user || !steamConnected) return;
     const userId = user.id;
-    const supabase = createClient();
 
     async function checkUnsynced() {
+      const supabase = createClient();
       const { data: allUnsyncedGames } = await supabase
         .from('games')
         .select('app_id, name, type, categories')
@@ -50,96 +51,7 @@ export function useGameLibrary() {
       }
     }
 
-    async function loadCarouselPools() {
-      const carouselSelect =
-        'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat';
-
-      const backlogFilter = 'status.is.null,status.eq.backlog';
-      const singlePlayer = ['Single-player'];
-
-      const [
-        { data: shortData },
-        { data: weekendData },
-        { data: highlyRatedData },
-        { data: hiddenGemsData },
-        { data: recentlyAddedData },
-      ] = await Promise.all([
-        supabase
-          .from('games')
-          .select(carouselSelect)
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .not('main_story_hours', 'is', null)
-          .not('steam_review_weighted', 'is', null)
-          .gte('main_story_hours', 1)
-          .lte('main_story_hours', 5)
-          .lte('playtime_forever', 240)
-          .contains('categories', singlePlayer)
-          .or(backlogFilter)
-          .order('steam_review_weighted', { ascending: false }),
-        supabase
-          .from('games')
-          .select(carouselSelect)
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .not('main_story_hours', 'is', null)
-          .not('steam_review_weighted', 'is', null)
-          .gt('main_story_hours', 5)
-          .lte('main_story_hours', 12)
-          .lte('playtime_forever', 240)
-          .contains('categories', singlePlayer)
-          .or(backlogFilter)
-          .order('steam_review_weighted', { ascending: false }),
-        supabase
-          .from('games')
-          .select(carouselSelect)
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .not('steam_review_weighted', 'is', null)
-          .eq('playtime_forever', 0)
-          .contains('categories', singlePlayer)
-          .or(backlogFilter)
-          .order('steam_review_weighted', { ascending: false })
-          .limit(20),
-        // Hidden Gems: high score, few reviews
-        supabase
-          .from('games')
-          .select(carouselSelect)
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .gte('steam_review_score', 80)
-          .gt('steam_review_count', 10)
-          .lte('steam_review_count', 500)
-          .contains('categories', singlePlayer)
-          .or(backlogFilter)
-          .order('steam_review_score', { ascending: false })
-          .limit(20),
-        // Recently Added (higher app_id = newer Steam release)
-        supabase
-          .from('games')
-          .select(carouselSelect)
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .contains('categories', singlePlayer)
-          .or(backlogFilter)
-          .order('app_id', { ascending: false })
-          .limit(20),
-      ]);
-
-      carousels.setShortGamesPool(shortData || []);
-      carousels.setWeekendGamesPool(weekendData || []);
-      carousels.setHighlyRatedGamesPool(highlyRatedData || []);
-      carousels.setHiddenGemsPool(hiddenGemsData || []);
-      carousels.setRecentlyAddedPool(recentlyAddedData || []);
-      carousels.setCarouselsLoading(false);
-    }
-
-    async function initializeLibrary() {
-      await checkUnsynced();
-      await loadCarouselPools();
-    }
-
-    initializeLibrary();
+    checkUnsynced();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authResolved, user?.id, steamConnected]);
 

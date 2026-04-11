@@ -32,11 +32,12 @@ export function useInvalidateQueries() {
     queue: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
     },
-    /** Invalidate games + queue (after pick/cancel that affects both) */
+    /** Invalidate games + queue + carousels (after pick/cancel or library refresh) */
     gamesAndQueue: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.games.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.queue.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.carousels.all });
     },
   };
 }

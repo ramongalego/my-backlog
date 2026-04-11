@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { addToQueue } from '@/lib/games/queue';
+import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { toast } from 'sonner';
@@ -24,19 +25,7 @@ interface UseCurrentGameOpts {
   addQueuedAppId: (appId: number) => void;
 }
 
-const PLAYING_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat';
-
-async function fetchCurrentlyPlaying(userId: string): Promise<GameWithImage | null> {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from('games')
-    .select(PLAYING_SELECT)
-    .eq('user_id', userId)
-    .eq('status', 'playing')
-    .single();
-  return data ?? null;
-}
+const ANONYMOUS_PLAYING_KEY = [...queryKeys.games.all, 'playing', 'anonymous'] as const;
 
 export function useCurrentGame({
   userId,
@@ -50,15 +39,17 @@ export function useCurrentGame({
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
   const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
 
+  const playingKey = userId ? queryKeys.games.playing(userId) : ANONYMOUS_PLAYING_KEY;
+
   const { data: currentlyPlaying = null } = useQuery({
-    queryKey: queryKeys.games.playing(),
+    queryKey: playingKey,
     queryFn: () => fetchCurrentlyPlaying(userId!),
     enabled: !!userId,
     staleTime: 30 * 1000,
   });
 
   const setCurrentlyPlaying = (game: GameWithImage | null) => {
-    queryClient.setQueryData(queryKeys.games.playing(), game);
+    queryClient.setQueryData(playingKey, game);
   };
 
   // ─── Actions ────────────────────────────────────────────────────────────────

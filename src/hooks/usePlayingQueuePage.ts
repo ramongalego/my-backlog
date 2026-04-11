@@ -8,7 +8,9 @@ import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
+import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
 import { useLibraryRefresh } from './useLibraryRefresh';
+import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
@@ -26,38 +28,17 @@ interface UsePlayingQueuePageReturn {
   gameSummary: GameSummaryData | null;
   handleFinish: () => void;
   handleDrop: () => void;
-  handleCancel: () => Promise<void>;
-  handleConfirm: (
-    status: string,
-    date: string,
-    notes: string,
-    rating: number | null,
-  ) => Promise<void>;
+  handleCancel: () => void;
+  handleConfirm: (status: string, date: string, notes: string, rating: number | null) => void;
   handleCloseStatusModal: () => void;
   handleCloseSummary: () => void;
-  handleRemoveFromQueue: (appId: number) => Promise<void>;
-  handlePickFromQueue: (appId: number) => Promise<void>;
-  handleReorder: (appIds: number[]) => Promise<void>;
+  handleRemoveFromQueue: (appId: number) => void;
+  handlePickFromQueue: (appId: number) => void;
+  handleReorder: (appIds: number[]) => void;
 }
 
-async function fetchPlayingGame(): Promise<GameWithImage | null> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data } = await supabase
-    .from('games')
-    .select(
-      'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
-    )
-    .eq('user_id', user.id)
-    .eq('status', 'playing')
-    .single();
-
-  return data ?? null;
-}
+const ANONYMOUS_PLAYING_KEY = [...queryKeys.games.all, 'playing', 'anonymous'] as const;
+const ANONYMOUS_QUEUE_KEY = [...queryKeys.queue.all, 'list', 'anonymous'] as const;
 
 async function fetchQueue(): Promise<QueueItem[]> {
   const res = await fetch('/api/queue');
@@ -66,32 +47,50 @@ async function fetchQueue(): Promise<QueueItem[]> {
   return data.queue ?? [];
 }
 
+interface ConfirmInput {
+  status: string;
+  date: string;
+  notes: string;
+  rating: number | null;
+}
+
+interface ConfirmResult {
+  finishedGame: GameWithImage;
+  promoted: GameWithImage | null;
+  gamesFinished: number;
+  totalGames: number;
+  status: string;
+  rating: number | null;
+}
+
 export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   const queryClient = useQueryClient();
   const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
   const { refreshIfStale } = useLibraryRefresh();
-  const [isStatusLoading, setIsStatusLoading] = useState(false);
+  const { user, authResolved } = useAuth();
+  const userId = user?.id ?? null;
+
+  const playingKey = userId ? queryKeys.games.playing(userId) : ANONYMOUS_PLAYING_KEY;
+  const queueKey = userId ? queryKeys.queue.list(userId) : ANONYMOUS_QUEUE_KEY;
+
   const [statusModal, setStatusModal] = useState<StatusModal | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
 
-  const { data: currentlyPlaying = null, isPending: isPlayingPending } = useQuery({
-    queryKey: queryKeys.games.playing(),
-    queryFn: fetchPlayingGame,
+  const { data: currentlyPlaying = null, isLoading: isPlayingLoading } = useQuery({
+    queryKey: playingKey,
+    queryFn: () => fetchCurrentlyPlaying(userId!),
+    enabled: !!userId,
     staleTime: 30 * 1000,
   });
 
-  const { data: queue = [], isPending: isQueuePending } = useQuery({
-    queryKey: queryKeys.queue.list(),
+  const { data: queue = [], isLoading: isQueueLoading } = useQuery({
+    queryKey: queueKey,
     queryFn: fetchQueue,
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 
-  const isLoading = isPlayingPending || isQueuePending;
-
-  useEffect(() => {
-    if (isLoading) return;
-    refreshIfStale();
-  }, [isLoading, refreshIfStale]);
+  const isLoading = !authResolved || (!!userId && (isPlayingLoading || isQueueLoading));
 
   // ─── Mutations ──────────────────────────────────────────────────────────────
 
@@ -100,18 +99,18 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
     },
     onMutate: async (appId) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.queue.list() });
-      const previous = queryClient.getQueryData<QueueItem[]>(queryKeys.queue.list());
-      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
+      await queryClient.cancelQueries({ queryKey: queueKey });
+      const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
+      queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) =>
         (old ?? []).filter((q) => q.app_id !== appId),
       );
       return { previous };
     },
     onError: (_err, _appId, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.queue.list(), context.previous);
+      if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to remove game from queue');
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.queue.list() }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queueKey }),
   });
 
   const reorderMutation = useMutation({
@@ -123,9 +122,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       });
     },
     onMutate: async (appIds) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.queue.list() });
-      const previous = queryClient.getQueryData<QueueItem[]>(queryKeys.queue.list());
-      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => {
+      await queryClient.cancelQueries({ queryKey: queueKey });
+      const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
+      queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) => {
         if (!old) return old;
         const byId = new Map(old.map((q) => [q.app_id, q]));
         return appIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
@@ -133,49 +132,14 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       return { previous };
     },
     onError: (_err, _appIds, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.queue.list(), context.previous);
+      if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to reorder queue');
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queueKey }),
   });
 
-  // ─── Handlers ───────────────────────────────────────────────────────────────
-
-  const handleFinish = () => {
-    if (!currentlyPlaying) return;
-    setStatusModal({ action: 'finished' });
-  };
-
-  const handleDrop = () => {
-    if (!currentlyPlaying) return;
-    setStatusModal({ action: 'dropped' });
-  };
-
-  const handleCloseStatusModal = () => setStatusModal(null);
-  const handleCloseSummary = () => setGameSummary(null);
-
-  const handleCancel = async () => {
-    if (!currentlyPlaying) return;
-    const game = currentlyPlaying;
-
-    setIsStatusLoading(true);
-    queryClient.setQueryData(queryKeys.games.playing(), null);
-    queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
-      ...(old ?? []),
-      {
-        id: -1,
-        app_id: game.app_id,
-        position: (old ?? []).length,
-        game: {
-          name: game.name,
-          header_image: game.header_image,
-          playtime_forever: game.playtime_forever,
-          main_story_hours: game.main_story_hours,
-          steam_review_score: game.steam_review_score ?? null,
-        },
-      },
-    ]);
-
-    try {
+  const cancelMutation = useMutation({
+    mutationFn: async (game: GameWithImage) => {
       await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -186,31 +150,52 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appId: game.app_id }),
       });
-      invalidateGamesAndQueue();
-    } catch (err) {
+    },
+    onMutate: async (game) => {
+      await queryClient.cancelQueries({ queryKey: playingKey });
+      await queryClient.cancelQueries({ queryKey: queueKey });
+      const previousPlaying = queryClient.getQueryData<GameWithImage | null>(playingKey);
+      const previousQueue = queryClient.getQueryData<QueueItem[]>(queueKey);
+
+      queryClient.setQueryData(playingKey, null);
+      queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) => [
+        ...(old ?? []),
+        {
+          id: -1,
+          app_id: game.app_id,
+          position: (old ?? []).length,
+          game: {
+            name: game.name,
+            header_image: game.header_image,
+            playtime_forever: game.playtime_forever,
+            main_story_hours: game.main_story_hours,
+            steam_review_score: game.steam_review_score ?? null,
+          },
+        },
+      ]);
+
+      return { previousPlaying, previousQueue };
+    },
+    onError: (err, _game, context) => {
       Sentry.captureException(err);
       console.error('Failed to move game to queue:', err);
       toast.error('Failed to move game to queue');
-      queryClient.setQueryData(queryKeys.games.playing(), game);
-      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
-        (old ?? []).filter((q) => q.app_id !== game.app_id),
-      );
-    } finally {
-      setIsStatusLoading(false);
-    }
-  };
+      if (context?.previousPlaying !== undefined) {
+        queryClient.setQueryData(playingKey, context.previousPlaying);
+      }
+      if (context?.previousQueue !== undefined) {
+        queryClient.setQueryData(queueKey, context.previousQueue);
+      }
+    },
+    onSettled: () => invalidateGamesAndQueue(),
+  });
 
-  const handleConfirm = async (
-    status: string,
-    date: string,
-    notes: string,
-    rating: number | null,
-  ) => {
-    if (!currentlyPlaying) return;
-    const finishedGame = currentlyPlaying;
-    setStatusModal(null);
-    setIsStatusLoading(true);
-    try {
+  const confirmMutation = useMutation<ConfirmResult, Error, ConfirmInput>({
+    mutationFn: async ({ status, date, notes, rating }) => {
+      if (!currentlyPlaying) throw new Error('No currently playing game');
+      if (!userId) throw new Error('Not authenticated');
+      const finishedGame = currentlyPlaying;
+
       await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,36 +210,33 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       });
 
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all([
+        supabase
+          .from('games')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('type', 'game')
+          .eq('status', 'finished'),
+        supabase
+          .from('games')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('type', 'game')
+          .neq('status', 'hidden'),
+        promoteNextFromQueue(userId, supabase),
+      ]);
 
-      let promoted: GameWithImage | null = null;
-      let gamesFinished = 0;
-      let totalGames = 0;
-
-      if (user) {
-        const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all([
-          supabase
-            .from('games')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('type', 'game')
-            .eq('status', 'finished'),
-          supabase
-            .from('games')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('type', 'game')
-            .neq('status', 'hidden'),
-          promoteNextFromQueue(user.id, supabase),
-        ]);
-        promoted = promotedGame;
-        gamesFinished = finishedCount ?? 0;
-        totalGames = totalCount ?? 0;
-      }
-
-      queryClient.setQueryData(queryKeys.games.playing(), promoted);
+      return {
+        finishedGame,
+        promoted: promotedGame,
+        gamesFinished: finishedCount ?? 0,
+        totalGames: totalCount ?? 0,
+        status,
+        rating,
+      };
+    },
+    onSuccess: ({ finishedGame, promoted, gamesFinished, totalGames, status, rating }) => {
+      queryClient.setQueryData(playingKey, promoted);
 
       if (status === 'finished') {
         setGameSummary({
@@ -271,38 +253,19 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         });
         celebrateGameFinished();
       }
-
-      invalidateGamesAndQueue();
-    } catch (err) {
+    },
+    onError: (err, variables) => {
       Sentry.captureException(err);
-      console.error(`Failed to ${status} game:`, err);
-      toast.error(`Failed to ${status} game`);
-    }
-    setIsStatusLoading(false);
-  };
+      console.error(`Failed to ${variables.status} game:`, err);
+      toast.error(`Failed to ${variables.status} game`);
+    },
+    onSettled: () => invalidateGamesAndQueue(),
+  });
 
-  const handleRemoveFromQueue = async (appId: number) => {
-    removeMutation.mutate(appId);
-  };
+  const pickMutation = useMutation({
+    mutationFn: async (appId: number) => {
+      if (!userId) throw new Error('Not authenticated');
 
-  const handlePickFromQueue = async (appId: number) => {
-    const item = queue.find((q) => q.app_id === appId);
-    if (!item) return;
-
-    setIsStatusLoading(true);
-    queryClient.setQueryData(queryKeys.games.playing(), {
-      app_id: item.app_id,
-      name: item.game.name,
-      header_image: item.game.header_image,
-      main_story_hours: item.game.main_story_hours ?? 0,
-      playtime_forever: item.game.playtime_forever,
-      started_at: null,
-    });
-    queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) =>
-      (old ?? []).filter((q) => q.app_id !== appId),
-    );
-
-    try {
       await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -310,37 +273,91 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       });
       await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
 
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: game } = await supabase
-          .from('games')
-          .select(
-            'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat',
-          )
-          .eq('user_id', user.id)
-          .eq('app_id', appId)
-          .single();
-        if (game) queryClient.setQueryData(queryKeys.games.playing(), game);
-      }
-      invalidateGamesAndQueue();
-    } catch (err) {
+      return fetchCurrentlyPlaying(userId);
+    },
+    onMutate: async (appId) => {
+      const item = queue.find((q) => q.app_id === appId);
+      if (!item) return { previousPlaying: undefined, previousQueue: undefined };
+
+      await queryClient.cancelQueries({ queryKey: playingKey });
+      await queryClient.cancelQueries({ queryKey: queueKey });
+      const previousPlaying = queryClient.getQueryData<GameWithImage | null>(playingKey);
+      const previousQueue = queryClient.getQueryData<QueueItem[]>(queueKey);
+
+      queryClient.setQueryData(playingKey, {
+        app_id: item.app_id,
+        name: item.game.name,
+        header_image: item.game.header_image,
+        main_story_hours: item.game.main_story_hours ?? 0,
+        playtime_forever: item.game.playtime_forever,
+        started_at: null,
+      });
+      queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) =>
+        (old ?? []).filter((q) => q.app_id !== appId),
+      );
+
+      return { previousPlaying, previousQueue };
+    },
+    onSuccess: (freshGame) => {
+      if (freshGame) queryClient.setQueryData(playingKey, freshGame);
+    },
+    onError: (err, _appId, context) => {
       Sentry.captureException(err);
       console.error('Failed to pick game from queue:', err);
       toast.error('Failed to start playing');
-      queryClient.setQueryData(queryKeys.games.playing(), null);
-      queryClient.setQueryData(queryKeys.queue.list(), (old: QueueItem[] | undefined) => [
-        ...(old ?? []),
-        item,
-      ]);
-    } finally {
-      setIsStatusLoading(false);
-    }
+      if (context?.previousPlaying !== undefined) {
+        queryClient.setQueryData(playingKey, context.previousPlaying);
+      }
+      if (context?.previousQueue !== undefined) {
+        queryClient.setQueryData(queueKey, context.previousQueue);
+      }
+    },
+    onSettled: () => invalidateGamesAndQueue(),
+  });
+
+  const isStatusLoading =
+    cancelMutation.isPending || confirmMutation.isPending || pickMutation.isPending;
+
+  useEffect(() => {
+    if (isLoading) return;
+    refreshIfStale();
+  }, [isLoading, refreshIfStale]);
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleFinish = () => {
+    if (!currentlyPlaying) return;
+    setStatusModal({ action: 'finished' });
   };
 
-  const handleReorder = async (appIds: number[]) => {
+  const handleDrop = () => {
+    if (!currentlyPlaying) return;
+    setStatusModal({ action: 'dropped' });
+  };
+
+  const handleCloseStatusModal = () => setStatusModal(null);
+  const handleCloseSummary = () => setGameSummary(null);
+
+  const handleCancel = () => {
+    if (!currentlyPlaying) return;
+    cancelMutation.mutate(currentlyPlaying);
+  };
+
+  const handleConfirm = (status: string, date: string, notes: string, rating: number | null) => {
+    if (!currentlyPlaying) return;
+    setStatusModal(null);
+    confirmMutation.mutate({ status, date, notes, rating });
+  };
+
+  const handleRemoveFromQueue = (appId: number) => {
+    removeMutation.mutate(appId);
+  };
+
+  const handlePickFromQueue = (appId: number) => {
+    pickMutation.mutate(appId);
+  };
+
+  const handleReorder = (appIds: number[]) => {
     reorderMutation.mutate(appIds);
   };
 
