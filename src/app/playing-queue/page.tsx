@@ -53,10 +53,16 @@ interface NowPlayingRowProps {
 }
 
 function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayingRowProps) {
-  const playedHours = game.playtime_forever >= 60 ? Math.round(game.playtime_forever / 60) : null;
-  const estimateHours = game.main_story_hours > 0 ? game.main_story_hours : null;
+  const hasEstimate = game.main_story_hours > 0;
+  const hasPlaytime = game.playtime_forever >= 60;
+  const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;
+  const estimateHours = hasEstimate ? game.main_story_hours : null;
+  const isPastEstimate =
+    hasEstimate && hasPlaytime && game.playtime_forever / 60 >= game.main_story_hours;
   const progressPct =
-    playedHours && estimateHours ? Math.min((playedHours / estimateHours) * 100, 100) : null;
+    !isPastEstimate && playedHours && estimateHours
+      ? Math.min((playedHours / estimateHours) * 100, 100)
+      : null;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-4">
@@ -69,7 +75,12 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-zinc-100 sm:truncate mb-1">{game.name}</p>
-          {progressPct !== null ? (
+          {isPastEstimate ? (
+            <p className="text-xs mt-0.5">
+              <span className="text-amber-400">{playedHours}h played</span>
+              <span className="text-zinc-500"> · past the ~{estimateHours}h estimate</span>
+            </p>
+          ) : progressPct !== null ? (
             <div className="w-fit">
               <p className="text-xs text-zinc-500 mt-0.5">
                 {playedHours}h played · ~{estimateHours}h to beat
