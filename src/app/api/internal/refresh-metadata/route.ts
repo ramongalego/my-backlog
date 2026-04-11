@@ -223,6 +223,8 @@ async function refreshOne(
 
   // Fan-out: push the refreshed data to every user's games row for this
   // app_id. No user_id filter — service role bypasses RLS deliberately here.
+  // Setting metadata_synced = true so LibrarySyncGuard doesn't re-trigger a
+  // pointless bulk sync for rows the cron already populated.
   const { error: fanoutError } = await supabase
     .from('games')
     .update({
@@ -239,6 +241,7 @@ async function refreshOne(
       main_story_hours: metadata.main_story_hours,
       deck_compat: metadata.deck_compat,
       tags: metadata.tags,
+      metadata_synced: true,
     })
     .eq('app_id', candidate.app_id);
 
