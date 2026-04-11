@@ -17,6 +17,13 @@ let cachedConfig: HLTBConfig | null = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 
+// Forces the next call to re-run the full bundle-scraping + init flow.
+// Used by the health check so it actually exercises the fragile path on every run.
+export function resetHltbCache(): void {
+  cachedConfig = null;
+  cacheTimestamp = 0;
+}
+
 async function getHLTBConfig(): Promise<HLTBConfig | null> {
   if (cachedConfig && Date.now() - cacheTimestamp < CACHE_DURATION) {
     return cachedConfig;

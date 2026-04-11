@@ -16,3 +16,7 @@ export function getSteamApiKey(): string {
 export function getOpenAIApiKey(): string {
   return required('OPENAI_API_KEY');
 }
+
+export function getCronSecret(): string {
+  return required('CRON_SECRET');
+}

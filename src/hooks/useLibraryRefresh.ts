@@ -55,7 +55,7 @@ export function useLibraryRefresh() {
               `Updated playtime for ${updatedPlaytime} ${updatedPlaytime === 1 ? 'game' : 'games'}`,
             );
           } else {
-            toast.success("You're up to date");
+            toast.success('Your library is up to date');
           }
         }
 

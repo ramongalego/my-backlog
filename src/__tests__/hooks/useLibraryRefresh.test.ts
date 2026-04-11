@@ -80,7 +80,7 @@ describe('useLibraryRefresh', () => {
         await result.current.refresh({ manual: true });
       });
 
-      expect(toast.success).toHaveBeenCalledWith("You're up to date");
+      expect(toast.success).toHaveBeenCalledWith('Your library is up to date');
       expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
     });
 

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/hltb-health",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
