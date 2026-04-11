@@ -42,3 +42,9 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Supabase CLI local state (never commit — may contain project IDs, dumps, secrets)
+supabase/.branches/
+supabase/.temp/
+supabase/seed.sql
+supabase/config.toml
