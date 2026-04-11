@@ -11,7 +11,7 @@ import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { toast } from 'sonner';
-import type { GameWithImage } from '@/types/games';
+import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
 interface StatusModal {
@@ -172,6 +172,13 @@ export function useCurrentGame({
       }
 
       setCurrentlyPlaying(promoted);
+      if (promoted && userId) {
+        queryClient.setQueryData(
+          queryKeys.queue.list(userId),
+          (old: QueueItem[] | undefined) =>
+            (old ?? []).filter((q) => q.app_id !== promoted.app_id),
+        );
+      }
 
       if (status === 'finished') {
         setGameSummary({

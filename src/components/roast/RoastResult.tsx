@@ -81,56 +81,67 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-center gap-4">
-        <button
-          onClick={handleReddit}
-          aria-label="Share on Reddit"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+      <div className="flex flex-col items-center gap-4">
+        <div
+          className="flex flex-col items-center gap-2"
+          role="group"
+          aria-labelledby="roast-share-heading"
         >
-          <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
-          Reddit
-        </button>
-        <span className="text-zinc-700" aria-hidden="true">
-          &middot;
-        </span>
-        <button
-          onClick={handleTwitter}
-          aria-label="Share on Twitter"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-        >
-          <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
-          Twitter
-        </button>
-        <span className="text-zinc-700" aria-hidden="true">
-          &middot;
-        </span>
-        <button
-          onClick={handleCopyLink}
-          aria-label="Copy share link"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-        >
-          {copied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-400">Copied!</span>
-            </>
-          ) : (
-            <>
-              <Link2 className="w-3.5 h-3.5" />
-              Copy link
-            </>
-          )}
-        </button>
-        {onRoastAnother && (
-          <>
-            <span className="text-zinc-700">&middot;</span>
+          <h2
+            id="roast-share-heading"
+            className="text-xs uppercase tracking-wider text-zinc-600"
+          >
+            Share
+          </h2>
+          <div className="flex items-center gap-4">
             <button
-              onClick={onRoastAnother}
-              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              onClick={handleReddit}
+              aria-label="Share on Reddit"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
             >
-              Roast someone else
+              <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
+              Reddit
             </button>
-          </>
+            <span className="text-zinc-700" aria-hidden="true">
+              &middot;
+            </span>
+            <button
+              onClick={handleTwitter}
+              aria-label="Share on Twitter"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
+              Twitter
+            </button>
+            <span className="text-zinc-700" aria-hidden="true">
+              &middot;
+            </span>
+            <button
+              onClick={handleCopyLink}
+              aria-label="Copy share link"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Link2 className="w-3.5 h-3.5" />
+                  Copy link
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        {onRoastAnother && (
+          <button
+            onClick={onRoastAnother}
+            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+          >
+            Roast someone else
+          </button>
         )}
       </div>
     </div>

@@ -10,9 +10,9 @@ interface GamesSortProps {
 }
 
 const SORT_OPTIONS = [
-  { value: 'playtime' as GameSort, label: 'Most Played' },
   { value: 'score' as GameSort, label: 'Highest Rated' },
   { value: 'recent' as GameSort, label: 'Most Recent' },
+  { value: 'playtime' as GameSort, label: 'Most Played' },
 ];
 
 export function GamesSort({ value, onChange }: GamesSortProps) {

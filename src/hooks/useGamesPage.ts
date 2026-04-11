@@ -123,8 +123,8 @@ export function useGamesPage(): UseGamesPageReturn {
   const games = data?.games ?? [];
   const queuedAppIds = data?.queuedAppIds ?? new Set<number>();
 
-  const [filter, setFilter] = useState<GameFilter>('all');
-  const [sort, setSort] = useState<GameSort>('playtime');
+  const [filter, setFilter] = useState<GameFilter>('backlog');
+  const [sort, setSort] = useState<GameSort>('score');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusModal, setStatusModal] = useState<GamesPageStatusModal | null>(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);

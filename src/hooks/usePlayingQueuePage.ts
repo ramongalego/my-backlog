@@ -245,6 +245,11 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     },
     onSuccess: ({ finishedGame, promoted, gamesFinished, totalGames, status, rating }) => {
       queryClient.setQueryData(playingKey, promoted);
+      if (promoted) {
+        queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) =>
+          (old ?? []).filter((q) => q.app_id !== promoted.app_id),
+        );
+      }
 
       if (status === 'finished') {
         setGameSummary({
