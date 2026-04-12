@@ -1,7 +1,18 @@
 'use client';
 
 import Image from 'next/image';
-import { Archive, Ban, Check, EyeOff, Gamepad2, ListOrdered, Pencil, Play, Star, X } from 'lucide-react';
+import {
+  Archive,
+  Ban,
+  Check,
+  EyeOff,
+  Gamepad2,
+  ListOrdered,
+  Pencil,
+  Play,
+  Star,
+  X,
+} from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
 import { GameCardInfo } from './GameCardInfo';
 

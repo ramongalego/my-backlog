@@ -25,8 +25,7 @@ export function Button({
 
   const variants = {
     primary: 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500',
-    secondary:
-      'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 focus:ring-zinc-500',
+    secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 focus:ring-zinc-500',
     ghost: 'bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 focus:ring-zinc-500',
     success: 'bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-500',
     danger: 'bg-rose-600 text-white hover:bg-rose-500 focus:ring-rose-500',

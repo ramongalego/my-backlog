@@ -216,9 +216,7 @@ export function useStats() {
     ];
     const floored = rawPcts.map((p) => ({ ...p, floor: Math.floor(p.value) }));
     let remainder = 100 - floored.reduce((sum, p) => sum + p.floor, 0);
-    const byRemainder = [...floored].sort(
-      (a, b) => (b.value - b.floor) - (a.value - a.floor),
-    );
+    const byRemainder = [...floored].sort((a, b) => b.value - b.floor - (a.value - a.floor));
     for (const p of byRemainder) {
       if (remainder <= 0) break;
       p.floor++;

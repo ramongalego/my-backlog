@@ -545,9 +545,7 @@ export default function StatsPage() {
           deckCompat={editModal.deckCompat}
           initialStatus="backlog"
           disablePlaying={hasPlayingGame}
-          onAddToQueue={
-            hasPlayingGame ? () => handleAddToQueue(editModal.appId) : undefined
-          }
+          onAddToQueue={hasPlayingGame ? () => handleAddToQueue(editModal.appId) : undefined}
         />
       )}
     </div>
