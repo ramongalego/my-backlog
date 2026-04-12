@@ -188,10 +188,22 @@ export async function POST(request: NextRequest) {
     .sort((a, b) => b.completionRate - a.completionRate)
     .slice(0, 10);
 
+  // Pre-filter by time commitment to reduce prompt size.
+  // Games with unknown hours are always included — let the AI reason about them.
+  const TIME_MAX_HOURS: Record<TimeCommitment, number | null> = {
+    short: 12,
+    medium: 20,
+    long: null,
+  };
+  const maxHours = TIME_MAX_HOURS[preferences.time];
+  const timeFilteredGames = maxHours
+    ? backlogGames.filter((g) => g.main_story_hours == null || g.main_story_hours <= maxHours)
+    : backlogGames;
+
   // Build context for AI
   const context: SuggestionContext = {
     preferences,
-    backlogGames: backlogGames.map(
+    backlogGames: timeFilteredGames.map(
       (g): GameForSuggestion => ({
         app_id: g.app_id,
         name: g.name,
