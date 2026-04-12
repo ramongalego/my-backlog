@@ -369,7 +369,7 @@ function MostPlayedUnfinished({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const { stats, loading } = useStats();
+  const { stats, loading, hasPlayingGame } = useStats();
   const { games: invalidateGames, queue: invalidateQueue } = useInvalidateQueries();
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
@@ -544,9 +544,9 @@ export default function StatsPage() {
           playtimeMinutes={editModal.playtimeMinutes}
           deckCompat={editModal.deckCompat}
           initialStatus="backlog"
-          disablePlaying={(stats?.playing ?? 0) > 0}
+          disablePlaying={hasPlayingGame}
           onAddToQueue={
-            (stats?.playing ?? 0) > 0 ? () => handleAddToQueue(editModal.appId) : undefined
+            hasPlayingGame ? () => handleAddToQueue(editModal.appId) : undefined
           }
         />
       )}

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Archive, Ban, Check, EyeOff, Gamepad2, ListOrdered, Pencil, Play, X } from 'lucide-react';
+import { Archive, Ban, Check, EyeOff, Gamepad2, ListOrdered, Pencil, Play, Star, X } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
 import { GameCardInfo } from './GameCardInfo';
 
@@ -79,6 +79,12 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
         ) : (
           <div className="absolute top-2 right-2">
             <StatusBadge status={status} />
+          </div>
+        )}
+        {game.status === 'finished' && game.rating != null && (
+          <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-zinc-950/90 text-xs font-medium rounded flex items-center gap-1">
+            <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
+            <span className="text-zinc-200">{game.rating}/10</span>
           </div>
         )}
       </button>

@@ -225,7 +225,7 @@ export default function DiaryPage() {
                 onChange={setSelectedYear}
                 icon={<CalendarDays className="w-4 h-4" />}
                 options={[
-                  { value: 'all', label: 'All years' },
+                  { value: 'all', label: 'All time' },
                   ...availableYears.map((year) => ({ value: year, label: year })),
                 ]}
               />

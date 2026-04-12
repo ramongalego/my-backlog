@@ -54,11 +54,9 @@ export interface Stats {
   finished: number;
   dropped: number;
   backlog: number;
-  playing: number;
   finishedPct: number;
   droppedPct: number;
   backlogPct: number;
-  playingPct: number;
   totalPlaytimeHours: number;
   totalPlaytimeDays: number;
   estimatedBacklogHours: number;
@@ -110,8 +108,7 @@ export function useStats() {
     const total = games.length;
     const finished = games.filter((g) => g.status === 'finished').length;
     const dropped = games.filter((g) => g.status === 'dropped').length;
-    const playing = games.filter((g) => g.status === 'playing').length;
-    const backlog = total - finished - dropped - playing;
+    const backlog = total - finished - dropped;
 
     const rawPlaytimeMins = games.reduce((sum, g) => sum + g.playtime_forever, 0);
     const totalPlaytimeHours = Math.round(rawPlaytimeMins / 60);
@@ -169,11 +166,10 @@ export function useStats() {
           10
         : null;
 
-    // Rating distribution — all games with a rating (any status)
-    const allRatedGames = games.filter((g) => g.rating !== null);
+    // Rating distribution — finished games only (consistent with avgRating)
     const ratingDistribution: RatingBar[] = Array.from({ length: 11 }, (_, i) => ({
       rating: i,
-      count: allRatedGames.filter((g) => g.rating === i).length,
+      count: ratedGames.filter((g) => g.rating === i).length,
     }));
 
     // Finished by year
@@ -212,16 +208,35 @@ export function useStats() {
         deck_compat: g.deck_compat ?? null,
       }));
 
+    // Largest-remainder method so percentages always sum to exactly 100
+    const rawPcts = [
+      { key: 'backlog' as const, value: (backlog / total) * 100 },
+      { key: 'finished' as const, value: (finished / total) * 100 },
+      { key: 'dropped' as const, value: (dropped / total) * 100 },
+    ];
+    const floored = rawPcts.map((p) => ({ ...p, floor: Math.floor(p.value) }));
+    let remainder = 100 - floored.reduce((sum, p) => sum + p.floor, 0);
+    const byRemainder = [...floored].sort(
+      (a, b) => (b.value - b.floor) - (a.value - a.floor),
+    );
+    for (const p of byRemainder) {
+      if (remainder <= 0) break;
+      p.floor++;
+      remainder--;
+    }
+    const pcts = Object.fromEntries(floored.map((p) => [p.key, p.floor])) as Record<
+      'backlog' | 'finished' | 'dropped',
+      number
+    >;
+
     return {
       total,
       finished,
       dropped,
       backlog,
-      playing,
-      finishedPct: Math.round((finished / total) * 100),
-      droppedPct: Math.round((dropped / total) * 100),
-      backlogPct: Math.round((backlog / total) * 100),
-      playingPct: Math.round((playing / total) * 100),
+      finishedPct: pcts.finished,
+      droppedPct: pcts.dropped,
+      backlogPct: pcts.backlog,
       totalPlaytimeHours,
       totalPlaytimeDays,
       estimatedBacklogHours,
@@ -236,5 +251,7 @@ export function useStats() {
     };
   })();
 
-  return { stats, loading: isPending };
+  const hasPlayingGame = games.some((g) => g.status === 'playing');
+
+  return { stats, loading: isPending, hasPlayingGame };
 }
