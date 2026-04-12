@@ -117,9 +117,7 @@ export async function GET(request: NextRequest) {
 
             if (gamesError) {
               console.error('Games batch insert failed:', gamesError.message);
-              resolve(
-                redirectWithClearedState(`${baseUrl}/?error=games_insert_failed`),
-              );
+              resolve(redirectWithClearedState(`${baseUrl}/?error=games_insert_failed`));
               return;
             }
           }

@@ -213,9 +213,7 @@ export async function POST(request: NextRequest) {
   };
 
   // Check if there are any eligible games after exclusions
-  const eligibleCount = context.backlogGames.filter(
-    (g) => !allExcludeAppIds.has(g.app_id),
-  ).length;
+  const eligibleCount = context.backlogGames.filter((g) => !allExcludeAppIds.has(g.app_id)).length;
   if (eligibleCount === 0) {
     return NextResponse.json(
       {

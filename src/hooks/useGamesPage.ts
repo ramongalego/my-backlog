@@ -27,7 +27,7 @@ export interface GameItem {
 }
 
 export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
-export type GameSort = 'playtime' | 'score' | 'recent';
+export type GameSort = 'playtime' | 'score' | 'recent' | 'length';
 
 export interface FilterCounts {
   all: number;
@@ -270,7 +270,13 @@ export function useGamesPage(): UseGamesPageReturn {
       // library and should appear under All alongside their own tab.
       if (filter === 'all' && game.status === 'hidden') return false;
       // Playing games appear under both "all" and "backlog" (like queued games)
-      if (filter === 'backlog' && game.status && game.status !== 'backlog' && game.status !== 'playing') return false;
+      if (
+        filter === 'backlog' &&
+        game.status &&
+        game.status !== 'backlog' &&
+        game.status !== 'playing'
+      )
+        return false;
       if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
       return true;
     });
@@ -281,6 +287,11 @@ export function useGamesPage(): UseGamesPageReturn {
           return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
         case 'recent':
           return b.app_id - a.app_id;
+        case 'length': {
+          const aHours = a.main_story_hours ?? Infinity;
+          const bHours = b.main_story_hours ?? Infinity;
+          return aHours - bHours;
+        }
         case 'playtime':
         default:
           return b.playtime_forever - a.playtime_forever;

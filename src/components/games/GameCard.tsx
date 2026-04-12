@@ -11,7 +11,10 @@ interface GameCardProps {
   queued?: boolean;
 }
 
-const STATUS_BADGE: Record<string, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
+const STATUS_BADGE: Record<
+  string,
+  { label: string; className: string; icon: React.ComponentType<{ className?: string }> }
+> = {
   finished: { label: 'Finished', className: 'bg-emerald-950/95 text-emerald-400', icon: Check },
   playing: { label: 'Playing', className: 'bg-sky-950/95 text-sky-400', icon: Play },
   dropped: { label: 'Dropped', className: 'bg-rose-950/95 text-rose-400', icon: X },
@@ -66,7 +69,10 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
         </div>
 
         {queued ? (
-          <div className="absolute top-2 right-2 px-2 py-0.5 bg-sky-950/95 text-sky-400 text-xs font-medium rounded flex items-center gap-1" title="In playing queue">
+          <div
+            className="absolute top-2 right-2 px-2 py-0.5 bg-sky-950/95 text-sky-400 text-xs font-medium rounded flex items-center gap-1"
+            title="In playing queue"
+          >
             <ListOrdered className="w-3 h-3" aria-hidden="true" />
             Queued
           </div>

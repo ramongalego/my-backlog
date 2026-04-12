@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { getSteamApiKey } from '@/lib/env.server';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },

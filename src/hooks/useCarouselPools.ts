@@ -167,20 +167,10 @@ export function useCarouselPools(userId: string | null) {
   const addBackToPool = (game: GameWithImage) => {
     updatePools((pools) => {
       const hours = game.main_story_hours;
-      if (
-        hours != null &&
-        hours >= 1 &&
-        hours <= 5 &&
-        (game.playtime_forever ?? 0) <= 240
-      ) {
+      if (hours != null && hours >= 1 && hours <= 5 && (game.playtime_forever ?? 0) <= 240) {
         return { ...pools, shortGamesPool: [...pools.shortGamesPool, game] };
       }
-      if (
-        hours != null &&
-        hours > 5 &&
-        hours <= 12 &&
-        (game.playtime_forever ?? 0) <= 240
-      ) {
+      if (hours != null && hours > 5 && hours <= 12 && (game.playtime_forever ?? 0) <= 240) {
         return { ...pools, weekendGamesPool: [...pools.weekendGamesPool, game] };
       }
       return pools;

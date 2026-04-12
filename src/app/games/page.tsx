@@ -112,7 +112,12 @@ export default function GamesPage() {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {visibleGames.map((game) => (
-                  <GameCard key={game.app_id} game={game} onOpenDetail={handleOpenDetail} queued={queuedAppIds.has(game.app_id)} />
+                  <GameCard
+                    key={game.app_id}
+                    game={game}
+                    onOpenDetail={handleOpenDetail}
+                    queued={queuedAppIds.has(game.app_id)}
+                  />
                 ))}
               </div>
               <div ref={sentinelRef} />

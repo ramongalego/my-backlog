@@ -13,6 +13,7 @@ const SORT_OPTIONS = [
   { value: 'score' as GameSort, label: 'Highest Rated' },
   { value: 'recent' as GameSort, label: 'Most Recent' },
   { value: 'playtime' as GameSort, label: 'Most Played' },
+  { value: 'length' as GameSort, label: 'Game Length' },
 ];
 
 export function GamesSort({ value, onChange }: GamesSortProps) {
