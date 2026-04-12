@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { getSteamApiKey } from '@/lib/env.server';
 
 export async function POST(request: NextRequest) {
-  // Rate limiting - stricter for Steam refresh
-  const ip = getClientIp(request);
-  const rateLimitResult = checkRateLimit(`steam-refresh:${ip}`, RATE_LIMITS.steamRefresh);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limiting per user (not IP) — this is an authenticated endpoint
+  const rateLimitResult = checkRateLimit(`steam-refresh:${user.id}`, RATE_LIMITS.steamRefresh);
 
   if (!rateLimitResult.success) {
     return NextResponse.json(
@@ -22,15 +30,6 @@ export async function POST(request: NextRequest) {
         },
       },
     );
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Get user's Steam ID from profile

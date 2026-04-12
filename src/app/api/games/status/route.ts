@@ -82,6 +82,12 @@ export async function POST(request: NextRequest) {
     updatePayload.dropped_at = droppedAt || null;
     updatePayload.notes = notes ?? null;
     updatePayload.rating = rating ?? null;
+  } else if (status === 'wont_play' || status === 'hidden') {
+    updatePayload.started_at = null;
+    updatePayload.finished_at = null;
+    updatePayload.dropped_at = null;
+    updatePayload.notes = null;
+    updatePayload.rating = null;
   }
 
   // Update the game status
@@ -115,7 +121,7 @@ export async function GET() {
     .select('app_id, name, header_image, main_story_hours')
     .eq('user_id', user.id)
     .eq('status', 'playing')
-    .single();
+    .maybeSingle();
 
   return NextResponse.json({ game: data });
 }

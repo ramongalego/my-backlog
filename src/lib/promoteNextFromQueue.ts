@@ -12,7 +12,7 @@ export async function promoteNextFromQueue(
     .eq('user_id', userId)
     .order('position', { ascending: true })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (!topItem) return null;
 
@@ -40,7 +40,7 @@ export async function promoteNextFromQueue(
     .select('app_id, name, header_image, main_story_hours, playtime_forever, started_at')
     .eq('user_id', userId)
     .eq('app_id', appId)
-    .single();
+    .maybeSingle();
 
   return game ?? null;
 }

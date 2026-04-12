@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     .eq('user_id', user.id);
 
   const queuedAppIds = (queuedGames ?? []).map((q) => q.app_id as number);
-  const allExcludeAppIds = [...new Set([...excludeAppIds, ...queuedAppIds])];
+  const allExcludeAppIds = new Set([...excludeAppIds, ...queuedAppIds]);
 
   // Fetch user's games
   const { data: backlogGames, error: backlogError } = await supabase
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
 
   // Check if there are any eligible games after exclusions
   const eligibleCount = context.backlogGames.filter(
-    (g) => !allExcludeAppIds.includes(g.app_id),
+    (g) => !allExcludeAppIds.has(g.app_id),
   ).length;
   if (eligibleCount === 0) {
     return NextResponse.json(

@@ -39,6 +39,7 @@ export default function GamesPage() {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
+    queuedAppIds,
   } = useGamesPage();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -111,7 +112,7 @@ export default function GamesPage() {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {visibleGames.map((game) => (
-                  <GameCard key={game.app_id} game={game} onOpenDetail={handleOpenDetail} />
+                  <GameCard key={game.app_id} game={game} onOpenDetail={handleOpenDetail} queued={queuedAppIds.has(game.app_id)} />
                 ))}
               </div>
               <div ref={sentinelRef} />

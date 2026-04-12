@@ -71,7 +71,7 @@ export function buildSuggestionPrompt(context: SuggestionContext): string {
   } = context;
 
   // Filter out excluded games
-  const eligibleGames = backlogGames.filter((g) => !excludeAppIds.includes(g.app_id));
+  const eligibleGames = backlogGames.filter((g) => !excludeAppIds.has(g.app_id));
 
   if (eligibleGames.length === 0) {
     throw new Error('No eligible games to suggest');

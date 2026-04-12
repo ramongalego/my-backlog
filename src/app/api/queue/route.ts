@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     .eq('user_id', user.id)
     .order('position', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const nextPosition = maxRow ? maxRow.position + 1 : 0;
 

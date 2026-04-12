@@ -39,7 +39,7 @@ export interface SuggestionContext {
   backlogGames: GameForSuggestion[];
   finishedGames: FinishedGame[];
   droppedGames: string[];
-  excludeAppIds: number[];
+  excludeAppIds: Set<number>;
   previousReasonings: string[];
   tagAffinities: TagAffinity[];
 }

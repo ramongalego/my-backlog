@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     .select('reroll_count')
     .eq('user_id', user.id)
     .eq('app_id', appId)
-    .single();
+    .maybeSingle();
 
   // Increment the reroll count
   const currentCount = game?.reroll_count ?? 0;

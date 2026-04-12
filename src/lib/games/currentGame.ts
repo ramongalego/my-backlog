@@ -11,6 +11,6 @@ export async function fetchCurrentlyPlaying(userId: string): Promise<GameWithIma
     .select(PLAYING_GAME_SELECT)
     .eq('user_id', userId)
     .eq('status', 'playing')
-    .single();
+    .maybeSingle();
   return data ?? null;
 }

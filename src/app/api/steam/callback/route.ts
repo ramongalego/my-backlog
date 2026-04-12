@@ -116,7 +116,11 @@ export async function GET(request: NextRequest) {
             const { error: gamesError } = await supabase.from('games').insert(batch);
 
             if (gamesError) {
-              console.error('Games batch insert failed');
+              console.error('Games batch insert failed:', gamesError.message);
+              resolve(
+                redirectWithClearedState(`${baseUrl}/?error=games_insert_failed`),
+              );
+              return;
             }
           }
         }

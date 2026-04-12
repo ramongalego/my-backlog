@@ -4,7 +4,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Minimal chainable supabase mock: each call returns `this`, the terminal
-// .single() returns whatever queueData/gameData is configured.
+// .maybeSingle() returns whatever queueData/gameData is configured.
 function makeSupabase({
   queueData,
   gameData,
@@ -17,16 +17,19 @@ function makeSupabase({
     gameData ?? null,
   ];
 
+  const resolve = jest.fn().mockImplementation(async () => {
+    const next = callQueue.shift() ?? null;
+    return { data: next, error: null };
+  });
+
   const chain = {
     from: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
-    single: jest.fn().mockImplementation(async () => {
-      const next = callQueue.shift() ?? null;
-      return { data: next, error: null };
-    }),
+    single: resolve,
+    maybeSingle: resolve,
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -11,12 +11,12 @@ const csp = [
   "default-src 'self'",
   // 'unsafe-inline' is required for Next.js inline scripts (hydration, JSON-LD).
   // 'unsafe-eval' is only needed in dev for React Refresh / HMR.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com",
   "font-src 'self' data:",
-  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost}`,
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://va.vercel-scripts.com`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

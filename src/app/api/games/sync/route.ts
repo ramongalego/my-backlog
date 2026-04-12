@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       'app_id, platform, type, name, genres, categories, description, release_date, header_image, steam_review_score, steam_review_count, steam_review_weighted, main_story_hours, deck_compat, tags, synced_at',
     )
     .eq('app_id', appId)
-    .single();
+    .maybeSingle();
 
   let metadata: GameMetadata | null = null;
   let fromCache = false;

@@ -266,14 +266,11 @@ export function useGamesPage(): UseGamesPageReturn {
   // Filter and sort games — uses deferredSearchQuery so input stays responsive
   const filteredGames = (() => {
     const filtered = searchFilteredGames.filter((game) => {
-      // Playing games live on the home page's Currently Playing tile — they
-      // don't appear on the Games page at all, so the visible filter counts
-      // (backlog + finished + dropped + wont_play + hidden) sum cleanly.
-      if (game.status === 'playing') return false;
       // "All" excludes only hidden — wont_play games are still part of the
       // library and should appear under All alongside their own tab.
       if (filter === 'all' && game.status === 'hidden') return false;
-      if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
+      // Playing games appear under both "all" and "backlog" (like queued games)
+      if (filter === 'backlog' && game.status && game.status !== 'backlog' && game.status !== 'playing') return false;
       if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
       return true;
     });
@@ -304,17 +301,12 @@ export function useGamesPage(): UseGamesPageReturn {
   const hasPlayingGame = games.some((g) => g.status === 'playing');
 
   // Single pass over search-filtered games to compute all counts at once.
-  // Playing games live on the home page and are excluded from the Games page
-  // entirely (see filteredGames above). `all` = backlog + finished + dropped
-  // + wont_play. Hidden and playing never contribute to `all`.
+  // Playing games count under both `all` and `backlog` (like queued games).
+  // Hidden games only count under `hidden`.
   const counts: FilterCounts = (() => {
     const result = { all: 0, backlog: 0, finished: 0, dropped: 0, wont_play: 0, hidden: 0 };
     for (const game of searchFilteredGames) {
       const s = game.status;
-      if (s === 'playing') {
-        // Intentionally skipped — playing games don't appear on the Games page.
-        continue;
-      }
       if (s === 'hidden') {
         result.hidden++;
       } else if (s === 'wont_play') {

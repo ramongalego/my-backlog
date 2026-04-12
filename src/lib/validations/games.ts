@@ -8,8 +8,8 @@ const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'wont_play',
 export const gameStatusSchema = z.object({
   appId: z.number().int().positive(),
   status: z.enum(validStatuses),
-  finishedAt: z.string().optional(),
-  droppedAt: z.string().optional(),
+  finishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Invalid date format').optional(),
+  droppedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Invalid date format').optional(),
   notes: safeText
     .pipe(z.string().max(1000, 'Notes must be 1000 characters or fewer'))
     .optional()

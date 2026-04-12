@@ -5,7 +5,7 @@ export const METADATA_FRESHNESS_DAYS = 90;
 const METADATA_MIN_DATE = new Date('2026-02-27');
 
 /**
- * Checks if cached metadata is still fresh (less than 30 days old)
+ * Checks if cached metadata is still fresh (less than 90 days old)
  * and was synced after the minimum schema date.
  */
 export function isMetadataFresh(syncedAt: string): boolean {

@@ -27,7 +27,7 @@ describe('buildSuggestionPrompt', () => {
     ],
     finishedGames: [{ name: 'Completed Game', rating: 9 }] as FinishedGame[],
     droppedGames: ['Dropped Game'],
-    excludeAppIds: [],
+    excludeAppIds: new Set<number>(),
     previousReasonings: [],
     tagAffinities: [],
   };
@@ -119,7 +119,7 @@ describe('buildSuggestionPrompt', () => {
   it('should exclude games in excludeAppIds', () => {
     const context: SuggestionContext = {
       ...baseContext,
-      excludeAppIds: [1],
+      excludeAppIds: new Set([1]),
     };
 
     const prompt = buildSuggestionPrompt(context);
@@ -131,7 +131,7 @@ describe('buildSuggestionPrompt', () => {
   it('should throw if no eligible games after exclusions', () => {
     const context: SuggestionContext = {
       ...baseContext,
-      excludeAppIds: [1, 2],
+      excludeAppIds: new Set([1, 2]),
     };
 
     expect(() => buildSuggestionPrompt(context)).toThrow('No eligible games to suggest');
