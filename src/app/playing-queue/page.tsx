@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Gamepad2, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
+import { Archive, Gamepad2, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -49,10 +49,11 @@ interface NowPlayingRowProps {
   onFinish: () => void;
   onDrop: () => void;
   onCancel: () => void;
+  onMoveToBacklog: () => void;
   isLoading?: boolean;
 }
 
-function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayingRowProps) {
+function NowPlayingRow({ game, onFinish, onDrop, onCancel, onMoveToBacklog, isLoading }: NowPlayingRowProps) {
   const hasEstimate = game.main_story_hours > 0;
   const hasPlaytime = game.playtime_forever >= 60;
   const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;
@@ -103,31 +104,59 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
         </div>
       </div>
 
-      <div className="flex items-center justify-center sm:justify-start gap-2 shrink-0">
-        <button
-          onClick={onFinish}
-          disabled={isLoading}
-          className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
-        >
-          <Check className="w-3.5 h-3.5" />
-          <span>Finish</span>
-        </button>
-        <button
-          onClick={onDrop}
-          disabled={isLoading}
-          className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-xs font-medium rounded-lg transition-colors"
-        >
-          <X className="w-3.5 h-3.5" />
-          <span>Drop</span>
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
-        >
-          <ListOrdered className="w-3.5 h-3.5" />
-          <span>Move to Queue</span>
-        </button>
+      <div className="shrink-0">
+        <div className="flex items-center justify-center sm:justify-start gap-2">
+          <button
+            onClick={onFinish}
+            disabled={isLoading}
+            className="cursor-pointer h-8 flex items-center gap-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Finish</span>
+          </button>
+          <button
+            onClick={onDrop}
+            disabled={isLoading}
+            className="cursor-pointer h-8 flex items-center gap-1.5 px-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Drop</span>
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="hidden sm:flex cursor-pointer items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
+          >
+            <ListOrdered className="w-3.5 h-3.5" />
+            <span>Move to Queue</span>
+          </button>
+          <button
+            onClick={onMoveToBacklog}
+            disabled={isLoading}
+            className="hidden sm:flex cursor-pointer items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Move to Backlog</span>
+          </button>
+        </div>
+        <div className="flex items-center justify-center gap-3 mt-2 sm:hidden">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
+          >
+            <ListOrdered className="w-3.5 h-3.5" />
+            <span>Move to Queue</span>
+          </button>
+          <button
+            onClick={onMoveToBacklog}
+            disabled={isLoading}
+            className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Move to Backlog</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -249,6 +278,7 @@ export default function PlayingQueuePage() {
     handleFinish,
     handleDrop,
     handleCancel,
+    handleMoveToBacklog,
     handleConfirm,
     handleCloseStatusModal,
     handleCloseSummary,
@@ -313,6 +343,7 @@ export default function PlayingQueuePage() {
                     onFinish={handleFinish}
                     onDrop={handleDrop}
                     onCancel={handleCancel}
+                    onMoveToBacklog={handleMoveToBacklog}
                     isLoading={isStatusLoading}
                   />
                 </>

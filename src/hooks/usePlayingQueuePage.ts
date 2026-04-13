@@ -30,6 +30,7 @@ interface UsePlayingQueuePageReturn {
   handleFinish: () => void;
   handleDrop: () => void;
   handleCancel: () => void;
+  handleMoveToBacklog: () => void;
   handleConfirm: (status: string, date: string, notes: string, rating: number | null) => void;
   handleCloseStatusModal: () => void;
   handleCloseSummary: () => void;
@@ -325,8 +326,32 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     onSettled: () => invalidateGamesAndQueue(),
   });
 
+  const backlogMutation = useMutation({
+    mutationFn: async (game: GameWithImage) => {
+      await updateGameStatus(game.app_id, 'backlog');
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: playingKey });
+      const previousPlaying = queryClient.getQueryData<GameWithImage | null>(playingKey);
+      queryClient.setQueryData(playingKey, null);
+      return { previousPlaying };
+    },
+    onError: (err, _game, context) => {
+      Sentry.captureException(err);
+      console.error('Failed to move game to backlog:', err);
+      toast.error('Failed to move game to backlog');
+      if (context?.previousPlaying !== undefined) {
+        queryClient.setQueryData(playingKey, context.previousPlaying);
+      }
+    },
+    onSettled: () => invalidateGamesAndQueue(),
+  });
+
   const isStatusLoading =
-    cancelMutation.isPending || confirmMutation.isPending || pickMutation.isPending;
+    cancelMutation.isPending ||
+    confirmMutation.isPending ||
+    pickMutation.isPending ||
+    backlogMutation.isPending;
 
   useEffect(() => {
     if (isLoading) return;
@@ -351,6 +376,11 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   const handleCancel = () => {
     if (!currentlyPlaying) return;
     cancelMutation.mutate(currentlyPlaying);
+  };
+
+  const handleMoveToBacklog = () => {
+    if (!currentlyPlaying) return;
+    backlogMutation.mutate(currentlyPlaying);
   };
 
   const handleConfirm = (status: string, date: string, notes: string, rating: number | null) => {
@@ -381,6 +411,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
     handleFinish,
     handleDrop,
     handleCancel,
+    handleMoveToBacklog,
     handleConfirm,
     handleCloseStatusModal,
     handleCloseSummary,
