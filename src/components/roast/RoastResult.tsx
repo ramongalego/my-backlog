@@ -97,7 +97,7 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
               className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
             >
               <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
-              Reddit
+              <span>Reddit</span>
             </button>
             <span className="text-zinc-700" aria-hidden="true">
               &middot;
@@ -108,7 +108,7 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
               className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
             >
               <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
-              Twitter
+              <span>Twitter</span>
             </button>
             <span className="text-zinc-700" aria-hidden="true">
               &middot;
@@ -126,7 +126,7 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
               ) : (
                 <>
                   <Link2 className="w-3.5 h-3.5" />
-                  Copy link
+                  <span>Copy link</span>
                 </>
               )}
             </button>

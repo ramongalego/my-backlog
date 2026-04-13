@@ -103,7 +103,7 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
         {entry.rating != null && (
           <p className="flex items-center gap-1 text-sm text-zinc-400 sm:hidden mt-0.5">
             <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" />
-            {entry.rating}/10
+            <span>{entry.rating}/10</span>
           </p>
         )}
       </div>
@@ -113,7 +113,7 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
         {entry.rating != null && (
           <span className="flex items-center justify-end gap-1 text-base text-zinc-300">
             <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
-            {entry.rating}/10
+            <span>{entry.rating}/10</span>
           </span>
         )}
       </div>

@@ -269,14 +269,14 @@ export function GameSummaryModal({
               className="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer w-full"
             >
               <Share2 className="w-4 h-4" />
-              Share
+              <span>Share</span>
             </button>
           )}
 
           {shareState === 'loading' && (
             <div className="flex items-center justify-center gap-2 text-sm text-zinc-500">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Creating share link...
+              <span>Creating share link...</span>
             </div>
           )}
 
@@ -288,7 +288,7 @@ export function GameSummaryModal({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
               >
                 <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                Reddit
+                <span>Reddit</span>
               </button>
               <button
                 onClick={handleTwitter}
@@ -296,7 +296,7 @@ export function GameSummaryModal({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
               >
                 <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                Twitter
+                <span>Twitter</span>
               </button>
               <button
                 onClick={handleCopyLink}
@@ -311,7 +311,7 @@ export function GameSummaryModal({
                 ) : (
                   <>
                     <Link2 className="w-3.5 h-3.5" />
-                    Copy link
+                    <span>Copy link</span>
                   </>
                 )}
               </button>

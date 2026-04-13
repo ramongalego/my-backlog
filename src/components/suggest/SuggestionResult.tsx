@@ -60,13 +60,13 @@ export function SuggestionResult({
           {game.main_story_hours && (
             <span className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              {game.main_story_hours}h
+              <span>{game.main_story_hours}h</span>
             </span>
           )}
           {game.steam_review_score && (
             <span className="flex items-center gap-1">
               <Star className="w-3.5 h-3.5" />
-              {(game.steam_review_score / 10).toFixed(1)}
+              <span>{(game.steam_review_score / 10).toFixed(1)}</span>
             </span>
           )}
           {game.genres && game.genres.length > 0 && (
@@ -78,7 +78,7 @@ export function SuggestionResult({
             rel="noopener noreferrer"
             className="flex items-center gap-1 ml-auto hover:text-zinc-300 transition-colors"
           >
-            Steam <ExternalLink className="w-3 h-3" />
+            <span>Steam</span> <ExternalLink className="w-3 h-3" />
           </a>
         </div>
 
@@ -112,7 +112,7 @@ export function SuggestionResult({
             title={isOnCooldown ? `Wait ${cooldownRemaining}s` : 'Get another suggestion'}
           >
             <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isOnCooldown ? `${cooldownRemaining}s` : 'Reroll'}
+            <span>{isOnCooldown ? `${cooldownRemaining}s` : 'Reroll'}</span>
           </button>
         </div>
       </div>

@@ -33,7 +33,7 @@ function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
     return (
       <div className="relative w-24 h-[60px] rounded overflow-hidden shrink-0">
-        <Image src={src} alt={alt} fill className="object-cover" sizes="96px" />
+        <Image src={src} alt={alt} fill className="object-cover" sizes="96px" quality={90} />
       </div>
     );
   }
@@ -110,14 +110,15 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
           className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
         >
           <Check className="w-3.5 h-3.5" />
-          Finish
+          <span>Finish</span>
         </button>
         <button
           onClick={onDrop}
           disabled={isLoading}
           className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-xs font-medium rounded-lg transition-colors"
         >
-          Drop
+          <X className="w-3.5 h-3.5" />
+          <span>Drop</span>
         </button>
         <button
           onClick={onCancel}
@@ -125,7 +126,7 @@ function NowPlayingRow({ game, onFinish, onDrop, onCancel, isLoading }: NowPlayi
           className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
         >
           <ListOrdered className="w-3.5 h-3.5" />
-          Move to Queue
+          <span>Move to Queue</span>
         </button>
       </div>
     </div>
@@ -193,7 +194,7 @@ function QueueItemRow({
             className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
           >
             <Play className="w-3.5 h-3.5 fill-white" />
-            Play
+            <span>Play</span>
           </button>
         )}
         <button

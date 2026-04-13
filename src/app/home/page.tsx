@@ -111,7 +111,7 @@ function HomeContent() {
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
                     <Sparkles className="w-5 h-5" />
-                    Pick My Next Game
+                    <span>Pick My Next Game</span>
                   </Button>
                   <p className="mt-1 text-xs text-zinc-500">
                     The picked game will be added to your{' '}
@@ -136,7 +136,7 @@ function HomeContent() {
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
                     <Sparkles className="w-5 h-5" />
-                    Pick My Game
+                    <span>Pick My Game</span>
                   </Button>
                   <Button
                     onClick={handleRandomPick}
@@ -146,7 +146,7 @@ function HomeContent() {
                     title="Pick a random game"
                   >
                     <Dices className="w-5 h-5" />
-                    Random
+                    <span>Random</span>
                   </Button>
                 </div>
               </div>

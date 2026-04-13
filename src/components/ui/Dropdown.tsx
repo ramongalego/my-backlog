@@ -97,7 +97,7 @@ export function Dropdown<T extends string>({
         aria-label={ariaLabel}
       >
         {icon && <span aria-hidden="true">{icon}</span>}
-        {selected?.label}
+        <span>{selected?.label}</span>
       </button>
       {open && (
         <ul

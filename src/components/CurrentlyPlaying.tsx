@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ExternalLink, Archive, Check, Star, Clock, ListOrdered } from 'lucide-react';
+import { ExternalLink, Archive, Check, Star, Clock, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 
@@ -98,12 +98,12 @@ export function CurrentlyPlaying({
                 <div className="flex items-center justify-center gap-3 text-sm text-zinc-500">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" aria-hidden="true" />
-                    {game.main_story_hours}h
+                    <span>{game.main_story_hours}h</span>
                   </span>
                   {game.steam_review_score != null && (
                     <span className="flex items-center gap-1">
                       <Star className="w-3 h-3" aria-hidden="true" />
-                      {(game.steam_review_score / 10).toFixed(1)}
+                      <span>{(game.steam_review_score / 10).toFixed(1)}</span>
                     </span>
                   )}
                   <SteamDeckBadge deckCompat={game.deck_compat} />
@@ -118,8 +118,8 @@ export function CurrentlyPlaying({
               variant="success"
               className="flex-1 cursor-pointer"
             >
-              <Check className="w-3.5 h-3.5" />
-              Finish
+              <Check className="w-4 h-4" />
+              <span>Finish</span>
             </Button>
             <Button
               onClick={onDrop}
@@ -127,7 +127,8 @@ export function CurrentlyPlaying({
               variant="danger"
               className="flex-1 cursor-pointer"
             >
-              Drop
+              <X className="w-4 h-4" />
+              <span>Drop</span>
             </Button>
           </div>
           <div className="mt-5 flex items-center justify-center gap-6">
@@ -137,7 +138,7 @@ export function CurrentlyPlaying({
               className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <ListOrdered className="w-3.5 h-3.5" />
-              Move to Queue
+              <span>Move to Queue</span>
             </button>
             <button
               onClick={onCancel}
@@ -145,7 +146,7 @@ export function CurrentlyPlaying({
               className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Archive className="w-3.5 h-3.5" />
-              Move to Backlog
+              <span>Move to Backlog</span>
             </button>
           </div>
         </div>

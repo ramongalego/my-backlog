@@ -24,7 +24,7 @@ export function GameMetaRow({
       {mainStoryHours ? (
         <span className="flex items-center gap-1" title="Time to beat">
           <Clock className="w-3 h-3" aria-hidden="true" />
-          {mainStoryHours}h
+          <span>{mainStoryHours}h</span>
         </span>
       ) : null}
       {steamReviewScore ? (
@@ -33,7 +33,7 @@ export function GameMetaRow({
           title={`Steam reviews${steamReviewCount ? ` (${steamReviewCount.toLocaleString()} reviews)` : ''}`}
         >
           <Star className="w-3 h-3" aria-hidden="true" />
-          {(steamReviewScore / 10).toFixed(1)}
+          <span>{(steamReviewScore / 10).toFixed(1)}</span>
         </span>
       ) : null}
       {playtimeMinutes >= 60 ? (

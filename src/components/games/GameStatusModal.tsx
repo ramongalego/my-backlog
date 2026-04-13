@@ -247,7 +247,7 @@ export function GameDetailModal({
                     }`}
                   >
                     <ListOrdered className="w-3.5 h-3.5" />
-                    Queue
+                    <span>Queue</span>
                   </button>
                 );
               }
@@ -262,7 +262,7 @@ export function GameDetailModal({
                   }`}
                 >
                   {opt.icon}
-                  {opt.label}
+                  <span>{opt.label}</span>
                 </button>
               );
             })}
@@ -300,7 +300,7 @@ export function GameDetailModal({
                   className="cursor-pointer flex items-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 rounded-lg px-2.5 py-1 text-sm text-zinc-100 transition-colors"
                 >
                   <CalendarDays className="w-3.5 h-3.5 text-zinc-400" />
-                  {formatDateLabel(date)}
+                  <span>{formatDateLabel(date)}</span>
                 </button>
 
                 {calendarOpen && (
@@ -402,7 +402,7 @@ export function GameDetailModal({
           >
             {saving ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Saving…
+                <Loader2 className="w-4 h-4 animate-spin" /> <span>Saving…</span>
               </>
             ) : (
               'Save Changes'

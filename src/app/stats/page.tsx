@@ -337,6 +337,7 @@ function MostPlayedUnfinished({
                       fill
                       className="object-cover"
                       sizes="64px"
+                      quality={90}
                     />
                   )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

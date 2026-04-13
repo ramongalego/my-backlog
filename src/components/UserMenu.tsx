@@ -134,11 +134,13 @@ export function UserMenu({
                 className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
                 aria-hidden="true"
               />
-              {isRefreshing
-                ? 'Refreshing...'
-                : isRefreshDisabled
-                  ? `Available in${cooldownLabel ? ` ${cooldownLabel}` : ''}`
-                  : 'Refresh Library'}
+              <span>
+                {isRefreshing
+                  ? 'Refreshing...'
+                  : isRefreshDisabled
+                    ? `Available in${cooldownLabel ? ` ${cooldownLabel}` : ''}`
+                    : 'Refresh Library'}
+              </span>
             </button>
           )}
 
@@ -151,7 +153,7 @@ export function UserMenu({
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <Bug className="w-4 h-4" aria-hidden="true" />
-            Report an issue
+            <span>Report an issue</span>
           </button>
 
           <button
@@ -160,7 +162,7 @@ export function UserMenu({
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" aria-hidden="true" />
-            Sign Out
+            <span>Sign Out</span>
           </button>
         </div>
       )}

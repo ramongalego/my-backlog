@@ -43,7 +43,7 @@ function StatusBadge({ status }: { status: string }) {
       className={`px-2 py-0.5 ${config.className} text-xs font-medium rounded flex items-center gap-1`}
     >
       <Icon className="w-3 h-3" aria-hidden="true" />
-      {config.label}
+      <span>{config.label}</span>
     </div>
   );
 }
@@ -85,7 +85,7 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
             title="In playing queue"
           >
             <ListOrdered className="w-3 h-3" aria-hidden="true" />
-            Queued
+            <span>Queued</span>
           </div>
         ) : (
           <div className="absolute top-2 right-2">
