@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
 import Image from 'next/image';
 
@@ -50,6 +50,24 @@ const MOCK_LIBRARY = [
 export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = statsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStatsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const openModal = (mode: AuthMode) => {
     setAuthMode(mode);
@@ -68,7 +86,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
           <div className="relative max-w-4xl mx-auto px-6 py-32 md:py-48 text-center">
             <h1 className="text-5xl md:text-7xl font-bold text-zinc-100 leading-[1.1] tracking-tight mb-6">
               Stop scrolling <br />
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-fuchsia-400 to-violet-400 bg-[length:200%_auto] animate-[gradientShimmer_8s_ease-in-out_infinite]">
                 Start playing
               </span>
             </h1>
@@ -211,7 +229,15 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                     <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">
                       {game.title}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${game.pill}`}>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full shrink-0 inline-flex items-center gap-1.5 ${game.pill}`}
+                    >
+                      {game.status === 'Playing' && (
+                        <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-400" />
+                        </span>
+                      )}
                       {game.status}
                     </span>
                   </div>
@@ -268,7 +294,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
             {/* Momentum mock */}
             <div className="space-y-3">
               {/* Queue */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-700">
                 <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Up next</p>
                 <div className="space-y-2.5">
                   {[
@@ -292,7 +318,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </div>
 
               {/* Diary entry */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-start gap-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-start gap-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-700">
                 <Image
                   src="/lp_hk.jpeg"
                   alt="Hollow Knight"
@@ -317,13 +343,15 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </div>
 
               {/* Stats callout */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-5">
-                <div className="flex items-end gap-1 h-10">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-700">
+                <div ref={statsRef} className="flex items-end gap-1 h-10">
                   {[40, 60, 45, 80, 65, 90, 70].map((h, i) => (
                     <div
                       key={i}
-                      className="w-3 bg-violet-500/30 rounded-sm"
-                      style={{ height: `${h}%` }}
+                      className={`w-3 bg-violet-500/30 rounded-sm origin-bottom ${
+                        statsVisible ? 'animate-[barGrow_0.7s_ease-out_backwards]' : 'scale-y-0'
+                      }`}
+                      style={{ height: `${h}%`, animationDelay: `${i * 90}ms` }}
                     />
                   ))}
                 </div>
@@ -337,20 +365,36 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         </section>
 
         {/* ── Final CTA ── */}
-        <section className="border-t border-zinc-900">
-          <div className="max-w-2xl mx-auto px-6 py-24 md:py-32 text-center">
+        <section className="relative overflow-hidden border-t border-zinc-900">
+          {/* Violet orb — bookend the hero */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <div className="w-[700px] h-[420px] bg-violet-600/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative max-w-2xl mx-auto px-6 py-24 md:py-32 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
-              Start clearing your backlog tonight.
+              Start clearing your backlog tonight
             </h2>
             <p className="text-zinc-500 mb-10">
               Free to use. Your Steam library, synced and ready to go.
             </p>
             {user ? (
-              <Button size="lg" onClick={onConnectSteam}>
+              <Button
+                size="lg"
+                onClick={onConnectSteam}
+                className="shadow-lg shadow-violet-600/25 transition-all hover:shadow-[0_0_32px_rgba(124,58,237,0.45)] hover:-translate-y-0.5"
+              >
                 Connect Your Steam
               </Button>
             ) : (
-              <Button size="lg" onClick={() => openModal('signup')}>
+              <Button
+                size="lg"
+                onClick={() => openModal('signup')}
+                className="shadow-lg shadow-violet-600/25 transition-all hover:shadow-[0_0_32px_rgba(124,58,237,0.45)] hover:-translate-y-0.5"
+              >
                 Get Started
               </Button>
             )}

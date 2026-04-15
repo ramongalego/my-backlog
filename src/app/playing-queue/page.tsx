@@ -53,7 +53,14 @@ interface NowPlayingRowProps {
   isLoading?: boolean;
 }
 
-function NowPlayingRow({ game, onFinish, onDrop, onCancel, onMoveToBacklog, isLoading }: NowPlayingRowProps) {
+function NowPlayingRow({
+  game,
+  onFinish,
+  onDrop,
+  onCancel,
+  onMoveToBacklog,
+  isLoading,
+}: NowPlayingRowProps) {
   const hasEstimate = game.main_story_hours > 0;
   const hasPlaytime = game.playtime_forever >= 60;
   const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;

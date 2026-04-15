@@ -93,6 +93,27 @@ body {
   background: #52525b;
 }
 
+/* Stats bar grow-on-reveal — gamified stats page entrance */
+@keyframes barGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Title-screen shimmer for the hero gradient headline */
+@keyframes gradientShimmer {
+  0%,
+  100% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+}
+
 /* Celebration animation */
 @keyframes celebration {
   0% {
