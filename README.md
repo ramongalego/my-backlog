@@ -1,25 +1,29 @@
-# my-backlog
+# MyBacklog
 
 A full-stack web app that helps Steam players stop doomscrolling their library and actually finish a game. It ingests your full Steam backlog, enriches it with HowLongToBeat data and Bayesian-smoothed review scores, and uses an LLM to recommend what to play next based on your mood, energy, and available time. It also gives you a drag-and-drop playing queue, a completion diary, share-ready completion cards rendered as dynamic OG images, and a public "Steam roast" tool.
 
 ## Tech Stack
 
 **Framework & Runtime**
+
 - Next.js 16 (App Router, Server Components, Route Handlers, Edge middleware)
 - React 19 with the React Compiler enabled for auto-memoization
 - TypeScript in strict mode across ~18k LOC
 - Tailwind CSS v4 via PostCSS
 
 **Data & Auth**
+
 - Supabase (Postgres, Row-Level Security, SSR cookie-based auth)
 - Steam OpenID 2.0 via the `openid` package for library linking
 - PL/pgSQL functions for atomic server-side operations
 
 **Intelligence**
+
 - OpenAI SDK (`gpt-4o-mini`) for mood-aware game recommendations
 - Custom tag-affinity learning computed from the user's completion history
 
 **Client State & Interaction**
+
 - TanStack Query v5 for server-state caching, invalidation, and optimistic updates
 - dnd-kit (core, sortable, utilities) for accessible drag-and-drop reordering
 - Zod v4 for runtime validation on every API boundary
@@ -27,13 +31,10 @@ A full-stack web app that helps Steam players stop doomscrolling their library a
 - react-day-picker for scheduling controls
 
 **Observability & Ops**
+
 - Sentry (with a `/monitoring` tunnel route and custom event scrubbing)
 - Vercel Analytics
 - Vercel Cron for scheduled metadata refresh
-
-**Testing**
-- Jest 30 on jsdom, Testing Library (React + user-event), v8 coverage
-- ~35 suites covering hooks, prompt construction, scoring, carousel dedup, auth validation, and page-level integration flows
 
 ## Architecture & System Design
 
