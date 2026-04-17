@@ -103,7 +103,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_hades.jpg',
     title: 'Hades',
-    meta: '~22h to beat · 9.3 rating',
+    meta: '~23h to beat · 9.3 rating',
     moods: ['Adrenaline'],
     energies: ['High', 'Medium'],
     times: ['One session'],
@@ -119,7 +119,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_disco.jpeg',
     title: 'Disco Elysium',
-    meta: '~30h to beat · 9.5 rating',
+    meta: '~23h to beat · 9.5 rating',
     moods: ['Engaged'],
     energies: ['Medium', 'Low'],
     times: ['Long haul'],
@@ -135,7 +135,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_cyberpunk.jpg',
     title: 'Cyberpunk 2077',
-    meta: '~55h to beat · 8.7 rating',
+    meta: '~26h to beat · 8.7 rating',
     moods: ['Adrenaline'],
     energies: ['Medium'],
     times: ['Long haul'],
@@ -149,23 +149,23 @@ const PICKER_GAMES: PickerGame[] = [
     times: ['Long haul'],
   },
   {
-    image: '/lp_vampsurvivors.jpg',
+    image: '/lp_vampire.jpg',
     title: 'Vampire Survivors',
-    meta: '~20h to beat · 9.1 rating',
+    meta: '~15h to beat · 9.1 rating',
     moods: ['Adrenaline'],
     energies: ['Low'],
     times: ['One session', 'A few nights'],
   },
   {
-    image: '/lp_stardew.jpg',
+    image: '/lp_stardew.png',
     title: 'Stardew Valley',
-    meta: '~50h to beat · 9.5 rating',
+    meta: '~53h to beat · 9.5 rating',
     moods: ['Relaxed'],
     energies: ['Low', 'Medium'],
     times: ['Long haul'],
   },
   {
-    image: '/lp_shorthike.jpg',
+    image: '/lp_shorthike.png',
     title: 'A Short Hike',
     meta: '~2h to beat · 9.4 rating',
     moods: ['Relaxed'],
@@ -173,15 +173,15 @@ const PICKER_GAMES: PickerGame[] = [
     times: ['One session'],
   },
   {
-    image: '/lp_dorfromantik.jpg',
+    image: '/lp_dorf.webp',
     title: 'Dorfromantik',
-    meta: '~10h to beat · 8.8 rating',
+    meta: '~18h to beat · 8.8 rating',
     moods: ['Relaxed'],
     energies: ['Medium', 'Low'],
     times: ['One session', 'A few nights'],
   },
   {
-    image: '/lp_davethediver.jpg',
+    image: '/lp_dave.webp',
     title: 'Dave the Diver',
     meta: '~25h to beat · 9.0 rating',
     moods: ['Relaxed'],
@@ -191,7 +191,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_outerwilds.jpg',
     title: 'Outer Wilds',
-    meta: '~18h to beat · 9.7 rating',
+    meta: '~17h to beat · 9.7 rating',
     moods: ['Engaged', 'Emotional'],
     energies: ['High', 'Medium'],
     times: ['A few nights'],
@@ -199,7 +199,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_bg3.jpg',
     title: "Baldur's Gate 3",
-    meta: '~90h to beat · 9.7 rating',
+    meta: '~73h to beat · 9.7 rating',
     moods: ['Engaged'],
     energies: ['High', 'Medium'],
     times: ['Long haul'],
@@ -207,7 +207,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_slaythespire.jpg',
     title: 'Slay the Spire',
-    meta: '~25h to beat · 9.2 rating',
+    meta: '~12h to beat · 9.2 rating',
     moods: ['Engaged'],
     energies: ['High', 'Medium'],
     times: ['One session'],
@@ -231,7 +231,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_spiritfarer.jpg',
     title: 'Spiritfarer',
-    meta: '~30h to beat · 9.1 rating',
+    meta: '~26h to beat · 9.1 rating',
     moods: ['Emotional', 'Relaxed'],
     energies: ['Low', 'Medium'],
     times: ['Long haul'],
@@ -240,13 +240,14 @@ const PICKER_GAMES: PickerGame[] = [
 
 function pickGame(mood: Mood, energy: Energy, time: Time): PickerGame {
   let best = PICKER_GAMES[0];
-  let bestScore = -1;
+  let bestScore = -Infinity;
   for (const game of PICKER_GAMES) {
-    // Mood is the primary axis — weight it double so tied energy/time don't override a wrong vibe.
+    // Mood and time are hard constraints (wrong vibe / no time) — mismatches penalize, not just miss out on points.
+    // Energy is softer, so it's a lighter tiebreaker.
     const score =
-      (game.moods.includes(mood) ? 2 : 0) +
-      (game.energies.includes(energy) ? 1 : 0) +
-      (game.times.includes(time) ? 1 : 0);
+      (game.moods.includes(mood) ? 2 : -2) +
+      (game.times.includes(time) ? 2 : -2) +
+      (game.energies.includes(energy) ? 1 : -1);
     if (score > bestScore) {
       best = game;
       bestScore = score;
@@ -502,7 +503,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
                 <span className="text-sm font-medium text-zinc-300">My Library</span>
                 <span className="text-xs text-zinc-600">
-                  <CountUp to={847} /> games
+                  <CountUp to={457} /> games
                 </span>
               </div>
               <div className="divide-y divide-zinc-800/60">
