@@ -5,16 +5,42 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 
+// header_image is re-fetched server-side by the OG route (next/og ImageResponse
+// requires a raw <img src>). Restrict it to Steam's CDNs so we can't be tricked
+// into SSRF against internal hosts through that code path.
+function isAllowedImageHost(hostname: string): boolean {
+  return (
+    hostname === 'steamcdn-a.akamaihd.net' ||
+    hostname.endsWith('.steamstatic.com') ||
+    hostname === 'steamstatic.com'
+  );
+}
+
+const headerImageSchema = z
+  .string()
+  .max(1000)
+  .refine(
+    (url) => {
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'https:' && isAllowedImageHost(parsed.hostname);
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Header image must be from a Steam CDN' },
+  );
+
 const shareSchema = z.object({
-  gameName: z.string().min(1).max(200),
-  headerImage: z.string().max(1000).nullish(),
+  gameName: z.string().trim().min(1).max(200),
+  headerImage: headerImageSchema.nullish(),
   playtimeMinutes: z.number().int().min(0).max(10_000_000).default(0),
   mainStoryHours: z.number().min(0).max(10_000).nullish(),
   rating: z.number().int().min(0).max(10).nullish(),
   gamesFinished: z.number().int().min(0).max(1_000_000).default(0),
   totalGames: z.number().int().min(0).max(1_000_000).default(0),
   backlogHoursRemoved: z.number().min(0).max(1_000_000).nullish(),
-  nextGame: z.string().max(200).nullish(),
+  nextGame: z.string().trim().max(200).nullish(),
 });
 
 export async function POST(request: NextRequest) {

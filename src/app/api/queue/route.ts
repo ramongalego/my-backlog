@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
+import {
+  queueAddRequestSchema,
+  queueReorderRequestSchema,
+  appIdSchema,
+} from '@/lib/validations/common';
 
 export async function GET() {
   const supabase = await createClient();
@@ -70,18 +75,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appId } = body;
-
-  if (!appId || typeof appId !== 'number' || !Number.isInteger(appId) || appId <= 0) {
+  const parsed = queueAddRequestSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
   }
+  const { appId } = parsed.data;
 
   // Get max position for the user's queue
   const { data: maxRow } = await supabase
@@ -122,21 +127,18 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { order } = body;
-  if (
-    !Array.isArray(order) ||
-    order.length === 0 ||
-    !order.every((id) => Number.isInteger(id) && id > 0)
-  ) {
+  const parsed = queueReorderRequestSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid order' }, { status: 400 });
   }
+  const { order } = parsed.data;
 
   const { error } = await supabase.rpc('reorder_playing_queue', { p_order: order });
 
@@ -170,10 +172,11 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Missing appId' }, { status: 400 });
   }
 
-  const appId = parseInt(appIdParam, 10);
-  if (!Number.isInteger(appId) || appId <= 0) {
+  const parsedAppId = appIdSchema.safeParse(Number(appIdParam));
+  if (!parsedAppId.success) {
     return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
   }
+  const appId = parsedAppId.data;
 
   const { error } = await supabase
     .from('playing_queue')

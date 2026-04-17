@@ -6,41 +6,12 @@ import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 import { getOpenAIApiKey } from '@/lib/env.server';
 import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
 import type {
-  SuggestionPreferences,
   GameForSuggestion,
   FinishedGame,
   SuggestionContext,
-  MoodType,
-  EnergyLevel,
   TimeCommitment,
 } from '@/lib/suggest/types';
-
-const VALID_MOODS: MoodType[] = ['adrenaline', 'relaxed', 'engaged', 'emotional'];
-const VALID_ENERGY: EnergyLevel[] = ['high', 'medium', 'low'];
-const VALID_TIME: TimeCommitment[] = ['short', 'medium', 'long'];
-
-function validatePreferences(body: unknown): SuggestionPreferences | null {
-  if (!body || typeof body !== 'object') return null;
-
-  const { mood, energy, time } = body as Record<string, unknown>;
-
-  if (!VALID_MOODS.includes(mood as MoodType)) return null;
-  if (!VALID_ENERGY.includes(energy as EnergyLevel)) return null;
-  if (!VALID_TIME.includes(time as TimeCommitment)) return null;
-
-  return { mood, energy, time } as SuggestionPreferences;
-}
-
-const MAX_EXCLUDE_APP_IDS = 200;
-const MAX_PREVIOUS_REASONINGS = 5;
-const MAX_REASONING_LENGTH = 500;
-
-function validateExcludeAppIds(value: unknown): number[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((id): id is number => typeof id === 'number' && Number.isInteger(id) && id > 0)
-    .slice(0, MAX_EXCLUDE_APP_IDS);
-}
+import { suggestRequestSchema } from '@/lib/validations/suggest';
 
 export async function POST(request: NextRequest) {
   // Check for API key configuration
@@ -88,19 +59,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const preferences = validatePreferences(body);
-  if (!preferences) {
-    return NextResponse.json({ success: false, error: 'Invalid preferences' }, { status: 400 });
+  const parsed = suggestRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid preferences' },
+      { status: 400 },
+    );
   }
 
-  const excludeAppIds = validateExcludeAppIds((body as Record<string, unknown>).excludeAppIds);
-  const rawReasonings = (body as Record<string, unknown>).previousReasonings;
-  const previousReasonings = Array.isArray(rawReasonings)
-    ? (rawReasonings as unknown[])
-        .filter((r): r is string => typeof r === 'string')
-        .slice(0, MAX_PREVIOUS_REASONINGS)
-        .map((r) => r.slice(0, MAX_REASONING_LENGTH))
-    : [];
+  const { mood, energy, time, excludeAppIds, previousReasonings } = parsed.data;
+  const preferences = { mood, energy, time };
 
   // Fetch queued games to exclude from suggestions
   const { data: queuedGames } = await supabase

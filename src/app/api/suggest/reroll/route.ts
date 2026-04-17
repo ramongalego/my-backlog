@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { queueAddRequestSchema } from '@/lib/validations/common';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -18,11 +19,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appId } = body as { appId?: number };
-
-  if (!appId || typeof appId !== 'number' || !Number.isInteger(appId) || appId <= 0) {
+  const parsed = queueAddRequestSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ success: false, error: 'Invalid appId' }, { status: 400 });
   }
+  const { appId } = parsed.data;
 
   // Get current reroll count
   const { data: game } = await supabase

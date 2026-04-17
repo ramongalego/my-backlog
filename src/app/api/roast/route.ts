@@ -15,6 +15,7 @@ import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 import { buildRoastPrompt } from '@/lib/roast/prompt';
 import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
 import { getBlacklistMessage } from '@/lib/roast/blacklist';
+import { roastRequestSchema } from '@/lib/validations/roast';
 
 export async function POST(request: NextRequest) {
   // Check API keys
@@ -28,17 +29,21 @@ export async function POST(request: NextRequest) {
   }
 
   // Parse input
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { steamInput } = body;
-  if (!steamInput || typeof steamInput !== 'string' || steamInput.trim().length === 0) {
-    return NextResponse.json({ error: 'Steam URL or username is required' }, { status: 400 });
+  const parsed = roastRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Invalid request' },
+      { status: 400 },
+    );
   }
+  const { steamInput } = parsed.data;
 
   // Check blacklist before any API calls
   const blacklistMessage = getBlacklistMessage(steamInput);

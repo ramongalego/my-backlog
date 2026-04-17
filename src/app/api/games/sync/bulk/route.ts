@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isMetadataFresh } from '@/lib/games/scoring';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { syncBulkRequestSchema, MAX_BULK_APP_IDS } from '@/lib/validations/common';
 
-const MAX_APP_IDS = 2000;
 const DB_BATCH_SIZE = 50;
 
 export async function POST(request: NextRequest) {
@@ -30,33 +30,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appIds } = body;
-
-  if (!Array.isArray(appIds) || appIds.length === 0) {
-    return NextResponse.json({ error: 'appIds must be a non-empty array' }, { status: 400 });
-  }
-
-  if (appIds.length > MAX_APP_IDS) {
+  const parsed = syncBulkRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    const tooMany = parsed.error.issues.some((i) => i.code === 'too_big');
     return NextResponse.json(
-      { error: `Maximum ${MAX_APP_IDS} app IDs per request` },
+      { error: tooMany ? `Maximum ${MAX_BULK_APP_IDS} app IDs per request` : 'Invalid appIds' },
       { status: 400 },
     );
   }
-
-  const validAppIds = appIds.filter(
-    (id: unknown) => typeof id === 'number' && Number.isInteger(id) && id > 0,
-  );
-
-  if (validAppIds.length === 0) {
-    return NextResponse.json({ error: 'No valid app IDs provided' }, { status: 400 });
-  }
+  const validAppIds = parsed.data.appIds;
 
   // Fetch all matching metadata from shared cache in one query
   const { data: cachedRows } = await supabase

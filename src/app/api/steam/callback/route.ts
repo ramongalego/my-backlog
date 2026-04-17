@@ -3,14 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createSteamRelyingParty, extractSteamId } from '@/lib/steam/auth';
 import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
 import { getSteamApiKey } from '@/lib/env.server';
-import { timingSafeEqual } from 'crypto';
-
-function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
+import { constantTimeCompare } from '@/lib/crypto/compare';
 
 export async function GET(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isMetadataFresh } from '@/lib/games/scoring';
 import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { syncSingleRequestSchema } from '@/lib/validations/common';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -31,18 +32,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appId, name: libraryName } = body;
-
-  if (!appId || typeof appId !== 'number' || !Number.isInteger(appId) || appId <= 0) {
+  const parsed = syncSingleRequestSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
   }
+  const { appId, name: libraryName } = parsed.data;
 
   // Check for existing fresh metadata in shared table
   const { data: existingMetadata } = await supabase

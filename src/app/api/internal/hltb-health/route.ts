@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { getMainStoryHours, resetHltbCache } from '@/lib/hltb/api';
 import { getCronSecret } from '@/lib/env.server';
+import { verifyBearerToken } from '@/lib/crypto/compare';
 
 export const maxDuration = 30;
 
@@ -48,8 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Server config error' }, { status: 500 });
   }
 
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyBearerToken(request.headers.get('authorization'), cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

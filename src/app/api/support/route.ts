@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
 
@@ -14,6 +16,10 @@ const supportTicketSchema = z.object({
   ),
 });
 
+// Per-user cap — authed-only endpoint, so a user ID is the natural key.
+// Ten tickets/hour is generous for legit use, tight enough to stop spam.
+const SUPPORT_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -24,7 +30,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body;
+  const rateLimitResult = checkRateLimit(`support:${user.id}`, SUPPORT_RATE_LIMIT);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: 'Too many tickets submitted. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
+        },
+      },
+    );
+  }
+
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
@@ -47,6 +66,7 @@ export async function POST(request: NextRequest) {
     .insert({ user_id: user.id, type, message });
 
   if (error) {
+    Sentry.captureException(error);
     return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
   }
 

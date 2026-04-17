@@ -4,6 +4,29 @@ import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
+// Defense in depth: even though the /api/share/completion endpoint validates
+// header_image against the Steam CDN allow-list before persisting, we re-check
+// here before rendering. next/og fetches the URL server-side — if a bad row
+// ever lands in the DB (migration, manual edit, schema drift), we must not
+// turn that into an SSRF primitive.
+function isAllowedImageHost(hostname: string): boolean {
+  return (
+    hostname === 'steamcdn-a.akamaihd.net' ||
+    hostname.endsWith('.steamstatic.com') ||
+    hostname === 'steamstatic.com'
+  );
+}
+
+function safeImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && isAllowedImageHost(parsed.hostname) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -14,6 +37,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return new Response('Not found', { status: 404 });
   }
 
+  const safeHeaderImage = safeImageUrl(data.header_image);
   const steamHours = Math.round((data.playtime_minutes / 60) * 10) / 10;
   const ratingText = data.rating !== null ? `Rated ${data.rating}/10` : null;
 
@@ -32,10 +56,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       }}
     >
       {/* Background game image with overlay — next/image cannot be used inside ImageResponse */}
-      {data.header_image && (
+      {safeHeaderImage && (
         // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
         <img
-          src={data.header_image}
+          src={safeHeaderImage}
           style={{
             position: 'absolute',
             top: 0,

@@ -3,18 +3,32 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
-const rateLimitStore = new Map<string, RateLimitEntry>();
+// Bound the in-memory store so a burst of unique identifiers can't grow it
+// without limit. On overflow we evict the oldest entry (Map preserves insertion
+// order). This is a soft cap — still imperfect for serverless, but keeps a
+// single instance from leaking unbounded memory.
+const MAX_ENTRIES = 10_000;
+// Cleanup runs at most this often to amortize its cost across requests.
+const CLEANUP_INTERVAL_MS = 60_000;
 
-// Clean up expired entries periodically
-const cleanupInterval = setInterval(() => {
-  const now = Date.now();
+const rateLimitStore = new Map<string, RateLimitEntry>();
+let lastCleanupAt = 0;
+
+function cleanupIfDue(now: number): void {
+  if (now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
+  lastCleanupAt = now;
   for (const [key, entry] of rateLimitStore) {
-    if (entry.resetAt < now) {
-      rateLimitStore.delete(key);
-    }
+    if (entry.resetAt < now) rateLimitStore.delete(key);
   }
-}, 60000);
-cleanupInterval.unref();
+}
+
+function evictIfOverCapacity(): void {
+  while (rateLimitStore.size > MAX_ENTRIES) {
+    const oldestKey = rateLimitStore.keys().next().value;
+    if (oldestKey === undefined) break;
+    rateLimitStore.delete(oldestKey);
+  }
+}
 
 export interface RateLimitConfig {
   limit: number;
@@ -30,13 +44,14 @@ export interface RateLimitResult {
 
 export function checkRateLimit(identifier: string, config: RateLimitConfig): RateLimitResult {
   const now = Date.now();
-  const key = identifier;
-  const entry = rateLimitStore.get(key);
+  cleanupIfDue(now);
 
-  // If no entry or window expired, create new entry
+  const entry = rateLimitStore.get(identifier);
+
   if (!entry || entry.resetAt < now) {
     const resetAt = now + config.windowMs;
-    rateLimitStore.set(key, { count: 1, resetAt });
+    rateLimitStore.set(identifier, { count: 1, resetAt });
+    evictIfOverCapacity();
     return {
       success: true,
       limit: config.limit,
@@ -45,10 +60,8 @@ export function checkRateLimit(identifier: string, config: RateLimitConfig): Rat
     };
   }
 
-  // Increment count
   entry.count++;
 
-  // Check if over limit
   if (entry.count > config.limit) {
     return {
       success: false,
@@ -74,16 +87,11 @@ export function getClientIp(request: Request): string {
     return vercelIp.split(',')[0].trim();
   }
 
-  // Fallbacks for non-Vercel environments (local dev, tests)
   const realIp = request.headers.get('x-real-ip');
-  if (realIp) {
-    return realIp;
-  }
+  if (realIp) return realIp;
 
   const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
+  if (forwarded) return forwarded.split(',')[0].trim();
 
   return 'unknown';
 }
