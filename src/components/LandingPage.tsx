@@ -47,11 +47,226 @@ const MOCK_LIBRARY = [
   },
 ];
 
+const HERO_PARTICLES = [
+  { left: 8, top: 78, duration: 11, delay: 0 },
+  { left: 22, top: 88, duration: 14, delay: 2.5 },
+  { left: 38, top: 72, duration: 12, delay: 5 },
+  { left: 55, top: 90, duration: 15, delay: 1.2 },
+  { left: 68, top: 80, duration: 13, delay: 3.8 },
+  { left: 82, top: 85, duration: 11, delay: 6 },
+  { left: 92, top: 74, duration: 14, delay: 4.3 },
+];
+
+const CTA_PARTICLES = [
+  { left: 15, top: 82, duration: 12, delay: 0.5 },
+  { left: 32, top: 90, duration: 14, delay: 3 },
+  { left: 50, top: 78, duration: 11, delay: 1.8 },
+  { left: 70, top: 88, duration: 13, delay: 4.5 },
+  { left: 88, top: 80, duration: 15, delay: 2.2 },
+];
+
+const HERO_TEASES = [
+  'Like that Elden Ring save from last summer',
+  'Like the Disco Elysium playthrough you promised',
+  "Like the Baldur's Gate 3 run you restarted twice",
+  'Like the Civ save still waiting from 2019',
+  'Like the sale bundle you forgot you bought',
+  "Like the Hades run you're one boss away from",
+];
+
+type Mood = 'Adrenaline' | 'Relaxed' | 'Engaged' | 'Emotional';
+type Energy = 'High' | 'Medium' | 'Low';
+type Time = 'One session' | 'A few nights' | 'Long haul';
+
+const MOODS: Mood[] = ['Adrenaline', 'Relaxed', 'Engaged', 'Emotional'];
+const ENERGIES: Energy[] = ['High', 'Medium', 'Low'];
+const TIMES: Time[] = ['One session', 'A few nights', 'Long haul'];
+
+type PickerGame = {
+  image: string;
+  title: string;
+  meta: string;
+  moods: Mood[];
+  energies: Energy[];
+  times: Time[];
+};
+
+const PICKER_GAMES: PickerGame[] = [
+  {
+    image: '/lp_hk.jpeg',
+    title: 'Hollow Knight',
+    meta: '~27h to beat · 9.8 rating',
+    moods: ['Adrenaline'],
+    energies: ['High'],
+    times: ['A few nights'],
+  },
+  {
+    image: '/lp_hades.jpg',
+    title: 'Hades',
+    meta: '~22h to beat · 9.3 rating',
+    moods: ['Adrenaline'],
+    energies: ['High', 'Medium'],
+    times: ['One session'],
+  },
+  {
+    image: '/lp_celeste.png',
+    title: 'Celeste',
+    meta: '~8h to beat · 9.4 rating',
+    moods: ['Emotional'],
+    energies: ['High'],
+    times: ['One session'],
+  },
+  {
+    image: '/lp_disco.jpeg',
+    title: 'Disco Elysium',
+    meta: '~30h to beat · 9.5 rating',
+    moods: ['Engaged'],
+    energies: ['Medium', 'Low'],
+    times: ['Long haul'],
+  },
+  {
+    image: '/lp_portal.jpg',
+    title: 'Portal 2',
+    meta: '~9h to beat · 9.5 rating',
+    moods: ['Engaged'],
+    energies: ['Medium', 'Low'],
+    times: ['One session', 'A few nights'],
+  },
+  {
+    image: '/lp_cyberpunk.jpg',
+    title: 'Cyberpunk 2077',
+    meta: '~55h to beat · 8.7 rating',
+    moods: ['Adrenaline'],
+    energies: ['Medium'],
+    times: ['Long haul'],
+  },
+  {
+    image: '/lp_eldenring.jpg',
+    title: 'Elden Ring',
+    meta: '~60h to beat · 9.6 rating',
+    moods: ['Adrenaline'],
+    energies: ['High'],
+    times: ['Long haul'],
+  },
+  {
+    image: '/lp_vampsurvivors.jpg',
+    title: 'Vampire Survivors',
+    meta: '~20h to beat · 9.1 rating',
+    moods: ['Adrenaline'],
+    energies: ['Low'],
+    times: ['One session', 'A few nights'],
+  },
+  {
+    image: '/lp_stardew.jpg',
+    title: 'Stardew Valley',
+    meta: '~50h to beat · 9.5 rating',
+    moods: ['Relaxed'],
+    energies: ['Low', 'Medium'],
+    times: ['Long haul'],
+  },
+  {
+    image: '/lp_shorthike.jpg',
+    title: 'A Short Hike',
+    meta: '~2h to beat · 9.4 rating',
+    moods: ['Relaxed'],
+    energies: ['Low'],
+    times: ['One session'],
+  },
+  {
+    image: '/lp_dorfromantik.jpg',
+    title: 'Dorfromantik',
+    meta: '~10h to beat · 8.8 rating',
+    moods: ['Relaxed'],
+    energies: ['Medium', 'Low'],
+    times: ['One session', 'A few nights'],
+  },
+  {
+    image: '/lp_davethediver.jpg',
+    title: 'Dave the Diver',
+    meta: '~25h to beat · 9.0 rating',
+    moods: ['Relaxed'],
+    energies: ['High', 'Medium'],
+    times: ['A few nights'],
+  },
+  {
+    image: '/lp_outerwilds.jpg',
+    title: 'Outer Wilds',
+    meta: '~18h to beat · 9.7 rating',
+    moods: ['Engaged', 'Emotional'],
+    energies: ['High', 'Medium'],
+    times: ['A few nights'],
+  },
+  {
+    image: '/lp_bg3.jpg',
+    title: "Baldur's Gate 3",
+    meta: '~90h to beat · 9.7 rating',
+    moods: ['Engaged'],
+    energies: ['High', 'Medium'],
+    times: ['Long haul'],
+  },
+  {
+    image: '/lp_slaythespire.jpg',
+    title: 'Slay the Spire',
+    meta: '~25h to beat · 9.2 rating',
+    moods: ['Engaged'],
+    energies: ['High', 'Medium'],
+    times: ['One session'],
+  },
+  {
+    image: '/lp_journey.jpg',
+    title: 'Journey',
+    meta: '~2h to beat · 9.4 rating',
+    moods: ['Emotional', 'Relaxed'],
+    energies: ['Low'],
+    times: ['One session'],
+  },
+  {
+    image: '/lp_firewatch.jpg',
+    title: 'Firewatch',
+    meta: '~4h to beat · 8.8 rating',
+    moods: ['Emotional'],
+    energies: ['Low', 'Medium'],
+    times: ['One session'],
+  },
+  {
+    image: '/lp_spiritfarer.jpg',
+    title: 'Spiritfarer',
+    meta: '~30h to beat · 9.1 rating',
+    moods: ['Emotional', 'Relaxed'],
+    energies: ['Low', 'Medium'],
+    times: ['Long haul'],
+  },
+];
+
+function pickGame(mood: Mood, energy: Energy, time: Time): PickerGame {
+  let best = PICKER_GAMES[0];
+  let bestScore = -1;
+  for (const game of PICKER_GAMES) {
+    // Mood is the primary axis — weight it double so tied energy/time don't override a wrong vibe.
+    const score =
+      (game.moods.includes(mood) ? 2 : 0) +
+      (game.energies.includes(energy) ? 1 : 0) +
+      (game.times.includes(time) ? 1 : 0);
+    if (score > bestScore) {
+      best = game;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
 export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement | null>(null);
+
+  const [mood, setMood] = useState<Mood>('Adrenaline');
+  const [energy, setEnergy] = useState<Energy>('High');
+  const [time, setTime] = useState<Time>('A few nights');
+  const pickedGame = pickGame(mood, energy, time);
+
+  const [teaseIndex, setTeaseIndex] = useState(0);
 
   useEffect(() => {
     const el = statsRef.current;
@@ -69,6 +284,13 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setTeaseIndex((i) => (i + 1) % HERO_TEASES.length);
+    }, 2800);
+    return () => window.clearInterval(id);
+  }, []);
+
   const openModal = (mode: AuthMode) => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
@@ -80,19 +302,57 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         {/* ── Hero ── */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[900px] h-[600px] bg-violet-600/8 rounded-full blur-3xl" />
+            <div className="w-[900px] h-[600px] bg-violet-600/8 rounded-full blur-3xl animate-[orbBreathe_10s_ease-in-out_infinite]" />
+          </div>
+
+          {/* Drifting particles */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
+            {HERO_PARTICLES.map((p, i) => (
+              <span
+                key={i}
+                className="absolute block w-1 h-1 rounded-full bg-violet-300/50"
+                style={{
+                  left: `${p.left}%`,
+                  top: `${p.top}%`,
+                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite`,
+                }}
+              />
+            ))}
           </div>
 
           <div className="relative max-w-4xl mx-auto px-6 py-32 md:py-48 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 mb-8">
+              <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-400" />
+              </span>
+              <span className="text-xs text-violet-300 font-medium tracking-wide">
+                Free forever · Syncs with Steam
+              </span>
+            </div>
+
             <h1 className="text-5xl md:text-7xl font-bold text-zinc-100 leading-[1.1] tracking-tight mb-6">
               Stop scrolling <br />
               <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-fuchsia-400 to-violet-400 bg-[length:200%_auto] animate-[gradientShimmer_8s_ease-in-out_infinite]">
                 Start playing
               </span>
             </h1>
-            <p className="text-xl text-zinc-400 mb-12 max-w-lg mx-auto leading-relaxed">
+            <p className="text-xl text-zinc-400 mb-4 max-w-lg mx-auto leading-relaxed">
               Your Steam library has hundreds of games. We help you actually play them, and finish
               them.
+            </p>
+
+            <p
+              className="text-sm mb-12 h-5 leading-5 text-center"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <span
+                key={teaseIndex}
+                className="inline-block text-violet-300/90 animate-[resultPop_0.4s_ease-out]"
+              >
+                {HERO_TEASES[teaseIndex]}
+              </span>
             </p>
 
             {user ? (
@@ -135,65 +395,92 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </p>
             </div>
 
-            {/* Picker mock */}
+            {/* Picker — interactive */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5">
               <div>
                 <p className="text-xs text-zinc-500 mb-3">What do you want to feel?</p>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">
-                    Adrenaline
-                  </span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    Relaxed
-                  </span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    Engaged
-                  </span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    Emotional
-                  </span>
+                  {MOODS.map((m) => {
+                    const selected = m === mood;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMood(m)}
+                        aria-pressed={selected}
+                        className={`px-3 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                          selected
+                            ? 'bg-violet-600 text-white'
+                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-3">How much mental energy do you have?</p>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">
-                    High
-                  </span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    Medium
-                  </span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    Low
-                  </span>
+                  {ENERGIES.map((e) => {
+                    const selected = e === energy;
+                    return (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => setEnergy(e)}
+                        aria-pressed={selected}
+                        className={`px-3 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                          selected
+                            ? 'bg-violet-600 text-white'
+                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                        }`}
+                      >
+                        {e}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-3">Time commitment?</p>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    One session
-                  </span>
-                  <span className="px-3 py-1.5 bg-violet-600 rounded-lg text-xs text-white">
-                    A few nights
-                  </span>
-                  <span className="px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-400">
-                    Long haul
-                  </span>
+                  {TIMES.map((t) => {
+                    const selected = t === time;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTime(t)}
+                        aria-pressed={selected}
+                        className={`px-3 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                          selected
+                            ? 'bg-violet-600 text-white'
+                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="h-px bg-zinc-800" />
-              <div className="flex items-center gap-4 bg-zinc-950 rounded-xl p-4 border border-zinc-800/60">
+              <div
+                key={pickedGame.title}
+                className="flex items-center gap-4 bg-zinc-950 rounded-xl p-4 border border-zinc-800/60 animate-[resultPop_0.35s_ease-out]"
+              >
                 <Image
-                  src="/lp_hk.jpeg"
-                  alt="Hollow Knight"
+                  src={pickedGame.image}
+                  alt={pickedGame.title}
                   width={56}
                   height={56}
                   className="w-14 h-14 rounded-lg object-cover shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-100 mb-0.5">Hollow Knight</p>
-                  <p className="text-xs text-zinc-500">~27h to beat · 9.8 rating</p>
+                  <p className="text-sm font-medium text-zinc-100 mb-0.5">{pickedGame.title}</p>
+                  <p className="text-xs text-zinc-500">{pickedGame.meta}</p>
                 </div>
                 <div className="text-xs px-3 py-1.5 bg-violet-600 rounded-lg text-white shrink-0">
                   Play this
@@ -214,7 +501,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden order-last lg:order-first">
               <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
                 <span className="text-sm font-medium text-zinc-300">My Library</span>
-                <span className="text-xs text-zinc-600">847 games</span>
+                <span className="text-xs text-zinc-600">
+                  <CountUp to={847} /> games
+                </span>
               </div>
               <div className="divide-y divide-zinc-800/60">
                 {MOCK_LIBRARY.map((game, i) => (
@@ -356,7 +645,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   ))}
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-zinc-100">47</p>
+                  <p className="text-xl font-bold text-zinc-100">
+                    <CountUp to={47} trigger={statsVisible} />
+                  </p>
                   <p className="text-xs text-zinc-500">games finished this year</p>
                 </div>
               </div>
@@ -371,12 +662,30 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
-            <div className="w-[700px] h-[420px] bg-violet-600/10 rounded-full blur-3xl" />
+            <div className="w-[700px] h-[420px] bg-violet-600/10 rounded-full blur-3xl animate-[orbBreathe_10s_ease-in-out_infinite]" />
+          </div>
+
+          {/* Drifting particles — mirror the hero */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
+            {CTA_PARTICLES.map((p, i) => (
+              <span
+                key={i}
+                className="absolute block w-1 h-1 rounded-full bg-violet-300/50"
+                style={{
+                  left: `${p.left}%`,
+                  top: `${p.top}%`,
+                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite`,
+                }}
+              />
+            ))}
           </div>
 
           <div className="relative max-w-2xl mx-auto px-6 py-24 md:py-32 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
-              Start clearing your backlog tonight
+            <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4 leading-tight">
+              Start clearing your backlog{' '}
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-fuchsia-400 to-violet-400 bg-[length:200%_auto] animate-[gradientShimmer_8s_ease-in-out_infinite]">
+                tonight
+              </span>
             </h2>
             <p className="text-zinc-500 mb-10">
               Free to use. Your Steam library, synced and ready to go.
@@ -409,4 +718,58 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
       />
     </div>
   );
+}
+
+function CountUp({
+  to,
+  durationMs = 1400,
+  trigger,
+}: {
+  to: number;
+  durationMs?: number;
+  trigger?: boolean;
+}) {
+  const [value, setValue] = useState(0);
+  const nodeRef = useRef<HTMLSpanElement | null>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current) return;
+
+    const start = () => {
+      if (started.current) return;
+      started.current = true;
+      const startTime = performance.now();
+      const tick = (now: number) => {
+        const elapsed = now - startTime;
+        const t = Math.min(1, elapsed / durationMs);
+        // ease-out cubic
+        const eased = 1 - Math.pow(1 - t, 3);
+        setValue(Math.round(to * eased));
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    if (trigger !== undefined) {
+      if (trigger) start();
+      return;
+    }
+
+    const el = nodeRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          start();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [to, durationMs, trigger]);
+
+  return <span ref={nodeRef}>{value.toLocaleString()}</span>;
 }
