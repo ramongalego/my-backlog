@@ -24,6 +24,36 @@ export function resetHltbCache(): void {
   cacheTimestamp = 0;
 }
 
+// Scans a minified JS chunk for `fetch("/api/...", { ...method:"POST"... })`.
+// The old regex required `method:"POST"` to appear before the first `}` after
+// the options brace, which silently fails when the minifier emits `headers`
+// (itself an object literal) before `method`. We now walk each fetch call's
+// options by balanced braces and look for `method:"POST"` anywhere inside.
+function findSearchEndpoint(scriptContent: string): string | null {
+  const fetchStart = /fetch\s*\(\s*["'](\/api\/[a-zA-Z0-9_/]+)["']\s*,\s*\{/g;
+  for (const match of scriptContent.matchAll(fetchStart)) {
+    const url = match[1];
+    const braceIdx = match.index! + match[0].length - 1;
+    let depth = 0;
+    let end = -1;
+    for (let i = braceIdx; i < scriptContent.length; i++) {
+      const ch = scriptContent[i];
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) continue;
+    const opts = scriptContent.substring(braceIdx, end + 1);
+    if (/method\s*:\s*["']POST["']/i.test(opts)) return url;
+  }
+  return null;
+}
+
 async function getHLTBConfig(): Promise<HLTBConfig | null> {
   if (cachedConfig && Date.now() - cacheTimestamp < CACHE_DURATION) {
     return cachedConfig;
@@ -35,9 +65,17 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
       { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
       TIMEOUTS.HLTB,
     );
+    if (!homeRes.ok) {
+      console.error(`[HLTB] Home page returned HTTP ${homeRes.status}`);
+      return null;
+    }
     const html = await homeRes.text();
 
     const scriptMatches = [...html.matchAll(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g)];
+    if (scriptMatches.length === 0) {
+      console.error('[HLTB] No _next chunks found in home HTML — bundle layout may have changed');
+      return null;
+    }
 
     let searchEndpoint: string | null = null;
 
@@ -48,14 +86,12 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
         { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
         TIMEOUTS.HLTB,
       );
+      if (!scriptRes.ok) continue;
       const scriptContent = await scriptRes.text();
 
-      const endpointMatch = scriptContent.match(
-        /fetch\s*\(\s*["']([^"']*\/api\/[a-zA-Z0-9_/]+)["']\s*,\s*\{[^}]*method:\s*["']POST["']/i,
-      );
-
-      if (endpointMatch) {
-        searchEndpoint = endpointMatch[1];
+      const url = findSearchEndpoint(scriptContent);
+      if (url) {
+        searchEndpoint = url;
         break;
       }
     }
@@ -72,6 +108,10 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
       { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
       TIMEOUTS.HLTB,
     );
+    if (!initRes.ok) {
+      console.error(`[HLTB] Init endpoint returned HTTP ${initRes.status}`);
+      return null;
+    }
     const initData = await initRes.json();
     const authToken = initData?.token;
     const hpKey = initData?.hpKey;
@@ -91,7 +131,8 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
     cachedConfig = { searchEndpoint, authToken, hpKey, hpVal };
     cacheTimestamp = Date.now();
     return cachedConfig;
-  } catch {
+  } catch (err) {
+    console.error('[HLTB] getHLTBConfig threw:', err);
     return null;
   }
 }
