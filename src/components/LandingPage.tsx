@@ -292,6 +292,13 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    for (const game of PICKER_GAMES) {
+      const img = new window.Image();
+      img.src = `/_next/image?url=${encodeURIComponent(game.image)}&w=128&q=75`;
+    }
+  }, []);
+
   const openModal = (mode: AuthMode) => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
@@ -315,7 +322,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 style={{
                   left: `${p.left}%`,
                   top: `${p.top}%`,
-                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite`,
+                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite backwards`,
                 }}
               />
             ))}
@@ -675,7 +682,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 style={{
                   left: `${p.left}%`,
                   top: `${p.top}%`,
-                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite`,
+                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite backwards`,
                 }}
               />
             ))}
