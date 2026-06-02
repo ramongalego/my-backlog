@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { jsonError, rateLimited } from '@/lib/api/response';
 import { getOpenAIApiKey } from '@/lib/env.server';
 import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
 import type {
@@ -19,26 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     openaiApiKey = getOpenAIApiKey();
   } catch {
-    return NextResponse.json(
-      { success: false, error: 'AI suggestions not configured' },
-      { status: 503 },
-    );
-  }
-
-  // Rate limiting
-  const ip = getClientIp(request);
-  const rateLimitResult = checkRateLimit(`suggestion:${ip}`, RATE_LIMITS.suggestion);
-
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { success: false, error: 'Too many requests. Please wait before trying again.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-        },
-      },
-    );
+    return jsonError('AI suggestions not configured', 503);
   }
 
   // Authentication
@@ -48,7 +30,14 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
+  }
+
+  // Rate limiting per user (not IP) — authenticated endpoint, so each user gets
+  // their own OpenAI quota and shared NATs don't throttle each other.
+  const rateLimitResult = checkRateLimit(`suggestion:${user.id}`, RATE_LIMITS.suggestion);
+  if (!rateLimitResult.success) {
+    return rateLimited(rateLimitResult);
   }
 
   // Parse and validate request body
@@ -56,15 +45,12 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = suggestRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid preferences' },
-      { status: 400 },
-    );
+    return jsonError(parsed.error.issues[0]?.message ?? 'Invalid preferences', 400);
   }
 
   const { mood, energy, time, excludeAppIds, previousReasonings } = parsed.data;
@@ -92,11 +78,11 @@ export async function POST(request: NextRequest) {
 
   if (backlogError) {
     console.error('Failed to fetch backlog games:', backlogError);
-    return NextResponse.json({ success: false, error: 'Failed to fetch games' }, { status: 500 });
+    return jsonError('Failed to fetch games', 500);
   }
 
   if (!backlogGames || backlogGames.length === 0) {
-    return NextResponse.json({ success: false, error: 'No games in backlog' }, { status: 400 });
+    return jsonError('No games in backlog', 400);
   }
 
   // Fetch finished games with ratings for context
@@ -195,13 +181,7 @@ export async function POST(request: NextRequest) {
   // Check if there are any eligible games after exclusions
   const eligibleCount = context.backlogGames.filter((g) => !allExcludeAppIds.has(g.app_id)).length;
   if (eligibleCount === 0) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'No more games to suggest. Try with different filters or clear exclusions.',
-      },
-      { status: 400 },
-    );
+    return jsonError('No more games to suggest. Try with different filters or clear exclusions.', 400);
   }
 
   // Build prompt and call OpenAI
@@ -211,10 +191,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     Sentry.captureException(err);
     console.error('Failed to build prompt:', err);
-    return NextResponse.json(
-      { success: false, error: 'Failed to build suggestion request' },
-      { status: 500 },
-    );
+    return jsonError('Failed to build suggestion request', 500);
   }
 
   const openai = new OpenAI({ apiKey: openaiApiKey });
@@ -232,10 +209,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     Sentry.captureException(err);
     console.error('OpenAI API error:', err);
-    return NextResponse.json(
-      { success: false, error: 'AI service temporarily unavailable' },
-      { status: 503 },
-    );
+    return jsonError('AI service temporarily unavailable', 503);
   }
 
   // Parse AI response
@@ -245,20 +219,14 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     Sentry.captureException(err, { extra: { aiResponse } });
     console.error('Failed to parse AI response:', err, aiResponse);
-    return NextResponse.json(
-      { success: false, error: 'Failed to parse AI suggestion' },
-      { status: 500 },
-    );
+    return jsonError('Failed to parse AI suggestion', 500);
   }
 
   // Verify the suggested game exists in user's backlog
   const suggestedGame = backlogGames.find((g) => g.app_id === parsedResponse.app_id);
   if (!suggestedGame) {
     console.error('AI suggested non-existent game:', parsedResponse.app_id);
-    return NextResponse.json(
-      { success: false, error: 'AI suggested an invalid game. Please try again.' },
-      { status: 500 },
-    );
+    return jsonError('AI suggested an invalid game. Please try again.', 500);
   }
 
   // Fetch full game details for response

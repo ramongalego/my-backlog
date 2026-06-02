@@ -3,6 +3,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
+import {
+  SHORT_GAME_MIN_HOURS,
+  SHORT_GAME_MAX_HOURS,
+  WEEKEND_GAME_MAX_HOURS,
+  MAX_PLAYTIME_MINUTES,
+} from '@/lib/games/filtering';
 import type { GameWithImage } from '@/types/games';
 
 interface CarouselPools {
@@ -44,9 +50,9 @@ async function fetchCarouselPools(userId: string): Promise<CarouselPools> {
       .eq('type', 'game')
       .not('main_story_hours', 'is', null)
       .not('steam_review_weighted', 'is', null)
-      .gte('main_story_hours', 1)
-      .lte('main_story_hours', 5)
-      .lte('playtime_forever', 240)
+      .gte('main_story_hours', SHORT_GAME_MIN_HOURS)
+      .lte('main_story_hours', SHORT_GAME_MAX_HOURS)
+      .lte('playtime_forever', MAX_PLAYTIME_MINUTES)
       .contains('categories', SINGLE_PLAYER)
       .or(BACKLOG_FILTER)
       .order('steam_review_weighted', { ascending: false }),
@@ -57,9 +63,9 @@ async function fetchCarouselPools(userId: string): Promise<CarouselPools> {
       .eq('type', 'game')
       .not('main_story_hours', 'is', null)
       .not('steam_review_weighted', 'is', null)
-      .gt('main_story_hours', 5)
-      .lte('main_story_hours', 12)
-      .lte('playtime_forever', 240)
+      .gt('main_story_hours', SHORT_GAME_MAX_HOURS)
+      .lte('main_story_hours', WEEKEND_GAME_MAX_HOURS)
+      .lte('playtime_forever', MAX_PLAYTIME_MINUTES)
       .contains('categories', SINGLE_PLAYER)
       .or(BACKLOG_FILTER)
       .order('steam_review_weighted', { ascending: false }),
@@ -167,10 +173,12 @@ export function useCarouselPools(userId: string | null) {
   const addBackToPool = (game: GameWithImage) => {
     updatePools((pools) => {
       const hours = game.main_story_hours;
-      if (hours != null && hours >= 1 && hours <= 5 && (game.playtime_forever ?? 0) <= 240) {
+      const playtime = game.playtime_forever ?? 0;
+      if (playtime > MAX_PLAYTIME_MINUTES || hours == null) return pools;
+      if (hours >= SHORT_GAME_MIN_HOURS && hours <= SHORT_GAME_MAX_HOURS) {
         return { ...pools, shortGamesPool: [...pools.shortGamesPool, game] };
       }
-      if (hours != null && hours > 5 && hours <= 12 && (game.playtime_forever ?? 0) <= 240) {
+      if (hours > SHORT_GAME_MAX_HOURS && hours <= WEEKEND_GAME_MAX_HOURS) {
         return { ...pools, weekendGamesPool: [...pools.weekendGamesPool, game] };
       }
       return pools;

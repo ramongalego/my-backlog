@@ -10,6 +10,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
 import { updateGameStatus } from '@/lib/games/status';
+import { fetchCompletionCounts, buildCompletionSummary } from '@/lib/games/completion';
 import { useLibraryRefresh } from './useLibraryRefresh';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -219,27 +220,16 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       });
 
       const supabase = createClient();
-      const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all([
-        supabase
-          .from('games')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .eq('status', 'finished'),
-        supabase
-          .from('games')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('type', 'game')
-          .neq('status', 'hidden'),
+      const [counts, promotedGame] = await Promise.all([
+        fetchCompletionCounts(supabase, userId),
         promoteNextFromQueue(userId, supabase),
       ]);
 
       return {
         finishedGame,
         promoted: promotedGame,
-        gamesFinished: finishedCount ?? 0,
-        totalGames: totalCount ?? 0,
+        gamesFinished: counts.gamesFinished,
+        totalGames: counts.totalGames,
         status,
         rating,
       };
@@ -253,18 +243,14 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       }
 
       if (status === 'finished') {
-        setGameSummary({
-          gameName: finishedGame.name,
-          headerImage: finishedGame.header_image,
-          playtimeMinutes: finishedGame.playtime_forever,
-          mainStoryHours: finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-          rating,
-          gamesFinished,
-          totalGames,
-          backlogHoursRemoved:
-            finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-          nextGame: promoted?.name ?? null,
-        });
+        setGameSummary(
+          buildCompletionSummary({
+            finishedGame,
+            promoted,
+            counts: { gamesFinished, totalGames },
+            rating,
+          }),
+        );
         celebrateGameFinished();
       }
     },
@@ -299,7 +285,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         app_id: item.app_id,
         name: item.game.name,
         header_image: item.game.header_image,
-        main_story_hours: item.game.main_story_hours ?? 0,
+        main_story_hours: item.game.main_story_hours,
         playtime_forever: item.game.playtime_forever,
         started_at: null,
       });

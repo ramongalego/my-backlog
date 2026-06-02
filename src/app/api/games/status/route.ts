@@ -1,50 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { jsonError, rateLimited } from '@/lib/api/response';
 import { gameStatusSchema } from '@/lib/validations/games';
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const ip = getClientIp(request);
-  const rateLimitResult = checkRateLimit(`game-status:${ip}`, RATE_LIMITS.gameStatus);
-
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-          'X-RateLimit-Remaining': '0',
-        },
-      },
-    );
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
+  }
+
+  // Rate limiting per user (not IP) — this is an authenticated endpoint, so a
+  // per-user quota avoids throttling unrelated users behind a shared NAT/IP.
+  const rateLimitResult = checkRateLimit(`game-status:${user.id}`, RATE_LIMITS.gameStatus);
+  if (!rateLimitResult.success) {
+    return rateLimited(rateLimitResult);
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = gameStatusSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? 'Invalid request' },
-      { status: 400 },
-    );
+    return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
   }
 
   const { appId, status, finishedAt, droppedAt, notes, rating } = parsed.data;
@@ -99,7 +86,7 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Failed to update game status' }, { status: 500 });
+    return jsonError('Failed to update game status', 500);
   }
 
   return NextResponse.json({ success: true });
@@ -112,7 +99,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   // Get now playing game

@@ -12,6 +12,8 @@ export const SHORT_GAME_MAX_HOURS = 5;
 export const WEEKEND_GAME_MIN_HOURS = 5;
 export const WEEKEND_GAME_MAX_HOURS = 12;
 export const MAX_PLAYTIME_MINUTES = 240;
+// Random pick uses a stricter "barely touched" playtime bound than the pools.
+export const RANDOM_PICK_MAX_PLAYTIME_MINUTES = 120;
 
 /**
  * Checks if a game is eligible for the short games pool (1-5 hours)
@@ -86,7 +88,7 @@ export function isRandomPickEligible(game: GameForFiltering): boolean {
   if (game.main_story_hours == null) return false;
 
   // Must have 2 hours or less playtime (120 minutes)
-  if (game.playtime_forever != null && game.playtime_forever > 120) {
+  if (game.playtime_forever != null && game.playtime_forever > RANDOM_PICK_MAX_PLAYTIME_MINUTES) {
     return false;
   }
 

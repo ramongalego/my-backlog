@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { jsonError } from '@/lib/api/response';
 import { queueAddRequestSchema } from '@/lib/validations/common';
 
 export async function POST(request: NextRequest) {
@@ -9,19 +10,19 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = queueAddRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ success: false, error: 'Invalid appId' }, { status: 400 });
+    return jsonError('Invalid appId', 400);
   }
   const { appId } = parsed.data;
 

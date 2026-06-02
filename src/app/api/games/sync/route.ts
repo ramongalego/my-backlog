@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { isMetadataFresh } from '@/lib/games/scoring';
 import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { jsonError, rateLimited } from '@/lib/api/response';
 import { syncSingleRequestSchema } from '@/lib/validations/common';
 
 export async function POST(request: NextRequest) {
@@ -12,36 +14,25 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   // Rate limiting per user (not IP) so each user gets their own quota
   const rateLimitResult = checkRateLimit(`game-sync:${user.id}`, RATE_LIMITS.gameSync);
-
   if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-          'X-RateLimit-Remaining': '0',
-        },
-      },
-    );
+    return rateLimited(rateLimitResult);
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = syncSingleRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
+    return jsonError('Invalid appId', 400);
   }
   const { appId, name: libraryName } = parsed.data;
 
@@ -68,13 +59,20 @@ export async function POST(request: NextRequest) {
   } else {
     metadata = await fetchGameMetadata(appId, libraryName);
     if (metadata) {
-      await supabase.from('game_metadata').upsert(metadata, { onConflict: 'app_id' });
+      const { error: cacheError } = await supabase
+        .from('game_metadata')
+        .upsert(metadata, { onConflict: 'app_id' });
+      if (cacheError) {
+        // Non-fatal: the shared cache write failed but we can still update the
+        // user's own row below. Surface it so we notice systemic cache failures.
+        Sentry.captureException(cacheError);
+      }
     }
   }
 
   if (metadata) {
     // Update user's game with metadata from shared table
-    await supabase
+    const { error: updateError } = await supabase
       .from('games')
       .update({
         platform: metadata.platform,
@@ -95,6 +93,11 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .eq('app_id', appId);
 
+    if (updateError) {
+      Sentry.captureException(updateError);
+      return jsonError('Failed to save game metadata', 500);
+    }
+
     return NextResponse.json({
       success: true,
       fromCache,
@@ -113,11 +116,16 @@ export async function POST(request: NextRequest) {
     });
   } else {
     // Mark as synced even if no data (game might be removed from store)
-    await supabase
+    const { error: markError } = await supabase
       .from('games')
       .update({ metadata_synced: true })
       .eq('user_id', user.id)
       .eq('app_id', appId);
+
+    if (markError) {
+      Sentry.captureException(markError);
+      return jsonError('Failed to update game', 500);
+    }
 
     return NextResponse.json({ success: true, fromCache: false, metadata: null });
   }

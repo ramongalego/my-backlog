@@ -1,8 +1,15 @@
-export type MoodType = 'adrenaline' | 'relaxed' | 'engaged' | 'emotional';
+import type { z } from 'zod';
+import type { suggestRequestSchema } from '@/lib/validations/suggest';
 
-export type EnergyLevel = 'high' | 'medium' | 'low';
+// Derived from the zod schema so the allowed values live in exactly one place.
+// (Used only in type position, so this import is erased at compile time.)
+type SuggestRequest = z.infer<typeof suggestRequestSchema>;
 
-export type TimeCommitment = 'short' | 'medium' | 'long';
+export type MoodType = SuggestRequest['mood'];
+
+export type EnergyLevel = SuggestRequest['energy'];
+
+export type TimeCommitment = SuggestRequest['time'];
 
 export interface SuggestionPreferences {
   mood: MoodType;

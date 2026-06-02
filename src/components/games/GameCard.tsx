@@ -52,7 +52,11 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
   const status = game.status ?? 'backlog';
 
   return (
-    <div className="group bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all sm:hover:scale-[1.02]">
+    // content-visibility lets the browser skip layout/paint for off-screen
+    // cards, so a large library scrolls smoothly without DOM virtualization.
+    // contain-intrinsic-size reserves an approximate height so the scrollbar
+    // stays stable before a card is first rendered.
+    <div className="group bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all sm:hover:scale-[1.02] [content-visibility:auto] [contain-intrinsic-size:auto_16rem]">
       {/* Clickable image area */}
       <button
         onClick={() => onOpenDetail(game.app_id)}

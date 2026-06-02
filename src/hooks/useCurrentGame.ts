@@ -9,6 +9,8 @@ import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { addToQueue } from '@/lib/games/queue';
 import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
 import { updateGameStatus } from '@/lib/games/status';
+import { fetchCompletionCounts, buildCompletionSummary } from '@/lib/games/completion';
+import { RANDOM_PICK_MAX_PLAYTIME_MINUTES } from '@/lib/games/filtering';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
@@ -157,28 +159,15 @@ export function useCurrentGame({
       } = await supabase.auth.getUser();
 
       let promoted: GameWithImage | null = null;
-      let gamesFinished = 0;
-      let totalGames = 0;
+      let counts = { gamesFinished: 0, totalGames: 0 };
 
       if (currentUser) {
-        const [{ count: finishedCount }, { count: totalCount }, promotedGame] = await Promise.all([
-          supabase
-            .from('games')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', currentUser.id)
-            .eq('type', 'game')
-            .eq('status', 'finished'),
-          supabase
-            .from('games')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', currentUser.id)
-            .eq('type', 'game')
-            .neq('status', 'hidden'),
+        const [completionCounts, promotedGame] = await Promise.all([
+          fetchCompletionCounts(supabase, currentUser.id),
           promoteNextFromQueue(currentUser.id, supabase),
         ]);
         promoted = promotedGame;
-        gamesFinished = finishedCount ?? 0;
-        totalGames = totalCount ?? 0;
+        counts = completionCounts;
       }
 
       setCurrentlyPlaying(promoted);
@@ -189,18 +178,7 @@ export function useCurrentGame({
       }
 
       if (status === 'finished') {
-        setGameSummary({
-          gameName: finishedGame.name,
-          headerImage: finishedGame.header_image,
-          playtimeMinutes: finishedGame.playtime_forever,
-          mainStoryHours: finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-          rating,
-          gamesFinished,
-          totalGames,
-          backlogHoursRemoved:
-            finishedGame.main_story_hours > 0 ? finishedGame.main_story_hours : null,
-          nextGame: promoted?.name ?? null,
-        });
+        setGameSummary(buildCompletionSummary({ finishedGame, promoted, counts, rating }));
         celebrateGameFinished();
       }
     } catch (err) {
@@ -263,7 +241,7 @@ export function useCurrentGame({
       .eq('user_id', currentUser.id)
       .eq('type', 'game')
       .not('main_story_hours', 'is', null)
-      .lte('playtime_forever', 120)
+      .lte('playtime_forever', RANDOM_PICK_MAX_PLAYTIME_MINUTES)
       .contains('categories', ['Single-player'])
       .or('status.is.null,status.eq.backlog');
 

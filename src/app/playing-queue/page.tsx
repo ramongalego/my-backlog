@@ -61,12 +61,13 @@ function NowPlayingRow({
   onMoveToBacklog,
   isLoading,
 }: NowPlayingRowProps) {
-  const hasEstimate = game.main_story_hours > 0;
+  const mainStoryHours = game.main_story_hours ?? 0;
+  const hasEstimate = mainStoryHours > 0;
   const hasPlaytime = game.playtime_forever >= 60;
   const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;
-  const estimateHours = hasEstimate ? game.main_story_hours : null;
+  const estimateHours = hasEstimate ? mainStoryHours : null;
   const isPastEstimate =
-    hasEstimate && hasPlaytime && game.playtime_forever / 60 >= game.main_story_hours;
+    hasEstimate && hasPlaytime && game.playtime_forever / 60 >= mainStoryHours;
   const progressPct =
     !isPastEstimate && playedHours && estimateHours
       ? Math.min((playedHours / estimateHours) * 100, 100)

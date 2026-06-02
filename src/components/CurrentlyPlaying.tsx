@@ -9,7 +9,7 @@ interface Game {
   app_id: number;
   name: string;
   header_image: string | null;
-  main_story_hours: number;
+  main_story_hours: number | null;
   playtime_forever: number;
   steam_review_score?: number | null;
   deck_compat?: number | null;
@@ -32,6 +32,7 @@ export function CurrentlyPlaying({
   onMoveToQueue,
   isLoading,
 }: CurrentlyPlayingProps) {
+  const mainStoryHours = game.main_story_hours ?? 0;
   return (
     <div className="w-full max-w-md mx-auto">
       <p className="text-sm text-zinc-500 uppercase tracking-wide mb-3 text-center">Now Playing</p>
@@ -63,17 +64,17 @@ export function CurrentlyPlaying({
               aria-hidden="true"
             />
           </a>
-          {game.main_story_hours > 0 && (
+          {mainStoryHours > 0 && (
             <div className="mb-5">
               {game.playtime_forever >= 60 ? (
-                game.playtime_forever / 60 >= game.main_story_hours ? (
+                game.playtime_forever / 60 >= mainStoryHours ? (
                   <p className="text-sm">
                     <span className="text-amber-400">
                       {Math.round(game.playtime_forever / 60)}h played
                     </span>
                     <span className="text-zinc-500">
                       {' '}
-                      · past the ~{game.main_story_hours}h estimate
+                      · past the ~{mainStoryHours}h estimate
                     </span>
                   </p>
                 ) : (
@@ -82,13 +83,13 @@ export function CurrentlyPlaying({
                       <span className="text-zinc-400">
                         {Math.round(game.playtime_forever / 60)}h played
                       </span>
-                      <span className="text-zinc-500">~{game.main_story_hours}h to beat</span>
+                      <span className="text-zinc-500">~{mainStoryHours}h to beat</span>
                     </div>
                     <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-sky-500 rounded-full"
                         style={{
-                          width: `${Math.min((game.playtime_forever / 60 / game.main_story_hours) * 100, 100)}%`,
+                          width: `${Math.min((game.playtime_forever / 60 / mainStoryHours) * 100, 100)}%`,
                         }}
                       />
                     </div>

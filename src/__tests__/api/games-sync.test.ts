@@ -1,109 +1,57 @@
-import {
-  validateSyncInput,
-  shouldSkipEnrichment,
-  getEnrichmentStrategy,
-} from '@/lib/games/sync-validation';
+import { syncSingleRequestSchema } from '@/lib/validations/common';
 import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
 
-describe('validateSyncInput', () => {
+// The sync route validates its input with `syncSingleRequestSchema` (zod) and
+// decides metadata enrichment via the inline `type === 'game'` check in
+// metadata-fetch. These tests exercise that real validation contract — the
+// route's source of truth — rather than a parallel reimplementation.
+describe('syncSingleRequestSchema (sync route input validation)', () => {
   describe('appId validation', () => {
     it('should reject missing appId', () => {
-      const result = validateSyncInput({ appId: undefined });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+      expect(syncSingleRequestSchema.safeParse({}).success).toBe(false);
     });
 
     it('should reject null appId', () => {
-      const result = validateSyncInput({ appId: null });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+      expect(syncSingleRequestSchema.safeParse({ appId: null }).success).toBe(false);
     });
 
     it('should reject non-number appId', () => {
-      const result = validateSyncInput({ appId: 'abc' });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+      expect(syncSingleRequestSchema.safeParse({ appId: 'abc' }).success).toBe(false);
     });
 
     it('should reject zero appId', () => {
-      const result = validateSyncInput({ appId: 0 });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+      expect(syncSingleRequestSchema.safeParse({ appId: 0 }).success).toBe(false);
     });
 
     it('should reject negative appId', () => {
-      const result = validateSyncInput({ appId: -5 });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+      expect(syncSingleRequestSchema.safeParse({ appId: -5 }).success).toBe(false);
     });
 
     it('should reject float appId', () => {
-      const result = validateSyncInput({ appId: 123.5 });
-      expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid appId');
+      expect(syncSingleRequestSchema.safeParse({ appId: 123.5 }).success).toBe(false);
     });
 
     it('should accept valid positive integer appId', () => {
-      const result = validateSyncInput({ appId: 730 });
-      expect(result.valid).toBe(true);
-      expect(result.appId).toBe(730);
+      const result = syncSingleRequestSchema.safeParse({ appId: 730 });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.appId).toBe(730);
     });
 
     it('should accept large appId values', () => {
-      const result = validateSyncInput({ appId: 2147483647 });
-      expect(result.valid).toBe(true);
-      expect(result.appId).toBe(2147483647);
+      const result = syncSingleRequestSchema.safeParse({ appId: 2147483647 });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.appId).toBe(2147483647);
     });
   });
-});
 
-describe('shouldSkipEnrichment', () => {
-  it('should return false for game type', () => {
-    expect(shouldSkipEnrichment('game')).toBe(false);
-  });
+  describe('name hint', () => {
+    it('should accept an optional name', () => {
+      expect(syncSingleRequestSchema.safeParse({ appId: 730, name: 'CS2' }).success).toBe(true);
+    });
 
-  it('should return true for DLC type', () => {
-    expect(shouldSkipEnrichment('dlc')).toBe(true);
-  });
-
-  it('should return true for software type', () => {
-    expect(shouldSkipEnrichment('software')).toBe(true);
-  });
-
-  it('should return true for null type', () => {
-    expect(shouldSkipEnrichment(null)).toBe(true);
-  });
-
-  it('should return true for unknown types', () => {
-    expect(shouldSkipEnrichment('demo')).toBe(true);
-    expect(shouldSkipEnrichment('mod')).toBe(true);
-    expect(shouldSkipEnrichment('video')).toBe(true);
-  });
-});
-
-describe('getEnrichmentStrategy', () => {
-  it('should enable all enrichment for games', () => {
-    const strategy = getEnrichmentStrategy('game');
-    expect(strategy.fetchHLTB).toBe(true);
-    expect(strategy.fetchSteamReviews).toBe(true);
-  });
-
-  it('should disable enrichment for DLC', () => {
-    const strategy = getEnrichmentStrategy('dlc');
-    expect(strategy.fetchHLTB).toBe(false);
-    expect(strategy.fetchSteamReviews).toBe(false);
-  });
-
-  it('should disable enrichment for software', () => {
-    const strategy = getEnrichmentStrategy('software');
-    expect(strategy.fetchHLTB).toBe(false);
-    expect(strategy.fetchSteamReviews).toBe(false);
-  });
-
-  it('should disable enrichment for null type', () => {
-    const strategy = getEnrichmentStrategy(null);
-    expect(strategy.fetchHLTB).toBe(false);
-    expect(strategy.fetchSteamReviews).toBe(false);
+    it('should reject an empty name', () => {
+      expect(syncSingleRequestSchema.safeParse({ appId: 730, name: '' }).success).toBe(false);
+    });
   });
 });
 
@@ -158,23 +106,6 @@ describe('sync route behavior (integration)', () => {
     it('should return global average for zero reviews', () => {
       const score = calculateBayesianScore(50, 0);
       expect(score).toBe(70);
-    });
-  });
-
-  describe('game type handling', () => {
-    it('should fetch HLTB and reviews only for actual games', () => {
-      expect(getEnrichmentStrategy('game').fetchHLTB).toBe(true);
-      expect(getEnrichmentStrategy('game').fetchSteamReviews).toBe(true);
-    });
-
-    it('should skip HLTB and reviews for DLC', () => {
-      expect(getEnrichmentStrategy('dlc').fetchHLTB).toBe(false);
-      expect(getEnrichmentStrategy('dlc').fetchSteamReviews).toBe(false);
-    });
-
-    it('should skip HLTB and reviews for software', () => {
-      expect(getEnrichmentStrategy('software').fetchHLTB).toBe(false);
-      expect(getEnrichmentStrategy('software').fetchSteamReviews).toBe(false);
     });
   });
 });

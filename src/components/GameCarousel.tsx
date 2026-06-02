@@ -9,7 +9,7 @@ interface Game {
   app_id: number;
   name: string;
   header_image: string | null;
-  main_story_hours: number;
+  main_story_hours: number | null;
   playtime_forever: number;
   steam_review_score?: number | null;
   steam_review_count?: number | null;
