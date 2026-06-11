@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
+import { jsonError } from '@/lib/api/response';
 import {
   queueAddRequestSchema,
   queueReorderRequestSchema,
@@ -14,7 +15,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   // Step 1: fetch queue rows (no FK to games, so can't use join syntax)
@@ -26,7 +27,7 @@ export async function GET() {
 
   if (error) {
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Failed to load queue' }, { status: 500 });
+    return jsonError('Failed to load queue', 500);
   }
 
   if (!queueRows || queueRows.length === 0) {
@@ -72,19 +73,19 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = queueAddRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
+    return jsonError('Invalid appId', 400);
   }
   const { appId } = parsed.data;
 
@@ -108,10 +109,10 @@ export async function POST(request: NextRequest) {
   if (error) {
     if (error.code === '23505') {
       // Unique constraint violation — game already in queue
-      return NextResponse.json({ error: 'Game already in queue' }, { status: 409 });
+      return jsonError('Game already in queue', 409);
     }
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Failed to add to queue' }, { status: 500 });
+    return jsonError('Failed to add to queue', 500);
   }
 
   return NextResponse.json({ success: true });
@@ -124,14 +125,14 @@ export async function PATCH(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = queueReorderRequestSchema.safeParse(body);
@@ -146,10 +147,10 @@ export async function PATCH(request: NextRequest) {
     // Postgres raise_exception (P0001) for our validation errors → 400.
     // Everything else is a real server problem → Sentry + 500.
     if (error.code === 'P0001' || error.code === '22023') {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonError(error.message, 400);
     }
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Failed to reorder queue' }, { status: 500 });
+    return jsonError('Failed to reorder queue', 500);
   }
 
   return NextResponse.json({ success: true });
@@ -162,19 +163,19 @@ export async function DELETE(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   const { searchParams } = new URL(request.url);
   const appIdParam = searchParams.get('appId');
 
   if (!appIdParam) {
-    return NextResponse.json({ error: 'Missing appId' }, { status: 400 });
+    return jsonError('Missing appId', 400);
   }
 
   const parsedAppId = appIdSchema.safeParse(Number(appIdParam));
   if (!parsedAppId.success) {
-    return NextResponse.json({ error: 'Invalid appId' }, { status: 400 });
+    return jsonError('Invalid appId', 400);
   }
   const appId = parsedAppId.data;
 
@@ -186,7 +187,7 @@ export async function DELETE(request: NextRequest) {
 
   if (error) {
     Sentry.captureException(error);
-    return NextResponse.json({ error: 'Failed to remove from queue' }, { status: 500 });
+    return jsonError('Failed to remove from queue', 500);
   }
 
   return NextResponse.json({ success: true });

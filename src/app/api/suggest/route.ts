@@ -181,7 +181,10 @@ export async function POST(request: NextRequest) {
   // Check if there are any eligible games after exclusions
   const eligibleCount = context.backlogGames.filter((g) => !allExcludeAppIds.has(g.app_id)).length;
   if (eligibleCount === 0) {
-    return jsonError('No more games to suggest. Try with different filters or clear exclusions.', 400);
+    return jsonError(
+      'No more games to suggest. Try with different filters or clear exclusions.',
+      400,
+    );
   }
 
   // Build prompt and call OpenAI

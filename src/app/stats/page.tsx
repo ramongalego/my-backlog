@@ -124,7 +124,7 @@ function TopTags({ stats }: { stats: Stats }) {
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
         <SectionTitle>Top tags in your library</SectionTitle>
         <p className="text-sm text-zinc-600">
-          No tag data yet — tags populate on next metadata sync.
+          No tag data yet. Tags fill in on the next metadata sync.
         </p>
       </div>
     );
@@ -164,7 +164,7 @@ function YearChart({ stats }: { stats: Stats }) {
   const empty =
     view === 'finished'
       ? 'No finished games with dates yet.'
-      : 'No release year data yet — sync your library.';
+      : 'No release year data yet. Sync your library to fill this in.';
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col">
@@ -382,7 +382,7 @@ export default function StatsPage() {
       notes: string;
       rating: number | null;
     }) => {
-      await fetch('/api/games/status', {
+      const res = await fetch('/api/games/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -394,7 +394,12 @@ export default function StatsPage() {
           rating: vars.rating,
         }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Failed to update game (${res.status})`);
+      }
     },
+    onError: () => toast.error('Failed to update game. Please try again.'),
     onSettled: () => invalidateGames(),
   });
 
@@ -410,12 +415,15 @@ export default function StatsPage() {
   };
 
   const handleAddToQueue = async (appId: number) => {
+    const gameName = editModal?.gameName;
+    setEditModal(null);
     const ok = await addToQueue(appId);
     if (ok) {
       invalidateQueue();
-      toast.success(`${editModal?.gameName} added to the queue!`);
+      toast.success(`${gameName} added to the queue!`);
+    } else {
+      toast.error(`Could not add ${gameName} to the queue. Please try again.`);
     }
-    setEditModal(null);
   };
 
   const handleConfirm = async (
@@ -446,7 +454,9 @@ export default function StatsPage() {
           ) : !stats ? (
             <div className="text-center py-20">
               <Gamepad2 className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-              <p className="text-zinc-500">No data yet — sync your library first.</p>
+              <p className="text-zinc-500">
+                No data yet. Sync your Steam library to see your stats.
+              </p>
             </div>
           ) : (
             <div className="space-y-6">

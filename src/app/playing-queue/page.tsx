@@ -66,8 +66,7 @@ function NowPlayingRow({
   const hasPlaytime = game.playtime_forever >= 60;
   const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;
   const estimateHours = hasEstimate ? mainStoryHours : null;
-  const isPastEstimate =
-    hasEstimate && hasPlaytime && game.playtime_forever / 60 >= mainStoryHours;
+  const isPastEstimate = hasEstimate && hasPlaytime && game.playtime_forever / 60 >= mainStoryHours;
   const progressPct =
     !isPastEstimate && playedHours && estimateHours
       ? Math.min((playedHours / estimateHours) * 100, 100)

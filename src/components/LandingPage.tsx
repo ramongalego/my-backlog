@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
-import Image from 'next/image';
+import Image, { getImageProps } from 'next/image';
 
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
@@ -293,9 +293,14 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   }, []);
 
   useEffect(() => {
+    // Warm the cache with the exact URLs next/image will request, so picker
+    // results swap in without pop-in. getImageProps keeps this in sync with
+    // the loader config (width snapping, qualities allowlist).
     for (const game of PICKER_GAMES) {
+      const { props } = getImageProps({ src: game.image, alt: '', width: 56, height: 56 });
       const img = new window.Image();
-      img.src = `/_next/image?url=${encodeURIComponent(game.image)}&w=128&q=75`;
+      if (props.srcSet) img.srcset = props.srcSet;
+      img.src = props.src;
     }
   }, []);
 

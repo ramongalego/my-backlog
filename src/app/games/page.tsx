@@ -11,11 +11,18 @@ import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage } from '@/hooks/useGamesPage';
 
-function EmptyState() {
+function EmptyState({ searching }: { searching: boolean }) {
   return (
     <div className="text-center py-16">
       <Gamepad2 className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
-      <p className="text-zinc-500">No games found</p>
+      <p className="text-zinc-500">
+        {searching ? 'No games match your search.' : 'Nothing here yet.'}
+      </p>
+      <p className="text-zinc-600 text-sm mt-1">
+        {searching
+          ? 'Try a different search or switch filters.'
+          : 'Games will show up here once they match this filter.'}
+      </p>
     </div>
   );
 }
@@ -107,7 +114,7 @@ export default function GamesPage() {
           </div>
 
           {visibleGames.length === 0 ? (
-            <EmptyState />
+            <EmptyState searching={searchQuery.trim().length > 0} />
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

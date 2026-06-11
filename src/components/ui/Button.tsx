@@ -45,14 +45,10 @@ export function Button({
       aria-busy={isLoading || undefined}
       {...props}
     >
-      {isLoading ? (
-        <>
-          <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />
-          <span>Loading...</span>
-        </>
-      ) : (
-        children
-      )}
+      {/* Keep the label visible while loading so the button doesn't change
+          width and the user still sees what action is in flight. */}
+      {isLoading && <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />}
+      {children}
     </button>
   );
 }

@@ -129,7 +129,7 @@ ${
   previousReasonings.length > 0
     ? `
 AVOID REPETITION: The user has rerolled. Here are your previous suggestions - do NOT repeat the same reasoning patterns or reference the same games from their history:
-${previousReasonings.map((r, i) => `${i + 1}. "${r}"`).join('\n')}
+${previousReasonings.map((r, i) => `${i + 1}. ${JSON.stringify(r)}`).join('\n')}
 
 Use DIFFERENT examples from their history and vary your reasoning style.`
     : ''

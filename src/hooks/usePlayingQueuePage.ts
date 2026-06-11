@@ -145,6 +145,9 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) => {
         if (!old) return old;
         const byId = new Map(old.map((q) => [q.app_id, q]));
+        // Unknown id means the cache and the drag state diverged; skip the
+        // optimistic pass and let onSettled's invalidation catch up.
+        if (!appIds.every((id) => byId.has(id))) return old;
         return appIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
       });
       return { previous };
@@ -186,6 +189,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
             playtime_forever: game.playtime_forever,
             main_story_hours: game.main_story_hours,
             steam_review_score: game.steam_review_score ?? null,
+            deck_compat: game.deck_compat ?? null,
           },
         },
       ]);
@@ -273,13 +277,15 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       return fetchCurrentlyPlaying(userId);
     },
     onMutate: async (appId) => {
-      const item = queue.find((q) => q.app_id === appId);
-      if (!item) return { previousPlaying: undefined, previousQueue: undefined };
-
       await queryClient.cancelQueries({ queryKey: playingKey });
       await queryClient.cancelQueries({ queryKey: queueKey });
       const previousPlaying = queryClient.getQueryData<GameWithImage | null>(playingKey);
       const previousQueue = queryClient.getQueryData<QueueItem[]>(queueKey);
+
+      // Read from the cache, not the render closure, so rapid picks can't
+      // resolve against a stale queue snapshot.
+      const item = (previousQueue ?? []).find((q) => q.app_id === appId);
+      if (!item) return { previousPlaying: undefined, previousQueue: undefined };
 
       queryClient.setQueryData(playingKey, {
         app_id: item.app_id,
@@ -288,6 +294,8 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         main_story_hours: item.game.main_story_hours,
         playtime_forever: item.game.playtime_forever,
         started_at: null,
+        steam_review_score: item.game.steam_review_score,
+        deck_compat: item.game.deck_compat ?? null,
       });
       queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) =>
         (old ?? []).filter((q) => q.app_id !== appId),

@@ -16,6 +16,7 @@ import { buildRoastPrompt } from '@/lib/roast/prompt';
 import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
 import { getBlacklistMessage } from '@/lib/roast/blacklist';
 import { roastRequestSchema } from '@/lib/validations/roast';
+import { jsonError } from '@/lib/api/response';
 
 export async function POST(request: NextRequest) {
   // Check API keys
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     steamApiKey = getSteamApiKey();
     openaiApiKey = getOpenAIApiKey();
   } catch {
-    return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
+    return jsonError('Service not configured', 503);
   }
 
   // Parse input
@@ -33,15 +34,12 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = roastRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? 'Invalid request' },
-      { status: 400 },
-    );
+    return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
   }
   const { steamInput } = parsed.data;
 
@@ -54,12 +52,9 @@ export async function POST(request: NextRequest) {
   // Resolve to Steam ID
   const steamId = await parseSteamInput(steamInput, steamApiKey);
   if (!steamId) {
-    return NextResponse.json(
-      {
-        error:
-          'Could not find that Steam profile. Try pasting the full profile URL from your browser, display names and vanity URLs are not the same thing.',
-      },
-      { status: 404 },
+    return jsonError(
+      'Could not find that Steam profile. Try pasting the full profile URL from your browser, display names and vanity URLs are not the same thing.',
+      404,
     );
   }
 
@@ -72,15 +67,9 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = checkRateLimit(`roast:${ip}`, RATE_LIMITS.roast);
 
   if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Too many roasts — try again later' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-        },
-      },
-    );
+    return jsonError('Too many roasts. Try again later.', 429, {
+      'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
+    });
   }
 
   // Global circuit breaker on fresh generations — bounds worst-case OpenAI spend
@@ -88,10 +77,7 @@ export async function POST(request: NextRequest) {
   // already skipped this check.
   const globalLimit = checkRateLimit('roast:global', RATE_LIMITS.roastGlobal);
   if (!globalLimit.success) {
-    return NextResponse.json(
-      { error: 'Roasts are temporarily unavailable — try again tomorrow' },
-      { status: 429 },
-    );
+    return jsonError('Roasts are temporarily unavailable. Try again tomorrow.', 429);
   }
 
   // Fetch Steam data — all in parallel
@@ -110,21 +96,15 @@ export async function POST(request: NextRequest) {
     ]);
   } catch (err) {
     Sentry.captureException(err);
-    return NextResponse.json(
-      { error: 'Could not fetch Steam data. The profile may be private.' },
-      { status: 502 },
-    );
+    return jsonError('Could not fetch Steam data. The profile may be private.', 502);
   }
 
   if (!profile) {
-    return NextResponse.json({ error: 'Steam profile not found' }, { status: 404 });
+    return jsonError('Steam profile not found', 404);
   }
 
   if (games.length === 0) {
-    return NextResponse.json(
-      { error: 'This profile has no games or the game library is set to private.' },
-      { status: 422 },
-    );
+    return jsonError('This profile has no games or the game library is set to private.', 422);
   }
 
   // Fetch tags for top 10 most-played games
@@ -183,6 +163,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     Sentry.captureException(err);
     console.error('OpenAI API error:', err);
-    return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 503 });
+    return jsonError('AI service temporarily unavailable', 503);
   }
 }

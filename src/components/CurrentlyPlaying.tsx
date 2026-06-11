@@ -72,10 +72,7 @@ export function CurrentlyPlaying({
                     <span className="text-amber-400">
                       {Math.round(game.playtime_forever / 60)}h played
                     </span>
-                    <span className="text-zinc-500">
-                      {' '}
-                      · past the ~{mainStoryHours}h estimate
-                    </span>
+                    <span className="text-zinc-500"> · past the ~{mainStoryHours}h estimate</span>
                   </p>
                 ) : (
                   <>

@@ -51,7 +51,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to submit');
       } else {
-        toast.success('Report sent — thanks!');
+        toast.success('Report sent. Thanks!');
         handleClose();
       }
     });

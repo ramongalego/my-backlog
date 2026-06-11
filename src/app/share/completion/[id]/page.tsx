@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!data) return {};
 
   const steamHours = Math.round((data.playtime_minutes / 60) * 10) / 10;
-  const ratingPart = data.rating !== null ? ` — rated ${data.rating}/10` : '';
+  const ratingPart = data.rating !== null ? `, rated ${data.rating}/10` : '';
   const description = `Finished ${data.game_name} after ${steamHours}h${ratingPart}`;
 
   return {

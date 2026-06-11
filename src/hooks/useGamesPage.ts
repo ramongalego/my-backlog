@@ -197,6 +197,8 @@ export function useGamesPage(): UseGamesPageReturn {
           return { ...old, queuedAppIds: new Set([...old.queuedAppIds, vars.appId]) };
         });
         toast.success(`${vars.gameName} added to the queue!`);
+      } else {
+        toast.error(`Could not add ${vars.gameName} to the queue. Please try again.`);
       }
     },
     onSettled: () => invalidateQueue(),
