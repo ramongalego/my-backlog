@@ -104,15 +104,41 @@ async function getTagNameMap(): Promise<Map<number, string> | null> {
   }
 }
 
-export async function getSteamTags(appId: number): Promise<string[] | null> {
+const STORE_ASSET_BASE = 'https://shared.akamai.steamstatic.com/store_item_assets/';
+
+interface StoreItemAssets {
+  asset_url_format?: string;
+  header?: string;
+  header_2x?: string;
+}
+
+export interface StoreItemInfo {
+  /** Tag names, most voted first. */
+  tags: string[] | null;
+  /**
+   * The 920×430 version of the store header, when the game has one. Steam's
+   * appdetails only returns the 460×215 header, which looks soft anywhere
+   * it's shown larger than that.
+   */
+  headerImage2x: string | null;
+}
+
+function headerImage2x(assets: StoreItemAssets | undefined): string | null {
+  if (!assets?.asset_url_format || !assets.header_2x || assets.header_2x === assets.header) {
+    return null;
+  }
+  return STORE_ASSET_BASE + assets.asset_url_format.replace('${FILENAME}', assets.header_2x);
+}
+
+/** Tags and high-resolution header art for one app, from a single GetItems call. */
+export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | null> {
   try {
     const tagMap = await getTagNameMap();
-    if (!tagMap) return null;
 
     const params = JSON.stringify({
       ids: [{ appid: appId }],
       context: { language: 'english', country_code: 'US' },
-      data_request: { include_tag_count: 20 },
+      data_request: { include_tag_count: 20, include_assets: true },
     });
 
     const response = await fetchWithTimeout(
@@ -122,28 +148,34 @@ export async function getSteamTags(appId: number): Promise<string[] | null> {
     );
 
     if (!response.ok) {
-      console.error(`[Steam Tags] GetItems failed for appId=${appId}: HTTP ${response.status}`);
+      console.error(`[Steam Store] GetItems failed for appId=${appId}: HTTP ${response.status}`);
       return null;
     }
 
     const data = await response.json();
-    const items: { tagids?: number[] }[] = data?.response?.store_items ?? [];
-
-    if (!items.length || !items[0].tagids?.length) {
-      console.warn(`[Steam Tags] No tags returned for appId=${appId}`);
-      return null;
-    }
+    const item: { tagids?: number[]; assets?: StoreItemAssets } | undefined =
+      data?.response?.store_items?.[0];
+    if (!item) return null;
 
     // Tag IDs are already sorted by weight (most voted first)
-    const tagNames = items[0].tagids
-      .map((id) => tagMap.get(id))
-      .filter((name): name is string => !!name);
+    const tagNames =
+      tagMap && item.tagids?.length
+        ? item.tagids.map((id) => tagMap.get(id)).filter((name): name is string => !!name)
+        : [];
+    if (!tagNames.length) console.warn(`[Steam Tags] No tags returned for appId=${appId}`);
 
-    return tagNames.length > 0 ? tagNames : null;
+    return {
+      tags: tagNames.length > 0 ? tagNames : null,
+      headerImage2x: headerImage2x(item.assets),
+    };
   } catch (error) {
-    console.error(`[Steam Tags] Exception for appId=${appId}:`, error);
+    console.error(`[Steam Store] Exception for appId=${appId}:`, error);
     return null;
   }
+}
+
+export async function getSteamTags(appId: number): Promise<string[] | null> {
+  return (await getStoreItemInfo(appId))?.tags ?? null;
 }
 
 export interface SteamReviewData {

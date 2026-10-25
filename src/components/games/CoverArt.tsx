@@ -99,7 +99,9 @@ export function CoverThumb({
       src={src}
       alt={alt}
       rounded="md"
-      sizes="(max-width: 640px) 64px, 112px"
+      // Requested at twice the display width: a 1:1 downscale of Steam art looks
+      // soft, even on 1x screens.
+      sizes="(max-width: 640px) 128px, 224px"
       quality={90}
       className={`shrink-0 ${className}`}
     >

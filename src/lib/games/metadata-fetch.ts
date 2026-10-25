@@ -2,7 +2,7 @@ import {
   getGameDetails,
   extractGameMetadata,
   getSteamReviewData,
-  getSteamTags,
+  getStoreItemInfo,
   getSteamDeckCompat,
 } from '@/lib/steam/store-api';
 import { getMainStoryHours } from '@/lib/hltb/api';
@@ -41,11 +41,11 @@ export async function fetchGameMetadata(
   const isGame = extracted.type === 'game';
 
   // Only fetch enriched data for actual games — skip DLC, software, etc.
-  const [mainStoryHours, steamReviewData, tags, deckCompat] = isGame
+  const [mainStoryHours, steamReviewData, storeItem, deckCompat] = isGame
     ? await Promise.all([
         getMainStoryHours(nameHint || details?.data?.name || ''),
         getSteamReviewData(appId),
-        getSteamTags(appId),
+        getStoreItemInfo(appId),
         getSteamDeckCompat(appId),
       ])
     : [null, null, null, null];
@@ -63,13 +63,14 @@ export async function fetchGameMetadata(
     categories: extracted.categories,
     description: extracted.description,
     release_date: extracted.release_date,
-    header_image: extracted.header_image,
+    // Prefer the 920×430 header so the art stays sharp in large spots.
+    header_image: storeItem?.headerImage2x ?? extracted.header_image,
     steam_review_score: steamReviewData?.score ?? null,
     steam_review_count: steamReviewData?.count ?? null,
     steam_review_weighted: weightedScore,
     main_story_hours: mainStoryHours,
     deck_compat: deckCompat,
-    tags: tags,
+    tags: storeItem?.tags ?? null,
     synced_at: new Date().toISOString(),
   };
 }

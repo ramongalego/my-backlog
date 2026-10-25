@@ -154,7 +154,7 @@ export function GameDetailModal({
             alt={gameName}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 100vw, 512px"
+            sizes="(max-width: 640px) 100vw, 544px"
           />
         ) : (
           <div className="w-full h-full bg-ink-800 flex items-center justify-center">
