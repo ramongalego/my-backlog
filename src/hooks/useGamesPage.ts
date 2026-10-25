@@ -15,9 +15,38 @@ import { useUrlState } from './useUrlState';
 export type { GameItem };
 
 const GAME_FILTERS = ['all', 'backlog', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
-const GAME_SORTS = ['playtime', 'score', 'recent', 'length'] as const;
+const GAME_SORTS = ['playtime', 'score', 'recent', 'released', 'length'] as const;
 export type GameFilter = (typeof GAME_FILTERS)[number];
 export type GameSort = (typeof GAME_SORTS)[number];
+
+// Steam gives display dates like "Sep 28, 2010"; "To be announced" and missing
+// dates parse to NaN and sort last.
+function releaseTime(game: GameItem): number {
+  const time = game.release_date ? Date.parse(game.release_date) : NaN;
+  return Number.isNaN(time) ? -Infinity : time;
+}
+
+/** Sort comparator for the Games page. */
+export function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
+  switch (sort) {
+    case 'score':
+      return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
+    case 'recent':
+      // When the game joined the library. The first sync imports everything
+      // at once, so ties fall back to the newest on Steam.
+      return b.created_at.localeCompare(a.created_at) || b.app_id - a.app_id;
+    case 'released':
+      return releaseTime(b) - releaseTime(a) || b.app_id - a.app_id;
+    case 'length': {
+      const aHours = a.main_story_hours ?? Infinity;
+      const bHours = b.main_story_hours ?? Infinity;
+      return aHours - bHours;
+    }
+    case 'playtime':
+    default:
+      return b.playtime_forever - a.playtime_forever;
+  }
+}
 
 export interface FilterCounts {
   all: number;
@@ -220,22 +249,7 @@ export function useGamesPage(): UseGamesPageReturn {
       return true;
     });
 
-    return filtered.sort((a, b) => {
-      switch (sort) {
-        case 'score':
-          return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
-        case 'recent':
-          return b.app_id - a.app_id;
-        case 'length': {
-          const aHours = a.main_story_hours ?? Infinity;
-          const bHours = b.main_story_hours ?? Infinity;
-          return aHours - bHours;
-        }
-        case 'playtime':
-        default:
-          return b.playtime_forever - a.playtime_forever;
-      }
-    });
+    return filtered.sort((a, b) => compareGames(a, b, sort));
   })();
 
   const visibleGames = filteredGames.slice(0, visibleCount);

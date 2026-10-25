@@ -29,6 +29,10 @@ export interface GameItem {
   dropped_at: string | null;
   tags: string[] | null;
   deck_compat?: number | null;
+  /** When the game first appeared in the library (set on insert, never updated). */
+  created_at: string;
+  /** Steam's display date, e.g. "Sep 28, 2010" or "To be announced". */
+  release_date: string | null;
 }
 
 export function loadGamesList(supabase: SupabaseClient, userId: string): Promise<GameItem[]> {
@@ -36,7 +40,7 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
     supabase
       .from('games')
       .select(
-        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
+        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
@@ -266,22 +270,29 @@ export async function loadCarouselPools(
       .or(BACKLOG_FILTER)
       .order('steam_review_score', { ascending: false })
       .limit(20),
-    // Recently Added (higher app_id = newer Steam release)
+    // Recently Added: newest arrivals in the library (see below).
     supabase
       .from('games')
-      .select(CAROUSEL_SELECT)
+      .select(`${CAROUSEL_SELECT}, created_at`)
       .eq('user_id', userId)
       .eq('type', 'game')
-      .contains('categories', SINGLE_PLAYER)
       .or(BACKLOG_FILTER)
+      .order('created_at', { ascending: false })
       .order('app_id', { ascending: false })
       .limit(20),
+    // When the library was first imported.
+    supabase
+      .from('games')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(1),
   ]);
 
   const failed = results.find((r) => r.error);
   if (failed?.error) throw failed.error;
-  const [short, weekend, highlyRated, hiddenGems, recentlyAdded] = results.map(
-    (r) => (r.data ?? []) as GameWithImage[],
+  const [short, weekend, highlyRated, hiddenGems, recent, firstImported] = results.map(
+    (r) => (r.data ?? []) as (GameWithImage & { created_at: string })[],
   );
 
   return {
@@ -289,6 +300,21 @@ export async function loadCarouselPools(
     weekendGamesPool: weekend,
     highlyRatedGamesPool: highlyRated,
     hiddenGemsPool: hiddenGems,
-    recentlyAddedPool: recentlyAdded,
+    recentlyAddedPool: addedSinceFirstSync(recent, firstImported[0]?.created_at),
   };
+}
+
+// The first sync imports the whole library at once, so those rows all share
+// roughly the same created_at and say nothing about when each game was
+// bought. Steam doesn't expose purchase dates, so "recently added" means
+// games that first appeared in a later sync.
+const FIRST_SYNC_WINDOW_MS = 60 * 60 * 1000;
+
+function addedSinceFirstSync<T extends { created_at: string }>(
+  games: T[],
+  firstImportedAt: string | undefined,
+): T[] {
+  if (!firstImportedAt) return [];
+  const cutoff = Date.parse(firstImportedAt) + FIRST_SYNC_WINDOW_MS;
+  return games.filter((g) => Date.parse(g.created_at) > cutoff);
 }

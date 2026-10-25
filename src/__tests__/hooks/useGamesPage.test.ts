@@ -1,4 +1,4 @@
-import type { GameItem, GameFilter, GameSort } from '@/hooks/useGamesPage';
+import { compareGames, type GameItem, type GameFilter, type GameSort } from '@/hooks/useGamesPage';
 
 // Test the filtering and sorting logic used in useGamesPage
 // We extract the logic to test it independently of React hooks
@@ -30,17 +30,7 @@ function filterAndSortGames(
     return true;
   });
 
-  return filtered.sort((a, b) => {
-    switch (sort) {
-      case 'score':
-        return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
-      case 'recent':
-        return b.app_id - a.app_id;
-      case 'playtime':
-      default:
-        return b.playtime_forever - a.playtime_forever;
-    }
-  });
+  return filtered.sort((a, b) => compareGames(a, b, sort));
 }
 
 function filterGames(games: GameItem[], filter: GameFilter, searchQuery: string): GameItem[] {
@@ -57,6 +47,8 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   header_image: 'https://example.com/image.jpg',
   main_story_hours: 10,
   status: 'backlog',
+  created_at: '2026-01-01T00:00:00Z',
+  release_date: null,
   notes: null,
   rating: null,
   finished_at: null,
@@ -352,12 +344,51 @@ describe('useGamesPage filtering logic', () => {
       expect(result[2].name).toBe('Game A'); // 70 score
     });
 
-    it('should sort by most recent (app_id descending)', () => {
+    it('should fall back to app_id (newest on Steam) when games joined the library together', () => {
       const result = filterAndSortGames(gamesForSorting, 'all', '', 'recent');
 
       expect(result[0].name).toBe('Game B'); // app_id 3
       expect(result[1].name).toBe('Game C'); // app_id 2
       expect(result[2].name).toBe('Game A'); // app_id 1
+    });
+
+    it('should sort recently added by when the game joined the library', () => {
+      const games = [
+        createGame({
+          app_id: 900,
+          name: 'First sync, new on Steam',
+          created_at: '2026-01-26T20:33:00Z',
+        }),
+        createGame({ app_id: 10, name: 'Bought last', created_at: '2026-10-25T13:53:00Z' }),
+        createGame({ app_id: 20, name: 'Bought in April', created_at: '2026-04-04T17:10:00Z' }),
+      ];
+
+      const result = filterAndSortGames(games, 'all', '', 'recent');
+
+      expect(result.map((g) => g.name)).toEqual([
+        'Bought last',
+        'Bought in April',
+        'First sync, new on Steam',
+      ]);
+    });
+
+    it('should sort by release date, newest first, with unknown dates last', () => {
+      const games = [
+        createGame({ app_id: 1, name: 'TBA', release_date: 'To be announced' }),
+        createGame({ app_id: 2, name: '2010', release_date: 'Sep 28, 2010' }),
+        createGame({ app_id: 3, name: 'No date', release_date: null }),
+        createGame({ app_id: 4, name: '2023', release_date: 'Jun 16, 2023' }),
+      ];
+
+      const result = filterAndSortGames(games, 'all', '', 'released');
+
+      expect(result.slice(0, 2).map((g) => g.name)).toEqual(['2023', '2010']);
+      expect(
+        result
+          .slice(2)
+          .map((g) => g.name)
+          .sort(),
+      ).toEqual(['No date', 'TBA']);
     });
 
     it('should handle null scores when sorting by score', () => {

@@ -11,7 +11,8 @@ interface GamesSortProps {
 
 const SORT_OPTIONS = [
   { value: 'score' as GameSort, label: 'Highest Rated' },
-  { value: 'recent' as GameSort, label: 'Most Recent' },
+  { value: 'recent' as GameSort, label: 'Recently Added' },
+  { value: 'released' as GameSort, label: 'Release Date' },
   { value: 'playtime' as GameSort, label: 'Most Played' },
   { value: 'length' as GameSort, label: 'Game Length' },
 ];
