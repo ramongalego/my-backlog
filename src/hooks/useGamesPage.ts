@@ -15,7 +15,7 @@ import { useUrlState } from './useUrlState';
 export type { GameItem };
 
 const GAME_FILTERS = ['all', 'backlog', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
-const GAME_SORTS = ['playtime', 'score', 'recent', 'released', 'length'] as const;
+const GAME_SORTS = ['playtime', 'score', 'rating', 'recent', 'released', 'length'] as const;
 export type GameFilter = (typeof GAME_FILTERS)[number];
 export type GameSort = (typeof GAME_SORTS)[number];
 
@@ -26,11 +26,26 @@ function releaseTime(game: GameItem): number {
   return Number.isNaN(time) ? -Infinity : time;
 }
 
+// Ratings only mean something on finished or dropped games. Some older rows
+// kept a rating after moving back to the backlog, so those count as unrated.
+function myRating(game: GameItem): number {
+  const rated = game.status === 'finished' || game.status === 'dropped';
+  return rated && game.rating != null ? game.rating : -1;
+}
+
 /** Sort comparator for the Games page. */
 export function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
   switch (sort) {
     case 'score':
       return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
+    case 'rating':
+      // Your own rating, highest first; ties show the most recently finished
+      // first. Unrated games follow, by Steam score.
+      return (
+        myRating(b) - myRating(a) ||
+        (b.finished_at ?? '').localeCompare(a.finished_at ?? '') ||
+        (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0)
+      );
     case 'recent':
       // When the game joined the library. The first sync imports everything
       // at once, so ties fall back to the newest on Steam.

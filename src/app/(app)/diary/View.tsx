@@ -231,18 +231,21 @@ export default function DiaryView() {
         title="Diary"
         description={!loading && summaryText}
         actions={
-          !loading &&
-          availableYears.length >= 2 &&
-          entries.length >= 5 && (
-            <Dropdown
-              value={selectedYear}
-              onChange={setSelectedYear}
-              icon={<CalendarDays className="w-4 h-4" />}
-              options={[
-                { value: 'all', label: 'All time' },
-                ...availableYears.map((year) => ({ value: year, label: year })),
-              ]}
-            />
+          !loading && (
+            <div className="flex items-center gap-6">
+              {availableYears.length >= 2 && entries.length >= 5 && (
+                <Dropdown
+                  value={selectedYear}
+                  onChange={setSelectedYear}
+                  icon={<CalendarDays className="w-4 h-4" />}
+                  aria-label="Filter by year"
+                  options={[
+                    { value: 'all', label: 'All time' },
+                    ...availableYears.map((year) => ({ value: year, label: year })),
+                  ]}
+                />
+              )}
+            </div>
           )
         }
       />

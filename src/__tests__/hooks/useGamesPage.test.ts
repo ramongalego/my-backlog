@@ -372,6 +372,62 @@ describe('useGamesPage filtering logic', () => {
       ]);
     });
 
+    it('should sort by my rating, then most recently finished, with unrated games last', () => {
+      const finished = (o: Partial<GameItem>) => createGame({ status: 'finished', ...o });
+      const games = [
+        createGame({
+          app_id: 1,
+          name: 'Unrated, great on Steam',
+          rating: null,
+          steam_review_weighted: 99,
+        }),
+        finished({ app_id: 2, name: '8, finished 2024', rating: 8, finished_at: '2024-05-01' }),
+        finished({ app_id: 3, name: '10', rating: 10, finished_at: '2021-01-01' }),
+        finished({ app_id: 4, name: '8, finished 2025', rating: 8, finished_at: '2025-08-20' }),
+        createGame({ app_id: 6, name: 'Dropped at 4', status: 'dropped', rating: 4 }),
+        finished({ app_id: 5, name: 'Rated 0', rating: 0, finished_at: '2023-01-01' }),
+      ];
+
+      const result = filterAndSortGames(games, 'all', '', 'rating');
+
+      expect(result.map((g) => g.name)).toEqual([
+        '10',
+        '8, finished 2025',
+        '8, finished 2024',
+        'Dropped at 4',
+        'Rated 0',
+        'Unrated, great on Steam',
+      ]);
+    });
+
+    it('should ignore a rating left on a game that is back in the backlog', () => {
+      const games = [
+        createGame({
+          app_id: 1,
+          name: 'Backlog, old 10',
+          status: 'backlog',
+          rating: 10,
+          steam_review_weighted: 50,
+        }),
+        createGame({ app_id: 2, name: 'Finished 6', status: 'finished', rating: 6 }),
+        createGame({
+          app_id: 3,
+          name: 'Backlog, unrated',
+          status: 'backlog',
+          rating: null,
+          steam_review_weighted: 90,
+        }),
+      ];
+
+      const result = filterAndSortGames(games, 'all', '', 'rating');
+
+      expect(result.map((g) => g.name)).toEqual([
+        'Finished 6',
+        'Backlog, unrated',
+        'Backlog, old 10',
+      ]);
+    });
+
     it('should sort by release date, newest first, with unknown dates last', () => {
       const games = [
         createGame({ app_id: 1, name: 'TBA', release_date: 'To be announced' }),

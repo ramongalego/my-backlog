@@ -144,6 +144,9 @@ export default function GamesView() {
                 game={game}
                 onOpenDetail={handleOpenDetail}
                 queued={queuedAppIds.has(game.app_id)}
+                // In All and Backlog the badge tells statuses apart (e.g. Playing);
+                // in a single-status filter it would repeat the filter on every card.
+                showStatus={filter === 'all' || filter === 'backlog'}
               />
             ))}
           </div>
