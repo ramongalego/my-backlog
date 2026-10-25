@@ -87,8 +87,17 @@ const FIGHTING_TAGS = new Set(['Fighting', '2D Fighter', '3D Fighter', 'Arena Fi
 
 const FIRST_SYNC_WINDOW_MS = 60 * 60 * 1000;
 
-function isPlayedOut(g: CarouselGame) {
+/** Played most of the main story: probably finished, whatever the status says. */
+export function isPlayedOut(g: { main_story_hours: number | null; playtime_forever: number }) {
   return !!g.main_story_hours && g.playtime_forever / 60 >= g.main_story_hours * PLAYED_OUT_SHARE;
+}
+
+/** Multiplayer-only, or listed as single-player but built around playing with others. */
+export function isMultiplayerFirst(g: { categories: string[] | null; tags: string[] | null }) {
+  return (
+    !g.categories?.includes('Single-player') ||
+    multiplayerFocus({ categories: g.categories, tags: g.tags }) >= MULTIPLAYER_FIRST
+  );
 }
 
 function isFighting(g: CarouselGame) {
@@ -176,12 +185,7 @@ export function buildCarouselPools(
 ): CarouselPools {
   // Queued games are already decided, so they aren't suggested again.
   const candidates = oneEditionEach(
-    backlog.filter(
-      (g) =>
-        !queuedAppIds.has(g.app_id) &&
-        g.categories?.includes('Single-player') &&
-        multiplayerFocus({ categories: g.categories, tags: g.tags }) < MULTIPLAYER_FIRST,
-    ),
+    backlog.filter((g) => !queuedAppIds.has(g.app_id) && !isMultiplayerFirst(g)),
   );
   const unfinished = candidates.filter((g) => !isPlayedOut(g));
   const reviewed = unfinished.filter((g) => g.steam_review_weighted != null).sort(byWeighted);

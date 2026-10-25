@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { loadStatsGames } from '@/lib/data/loaders';
 import { useAuth } from './useAuth';
+import { useQueue } from './useNowPlaying';
+import { playedALot } from '@/lib/games/played-a-lot';
 import { queryKeys } from '@/lib/query-keys';
 
 export interface TagStat {
@@ -28,7 +30,7 @@ export interface RatingBar {
   count: number;
 }
 
-export interface MostPlayedUnfinished {
+export interface PlayedALotGame {
   app_id: number;
   name: string;
   playtime_forever: number;
@@ -55,7 +57,8 @@ export interface Stats {
   finishedByYear: YearStat[];
   gamesByReleaseYear: YearStat[];
   ratingDistribution: RatingBar[];
-  mostPlayedUnfinished: MostPlayedUnfinished[];
+  /** Backlog games played past their story, or open-ended games with many hours. */
+  playedALot: PlayedALotGame[];
   /** Games finished in the last 365 days, for the backlog pace estimate. */
   finishedLastYear: number;
 }
@@ -75,6 +78,7 @@ export function useStats() {
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
+  const { queuedAppIds } = useQueue(userId);
 
   const stats: Stats | null = (() => {
     if (games.length === 0) return null;
@@ -175,19 +179,14 @@ export function useStats() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
 
-    // Most played but still in backlog
-    const mostPlayedUnfinished: MostPlayedUnfinished[] = games
-      .filter((g) => (!g.status || g.status === 'backlog') && g.playtime_forever > 0)
-      .sort((a, b) => b.playtime_forever - a.playtime_forever)
-      .slice(0, 5)
-      .map((g) => ({
-        app_id: g.app_id,
-        name: g.name,
-        playtime_forever: g.playtime_forever,
-        main_story_hours: g.main_story_hours,
-        header_image: g.header_image,
-        deck_compat: g.deck_compat ?? null,
-      }));
+    const playedALotGames: PlayedALotGame[] = playedALot(games, queuedAppIds).map((g) => ({
+      app_id: g.app_id,
+      name: g.name,
+      playtime_forever: g.playtime_forever,
+      main_story_hours: g.main_story_hours,
+      header_image: g.header_image,
+      deck_compat: g.deck_compat ?? null,
+    }));
 
     // Largest-remainder method so percentages always sum to exactly 100
     const rawPcts = [
@@ -227,7 +226,7 @@ export function useStats() {
       finishedByYear,
       gamesByReleaseYear,
       ratingDistribution,
-      mostPlayedUnfinished,
+      playedALot: playedALotGames,
     };
   })();
 

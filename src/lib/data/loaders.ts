@@ -64,6 +64,7 @@ export interface GameForStats {
   header_image: string | null;
   release_date: string | null;
   deck_compat: number | null;
+  categories: string[] | null;
 }
 
 export function loadStatsGames(supabase: SupabaseClient, userId: string): Promise<GameForStats[]> {
@@ -71,7 +72,7 @@ export function loadStatsGames(supabase: SupabaseClient, userId: string): Promis
     supabase
       .from('games')
       .select(
-        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
+        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat, categories',
       )
       .eq('user_id', userId)
       .eq('type', 'game')

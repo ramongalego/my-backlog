@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
 import { STATUS_STYLE } from '@/lib/games/status-style';
@@ -290,7 +291,11 @@ function TagCompletion({ stats }: { stats: Stats }) {
   );
 }
 
-function MostPlayedUnfinished({
+/**
+ * Backlog games that are probably not backlog any more (see playedALot), with
+ * a quick way to mark them. The other half of Home's Pick Up row.
+ */
+function PlayedALot({
   stats,
   onEdit,
 }: {
@@ -304,33 +309,23 @@ function MostPlayedUnfinished({
     deckCompat: number | null,
   ) => void;
 }) {
-  if (stats.mostPlayedUnfinished.length === 0) return null;
-
   return (
     <Panel>
-      <SectionTitle>Most played but still in backlog</SectionTitle>
-      <div className="space-y-3">
-        {stats.mostPlayedUnfinished.map(
+      <SectionTitle>Played a lot, still in your backlog</SectionTitle>
+      <p className="-mt-2 mb-4 text-sm text-ink-400 max-w-md">
+        Finished these, or play them rather than finish them? Updating them keeps your backlog count
+        and pace honest.
+      </p>
+      <ul className="space-y-3">
+        {stats.playedALot.map(
           ({ app_id, name, playtime_forever, main_story_hours, header_image, deck_compat }) => {
-            const hours = Math.round(playtime_forever / 60);
-            const barPct =
-              main_story_hours && main_story_hours > 0
-                ? Math.min((hours / main_story_hours) * 100, 100)
-                : (hours / Math.round(stats.mostPlayedUnfinished[0].playtime_forever / 60)) * 100;
+            const edit = () =>
+              onEdit(app_id, name, header_image, main_story_hours, playtime_forever, deck_compat);
             return (
-              <div key={name} className="flex items-center gap-3">
+              <li key={app_id} className="flex items-center gap-3">
                 <button
-                  onClick={() =>
-                    onEdit(
-                      app_id,
-                      name,
-                      header_image,
-                      main_story_hours,
-                      playtime_forever,
-                      deck_compat,
-                    )
-                  }
-                  aria-label={`Edit ${name}`}
+                  onClick={edit}
+                  aria-label={`Update ${name}`}
                   className="group shrink-0 rounded-md cursor-pointer"
                 >
                   <CoverThumb src={header_image} alt="" className="w-16">
@@ -339,23 +334,25 @@ function MostPlayedUnfinished({
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-1 bg-ink-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-ink-400 rounded-full"
-                        style={{ width: `${barPct}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-ink-400 shrink-0 w-20 text-right tabular-nums">
-                      {hours}h{main_story_hours ? ` / ${main_story_hours}h` : ' played'}
-                    </span>
-                  </div>
+                  <p className="mt-0.5 text-xs text-ink-400 tabular-nums">
+                    {Math.round(playtime_forever / 60)}h played
+                    {main_story_hours ? ` · story is ${main_story_hours}h` : ''}
+                  </p>
                 </div>
-              </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={edit}
+                  aria-label={`Update ${name}`}
+                  className="shrink-0 cursor-pointer"
+                >
+                  Update
+                </Button>
+              </li>
             );
           },
         )}
-      </div>
+      </ul>
     </Panel>
   );
 }
@@ -501,11 +498,9 @@ export default function StatsView() {
           {/* Rating distribution */}
           <RatingHistogram stats={stats} />
 
-          {/* Most played unfinished + backlog pace */}
+          {/* Played a lot but still backlog + backlog pace */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {stats.mostPlayedUnfinished.length > 0 && (
-              <MostPlayedUnfinished stats={stats} onEdit={handleEdit} />
-            )}
+            {stats.playedALot.length > 0 && <PlayedALot stats={stats} onEdit={handleEdit} />}
             <BacklogPace stats={stats} />
           </div>
         </div>
