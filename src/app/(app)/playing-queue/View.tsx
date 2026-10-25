@@ -25,7 +25,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 
-import { CoverThumb } from '@/components/games/CoverArt';
+import { CoverArt } from '@/components/games/CoverArt';
 import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
@@ -67,12 +67,20 @@ function NowPlayingRow({
     'cursor-pointer flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
 
   return (
-    <Panel padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-4">
-      <div className="flex items-center gap-4 min-w-0 flex-1">
-        <CoverThumb src={game.header_image} alt="" />
+    <Panel
+      padding="sm"
+      className="grid gap-4 sm:grid-cols-[16rem_1fr] lg:grid-cols-[18rem_1fr] sm:gap-5 sm:items-center"
+    >
+      <CoverArt
+        src={game.header_image}
+        alt=""
+        sizes="(max-width: 640px) 100vw, 288px"
+        className="w-full"
+      />
 
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-ink-50 sm:truncate">{game.name}</p>
+      <div className="min-w-0">
+        <div className="min-w-0">
+          <p className="text-lg font-semibold tracking-tight text-ink-50">{game.name}</p>
           <p className="mt-0.5 flex items-center gap-2 text-xs font-medium text-accent-400">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-500" aria-hidden="true" />
             Playing now
@@ -105,34 +113,34 @@ function NowPlayingRow({
             )}
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 shrink-0">
-        <div className="flex gap-2">
-          <Button size="sm" onClick={onFinish} disabled={isLoading} className="cursor-pointer">
-            <Check className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Finish</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={onDrop}
-            disabled={isLoading}
-            className="cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Drop</span>
-          </Button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button onClick={onMoveToQueue} disabled={isLoading} className={secondaryAction}>
-            <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Move to Queue</span>
-          </button>
-          <button onClick={onMoveToBacklog} disabled={isLoading} className={secondaryAction}>
-            <Archive className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Move to Backlog</span>
-          </button>
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div className="flex gap-2">
+            <Button size="sm" onClick={onFinish} disabled={isLoading} className="cursor-pointer">
+              <Check className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Finish</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={onDrop}
+              disabled={isLoading}
+              className="cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Drop</span>
+            </Button>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={onMoveToQueue} disabled={isLoading} className={secondaryAction}>
+              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Move to Queue</span>
+            </button>
+            <button onClick={onMoveToBacklog} disabled={isLoading} className={secondaryAction}>
+              <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Move to Backlog</span>
+            </button>
+          </div>
         </div>
       </div>
     </Panel>
@@ -171,57 +179,73 @@ function QueueItemRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 sm:gap-4 rounded-lg px-2 py-3 sm:px-3 transition-[opacity,background-color] ${
+      className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg py-4 sm:px-3 sm:py-3 transition-[opacity,background-color] ${
         isDragging ? 'opacity-0' : 'opacity-100'
-      } ${isOverlay ? 'bg-ink-800 shadow-xl shadow-black/40' : 'hover:bg-ink-900'}`}
+      } ${isOverlay ? 'bg-ink-800 px-3 shadow-xl shadow-black/40' : 'sm:hover:bg-ink-900'}`}
     >
-      <span className="w-5 text-right text-sm font-medium text-ink-500 tabular-nums shrink-0">
+      <span className="hidden sm:block w-5 text-right text-sm font-medium text-ink-500 tabular-nums shrink-0">
         {index + 1}
       </span>
 
-      <CoverThumb src={item.game.header_image} alt="" />
+      <CoverArt
+        src={item.game.header_image}
+        alt=""
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px"
+        className="w-full sm:w-48 lg:w-56 shrink-0"
+      >
+        {/* On phones the position rides on the art. */}
+        <span
+          aria-hidden="true"
+          className="sm:hidden absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-ink-950/90 px-1.5 text-xs font-semibold text-ink-100 tabular-nums"
+        >
+          {index + 1}
+        </span>
+      </CoverArt>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink-100 truncate mb-1">{item.game.name}</p>
-        <GameMetaRow
-          mainStoryHours={item.game.main_story_hours}
-          steamReviewScore={item.game.steam_review_score}
-          playtimeMinutes={item.game.playtime_forever}
-          deckCompat={item.game.deck_compat}
-          hidePlaytimeOnMobile
-        />
-      </div>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-ink-100 sm:truncate mb-1">
+            <span className="sr-only">{index + 1}. </span>
+            {item.game.name}
+          </p>
+          <GameMetaRow
+            mainStoryHours={item.game.main_story_hours}
+            steamReviewScore={item.game.steam_review_score}
+            playtimeMinutes={item.game.playtime_forever}
+            deckCompat={item.game.deck_compat}
+          />
+        </div>
 
-      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-        {canPlay && (
-          <Button
-            size="sm"
-            onClick={() => onPick(item.app_id)}
-            disabled={isLoading}
-            aria-label={`Play ${item.game.name}`}
-            className="cursor-pointer px-2.5 sm:px-3"
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {canPlay && (
+            <Button
+              size="sm"
+              onClick={() => onPick(item.app_id)}
+              disabled={isLoading}
+              aria-label={`Play ${item.game.name}`}
+              className="cursor-pointer px-2.5 sm:px-3"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+              <span className="hidden sm:inline">Play</span>
+            </Button>
+          )}
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1.5 text-ink-500 hover:text-ink-200 transition-colors rounded"
+            aria-label={`Reorder ${item.game.name}`}
           >
-            <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
-            <span className="hidden sm:inline">Play</span>
-          </Button>
-        )}
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1.5 text-ink-500 hover:text-ink-200 transition-colors rounded"
-          aria-label={`Reorder ${item.game.name}`}
-        >
-          <GripVertical className="w-4 h-4" aria-hidden="true" />
-        </button>
-        <button
-          onClick={() => onRemove(item.app_id)}
-          disabled={isLoading}
-          title="Remove from queue"
-          aria-label={`Remove ${item.game.name} from queue`}
-          className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 disabled:opacity-50 transition-colors rounded"
-        >
-          <X className="w-4 h-4" />
-        </button>
+            <GripVertical className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => onRemove(item.app_id)}
+            disabled={isLoading}
+            aria-label={`Remove ${item.game.name} from queue`}
+            className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 disabled:opacity-50 transition-colors rounded"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,23 +1,23 @@
-import { COVER_ASPECT, THUMB_WIDTH } from '@/components/games/CoverArt';
+import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
 
-/** Mirrors DiaryRow: day, cover, title, rating, notes and edit columns. */
+/** Mirrors DiaryRow: a full-width cover on phones; day, cover, title and actions on desktop. */
 function DiaryRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-ink-800/70">
-      <div className="w-6 shrink-0 flex justify-end">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70">
+      <div className="hidden sm:flex w-6 shrink-0 justify-end">
         <Skeleton className="h-4 w-4" />
       </div>
-      <Skeleton className={`${THUMB_WIDTH} ${COVER_ASPECT} rounded-md shrink-0`} />
-      <div className="min-w-0 flex-[2]">
-        <Skeleton className="h-4 w-3/4 sm:w-72" />
-        <Skeleton className="h-3 w-12 mt-2 sm:hidden" />
+      <Skeleton className={`w-full sm:w-48 lg:w-56 ${COVER_ASPECT} rounded-lg shrink-0`} />
+      <div className="min-w-0 flex-1 flex items-start gap-2">
+        <Skeleton className="h-5 w-3/4 sm:w-72" />
+        <Skeleton className="sm:hidden ml-auto h-5 w-20" />
       </div>
       <div className="hidden sm:flex shrink-0 w-20 justify-end">
         <Skeleton className="h-4 w-12" />
       </div>
-      <div className="shrink-0 w-8" />
-      <Skeleton className="w-7 h-7 shrink-0" />
+      <div className="hidden sm:block shrink-0 w-8" />
+      <Skeleton className="hidden sm:block w-7 h-7 shrink-0" />
     </div>
   );
 }

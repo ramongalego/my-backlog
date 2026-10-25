@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ExternalLink, Pencil, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
 
-import { CoverThumb } from '@/components/games/CoverArt';
+import { CoverArt } from '@/components/games/CoverArt';
 import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/DiaryNote';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
@@ -17,6 +17,16 @@ import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
+/** "20 Aug" from an ISO date, for the date chip on phones. */
+function shortDate(isoDate: string): string {
+  const d = new Date(
+    Number(isoDate.slice(0, 4)),
+    Number(isoDate.slice(5, 7)) - 1,
+    Number(isoDate.slice(8, 10)),
+  );
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short' });
+}
+
 function monthName(isoDate: string): string {
   const d = new Date(Number(isoDate.slice(0, 4)), Number(isoDate.slice(5, 7)) - 1, 1);
   return d.toLocaleString('en-US', { month: 'long' });
@@ -28,47 +38,108 @@ interface DiaryRowProps {
   onSaveNotes: (appId: number, notes: string) => void;
 }
 
-// Day, rating and the action buttons line up with the cover, whose height
-// tracks THUMB_WIDTH at the shared 460:215 ratio.
-const ALIGN_WITH_COVER = 'h-[30px] sm:h-[52px] flex items-center';
+// On desktop the day, rating and buttons line up with the cover, whose height
+// follows from its width at the shared 460:215 ratio (192px → 90px, 224px →
+// 105px). On phones the cover is full width above the text, so they sit on the
+// title line instead.
+const COVER_WIDTH = 'w-full sm:w-48 lg:w-56';
+const COVER_SIZES = '(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px';
+const COVER_HEIGHT = 'sm:min-h-[90px] lg:min-h-[105px]';
+const ALIGN_WITH_COVER = 'h-[90px] lg:h-[105px] flex items-center';
+
+function Rating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) {
+  return (
+    <span className="flex items-center gap-1 text-sm font-medium text-ink-200 tabular-nums">
+      <Star
+        className={`${size === 'md' ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0 fill-amber-400 text-amber-400`}
+        aria-hidden="true"
+      />
+      <span>{rating}/10</span>
+    </span>
+  );
+}
+
+function AddNoteButton({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Add a note for ${name}`}
+      className={`cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 ${ROW_REVEAL}`}
+    >
+      <MessageSquarePlus className="w-4 h-4" aria-hidden="true" />
+    </button>
+  );
+}
+
+function EditButton({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={`Edit ${name}`}
+      className="cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 transition-colors"
+    >
+      <Pencil className="w-4 h-4" aria-hidden="true" />
+    </button>
+  );
+}
 
 function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const [editingNote, setEditingNote] = useState(false);
-  const hasDate = Boolean(entry.finished_at);
-  const day = hasDate ? formatDay(entry.finished_at!) : null;
+  const day = entry.finished_at ? formatDay(entry.finished_at) : null;
+  const canAddNote = !entry.notes && !editingNote;
+  const startNote = () => setEditingNote(true);
+  const edit = () => onEdit(entry.app_id);
 
   return (
-    <div className="group/row flex items-start gap-3 sm:gap-4 py-3 border-b border-ink-800/70">
-      {/* Day */}
+    <div className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70">
+      {/* Day — desktop */}
       <div
-        className={`${ALIGN_WITH_COVER} justify-end w-6 shrink-0 text-sm text-ink-400 tabular-nums`}
+        className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end w-6 shrink-0 text-sm text-ink-400 tabular-nums`}
       >
         {day ?? ''}
       </div>
 
-      <CoverThumb src={entry.header_image} alt="" />
-
-      {/* Title, the mobile rating, and the note */}
-      <div className="min-w-0 flex-1 min-h-[30px] sm:min-h-[52px] flex flex-col justify-center">
-        <a
-          href={`https://store.steampowered.com/app/${entry.app_id}/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={entry.name}
-          className="group/title inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors sm:truncate max-w-full self-start"
-        >
-          <span className="sm:truncate min-w-0">{entry.name}</span>
-          <ExternalLink
-            className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
-            aria-hidden="true"
-          />
-        </a>
-        {entry.rating != null && (
-          <p className="flex items-center gap-1 text-sm text-ink-300 tabular-nums sm:hidden mt-0.5">
-            <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <span>{entry.rating}/10</span>
-          </p>
+      <CoverArt
+        src={entry.header_image}
+        alt=""
+        sizes={COVER_SIZES}
+        className={`${COVER_WIDTH} shrink-0`}
+      >
+        {/* On phones the date rides on the art. */}
+        {entry.finished_at && (
+          <span className="sm:hidden absolute top-2 left-2 rounded-md bg-ink-950/90 px-2 py-0.5 text-xs font-medium text-ink-100 tabular-nums">
+            {shortDate(entry.finished_at)}
+          </span>
         )}
+      </CoverArt>
+
+      {/* Title, the note, and on phones the rating and buttons */}
+      <div className={`min-w-0 flex-1 ${COVER_HEIGHT} flex flex-col sm:justify-center`}>
+        <div className="flex items-start gap-2">
+          <a
+            href={`https://store.steampowered.com/app/${entry.app_id}/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={entry.name}
+            className="group/title flex-1 min-w-0 inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors"
+          >
+            <span className="sm:truncate min-w-0">{entry.name}</span>
+            <ExternalLink
+              className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
+              aria-hidden="true"
+            />
+          </a>
+          <div className="sm:hidden flex items-center gap-1 shrink-0 -my-1 -mr-1.5">
+            {entry.rating != null && (
+              <span className="mr-1.5">
+                <Rating rating={entry.rating} />
+              </span>
+            )}
+            {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
+            <EditButton name={entry.name} onClick={edit} />
+          </div>
+        </div>
         {editingNote ? (
           <DiaryNoteEditor
             initialText={entry.notes ?? ''}
@@ -81,52 +152,20 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
           />
         ) : (
           entry.notes && (
-            <DiaryNoteText
-              text={entry.notes}
-              gameName={entry.name}
-              onEdit={() => setEditingNote(true)}
-            />
+            <DiaryNoteText text={entry.notes} gameName={entry.name} onEdit={startNote} />
           )
         )}
       </div>
 
-      {/* Rating — desktop only */}
+      {/* Rating and buttons — desktop */}
       <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-20`}>
-        {entry.rating != null && (
-          <span className="flex items-center gap-1 text-sm font-medium text-ink-200 tabular-nums">
-            <Star
-              className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400"
-              aria-hidden="true"
-            />
-            <span>{entry.rating}/10</span>
-          </span>
-        )}
+        {entry.rating != null && <Rating rating={entry.rating} size="md" />}
       </div>
-
-      {/* Add a note, when there isn't one yet */}
-      <div className={`${ALIGN_WITH_COVER} justify-center shrink-0 w-8`}>
-        {!entry.notes && !editingNote && (
-          <button
-            type="button"
-            onClick={() => setEditingNote(true)}
-            aria-label={`Add a note for ${entry.name}`}
-            title="Add a note"
-            className={`cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 ${ROW_REVEAL}`}
-          >
-            <MessageSquarePlus className="w-4 h-4" aria-hidden="true" />
-          </button>
-        )}
+      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-center shrink-0 w-8`}>
+        {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
       </div>
-
-      {/* Full editor: date, rating, status */}
-      <div className={`${ALIGN_WITH_COVER} shrink-0`}>
-        <button
-          onClick={() => onEdit(entry.app_id)}
-          aria-label={`Edit ${entry.name}`}
-          className="cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 transition-colors"
-        >
-          <Pencil className="w-4 h-4" aria-hidden="true" />
-        </button>
+      <div className={`${ALIGN_WITH_COVER} hidden sm:flex shrink-0`}>
+        <EditButton name={entry.name} onClick={edit} />
       </div>
     </div>
   );
