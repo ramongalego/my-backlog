@@ -5,11 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
-import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
 import { loadCurrentlyPlaying, loadQueue } from '@/lib/data/loaders';
-import { updateGameStatus } from '@/lib/games/status';
-import { fetchCompletionCounts, buildCompletionSummary } from '@/lib/games/completion';
+import { completeGame, updateGameStatus } from '@/lib/games/status';
+import { buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { removeAppFromPools, type CarouselPools } from './useCarouselPools';
@@ -192,33 +191,10 @@ export function useNowPlaying(userId: string | null) {
 
   const completeMutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: async ({ game, status, date, notes, rating }: CompleteInput) => {
-      await updateGameStatus(game.app_id, status, {
-        finishedAt: status === 'finished' ? date : undefined,
-        droppedAt: status === 'dropped' ? date : undefined,
-        notes,
-        rating,
-      });
-
-      // The finish/drop is saved; the follow-ups are best-effort so a failed
-      // promote doesn't report the whole action as failed.
-      const supabase = createClient();
-      const [countsResult, promotedResult] = await Promise.allSettled([
-        fetchCompletionCounts(supabase, userId!),
-        promoteNextFromQueue(userId!, supabase),
-      ]);
-      if (promotedResult.status === 'rejected') {
-        console.error('Failed to start next queued game:', promotedResult.reason);
-      }
-      return {
-        counts:
-          countsResult.status === 'fulfilled'
-            ? countsResult.value
-            : { gamesFinished: 0, totalGames: 0 },
-        promoted: promotedResult.status === 'fulfilled' ? promotedResult.value : null,
-        promoteFailed: promotedResult.status === 'rejected',
-      };
-    },
+    // One request saves the finish/drop, counts the library and starts the
+    // next queued game (the promote is best-effort and reported separately).
+    mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
+      completeGame(game.app_id, status as 'finished' | 'dropped', { date, notes, rating }),
     onSuccess: ({ counts, promoted, promoteFailed }, { game, status, rating }) => {
       if (promoteFailed) toast.error("Couldn't start the next game from your queue.");
       queryClient.setQueryData(playingKey, promoted);

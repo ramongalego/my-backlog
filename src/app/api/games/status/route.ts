@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { gameStatusSchema } from '@/lib/validations/games';
+import { applyStatusChange } from '@/lib/games/apply-status';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -33,93 +34,8 @@ export async function POST(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
   }
 
-  const { appId, status, finishedAt, droppedAt, notes, rating } = parsed.data;
-
-  // Confirm the game is in the user's library before touching anything else,
-  // so a bad appId can't demote the current game and then update nothing.
-  const { data: target, error: targetError } = await supabase
-    .from('games')
-    .select('app_id')
-    .eq('user_id', user.id)
-    .eq('app_id', appId)
-    .maybeSingle();
-
-  if (targetError) {
-    console.error(targetError);
-    return jsonError('Failed to update game status', 500);
-  }
-  if (!target) {
-    return jsonError('Game not found', 404);
-  }
-
-  // Only one game can be playing: move any other one back to the backlog.
-  if (status === 'playing') {
-    const { error: demoteError } = await supabase
-      .from('games')
-      .update({ status: 'backlog', started_at: null })
-      .eq('user_id', user.id)
-      .eq('status', 'playing')
-      .neq('app_id', appId);
-
-    if (demoteError) {
-      console.error(demoteError);
-      return jsonError('Failed to update game status', 500);
-    }
-  }
-
-  // Build update payload based on status
-  type GameUpdate = {
-    status: string;
-    started_at?: string | null;
-    finished_at?: string | null;
-    dropped_at?: string | null;
-    notes?: string | null;
-    rating?: number | null;
-  };
-
-  const updatePayload: GameUpdate = { status };
-
-  if (status === 'playing') {
-    updatePayload.started_at = new Date().toISOString();
-  } else if (status === 'backlog') {
-    updatePayload.started_at = null;
-  } else if (status === 'finished') {
-    updatePayload.finished_at = finishedAt || null;
-    updatePayload.notes = notes ?? null;
-    updatePayload.rating = rating ?? null;
-  } else if (status === 'dropped') {
-    updatePayload.dropped_at = droppedAt || null;
-    updatePayload.notes = notes ?? null;
-    updatePayload.rating = rating ?? null;
-  } else if (status === 'wont_play' || status === 'hidden') {
-    updatePayload.started_at = null;
-    updatePayload.finished_at = null;
-    updatePayload.dropped_at = null;
-    updatePayload.notes = null;
-    updatePayload.rating = null;
-  }
-
-  // Update the game status
-  const { error } = await supabase
-    .from('games')
-    .update(updatePayload)
-    .eq('user_id', user.id)
-    .eq('app_id', appId);
-
-  if (error) {
-    console.error(error);
-    return jsonError('Failed to update game status', 500);
-  }
-
-  // The queue only holds backlog games; any other status takes the game off it.
-  if (status !== 'backlog') {
-    const { error: dequeueError } = await supabase
-      .from('playing_queue')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('app_id', appId);
-    if (dequeueError) console.error(dequeueError);
-  }
+  const result = await applyStatusChange(supabase, user.id, parsed.data);
+  if (!result.ok) return jsonError(result.error, result.status);
 
   return NextResponse.json({ success: true });
 }

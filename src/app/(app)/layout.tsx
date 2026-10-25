@@ -18,27 +18,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
+  const queryClient = new QueryClient();
   let profile: Profile | null = null;
   if (user) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('steam_id, steam_username, steam_avatar')
-      .eq('id', user.id)
-      .maybeSingle();
+    // Both need only the user id, so they run together: this is on the path to
+    // every page's first paint.
+    const [{ data }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('steam_id, steam_username, steam_avatar')
+        .eq('id', user.id)
+        .maybeSingle(),
+      // The header's game count. Prefetched here rather than by pages: a query
+      // the header has already created can only be hydrated after mount, which
+      // made the server render a loading state that the client then replaced.
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.library.meta(user.id),
+        queryFn: () => loadLibraryMeta(supabase, user.id),
+      }),
+    ]);
     profile = data;
   }
-
-  const queryClient = new QueryClient();
   queryClient.setQueryData(queryKeys.auth.session(), { user, profile });
-  // The header's game count. Prefetched here rather than by pages: a query the
-  // header has already created can only be hydrated after mount, which made
-  // the server render a loading state that the client then replaced.
-  if (user) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.library.meta(user.id),
-      queryFn: () => loadLibraryMeta(supabase, user.id),
-    });
-  }
 
   return (
     <Providers>

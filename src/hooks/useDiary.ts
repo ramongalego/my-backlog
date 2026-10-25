@@ -72,6 +72,8 @@ export function useDiary(): UseDiaryReturn {
       date: string;
       notes: string;
       rating: number | null;
+      /** Only the note changed: nothing outside the diary and the games list shows it. */
+      notesOnly?: boolean;
     }) => {
       await updateGameStatus(vars.appId, vars.status, {
         finishedAt: vars.status === 'finished' ? vars.date : undefined,
@@ -116,7 +118,12 @@ export function useDiary(): UseDiaryReturn {
       }
       toast.error('Could not save your changes. Please try again.');
     },
-    onSettled: () => invalidateGames(),
+    onSettled: (_data, _error, vars) => {
+      if (!vars.notesOnly) return invalidateGames();
+      // A note doesn't affect carousels, the queue, counts or the playing game.
+      queryClient.invalidateQueries({ queryKey: diaryKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.games.list(userId ?? '') });
+    },
   });
 
   const handleOpenDetail = (appId: number) => {
@@ -156,6 +163,7 @@ export function useDiary(): UseDiaryReturn {
       date: entry.finished_at?.slice(0, 10) ?? '',
       notes,
       rating: entry.rating,
+      notesOnly: true,
     });
   };
 
