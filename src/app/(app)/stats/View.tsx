@@ -334,7 +334,7 @@ function PlayedALot({
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
-                  <p className="mt-0.5 text-xs text-ink-400 tabular-nums">
+                  <p className="mt-0.5 text-xs text-ink-400">
                     {Math.round(playtime_forever / 60)}h played
                     {main_story_hours ? ` · story is ${main_story_hours}h` : ''}
                   </p>

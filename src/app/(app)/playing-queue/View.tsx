@@ -87,13 +87,13 @@ function NowPlayingRow({
           </p>
           <div className="mt-2">
             {isPastEstimate ? (
-              <p className="text-xs tabular-nums">
+              <p className="text-xs">
                 <span className="text-ink-200">{playedHours}h played</span>
                 <span className="text-ink-400"> · past the ~{estimateHours}h estimate</span>
               </p>
             ) : progressPct !== null ? (
               <div className="max-w-56">
-                <p className="text-xs text-ink-400 tabular-nums">
+                <p className="text-xs text-ink-400">
                   {playedHours}h played · ~{estimateHours}h to beat
                 </p>
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
