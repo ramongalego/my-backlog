@@ -69,7 +69,12 @@ export function SuggestionResult({
             />
           ) : null}
           {game.playtime_forever >= 60 ? (
-            <Playtime minutes={game.playtime_forever} lastPlayedAt={game.last_played_at} />
+            <Playtime
+              compact
+              minutes={game.playtime_forever}
+              lastPlayedAt={game.last_played_at}
+              iconClassName="w-3.5 h-3.5"
+            />
           ) : null}
           {game.genres && game.genres.length > 0 && (
             <span>{game.genres.slice(0, 2).join(', ')}</span>

@@ -50,7 +50,7 @@ describe('GameCard', () => {
     it('should show playtime when at least 1 hour', () => {
       render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
-      expect(screen.getAllByText('2h played')[0]).toBeInTheDocument();
+      expect(screen.getByText('2h')).toBeInTheDocument();
     });
 
     it('should not show playtime when zero', () => {

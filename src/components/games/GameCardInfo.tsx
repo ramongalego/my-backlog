@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, ThumbsUp } from 'lucide-react';
+import { Clock, ExternalLink, History, ThumbsUp } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { steamReviewLabel } from '@/lib/steam/review-label';
 import { formatLastPlayed } from '@/lib/games/last-played';
@@ -56,14 +56,20 @@ export function TimeToBeat({
 /**
  * Hours played on Steam, with when you last played in the tooltip. Used
  * wherever a game shows its playtime, so it reads the same everywhere.
+ * `compact` is the meta-row form, icon and hours like its neighbours, so a
+ * row fits on narrow cards; elsewhere it reads "5h played".
  */
 export function Playtime({
   minutes,
   lastPlayedAt,
+  compact = false,
+  iconClassName = 'w-3 h-3',
   className = '',
 }: {
   minutes: number;
   lastPlayedAt?: string | null;
+  compact?: boolean;
+  iconClassName?: string;
   className?: string;
 }) {
   const hours = Math.round(minutes / 60);
@@ -79,7 +85,15 @@ export function Playtime({
         )
       }
     >
-      <span>{hours}h played</span>
+      {compact ? (
+        <>
+          <History className={iconClassName} aria-hidden="true" />
+          <span>{hours}h</span>
+          <span className="sr-only"> played</span>
+        </>
+      ) : (
+        <span>{hours}h played</span>
+      )}
     </Tooltip>
   );
 }
@@ -105,11 +119,12 @@ export function GameMetaRow({
 }: GameMetaRowProps) {
   if (!mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (
         <Playtime
+          compact
           minutes={playtimeMinutes}
           lastPlayedAt={lastPlayedAt}
           className={hidePlaytimeOnMobile ? 'max-sm:hidden' : ''}

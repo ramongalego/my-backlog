@@ -56,8 +56,8 @@ describe('GameCardInfo', () => {
     it('should show playtime when at least 60 minutes', () => {
       render(<GameCardInfo appId={1} name="Game" playtimeMinutes={120} />);
 
-      // Once on the card, once more in the tooltip it falls back to.
-      expect(screen.getAllByText('2h played')[0]).toBeVisible();
+      // Icon and hours, like the other meta-row indicators.
+      expect(screen.getByText('2h')).toBeVisible();
     });
 
     it('should say when you last played in the tooltip', () => {
