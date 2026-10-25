@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/Button';
+import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 
 type TicketType = 'bug' | 'feedback' | 'support';
@@ -85,7 +87,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
         </div>
 
         <div>
-          <label htmlFor="support-message" className="text-xs font-medium text-ink-400">
+          <label htmlFor="support-message" className={FIELD_LABEL}>
             Message
           </label>
           <textarea
@@ -94,32 +96,19 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
             onChange={(e) => setMessage(e.target.value)}
             rows={5}
             placeholder="Describe your issue or feedback..."
-            className={`mt-1.5 block w-full resize-none rounded-lg border bg-ink-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 transition-colors ${
-              error
-                ? 'border-rose-500 focus:ring-rose-500'
-                : 'border-ink-700 focus:border-ink-600 focus:ring-ink-600'
-            }`}
+            className={`${fieldClass(!!error)} block px-3 py-2 text-sm resize-none`}
           />
           {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
           <p className="mt-1 text-xs text-ink-500 text-right">{message.length}/2000</p>
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="cursor-pointer rounded-lg px-3 py-1.5 text-sm text-ink-400 hover:bg-ink-800 hover:text-ink-200 transition-colors"
-          >
+          <Button variant="ghost" size="sm" onClick={handleClose} className="cursor-pointer">
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={pending}
-            className="cursor-pointer rounded-lg bg-accent-500 hover:bg-accent-400 disabled:opacity-50 px-4 py-1.5 text-sm font-medium text-ink-950 transition-colors"
-          >
+          </Button>
+          <Button size="sm" onClick={handleSubmit} isLoading={pending} className="cursor-pointer">
             {pending ? 'Sending...' : 'Send'}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

@@ -1,14 +1,15 @@
 import {
-  CardSkeleton,
   PageHeaderSkeleton,
   PageSkeleton,
+  PanelSkeleton,
   Skeleton,
 } from '@/components/layout/Skeleton';
+import { panelPadding } from '@/components/ui/Panel';
 
 // Each block mirrors the real section's padding and content rows rather than
 // using fixed heights, so the skeleton and the loaded page line up.
 
-const PANEL = 'p-5 sm:p-6';
+const PANEL = panelPadding();
 
 function SectionTitleSkeleton() {
   return <Skeleton className="h-5 w-36 mb-4" />;
@@ -16,7 +17,7 @@ function SectionTitleSkeleton() {
 
 function BarListSkeleton({ rows }: { rows: number }) {
   return (
-    <CardSkeleton className={PANEL}>
+    <PanelSkeleton className={PANEL}>
       <SectionTitleSkeleton />
       <div className="space-y-3">
         {Array.from({ length: rows }, (_, i) => (
@@ -27,7 +28,7 @@ function BarListSkeleton({ rows }: { rows: number }) {
           </div>
         ))}
       </div>
-    </CardSkeleton>
+    </PanelSkeleton>
   );
 }
 
@@ -44,7 +45,7 @@ export function StatsContentSkeleton() {
         ))}
       </div>
 
-      <CardSkeleton className={PANEL}>
+      <PanelSkeleton className={PANEL}>
         <SectionTitleSkeleton />
         <Skeleton className="h-2.5 w-full rounded-full mb-5" />
         <div className="flex flex-wrap gap-x-6 gap-y-3">
@@ -52,11 +53,11 @@ export function StatsContentSkeleton() {
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-5 w-24" />
         </div>
-      </CardSkeleton>
+      </PanelSkeleton>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BarListSkeleton rows={10} />
-        <CardSkeleton className={`${PANEL} flex flex-col`}>
+        <PanelSkeleton className={`${PANEL} flex flex-col`}>
           <div className="flex items-center justify-between mb-4">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-7 w-36 rounded-lg" />
@@ -66,10 +67,10 @@ export function StatsContentSkeleton() {
               <Skeleton key={i} className="flex-1 rounded-sm" style={{ height: h }} />
             ))}
           </div>
-        </CardSkeleton>
+        </PanelSkeleton>
       </div>
 
-      <CardSkeleton className={PANEL}>
+      <PanelSkeleton className={PANEL}>
         <SectionTitleSkeleton />
         <Skeleton className="h-4 w-52 mb-5 -mt-2" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
@@ -81,7 +82,7 @@ export function StatsContentSkeleton() {
             </div>
           ))}
         </div>
-      </CardSkeleton>
+      </PanelSkeleton>
     </div>
   );
 }

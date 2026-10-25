@@ -1,18 +1,11 @@
 'use client';
 
-import Image from 'next/image';
-import {
-  ExternalLink,
-  Gamepad2,
-  Pencil,
-  Trophy,
-  Star,
-  MessageCircle,
-  CalendarDays,
-} from 'lucide-react';
+import { ExternalLink, Pencil, Trophy, Star, MessageCircle, CalendarDays } from 'lucide-react';
 
+import { CoverThumb } from '@/components/games/CoverArt';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useDiary } from '@/hooks/useDiary';
 import { useUrlState } from '@/hooks/useUrlState';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
@@ -21,18 +14,6 @@ import type { DiaryEntry } from '@/hooks/useDiary';
 import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
-
-function EmptyState() {
-  return (
-    <div className="py-16 flex flex-col items-center text-center">
-      <Trophy className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
-      <p className="text-ink-200 font-medium">No finished games yet</p>
-      <p className="text-ink-400 text-sm mt-1 max-w-sm">
-        When you finish a game, it lands here with the date, your rating and any notes.
-      </p>
-    </div>
-  );
-}
 
 function monthName(isoDate: string): string {
   const d = new Date(Number(isoDate.slice(0, 4)), Number(isoDate.slice(5, 7)) - 1, 1);
@@ -74,20 +55,7 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
       <div className="w-6 shrink-0 text-right text-sm text-ink-400 tabular-nums">{day ?? ''}</div>
 
       {/* Cover image */}
-      <div className="relative w-16 h-[30px] sm:w-28 sm:h-[52px] shrink-0 rounded-md overflow-hidden bg-ink-800 flex items-center justify-center">
-        {entry.header_image ? (
-          <Image
-            src={entry.header_image}
-            alt={entry.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 64px, 112px"
-            quality={90}
-          />
-        ) : (
-          <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-ink-500" />
-        )}
-      </div>
+      <CoverThumb src={entry.header_image} alt={entry.name} />
 
       {/* Game name + rating stacked on mobile */}
       <div className="min-w-0 flex-[2]">
@@ -253,7 +221,9 @@ export default function DiaryView() {
       {loading ? (
         <DiaryListSkeleton />
       ) : entries.length === 0 ? (
-        <EmptyState />
+        <EmptyState icon={Trophy} title="No finished games yet">
+          When you finish a game, it lands here with the date, your rating and any notes.
+        </EmptyState>
       ) : (
         <div>
           {/* Dated entries grouped by year → month */}

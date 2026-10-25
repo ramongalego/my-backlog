@@ -93,7 +93,7 @@ p {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-ink-700);
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

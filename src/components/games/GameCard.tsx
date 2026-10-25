@@ -1,9 +1,11 @@
 'use client';
 
-import Image from 'next/image';
-import { Ban, Check, EyeOff, Gamepad2, ListOrdered, Pencil, Play, Star, X } from 'lucide-react';
+import { ListOrdered, Star } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
+import type { GameStatus } from '@/lib/games/status-style';
+import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
+import { StatusBadge } from './StatusBadge';
 
 interface GameCardProps {
   game: GameItem;
@@ -11,34 +13,8 @@ interface GameCardProps {
   queued?: boolean;
 }
 
-const STATUS_BADGE: Record<
-  string,
-  { label: string; className: string; icon: React.ComponentType<{ className?: string }> }
-> = {
-  finished: { label: 'Finished', className: 'bg-ink-950/90 text-emerald-400', icon: Check },
-  playing: { label: 'Playing', className: 'bg-accent-500 text-ink-950', icon: Play },
-  dropped: { label: 'Dropped', className: 'bg-ink-950/90 text-rose-400', icon: X },
-  wont_play: { label: "Won't Play", className: 'bg-ink-950/90 text-ink-300', icon: Ban },
-  hidden: { label: 'Hidden', className: 'bg-ink-950/90 text-ink-300', icon: EyeOff },
-  // Backlog is the default state, so it gets no badge.
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const config = STATUS_BADGE[status];
-  if (!config) return null;
-  const Icon = config.icon;
-  return (
-    <div
-      className={`px-2 py-0.5 ${config.className} text-xs font-medium rounded flex items-center gap-1`}
-    >
-      <Icon className="w-3 h-3" aria-hidden="true" />
-      <span>{config.label}</span>
-    </div>
-  );
-}
-
 export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
-  const status = game.status ?? 'backlog';
+  const status = (game.status ?? 'backlog') as GameStatus;
 
   return (
     // content-visibility lets the browser skip layout/paint for off-screen
@@ -46,51 +22,38 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
     // contain-intrinsic-size reserves an approximate height so the scrollbar
     // stays stable before a card is first rendered.
     <div className="group min-w-0 [content-visibility:auto] [contain-intrinsic-size:auto_14rem]">
-      {/* Clickable cover art */}
       <button
         onClick={() => onOpenDetail(game.app_id)}
-        className="cursor-pointer relative block w-full aspect-[460/215] overflow-hidden rounded-lg bg-ink-900 select-none focus-visible:-outline-offset-2 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/8 after:transition-colors hover:after:ring-white/20"
+        className="cursor-pointer block w-full rounded-lg select-none focus-visible:-outline-offset-2"
         aria-label={`Open details for ${game.name}`}
       >
-        {game.header_image ? (
-          <Image
-            src={game.header_image}
-            alt={game.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            draggable={false}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Gamepad2 className="w-8 h-8 text-ink-700" />
-          </div>
-        )}
-
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-          <Pencil className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
-        </div>
-
-        {queued ? (
-          <div
-            className="absolute top-2 right-2 px-2 py-0.5 bg-ink-950/90 text-ink-200 text-xs font-medium rounded flex items-center gap-1"
-            title="In playing queue"
-          >
-            <ListOrdered className="w-3 h-3" aria-hidden="true" />
-            <span>Queued</span>
-          </div>
-        ) : (
+        <CoverArt
+          src={game.header_image}
+          alt={game.name}
+          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          interactive
+        >
+          <CoverEditHint />
           <div className="absolute top-2 right-2">
-            <StatusBadge status={status} />
+            {queued ? (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-ink-950/90 text-ink-200 text-xs font-medium"
+                title="In playing queue"
+              >
+                <ListOrdered className="w-3 h-3" aria-hidden="true" />
+                <span>Queued</span>
+              </span>
+            ) : (
+              <StatusBadge status={status} />
+            )}
           </div>
-        )}
-        {game.status === 'finished' && game.rating != null && (
-          <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-ink-950/90 text-xs font-medium rounded flex items-center gap-1">
-            <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <span className="text-ink-200">{game.rating}/10</span>
-          </div>
-        )}
+          {game.status === 'finished' && game.rating != null && (
+            <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-ink-950/90 text-xs font-medium">
+              <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
+              <span className="text-ink-200">{game.rating}/10</span>
+            </span>
+          )}
+        </CoverArt>
       </button>
 
       <div className="pt-3">

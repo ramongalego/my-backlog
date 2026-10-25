@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { COVER_ASPECT } from '@/components/games/CoverArt';
 import type { Game, SyncProgress as SyncProgressType } from '@/types/games';
 
 interface SyncProgressProps {
@@ -14,7 +15,7 @@ export function SyncProgress({ progress, games }: SyncProgressProps) {
 
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
-      <div className="relative aspect-460/215 overflow-hidden rounded-xl bg-ink-900">
+      <div className={`relative ${COVER_ASPECT} overflow-hidden rounded-xl bg-ink-900`}>
         {currentGame && (
           <>
             <div className="absolute inset-0 flex items-center justify-center p-4">

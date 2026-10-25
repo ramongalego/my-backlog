@@ -6,6 +6,10 @@ import Image, { getImageProps } from 'next/image';
 import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/Button';
+import { Panel } from '@/components/ui/Panel';
+import { ToggleGroup } from '@/components/ui/ToggleGroup';
+import { StatusBadge } from '@/components/games/StatusBadge';
+import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
@@ -17,37 +21,12 @@ interface LandingPageProps {
   onConnectSteam?: () => void;
 }
 
-const MOCK_LIBRARY = [
-  {
-    image: '/lp_hades.jpg',
-    title: 'Hades',
-    status: 'Playing',
-    pill: 'bg-accent-500 text-ink-950',
-  },
-  {
-    image: '/lp_disco.jpeg',
-    title: 'Disco Elysium',
-    status: 'Backlog',
-    pill: 'bg-ink-800 text-ink-300',
-  },
-  {
-    image: '/lp_hk.jpeg',
-    title: 'Hollow Knight',
-    status: 'Finished',
-    pill: 'bg-emerald-500/15 text-emerald-400',
-  },
-  {
-    image: '/lp_celeste.png',
-    title: 'Celeste',
-    status: 'Finished',
-    pill: 'bg-emerald-500/15 text-emerald-400',
-  },
-  {
-    image: '/lp_cyberpunk.jpg',
-    title: 'Cyberpunk 2077',
-    status: 'Backlog',
-    pill: 'bg-ink-800 text-ink-300',
-  },
+const MOCK_LIBRARY: { image: string; title: string; status: GameStatus }[] = [
+  { image: '/lp_hades.jpg', title: 'Hades', status: 'playing' },
+  { image: '/lp_disco.jpeg', title: 'Disco Elysium', status: 'backlog' },
+  { image: '/lp_hk.jpeg', title: 'Hollow Knight', status: 'finished' },
+  { image: '/lp_celeste.png', title: 'Celeste', status: 'finished' },
+  { image: '/lp_cyberpunk.jpg', title: 'Cyberpunk 2077', status: 'backlog' },
 ];
 
 const HERO_TEASES = [
@@ -259,48 +238,10 @@ const HERO_SHELF: { image: string; title: string; playing?: boolean }[][] = [
 ];
 
 const BREAKDOWN = [
-  { label: 'Finished', pct: 18, color: 'bg-emerald-500' },
-  { label: 'Dropped', pct: 9, color: 'bg-rose-500' },
-  { label: 'Backlog', pct: 73, color: 'bg-ink-500' },
+  { label: 'Finished', pct: 18, color: STATUS_STYLE.finished.fill },
+  { label: 'Dropped', pct: 9, color: STATUS_STYLE.dropped.fill },
+  { label: 'Backlog', pct: 73, color: STATUS_STYLE.backlog.fill },
 ];
-
-function ChoiceGroup<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: readonly T[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div>
-      <p className="text-sm text-ink-300 mb-2.5">{label}</p>
-      <div className="flex gap-1.5 flex-wrap" role="group" aria-label={label}>
-        {options.map((option) => {
-          const selected = option === value;
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onChange(option)}
-              aria-pressed={selected}
-              className={`h-8 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                selected
-                  ? 'bg-ink-100 text-ink-950'
-                  : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
-              }`}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function SectionCopy({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -448,25 +389,34 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </p>
             </SectionCopy>
 
-            <div className="bg-ink-900 rounded-2xl p-5 sm:p-6 space-y-5">
-              <ChoiceGroup
-                label="What do you want to feel?"
-                options={MOODS}
-                value={mood}
-                onChange={setMood}
-              />
-              <ChoiceGroup
-                label="How much mental energy do you have?"
-                options={ENERGIES}
-                value={energy}
-                onChange={setEnergy}
-              />
-              <ChoiceGroup
-                label="How much time do you have?"
-                options={TIMES}
-                value={time}
-                onChange={setTime}
-              />
+            <Panel className="space-y-5">
+              <div>
+                <p className="text-sm text-ink-300 mb-2.5">What do you want to feel?</p>
+                <ToggleGroup
+                  label="What do you want to feel?"
+                  value={mood}
+                  onChange={setMood}
+                  options={MOODS.map((v) => ({ value: v, label: v }))}
+                />
+              </div>
+              <div>
+                <p className="text-sm text-ink-300 mb-2.5">How much mental energy do you have?</p>
+                <ToggleGroup
+                  label="How much mental energy do you have?"
+                  value={energy}
+                  onChange={setEnergy}
+                  options={ENERGIES.map((v) => ({ value: v, label: v }))}
+                />
+              </div>
+              <div>
+                <p className="text-sm text-ink-300 mb-2.5">How much time do you have?</p>
+                <ToggleGroup
+                  label="How much time do you have?"
+                  value={time}
+                  onChange={setTime}
+                  options={TIMES.map((v) => ({ value: v, label: v }))}
+                />
+              </div>
               <div
                 key={pickedGame.title}
                 className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out]"
@@ -487,14 +437,14 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   Play this
                 </span>
               </div>
-            </div>
+            </Panel>
           </div>
         </section>
 
         {/* ── Library ── */}
         <section className="border-t border-ink-900">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
-            <div className="bg-ink-900 rounded-2xl overflow-hidden order-last lg:order-first">
+            <Panel padding="none" className="overflow-hidden order-last lg:order-first">
               <div className="px-5 py-4 border-b border-ink-800 flex items-center justify-between">
                 <span className="text-sm font-medium text-ink-200">My Library</span>
                 <span className="text-sm text-ink-400">457 games</span>
@@ -512,15 +462,13 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                     <span className="text-sm text-ink-200 flex-1 min-w-0 truncate">
                       {game.title}
                     </span>
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-md shrink-0 ${game.pill}`}
-                    >
-                      {game.status}
+                    <span className="shrink-0">
+                      <StatusBadge status={game.status} showBacklog />
                     </span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Panel>
 
             <SectionCopy title="Your whole Steam library, finally sorted">
               <p>
@@ -551,7 +499,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </p>
             </SectionCopy>
 
-            <div className="bg-ink-900 rounded-2xl divide-y divide-ink-800">
+            <Panel padding="none" className="divide-y divide-ink-800">
               <div className="px-5 py-4">
                 <p className="text-sm font-medium text-ink-200 mb-3">Up next</p>
                 <ol className="space-y-2.5">
@@ -620,7 +568,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   ))}
                 </div>
               </div>
-            </div>
+            </Panel>
           </div>
         </section>
 

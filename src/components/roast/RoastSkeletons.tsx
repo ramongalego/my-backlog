@@ -1,4 +1,5 @@
-import { Skeleton } from '@/components/layout/Skeleton';
+import { PanelSkeleton, Skeleton } from '@/components/layout/Skeleton';
+import { panelPadding } from '@/components/ui/Panel';
 
 /** Mirrors the roast form: 48px input + Roast button, then the hint line. */
 export function RoastFormSkeleton() {
@@ -21,11 +22,11 @@ export function RoastResultSkeleton() {
         <Skeleton className="w-9 h-9 rounded-md" />
         <Skeleton className="h-4 w-64 max-w-[70%]" />
       </div>
-      <div className="p-5 sm:p-6 bg-ink-900 rounded-xl space-y-3">
+      <PanelSkeleton className={`${panelPadding()} space-y-3`}>
         {['w-full', 'w-11/12', 'w-full', 'w-4/5', 'w-full', 'w-2/3'].map((w, i) => (
           <Skeleton key={i} className={`h-4 ${w}`} />
         ))}
-      </div>
+      </PanelSkeleton>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage, type GameFilter } from '@/hooks/useGamesPage';
 import { Page, PageHeader } from '@/components/layout/Page';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const EMPTY_COPY: Record<GameFilter, string> = {
   all: 'Your Steam library is empty, or still syncing.',
@@ -21,20 +22,6 @@ const EMPTY_COPY: Record<GameFilter, string> = {
   wont_play: "Nothing marked Won't Play. Use it for games you never plan to start.",
   hidden: 'No hidden games.',
 };
-
-function EmptyState({ searching, filter }: { searching: boolean; filter: GameFilter }) {
-  return (
-    <div className="py-16 flex flex-col items-center text-center">
-      <Gamepad2 className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
-      <p className="text-ink-200 font-medium">
-        {searching ? 'No games match your search.' : 'Nothing here yet.'}
-      </p>
-      <p className="text-ink-400 text-sm mt-1 max-w-sm">
-        {searching ? 'Try a different name or tag, or switch filters.' : EMPTY_COPY[filter]}
-      </p>
-    </div>
-  );
-}
 
 export default function GamesView() {
   const {
@@ -139,7 +126,15 @@ export default function GamesView() {
       </PageHeader>
 
       {visibleGames.length === 0 ? (
-        <EmptyState searching={searchQuery.trim().length > 0} filter={filter} />
+        searchQuery.trim().length > 0 ? (
+          <EmptyState icon={Gamepad2} title="No games match your search.">
+            Try a different name or tag, or switch filters.
+          </EmptyState>
+        ) : (
+          <EmptyState icon={Gamepad2} title="Nothing here yet.">
+            {EMPTY_COPY[filter]}
+          </EmptyState>
+        )
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">

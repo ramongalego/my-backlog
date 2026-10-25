@@ -1,3 +1,4 @@
+import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { Skeleton } from '@/components/layout/Skeleton';
 
@@ -43,7 +44,7 @@ export function CarouselsLoadingState() {
           <div className="flex gap-4 overflow-hidden pb-4">
             {[1, 2, 3, 4, 5].map((j) => (
               <div key={j} className="shrink-0 w-64">
-                <Skeleton className="aspect-[460/215] rounded-lg" />
+                <Skeleton className={`${COVER_ASPECT} rounded-lg`} />
                 <div className="pt-3">
                   <Skeleton className="h-5 w-3/4" />
                   <Skeleton className="h-4 w-1/2 mt-1.5" />
@@ -61,7 +62,7 @@ export function CarouselsLoadingState() {
 export function StatusLoadingState() {
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
-      <Skeleton className="aspect-[460/215] rounded-xl" />
+      <Skeleton className={`${COVER_ASPECT} rounded-xl`} />
       <div>
         <Skeleton className="h-8 sm:h-9 w-3/4" />
         <Skeleton className="h-4 w-24 mt-3" />

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Link2, Check } from 'lucide-react';
+import { Panel } from '@/components/ui/Panel';
 import type { RoastResponse } from '@/lib/roast/cache';
 
 function TwitterIcon({ className }: { className?: string }) {
@@ -78,11 +79,11 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
       </div>
 
       {/* The roast */}
-      <div className="p-5 sm:p-6 bg-ink-900 rounded-xl">
+      <Panel>
         <div className="text-ink-200 leading-relaxed whitespace-pre-line max-w-[68ch]">
           {result.roast}
         </div>
-      </div>
+      </Panel>
 
       {/* Actions */}
       <div className="flex flex-col items-center gap-4">

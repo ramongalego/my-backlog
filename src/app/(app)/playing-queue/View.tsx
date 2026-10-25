@@ -1,8 +1,9 @@
 'use client';
 
-import Image from 'next/image';
-import { Archive, Gamepad2, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
+import { Archive, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Panel } from '@/components/ui/Panel';
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +25,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 
+import { CoverThumb } from '@/components/games/CoverArt';
 import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
@@ -32,28 +34,6 @@ import { todayIso } from '@/lib/diary/date-utils';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { QueueListSkeleton } from './Skeleton';
 import type { GameWithImage, QueueItem } from '@/types/games';
-
-function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
-  if (src) {
-    return (
-      <div className="relative w-16 h-[30px] sm:w-28 sm:h-[52px] rounded-md overflow-hidden shrink-0 bg-ink-800">
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          className="object-cover"
-          sizes="(max-width: 640px) 64px, 112px"
-          quality={90}
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="w-16 h-[30px] sm:w-28 sm:h-[52px] bg-ink-800 rounded-md flex items-center justify-center shrink-0">
-      <Gamepad2 className="w-4 h-4 text-ink-500" />
-    </div>
-  );
-}
 
 interface NowPlayingRowProps {
   game: GameWithImage;
@@ -87,9 +67,9 @@ function NowPlayingRow({
     'cursor-pointer flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-ink-900 rounded-xl p-4">
+    <Panel padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-4">
       <div className="flex items-center gap-4 min-w-0 flex-1">
-        <GameThumbnail src={game.header_image} alt={game.name} />
+        <CoverThumb src={game.header_image} alt={game.name} />
 
         <div className="flex-1 min-w-0">
           <p className="font-medium text-ink-50 sm:truncate">{game.name}</p>
@@ -155,7 +135,7 @@ function NowPlayingRow({
           </button>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -199,7 +179,7 @@ function QueueItemRow({
         {index + 1}
       </span>
 
-      <GameThumbnail src={item.game.header_image} alt={item.game.name} />
+      <CoverThumb src={item.game.header_image} alt={item.game.name} />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink-100 truncate mb-1">{item.game.name}</p>
@@ -323,13 +303,9 @@ export default function PlayingQueueView() {
       {isLoading ? (
         <QueueListSkeleton />
       ) : isEmpty ? (
-        <div className="py-16 flex flex-col items-center text-center">
-          <ListOrdered className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
-          <p className="text-ink-200 font-medium">Your queue is empty.</p>
-          <p className="text-ink-400 text-sm mt-1 max-w-sm">
-            Pick a game to play first, then queue up what&apos;s next from your library.
-          </p>
-        </div>
+        <EmptyState icon={ListOrdered} title="Your queue is empty.">
+          Pick a game to play first, then queue up what&apos;s next from your library.
+        </EmptyState>
       ) : (
         <div>
           {currentlyPlaying && (

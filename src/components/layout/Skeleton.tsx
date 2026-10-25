@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PANEL_SURFACE } from '@/components/ui/Panel';
 import { PAGE_CONTAINER } from './Page';
 
 // Building blocks for loading skeletons. Each page's skeleton is assembled
@@ -58,13 +59,13 @@ export function PageHeaderSkeleton({
   );
 }
 
-/** A panel placeholder matching the app's ink-900 panels. */
-export function CardSkeleton({
+/** A placeholder with the same surface as <Panel>; pass the padding you'd give the real one. */
+export function PanelSkeleton({
   className = '',
   children,
 }: {
   className?: string;
   children?: ReactNode;
 }) {
-  return <div className={`bg-ink-900 rounded-xl ${className}`}>{children}</div>;
+  return <div className={`${PANEL_SURFACE} ${className}`}>{children}</div>;
 }

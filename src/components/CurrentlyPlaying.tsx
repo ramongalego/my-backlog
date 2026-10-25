@@ -1,9 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Image from 'next/image';
 import { ExternalLink, Archive, Check, Star, Clock, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { CoverArt } from '@/components/games/CoverArt';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 
 interface Game {
@@ -92,18 +92,13 @@ export function CurrentlyPlaying({
 }: CurrentlyPlayingProps) {
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
-      <div className="relative aspect-[460/215] overflow-hidden rounded-xl bg-ink-900">
-        {game.header_image && (
-          <Image
-            src={game.header_image}
-            alt={game.name}
-            fill
-            priority
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 480px"
-          />
-        )}
-      </div>
+      <CoverArt
+        src={game.header_image}
+        alt={game.name}
+        rounded="xl"
+        priority
+        sizes="(max-width: 768px) 100vw, 480px"
+      />
 
       <div className="min-w-0">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">

@@ -7,6 +7,7 @@ import { Flame, Loader2, ShieldOff, X } from 'lucide-react';
 import { RoastHeader, RoastShell } from '@/components/roast/RoastLayout';
 
 import { Button } from '@/components/ui/Button';
+import { fieldClass } from '@/components/ui/Input';
 import { RoastResult } from '@/components/roast/RoastResult';
 import type { RoastResponse } from '@/lib/roast/cache';
 
@@ -75,7 +76,7 @@ export default function RoastPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Enter Steam URL, Username, or Profile ID"
               aria-label="Steam profile URL or username"
-              className="w-full h-12 px-4 pr-10 bg-ink-900 border border-ink-800 rounded-xl text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-ink-600 transition-colors"
+              className={`${fieldClass()} h-12 px-4 pr-10`}
             />
             {input && (
               <button
@@ -91,7 +92,7 @@ export default function RoastPage() {
           <Button
             type="submit"
             size="lg"
-            className="!rounded-xl shrink-0"
+            className="shrink-0"
             disabled={roastMutation.isPending || !input.trim()}
           >
             {roastMutation.isPending ? (

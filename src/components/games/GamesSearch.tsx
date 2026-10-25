@@ -1,5 +1,6 @@
 'use client';
 
+import { fieldClass } from '@/components/ui/Input';
 import { Search, X } from 'lucide-react';
 
 interface GamesSearchProps {
@@ -17,7 +18,7 @@ export function GamesSearch({ value, onSearchChange }: GamesSearchProps) {
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder="Search by name or tag..."
         aria-label="Search games by name or tag"
-        className="w-full h-10 pl-9 pr-8 bg-ink-900 border border-ink-800 rounded-lg text-ink-100 placeholder-ink-500 text-sm focus:outline-none focus:border-ink-600 transition-colors"
+        className={`${fieldClass()} h-10 pl-9 pr-8 text-sm`}
       />
       {value && (
         <button

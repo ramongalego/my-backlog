@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import { Gamepad2, Pencil } from 'lucide-react';
+import { Gamepad2 } from 'lucide-react';
 
 import { useMutation } from '@tanstack/react-query';
+import { CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,10 @@ import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Panel } from '@/components/ui/Panel';
+import { ToggleGroup } from '@/components/ui/ToggleGroup';
+import { STATUS_STYLE } from '@/lib/games/status-style';
 import { StatsContentSkeleton } from './Skeleton';
 
 interface EditModalState {
@@ -31,8 +35,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <SectionLabel className="mb-4">{children}</SectionLabel>;
 }
 
-const PANEL = 'bg-ink-900 rounded-xl p-5 sm:p-6';
-
 function formatYears(years: number): string {
   if (years < 1) return 'under a year';
   const rounded = years < 10 ? Math.round(years * 10) / 10 : Math.round(years);
@@ -43,7 +45,7 @@ function formatYears(years: number): string {
 function BacklogPace({ stats }: { stats: Stats }) {
   const { backlog, finishedLastYear } = stats;
   return (
-    <div className={PANEL}>
+    <Panel>
       <SectionTitle>Backlog pace</SectionTitle>
       {finishedLastYear > 0 ? (
         <>
@@ -61,7 +63,7 @@ function BacklogPace({ stats }: { stats: Stats }) {
           backlog would take at your pace.
         </p>
       )}
-    </div>
+    </Panel>
   );
 }
 
@@ -81,13 +83,28 @@ function Summary({ items }: { items: { label: string; value: string | number; su
 
 function LibraryBreakdown({ stats }: { stats: Stats }) {
   const segments = [
-    { label: 'Finished', pct: stats.finishedPct, count: stats.finished, color: 'bg-emerald-500' },
-    { label: 'Dropped', pct: stats.droppedPct, count: stats.dropped, color: 'bg-rose-500' },
-    { label: 'Backlog', pct: stats.backlogPct, count: stats.backlog, color: 'bg-ink-500' },
+    {
+      label: 'Finished',
+      pct: stats.finishedPct,
+      count: stats.finished,
+      color: STATUS_STYLE.finished.fill,
+    },
+    {
+      label: 'Dropped',
+      pct: stats.droppedPct,
+      count: stats.dropped,
+      color: STATUS_STYLE.dropped.fill,
+    },
+    {
+      label: 'Backlog',
+      pct: stats.backlogPct,
+      count: stats.backlog,
+      color: STATUS_STYLE.backlog.fill,
+    },
   ].filter((s) => s.count > 0);
 
   return (
-    <div className={PANEL}>
+    <Panel>
       <SectionTitle>Library breakdown</SectionTitle>
       <div className="flex h-2.5 rounded-full overflow-hidden gap-px mb-5">
         {segments.map((s) => (
@@ -108,26 +125,26 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 }
 
 function TopTags({ stats }: { stats: Stats }) {
   if (stats.topTags.length === 0) {
     return (
-      <div className={PANEL}>
+      <Panel>
         <SectionTitle>Top tags in your library</SectionTitle>
         <p className="text-sm text-ink-500">
           No tag data yet. Tags fill in on the next metadata sync.
         </p>
-      </div>
+      </Panel>
     );
   }
 
   const max = stats.topTags[0].count;
 
   return (
-    <div className={PANEL}>
+    <Panel>
       <SectionTitle>Top tags in your library</SectionTitle>
       <div className="space-y-3">
         {stats.topTags.map(({ tag, count }) => (
@@ -145,7 +162,7 @@ function TopTags({ stats }: { stats: Stats }) {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -163,23 +180,19 @@ function YearChart({ stats }: { stats: Stats }) {
       : 'No release year data yet. Sync your library to fill this in.';
 
   return (
-    <div className={`${PANEL} flex flex-col`}>
+    <Panel className="flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <SectionLabel>Games by year</SectionLabel>
-        <div className="flex gap-0.5 rounded-lg bg-ink-800 p-0.5 text-xs font-medium" role="group">
-          {(['finished', 'released'] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              aria-pressed={view === v}
-              className={`px-2.5 py-1 rounded-md cursor-pointer capitalize transition-colors ${
-                view === v ? 'bg-ink-600 text-ink-50' : 'text-ink-400 hover:text-ink-100'
-              }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+        <ToggleGroup
+          variant="segmented"
+          label="Group games by"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'finished', label: 'Finished' },
+            { value: 'released', label: 'Released' },
+          ]}
+        />
       </div>
 
       {data.length === 0 ? (
@@ -193,13 +206,13 @@ function YearChart({ stats }: { stats: Stats }) {
               <div
                 className={`w-full rounded-sm transition-colors ${
                   view === 'finished'
-                    ? 'bg-emerald-500/80 hover:bg-emerald-500'
+                    ? `${STATUS_STYLE.finished.fill} opacity-80 hover:opacity-100`
                     : 'bg-ink-500 hover:bg-ink-400'
                 }`}
                 style={{ height: `${Math.max((count / max) * 65, 3)}%` }}
               />
               <span
-                className={`text-[11px] mt-1 tabular-nums ${data.length <= 14 || i % 2 === 0 ? 'text-ink-400' : 'invisible'}`}
+                className={`text-xs mt-1 tabular-nums ${data.length <= 14 || i % 2 === 0 ? 'text-ink-400' : 'invisible'}`}
               >
                 {year}
               </span>
@@ -207,7 +220,7 @@ function YearChart({ stats }: { stats: Stats }) {
           ))}
         </div>
       )}
-    </div>
+    </Panel>
   );
 }
 
@@ -219,7 +232,7 @@ function RatingHistogram({ stats }: { stats: Stats }) {
   const BAR_MAX_HEIGHT = 80;
 
   return (
-    <div className={PANEL}>
+    <Panel>
       <SectionTitle>Rating distribution</SectionTitle>
       <div className="flex items-end gap-2">
         {stats.ratingDistribution.map(({ rating, count }) => (
@@ -239,7 +252,7 @@ function RatingHistogram({ stats }: { stats: Stats }) {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -247,7 +260,7 @@ function TagCompletion({ stats }: { stats: Stats }) {
   if (stats.tagCompletion.length === 0) return null;
 
   return (
-    <div className={PANEL}>
+    <Panel>
       <SectionTitle>Completion rate by tag</SectionTitle>
       <p className="text-sm text-ink-400 mb-5 -mt-2">Tags with 3+ games in your library</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
@@ -262,7 +275,10 @@ function TagCompletion({ stats }: { stats: Stats }) {
               </span>
             </div>
             <div className="mt-2 h-1 bg-ink-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+              <div
+                className={`h-full rounded-full ${STATUS_STYLE.finished.fill}`}
+                style={{ width: `${pct}%` }}
+              />
             </div>
             <p className="mt-1.5 text-xs text-ink-500 tabular-nums">
               {finished} of {total} finished
@@ -270,7 +286,7 @@ function TagCompletion({ stats }: { stats: Stats }) {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -291,7 +307,7 @@ function MostPlayedUnfinished({
   if (stats.mostPlayedUnfinished.length === 0) return null;
 
   return (
-    <div className={PANEL}>
+    <Panel>
       <SectionTitle>Most played but still in backlog</SectionTitle>
       <div className="space-y-3">
         {stats.mostPlayedUnfinished.map(
@@ -315,21 +331,11 @@ function MostPlayedUnfinished({
                     )
                   }
                   aria-label={`Edit ${name}`}
-                  className="group relative w-16 h-[30px] shrink-0 rounded-md overflow-hidden bg-ink-800 cursor-pointer"
+                  className="group shrink-0 rounded-md cursor-pointer"
                 >
-                  {header_image && (
-                    <Image
-                      src={header_image}
-                      alt={name}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                      quality={90}
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Pencil className="w-3.5 h-3.5 text-white" aria-hidden="true" />
-                  </div>
+                  <CoverThumb src={header_image} alt={name} className="w-16">
+                    <CoverEditHint />
+                  </CoverThumb>
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
@@ -350,7 +356,7 @@ function MostPlayedUnfinished({
           },
         )}
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -445,13 +451,9 @@ export default function StatsView() {
       {loading ? (
         <StatsContentSkeleton />
       ) : !stats ? (
-        <div className="py-16 flex flex-col items-center text-center">
-          <Gamepad2 className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
-          <p className="text-ink-200 font-medium">No stats yet</p>
-          <p className="text-ink-400 text-sm mt-1 max-w-sm">
-            Sync your Steam library to see your stats.
-          </p>
-        </div>
+        <EmptyState icon={Gamepad2} title="No stats yet">
+          Sync your Steam library to see your stats.
+        </EmptyState>
       ) : (
         <div className="space-y-6">
           <Summary

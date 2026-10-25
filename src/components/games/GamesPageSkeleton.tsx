@@ -1,3 +1,4 @@
+import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
 
 const FILTER_PILL_WIDTHS = ['w-14', 'w-24', 'w-24', 'w-24', 'w-28', 'w-20'];
@@ -8,7 +9,7 @@ export function GameGridSkeleton({ count = 12 }: { count?: number }) {
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
       {Array.from({ length: count }, (_, i) => (
         <div key={i}>
-          <Skeleton className="aspect-[460/215] rounded-lg" />
+          <Skeleton className={`${COVER_ASPECT} rounded-lg`} />
           <div className="pt-3">
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-1/2 mt-1.5" />

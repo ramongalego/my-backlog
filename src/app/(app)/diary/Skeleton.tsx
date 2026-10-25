@@ -1,3 +1,4 @@
+import { COVER_ASPECT, THUMB_WIDTH } from '@/components/games/CoverArt';
 import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
 
 /** Mirrors DiaryRow: day, cover, title, rating, notes and edit columns. */
@@ -7,7 +8,7 @@ function DiaryRowSkeleton() {
       <div className="w-6 shrink-0 flex justify-end">
         <Skeleton className="h-4 w-4" />
       </div>
-      <Skeleton className="w-16 h-[30px] sm:w-28 sm:h-[52px] rounded-md shrink-0" />
+      <Skeleton className={`${THUMB_WIDTH} ${COVER_ASPECT} rounded-md shrink-0`} />
       <div className="min-w-0 flex-[2]">
         <Skeleton className="h-4 w-3/4 sm:w-72" />
         <Skeleton className="h-3 w-12 mt-2 sm:hidden" />

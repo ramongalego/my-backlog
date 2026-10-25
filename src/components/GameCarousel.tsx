@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
 
 interface Game {
@@ -125,28 +125,18 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
             <div key={game.app_id} className="group shrink-0 w-64 relative">
               <button
                 onClick={() => onOpenDetail?.(game)}
-                className="relative block w-full aspect-[460/215] overflow-hidden rounded-lg bg-ink-900 cursor-pointer select-none focus-visible:-outline-offset-2 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/8 after:transition-colors hover:after:ring-white/20"
+                className="block w-full rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
                 aria-label={`Open details for ${game.name}`}
               >
-                {game.header_image ? (
-                  <Image
-                    src={game.header_image}
-                    alt={game.name}
-                    fill
-                    priority={priority && i < 4 ? true : undefined}
-                    className="object-cover"
-                    sizes="256px"
-                    draggable={false}
-                  />
-                ) : (
-                  <div className="w-full h-full" />
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                  <Pencil
-                    className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
-                    aria-hidden="true"
-                  />
-                </div>
+                <CoverArt
+                  src={game.header_image}
+                  alt={game.name}
+                  sizes="256px"
+                  priority={priority && i < 4 ? true : undefined}
+                  interactive
+                >
+                  <CoverEditHint />
+                </CoverArt>
               </button>
               <div className="pt-3">
                 <GameCardInfo

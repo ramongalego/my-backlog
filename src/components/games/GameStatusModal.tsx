@@ -3,19 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import {
-  Gamepad2,
-  Check,
-  X,
-  EyeOff,
-  Archive,
-  Play,
-  Ban,
-  CalendarDays,
-  ListOrdered,
-  Loader2,
-} from 'lucide-react';
+import { Gamepad2, CalendarDays, ListOrdered } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { GAME_STATUSES, STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import { todayIso, toLocalIsoDate } from '@/lib/diary/date-utils';
 
 import 'react-day-picker/style.css';
@@ -24,7 +16,6 @@ const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.Day
 });
 import { GameMetaRow } from './GameCardInfo';
 
-type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
 type InternalStatus = GameStatus | 'queue';
 
 interface GameDetailModalProps {
@@ -50,50 +41,6 @@ interface GameDetailModalProps {
   playtimeMinutes?: number;
   deckCompat?: number | null;
 }
-
-const STATUS_OPTIONS: {
-  value: GameStatus;
-  label: string;
-  icon: React.ReactNode;
-  activeClass: string;
-}[] = [
-  {
-    value: 'backlog',
-    label: 'Backlog',
-    icon: <Archive className="w-3.5 h-3.5" />,
-    activeClass: 'bg-ink-100 text-ink-950',
-  },
-  {
-    value: 'playing',
-    label: 'Playing',
-    icon: <Play className="w-3.5 h-3.5" />,
-    activeClass: 'bg-accent-500 text-ink-950',
-  },
-  {
-    value: 'finished',
-    label: 'Finished',
-    icon: <Check className="w-3.5 h-3.5" />,
-    activeClass: 'bg-emerald-500 text-ink-950',
-  },
-  {
-    value: 'dropped',
-    label: 'Dropped',
-    icon: <X className="w-3.5 h-3.5" />,
-    activeClass: 'bg-rose-500 text-ink-950',
-  },
-  {
-    value: 'wont_play',
-    label: "Won't Play",
-    icon: <Ban className="w-3.5 h-3.5" />,
-    activeClass: 'bg-ink-100 text-ink-950',
-  },
-  {
-    value: 'hidden',
-    label: 'Hidden',
-    icon: <EyeOff className="w-3.5 h-3.5" />,
-    activeClass: 'bg-ink-100 text-ink-950',
-  },
-];
 
 // Converts "YYYY-MM-DD" → Date (local time, no timezone shift)
 function isoToDate(iso: string): Date {
@@ -239,7 +186,9 @@ export function GameDetailModal({
               disablePlaying && !onAddToQueue ? 'sm:grid-cols-5' : 'sm:grid-cols-6'
             }`}
           >
-            {STATUS_OPTIONS.map((opt) => {
+            {GAME_STATUSES.map((value) => {
+              const opt = { value, ...STATUS_STYLE[value] };
+              const Icon = opt.icon;
               // Replace the Playing slot with Queue (or nothing) when playing is disabled
               if (opt.value === 'playing' && disablePlaying) {
                 if (!onAddToQueue) return null;
@@ -251,7 +200,7 @@ export function GameDetailModal({
                     aria-pressed={isActive}
                     className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                       isActive
-                        ? 'bg-accent-500 text-ink-950'
+                        ? STATUS_STYLE.playing.solid
                         : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
                     }`}
                   >
@@ -267,11 +216,11 @@ export function GameDetailModal({
                   aria-pressed={status === opt.value}
                   className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                     status === opt.value
-                      ? opt.activeClass
+                      ? opt.solid
                       : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
                   }`}
                 >
-                  {opt.icon}
+                  <Icon className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{opt.label}</span>
                 </button>
               );
@@ -346,10 +295,7 @@ export function GameDetailModal({
           <>
             {/* Rating */}
             <div>
-              <label
-                className="block text-sm font-medium text-ink-300 mb-1.5"
-                htmlFor="detail-rating"
-              >
+              <label className={FIELD_LABEL} htmlFor="detail-rating">
                 Your rating (0–10)
               </label>
               <input
@@ -365,7 +311,7 @@ export function GameDetailModal({
                 placeholder="Unrated"
                 aria-invalid={ratingError ? true : undefined}
                 aria-describedby={ratingError ? 'detail-rating-error' : undefined}
-                className={`w-full bg-ink-800 border rounded-lg px-3 py-2 text-ink-100 text-sm focus:outline-none placeholder:text-ink-500 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-ink-700 focus:border-ink-500'}`}
+                className={`${fieldClass(!!ratingError)} px-3 py-2 text-sm`}
               />
               {ratingError && (
                 <p id="detail-rating-error" className="text-rose-400 text-xs mt-1" role="alert">
@@ -397,7 +343,7 @@ export function GameDetailModal({
                 placeholder="Any thoughts?"
                 rows={4}
                 maxLength={1000}
-                className="w-full bg-ink-800 border border-ink-700 rounded-lg px-3 py-2 text-ink-100 text-sm focus:outline-none focus:border-ink-500 placeholder:text-ink-500 resize-none"
+                className={`${fieldClass()} px-3 py-2 text-sm resize-none`}
               />
             </div>
           </>
@@ -405,26 +351,17 @@ export function GameDetailModal({
 
         {/* Actions */}
         <div className="flex gap-3 pt-1">
-          <button
+          <Button
+            variant="secondary"
             onClick={onClose}
             disabled={saving}
-            className="cursor-pointer flex-1 h-10 px-4 bg-ink-800 hover:bg-ink-700 disabled:opacity-50 disabled:cursor-not-allowed text-ink-100 text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 cursor-pointer"
           >
             Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={saving}
-            className="cursor-pointer flex-1 h-10 px-4 bg-accent-500 hover:bg-accent-400 disabled:opacity-50 disabled:cursor-not-allowed text-ink-950 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" /> <span>Saving…</span>
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </button>
+          </Button>
+          <Button onClick={handleConfirm} isLoading={saving} className="flex-1 cursor-pointer">
+            {saving ? 'Saving…' : 'Save Changes'}
+          </Button>
         </div>
       </div>
     </Modal>
