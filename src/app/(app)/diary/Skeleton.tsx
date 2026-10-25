@@ -1,7 +1,7 @@
 import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
 
-/** Mirrors DiaryRow: a full-width cover on phones; day, cover, title and actions on desktop. */
+/** Mirrors DiaryRow: a full-width cover on phones; day, cover, title, hours played and rating on desktop. */
 function DiaryRowSkeleton() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70">
@@ -11,13 +11,15 @@ function DiaryRowSkeleton() {
       <Skeleton className={`w-full sm:w-48 lg:w-56 ${COVER_ASPECT} rounded-lg shrink-0`} />
       <div className="min-w-0 flex-1 flex items-start gap-2">
         <Skeleton className="h-5 w-3/4 sm:w-72" />
-        <Skeleton className="sm:hidden ml-auto h-5 w-20" />
+        <Skeleton className="sm:hidden ml-auto h-5 w-24" />
+      </div>
+      <div className="hidden sm:flex shrink-0 w-16 justify-end">
+        <Skeleton className="h-4 w-10" />
       </div>
       <div className="hidden sm:flex shrink-0 w-20 justify-end">
         <Skeleton className="h-4 w-12" />
       </div>
       <div className="hidden sm:block shrink-0 w-8" />
-      <Skeleton className="hidden sm:block w-7 h-7 shrink-0" />
     </div>
   );
 }

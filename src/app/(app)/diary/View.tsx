@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Pencil, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
+import { ExternalLink, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
 
-import { CoverArt } from '@/components/games/CoverArt';
+import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
+import { Playtime } from '@/components/games/GameCardInfo';
 import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/DiaryNote';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
@@ -59,6 +60,24 @@ function Rating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' })
   );
 }
 
+/**
+ * The hours a finished game took, styled to sit beside the rating: for a
+ * finished game it's the number worth seeing with it. The other details are
+ * in the modal.
+ */
+function HoursPlayed({ entry, size = 'sm' }: { entry: DiaryEntry; size?: 'sm' | 'md' }) {
+  if (entry.playtime_forever < 60) return null;
+  return (
+    <Playtime
+      compact
+      minutes={entry.playtime_forever}
+      lastPlayedAt={entry.last_played_at}
+      className="text-sm font-medium text-ink-200 tabular-nums"
+      iconClassName={`${size === 'md' ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0 text-ink-400`}
+    />
+  );
+}
+
 function AddNoteButton({ name, onClick }: { name: string; onClick: () => void }) {
   return (
     <button
@@ -68,18 +87,6 @@ function AddNoteButton({ name, onClick }: { name: string; onClick: () => void })
       className={`cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 ${ROW_REVEAL}`}
     >
       <MessageSquarePlus className="w-4 h-4" aria-hidden="true" />
-    </button>
-  );
-}
-
-function EditButton({ name, onClick }: { name: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={`Edit ${name}`}
-      className="cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 transition-colors"
-    >
-      <Pencil className="w-4 h-4" aria-hidden="true" />
     </button>
   );
 }
@@ -100,19 +107,23 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         {day ?? ''}
       </div>
 
-      <CoverArt
-        src={entry.header_image}
-        alt=""
-        sizes={COVER_SIZES}
-        className={`${COVER_WIDTH} shrink-0`}
+      {/* The art opens the entry, as on every other card. */}
+      <button
+        type="button"
+        onClick={edit}
+        aria-label={`Edit ${entry.name}`}
+        className={`group ${COVER_WIDTH} shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2`}
       >
-        {/* On phones the date rides on the art. */}
-        {entry.finished_at && (
-          <span className="sm:hidden absolute top-2 left-2 rounded-md bg-ink-950/90 px-2 py-0.5 text-xs font-medium text-ink-100 tabular-nums">
-            {shortDate(entry.finished_at)}
-          </span>
-        )}
-      </CoverArt>
+        <CoverArt src={entry.header_image} alt="" sizes={COVER_SIZES} interactive>
+          <CoverEditHint />
+          {/* On phones the date rides on the art. */}
+          {entry.finished_at && (
+            <span className="sm:hidden absolute top-2 left-2 rounded-md bg-ink-950/90 px-2 py-0.5 text-xs font-medium text-ink-100 tabular-nums">
+              {shortDate(entry.finished_at)}
+            </span>
+          )}
+        </CoverArt>
+      </button>
 
       {/* Title, the note, and on phones the rating and buttons */}
       <div className={`min-w-0 flex-1 ${COVER_HEIGHT} flex flex-col sm:justify-center`}>
@@ -131,13 +142,17 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
             />
           </a>
           <div className="sm:hidden flex items-center gap-1 shrink-0 -my-1 -mr-1.5">
+            {entry.playtime_forever >= 60 && (
+              <span className="mr-2.5">
+                <HoursPlayed entry={entry} />
+              </span>
+            )}
             {entry.rating != null && (
               <span className="mr-1.5">
                 <Rating rating={entry.rating} />
               </span>
             )}
             {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
-            <EditButton name={entry.name} onClick={edit} />
           </div>
         </div>
         {editingNote ? (
@@ -157,15 +172,15 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         )}
       </div>
 
-      {/* Rating and buttons — desktop */}
+      {/* Hours played, rating and buttons — desktop */}
+      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-16`}>
+        <HoursPlayed entry={entry} size="md" />
+      </div>
       <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-20`}>
         {entry.rating != null && <Rating rating={entry.rating} size="md" />}
       </div>
       <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-center shrink-0 w-8`}>
         {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
-      </div>
-      <div className={`${ALIGN_WITH_COVER} hidden sm:flex shrink-0`}>
-        <EditButton name={entry.name} onClick={edit} />
       </div>
     </div>
   );
@@ -261,6 +276,12 @@ export default function DiaryView() {
             initialDate={detailModal.initialDate}
             initialNotes={detailModal.initialNotes}
             initialRating={detailModal.initialRating}
+            mainStoryHours={detailModal.game.main_story_hours}
+            steamReviewScore={detailModal.game.steam_review_score}
+            steamReviewCount={detailModal.game.steam_review_count}
+            playtimeMinutes={detailModal.game.playtime_forever}
+            lastPlayedAt={detailModal.game.last_played_at}
+            deckCompat={detailModal.game.deck_compat}
             disablePlaying={hasPlayingGame}
           />
         )

@@ -16,6 +16,8 @@ interface DiaryModal {
   appId: number;
   gameName: string;
   headerImage: string | null;
+  /** The entry, for the modal's meta row. */
+  game: DiaryEntry;
   initialStatus: 'finished';
   initialDate: string | null;
   initialNotes: string | null;
@@ -125,6 +127,7 @@ export function useDiary(): UseDiaryReturn {
       appId,
       gameName: entry.name,
       headerImage: entry.header_image,
+      game: entry,
       initialStatus: 'finished',
       initialDate: entry.finished_at?.slice(0, 10) ?? null,
       initialNotes: entry.notes,

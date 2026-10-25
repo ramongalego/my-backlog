@@ -93,6 +93,13 @@ export interface DiaryEntry {
   rating: number | null;
   notes: string | null;
   finished_at: string | null;
+  // For the meta row on each entry and in its modal, as on every other card.
+  playtime_forever: number;
+  main_story_hours: number | null;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
+  deck_compat: number | null;
+  last_played_at: string | null;
 }
 
 export async function loadDiaryEntries(
@@ -101,7 +108,9 @@ export async function loadDiaryEntries(
 ): Promise<DiaryEntry[]> {
   const { data, error } = await supabase
     .from('games')
-    .select('app_id, name, header_image, rating, notes, finished_at')
+    .select(
+      'app_id, name, header_image, rating, notes, finished_at, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at',
+    )
     .eq('user_id', userId)
     .eq('status', 'finished')
     .order('finished_at', { ascending: false, nullsFirst: false });
