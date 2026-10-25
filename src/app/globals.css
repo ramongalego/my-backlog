@@ -37,39 +37,43 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-html {
-  color-scheme: dark;
-  accent-color: var(--color-accent-500);
-  /* Reserve the scrollbar's width even when a modal locks scrolling, so the
-     page doesn't widen and shift sideways while the modal is open. */
-  scrollbar-gutter: stable;
-}
+/* Element defaults live in the base layer so Tailwind classes can override
+   them (unlayered CSS would beat every utility, e.g. a field's focus style). */
+@layer base {
+  html {
+    color-scheme: dark;
+    accent-color: var(--color-accent-500);
+    /* Reserve the scrollbar's width even when a modal locks scrolling, so the
+       page doesn't widen and shift sideways while the modal is open. */
+    scrollbar-gutter: stable;
+  }
 
-body {
-  background: var(--color-ink-950);
-  color: var(--color-ink-100);
-  caret-color: var(--color-accent-400);
-}
+  body {
+    background: var(--color-ink-950);
+    color: var(--color-ink-100);
+    caret-color: var(--color-accent-400);
+  }
 
-::selection {
-  background: var(--color-accent-500);
-  color: var(--color-ink-950);
-}
+  ::selection {
+    background: var(--color-accent-500);
+    color: var(--color-ink-950);
+  }
 
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
 
-p {
-  text-wrap: pretty;
-}
+  p {
+    text-wrap: pretty;
+  }
 
-/* One visible focus treatment for every control that doesn't draw its own. */
-:focus-visible {
-  outline: 2px solid var(--color-accent-400);
-  outline-offset: 2px;
+  /* One visible focus treatment for every control that doesn't draw its own. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-400);
+    outline-offset: 2px;
+  }
 }
 
 /* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */

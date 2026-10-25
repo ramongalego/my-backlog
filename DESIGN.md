@@ -209,7 +209,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `GameCard` (grid tile: art with title and meta underneath, no box), `GameCarousel`, `GameMetaRow` / `GameCardInfo`.
 - `STATUS_STYLE` and `GAME_STATUSES` in `src/lib/games/status-style.ts`: label, icon, text, solid and fill classes for every status.
 
-**Interaction states:** every control needs hover, keyboard focus (the global `:focus-visible` orange outline covers most), disabled and loading states. A disabled primary button goes neutral grey rather than faded orange.
+**Interaction states:** every control needs hover, keyboard focus (the global `:focus-visible` orange outline covers buttons and links; it lives in the base layer, so a component can replace it, as text fields do with their border), disabled and loading states. A disabled primary button goes neutral grey rather than faded orange.
 
 **Motion:** 150–250ms colour and opacity transitions. Motion shows a change of state; it is never ambient decoration. Respect `prefers-reduced-motion` (handled globally).
 

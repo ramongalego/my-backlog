@@ -16,7 +16,7 @@ function DiaryRowSkeleton() {
       <div className="hidden sm:flex shrink-0 w-20 justify-end">
         <Skeleton className="h-4 w-12" />
       </div>
-      <div className="hidden sm:block shrink-0 w-10" />
+      <div className="shrink-0 w-8" />
       <Skeleton className="w-7 h-7 shrink-0" />
     </div>
   );

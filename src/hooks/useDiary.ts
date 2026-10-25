@@ -35,6 +35,8 @@ interface UseDiaryReturn {
     notes: string,
     rating: number | null,
   ) => Promise<void>;
+  /** Saves just the note, keeping the entry's date and rating. */
+  handleSaveNotes: (appId: number, notes: string) => void;
 }
 
 export function useDiary(): UseDiaryReturn {
@@ -142,6 +144,18 @@ export function useDiary(): UseDiaryReturn {
     diaryMutation.mutate({ appId: detailModal.appId, status, date, notes, rating });
   };
 
+  const handleSaveNotes = (appId: number, notes: string) => {
+    const entry = entries.find((e) => e.app_id === appId);
+    if (!entry) return;
+    diaryMutation.mutate({
+      appId,
+      status: 'finished',
+      date: entry.finished_at?.slice(0, 10) ?? '',
+      notes,
+      rating: entry.rating,
+    });
+  };
+
   return {
     entries,
     loading: !!userId && isPending,
@@ -150,5 +164,6 @@ export function useDiary(): UseDiaryReturn {
     handleOpenDetail,
     handleCloseDetail,
     handleConfirmDetail,
+    handleSaveNotes,
   };
 }

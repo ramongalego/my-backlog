@@ -1,8 +1,10 @@
 'use client';
 
-import { ExternalLink, Pencil, Trophy, Star, MessageCircle, CalendarDays } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, Pencil, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
 
 import { CoverThumb } from '@/components/games/CoverArt';
+import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/DiaryNote';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -20,86 +22,112 @@ function monthName(isoDate: string): string {
   return d.toLocaleString('en-US', { month: 'long' });
 }
 
-function NotesTooltip({ text }: { text: string }) {
-  return (
-    <div className="relative group/notes">
-      <button
-        type="button"
-        aria-label="Show notes"
-        className="block p-1 text-ink-500 hover:text-ink-200 transition-colors cursor-default rounded"
-      >
-        <MessageCircle className="w-4 h-4" aria-hidden="true" />
-      </button>
-      <div
-        role="tooltip"
-        className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover/notes:block group-focus-within/notes:block z-50 bg-ink-800 border border-ink-700 rounded-lg px-3 py-2 text-sm text-ink-200 w-72 whitespace-normal shadow-xl shadow-black/40"
-      >
-        {text}
-      </div>
-    </div>
-  );
-}
-
 interface DiaryRowProps {
   entry: DiaryEntry;
   onEdit: (appId: number) => void;
+  onSaveNotes: (appId: number, notes: string) => void;
 }
 
-function DiaryRow({ entry, onEdit }: DiaryRowProps) {
+// Day, rating and the action buttons line up with the cover, whose height
+// tracks THUMB_WIDTH at the shared 460:215 ratio.
+const ALIGN_WITH_COVER = 'h-[30px] sm:h-[52px] flex items-center';
+
+function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
+  const [editingNote, setEditingNote] = useState(false);
   const hasDate = Boolean(entry.finished_at);
   const day = hasDate ? formatDay(entry.finished_at!) : null;
 
   return (
-    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-ink-800/70">
+    <div className="group/row flex items-start gap-3 sm:gap-4 py-3 border-b border-ink-800/70">
       {/* Day */}
-      <div className="w-6 shrink-0 text-right text-sm text-ink-400 tabular-nums">{day ?? ''}</div>
+      <div
+        className={`${ALIGN_WITH_COVER} justify-end w-6 shrink-0 text-sm text-ink-400 tabular-nums`}
+      >
+        {day ?? ''}
+      </div>
 
-      {/* Cover image */}
       <CoverThumb src={entry.header_image} alt={entry.name} />
 
-      {/* Game name + rating stacked on mobile */}
-      <div className="min-w-0 flex-[2]">
+      {/* Title, the mobile rating, and the note */}
+      <div className="min-w-0 flex-1 min-h-[30px] sm:min-h-[52px] flex flex-col justify-center">
         <a
           href={`https://store.steampowered.com/app/${entry.app_id}/`}
           target="_blank"
           rel="noopener noreferrer"
           title={entry.name}
-          className="group/title inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors sm:truncate max-w-full"
+          className="group/title inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors sm:truncate max-w-full self-start"
         >
           <span className="sm:truncate min-w-0">{entry.name}</span>
-          <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
+          <ExternalLink
+            className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
+            aria-hidden="true"
+          />
         </a>
         {entry.rating != null && (
           <p className="flex items-center gap-1 text-sm text-ink-300 tabular-nums sm:hidden mt-0.5">
-            <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" />
+            <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
             <span>{entry.rating}/10</span>
           </p>
+        )}
+        {editingNote ? (
+          <DiaryNoteEditor
+            initialText={entry.notes ?? ''}
+            gameName={entry.name}
+            onCancel={() => setEditingNote(false)}
+            onSave={(notes) => {
+              setEditingNote(false);
+              if (notes !== (entry.notes ?? '')) onSaveNotes(entry.app_id, notes);
+            }}
+          />
+        ) : (
+          entry.notes && (
+            <DiaryNoteText
+              text={entry.notes}
+              gameName={entry.name}
+              onEdit={() => setEditingNote(true)}
+            />
+          )
         )}
       </div>
 
       {/* Rating — desktop only */}
-      <div className="hidden sm:block shrink-0 w-20 text-right">
+      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-20`}>
         {entry.rating != null && (
-          <span className="flex items-center justify-end gap-1 text-sm font-medium text-ink-200 tabular-nums">
-            <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
+          <span className="flex items-center gap-1 text-sm font-medium text-ink-200 tabular-nums">
+            <Star
+              className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400"
+              aria-hidden="true"
+            />
             <span>{entry.rating}/10</span>
           </span>
         )}
       </div>
 
-      {/* Notes icon — desktop only */}
-      <div className="hidden sm:flex shrink-0 w-10 items-center justify-center">
-        {entry.notes && <NotesTooltip text={entry.notes} />}
+      {/* Add a note, when there isn't one yet */}
+      <div className={`${ALIGN_WITH_COVER} justify-center shrink-0 w-8`}>
+        {!entry.notes && !editingNote && (
+          <button
+            type="button"
+            onClick={() => setEditingNote(true)}
+            aria-label={`Add a note for ${entry.name}`}
+            title="Add a note"
+            className={`cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 ${ROW_REVEAL}`}
+          >
+            <MessageSquarePlus className="w-4 h-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
-      {/* Edit button — always visible */}
-      <button
-        onClick={() => onEdit(entry.app_id)}
-        aria-label={`Edit ${entry.name}`}
-        className="cursor-pointer shrink-0 p-1.5 text-ink-500 hover:text-ink-100 transition-colors"
-      >
-        <Pencil className="w-4 h-4" />
-      </button>
+      {/* Full editor: date, rating, status */}
+      <div className={`${ALIGN_WITH_COVER} shrink-0`}>
+        <button
+          onClick={() => onEdit(entry.app_id)}
+          aria-label={`Edit ${entry.name}`}
+          className="cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 transition-colors"
+        >
+          <Pencil className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -125,6 +153,7 @@ export default function DiaryView() {
     handleOpenDetail,
     handleCloseDetail,
     handleConfirmDetail,
+    handleSaveNotes,
   } = useDiary();
 
   const [selectedYear, setSelectedYear] = useUrlState<string>('year', 'all');
@@ -245,7 +274,12 @@ export default function DiaryView() {
                       {monthName(mg.entries[0].finished_at!)}
                     </h3>
                     {mg.entries.map((entry) => (
-                      <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
+                      <DiaryRow
+                        key={entry.app_id}
+                        entry={entry}
+                        onEdit={handleOpenDetail}
+                        onSaveNotes={handleSaveNotes}
+                      />
                     ))}
                   </div>
                 );
@@ -258,7 +292,12 @@ export default function DiaryView() {
             <div className="mt-12">
               <SectionLabel className="pb-2 border-b border-ink-800">No date</SectionLabel>
               {filteredUndated.map((entry) => (
-                <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
+                <DiaryRow
+                  key={entry.app_id}
+                  entry={entry}
+                  onEdit={handleOpenDetail}
+                  onSaveNotes={handleSaveNotes}
+                />
               ))}
             </div>
           )}
