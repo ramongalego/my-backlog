@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import HomePage from '@/app/home/page';
+import HomePage from '@/app/(app)/home/View';
 import type { GameWithImage } from '@/types/games';
 
 // Next.js navigation

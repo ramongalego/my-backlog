@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { LandingPage } from '@/components/LandingPage';
 
 export const metadata: Metadata = {
-  title: 'MyBacklog · Stop scrolling. Start playing.',
+  // absolute: this page sits under the root layout's '%s · MyBacklog' template.
+  title: { absolute: 'MyBacklog · Stop scrolling. Start playing.' },
   description:
     'Your Steam library has hundreds of games. MyBacklog helps you pick the right one to play tonight, track your progress, and actually finish your backlog.',
   openGraph: {

@@ -3,21 +3,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createClient, getSessionUserId } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { updateGameStatus } from '@/lib/games/status';
-import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
+import { loadCurrentlyPlaying, loadDiaryEntries, type DiaryEntry } from '@/lib/data/loaders';
 import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 
-export interface DiaryEntry {
-  app_id: number;
-  name: string;
-  header_image: string | null;
-  rating: number | null;
-  notes: string | null;
-  finished_at: string | null;
-}
+export type { DiaryEntry };
 
 interface DiaryModal {
   appId: number;
@@ -44,39 +37,26 @@ interface UseDiaryReturn {
   ) => Promise<void>;
 }
 
-async function fetchDiaryEntries(): Promise<DiaryEntry[]> {
-  const userId = await getSessionUserId();
-  if (!userId) return [];
-
-  const { data, error } = await createClient()
-    .from('games')
-    .select('app_id, name, header_image, rating, notes, finished_at')
-    .eq('user_id', userId)
-    .eq('status', 'finished')
-    .order('finished_at', { ascending: false, nullsFirst: false });
-
-  if (error) throw error;
-  return (data ?? []) as DiaryEntry[];
-}
-
 export function useDiary(): UseDiaryReturn {
   const queryClient = useQueryClient();
   const { games: invalidateGames } = useInvalidateQueries();
   const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const diaryKey = queryKeys.games.diary(userId ?? '');
 
   const { data: entries = [], isPending } = useQuery({
-    queryKey: queryKeys.games.diary(),
-    queryFn: fetchDiaryEntries,
+    queryKey: diaryKey,
+    queryFn: () => loadDiaryEntries(createClient(), userId!),
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
 
   // Shares the home page's cache entry. Used to stop the edit modal from
   // silently replacing the current game.
-  const { user } = useAuth();
-  const userId = user?.id ?? null;
   const { data: playingGame = null } = useQuery({
     queryKey: queryKeys.games.playing(userId ?? ''),
-    queryFn: () => fetchCurrentlyPlaying(userId!),
+    queryFn: () => loadCurrentlyPlaying(createClient(), userId!),
     enabled: !!userId,
     staleTime: 30 * 1000,
   });
@@ -98,11 +78,11 @@ export function useDiary(): UseDiaryReturn {
       return vars;
     },
     onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.games.diary() });
-      const previous = queryClient.getQueryData<DiaryEntry[]>(queryKeys.games.diary());
+      await queryClient.cancelQueries({ queryKey: diaryKey });
+      const previous = queryClient.getQueryData<DiaryEntry[]>(diaryKey);
 
       if (vars.status === 'finished') {
-        queryClient.setQueryData(queryKeys.games.diary(), (old: DiaryEntry[] | undefined) => {
+        queryClient.setQueryData(diaryKey, (old: DiaryEntry[] | undefined) => {
           if (!old) return old;
           const updated = old.map((e) =>
             e.app_id === vars.appId
@@ -117,7 +97,7 @@ export function useDiary(): UseDiaryReturn {
           });
         });
       } else {
-        queryClient.setQueryData(queryKeys.games.diary(), (old: DiaryEntry[] | undefined) => {
+        queryClient.setQueryData(diaryKey, (old: DiaryEntry[] | undefined) => {
           if (!old) return old;
           return old.filter((e) => e.app_id !== vars.appId);
         });
@@ -128,7 +108,7 @@ export function useDiary(): UseDiaryReturn {
     onError: (err, _vars, context) => {
       console.error(err);
       if (context?.previous) {
-        queryClient.setQueryData(queryKeys.games.diary(), context.previous);
+        queryClient.setQueryData(diaryKey, context.previous);
       }
       toast.error('Could not save your changes. Please try again.');
     },
@@ -164,7 +144,7 @@ export function useDiary(): UseDiaryReturn {
 
   return {
     entries,
-    loading: isPending,
+    loading: !!userId && isPending,
     hasPlayingGame: playingGame !== null,
     detailModal,
     handleOpenDetail,

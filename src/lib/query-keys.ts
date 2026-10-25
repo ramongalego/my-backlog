@@ -5,9 +5,9 @@ export const queryKeys = {
   },
   games: {
     all: ['games'] as const,
-    list: () => [...queryKeys.games.all, 'list'] as const,
-    diary: () => [...queryKeys.games.all, 'diary'] as const,
-    stats: () => [...queryKeys.games.all, 'stats'] as const,
+    list: (userId: string) => [...queryKeys.games.all, 'list', userId] as const,
+    diary: (userId: string) => [...queryKeys.games.all, 'diary', userId] as const,
+    stats: (userId: string) => [...queryKeys.games.all, 'stats', userId] as const,
     playing: (userId: string) => [...queryKeys.games.all, 'playing', userId] as const,
   },
   queue: {

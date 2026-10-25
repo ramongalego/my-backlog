@@ -31,32 +31,45 @@ async function fetchAuthSession(): Promise<AuthSession> {
   return { user, profile: profile ?? null };
 }
 
-export function useAuth() {
+/**
+ * Keeps the cached session in sync with Supabase auth events. Mounted once in
+ * the app Providers rather than in every useAuth() caller.
+ */
+export function AuthStateListener() {
   const queryClient = useQueryClient();
-
-  const { data = EMPTY_SESSION, isPending } = useQuery({
-    queryKey: queryKeys.auth.session(),
-    queryFn: fetchAuthSession,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
 
   useEffect(() => {
     const supabase = createClient();
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      const key = queryKeys.auth.session();
       if (event === 'SIGNED_OUT' || !session?.user) {
-        queryClient.setQueryData(queryKeys.auth.session(), EMPTY_SESSION);
+        queryClient.setQueryData(key, EMPTY_SESSION);
         return;
       }
+      // Supabase also emits SIGNED_IN on page load and tab refocus for the
+      // already signed-in user; only refetch when the user actually changed.
+      const cachedUserId = queryClient.getQueryData<AuthSession>(key)?.user?.id;
+      if (event === 'SIGNED_IN' && cachedUserId === session.user.id) return;
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
+        queryClient.invalidateQueries({ queryKey: key });
       }
       // TOKEN_REFRESHED / INITIAL_SESSION: user+profile unchanged, skip refetch.
     });
     return () => subscription.unsubscribe();
   }, [queryClient]);
+
+  return null;
+}
+
+export function useAuth() {
+  const { data = EMPTY_SESSION, isPending } = useQuery({
+    queryKey: queryKeys.auth.session(),
+    queryFn: fetchAuthSession,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
 
   return {
     user: data.user,

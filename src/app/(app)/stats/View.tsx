@@ -371,7 +371,7 @@ function MostPlayedUnfinished({
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default function StatsPage() {
+export default function StatsView() {
   const { stats, loading, hasPlayingGame } = useStats();
   const { games: invalidateGames } = useInvalidateQueries();
   const { user } = useAuth();

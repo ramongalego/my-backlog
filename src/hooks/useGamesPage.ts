@@ -2,8 +2,8 @@
 
 import { useState, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient, getSessionUserId } from '@/lib/supabase/client';
-import { fetchAllRows } from '@/lib/supabase/paginate';
+import { createClient } from '@/lib/supabase/client';
+import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
@@ -11,23 +11,7 @@ import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
 
-export interface GameItem {
-  app_id: number;
-  name: string;
-  playtime_forever: number;
-  steam_review_score: number | null;
-  steam_review_count: number | null;
-  steam_review_weighted: number | null;
-  header_image: string | null;
-  main_story_hours: number | null;
-  status: string | null;
-  notes: string | null;
-  rating: number | null;
-  finished_at: string | null;
-  dropped_at: string | null;
-  tags: string[] | null;
-  deck_compat?: number | null;
-}
+export type { GameItem };
 
 export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
 export type GameSort = 'playtime' | 'score' | 'recent' | 'length';
@@ -85,34 +69,17 @@ interface UseGamesPageReturn {
 
 const BATCH_SIZE = 60;
 
-async function fetchGames(): Promise<GameItem[]> {
-  const userId = await getSessionUserId();
-  if (!userId) return [];
-
-  const supabase = createClient();
-  return fetchAllRows<GameItem>((from, to) =>
-    supabase
-      .from('games')
-      .select(
-        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
-      )
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .order('playtime_forever', { ascending: false })
-      .order('app_id')
-      .range(from, to),
-  );
-}
-
 export function useGamesPage(): UseGamesPageReturn {
   const queryClient = useQueryClient();
   const { games: invalidateGames } = useInvalidateQueries();
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
+  const gamesKey = queryKeys.games.list(userId ?? '');
   const { data: games = [], isPending } = useQuery({
-    queryKey: queryKeys.games.list(),
-    queryFn: fetchGames,
+    queryKey: gamesKey,
+    queryFn: () => loadGamesList(createClient(), userId!),
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -144,9 +111,9 @@ export function useGamesPage(): UseGamesPageReturn {
       });
     },
     onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.games.list() });
-      const previous = queryClient.getQueryData<GameItem[]>(queryKeys.games.list());
-      queryClient.setQueryData<GameItem[]>(queryKeys.games.list(), (old) =>
+      await queryClient.cancelQueries({ queryKey: gamesKey });
+      const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
+      queryClient.setQueryData<GameItem[]>(gamesKey, (old) =>
         old?.map((g) =>
           g.app_id === vars.appId
             ? {
@@ -165,7 +132,7 @@ export function useGamesPage(): UseGamesPageReturn {
     onError: (err, _vars, context) => {
       console.error(err);
       if (context?.previous) {
-        queryClient.setQueryData(queryKeys.games.list(), context.previous);
+        queryClient.setQueryData(gamesKey, context.previous);
       }
       toast.error('Could not save your changes. Please try again.');
     },
@@ -321,7 +288,7 @@ export function useGamesPage(): UseGamesPageReturn {
 
   return {
     games,
-    loading: isPending,
+    loading: !!userId && isPending,
     filter,
     setFilter: setFilterAndReset,
     sort,

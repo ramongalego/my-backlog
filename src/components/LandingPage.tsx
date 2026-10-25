@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
 import Image, { getImageProps } from 'next/image';
+import dynamic from 'next/dynamic';
 
 import { Button } from '@/components/ui/Button';
-import { AuthModal } from '@/components/auth/AuthModal';
 import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
+
+// The auth forms pull in supabase-js; load them only when the modal opens.
+const AuthModal = dynamic(() => import('@/components/auth/AuthModal').then((m) => m.AuthModal));
 
 interface LandingPageProps {
   user: User | null;
@@ -720,11 +723,9 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         </section>
       </main>
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authMode}
-      />
+      {isAuthModalOpen && (
+        <AuthModal isOpen onClose={() => setIsAuthModalOpen(false)} initialMode={authMode} />
+      )}
     </div>
   );
 }

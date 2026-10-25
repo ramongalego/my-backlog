@@ -27,7 +27,7 @@ function EmptyState({ searching }: { searching: boolean }) {
   );
 }
 
-export default function GamesPage() {
+export default function GamesView() {
   const {
     loading,
     filter,

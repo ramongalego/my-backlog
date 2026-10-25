@@ -13,19 +13,8 @@ import { useLibraryRefresh, PLAYTIME_REFRESH_KEY } from '@/hooks/useLibraryRefre
 import type { AuthMode } from '@/types/auth';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
-const HIDDEN_ROUTES = ['/share/'];
 
 export function Header() {
-  const pathname = usePathname();
-
-  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
-    return null;
-  }
-
-  return <HeaderInner />;
-}
-
-function HeaderInner() {
   const { user, profile, authResolved } = useAuth();
   const { gameCount, loaded: libraryMetaLoaded } = useLibraryMeta(user?.id ?? null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);

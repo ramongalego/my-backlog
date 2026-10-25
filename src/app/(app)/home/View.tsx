@@ -30,7 +30,7 @@ const GameSummaryModal = dynamic(() =>
   import('@/components/games/GameSummaryModal').then((m) => m.GameSummaryModal),
 );
 
-export default function HomePage() {
+export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
   const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();

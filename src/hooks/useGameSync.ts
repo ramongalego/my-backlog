@@ -12,7 +12,8 @@ const BATCH_SIZE = 6;
 // individual upstream fetch. A failed chunk counts all of its ids as remaining.
 async function resolveFromCache(
   games: Game[],
-): Promise<{ synced: number; remaining: Set<number> }> {
+): Promise<{ resolved: number; synced: number; remaining: Set<number> }> {
+  let resolved = 0;
   let synced = 0;
   const remaining = new Set<number>();
   for (const ids of chunk(
@@ -27,6 +28,7 @@ async function resolveFromCache(
       });
       if (!res.ok) throw new Error(`Bulk sync failed (${res.status})`);
       const data = await res.json();
+      resolved += data.resolved;
       synced += data.synced;
       for (const id of data.remaining as number[]) remaining.add(id);
     } catch (err) {
@@ -34,7 +36,7 @@ async function resolveFromCache(
       for (const id of ids) remaining.add(id);
     }
   }
-  return { synced, remaining };
+  return { resolved, synced, remaining };
 }
 
 export function useGameSync() {
@@ -51,14 +53,15 @@ export function useGameSync() {
     try {
       // Step 1: cache hits, silently. The progress UI (which replaces the
       // dashboard) only appears when there's real upstream fetching to do.
-      const { synced, remaining } = await resolveFromCache(games);
+      const { resolved, synced, remaining } = await resolveFromCache(games);
       const remainingGames = games.filter((g) => remaining.has(g.app_id));
       if (remainingGames.length === 0) {
+        // Only refetch when the cache actually changed something.
         if (synced > 0) invalidateGameData();
         return;
       }
 
-      let completed = synced;
+      let completed = resolved;
       setIsSyncing(true);
       setSyncingGames(games);
       setSyncProgress({ current: completed, total: games.length });

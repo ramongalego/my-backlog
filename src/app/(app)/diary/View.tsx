@@ -147,7 +147,7 @@ interface YearGroup {
   months: MonthGroup[];
 }
 
-export default function DiaryPage() {
+export default function DiaryView() {
   const {
     entries,
     loading,

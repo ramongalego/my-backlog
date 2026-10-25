@@ -337,7 +337,9 @@ export function GameDetailModal({
         )}
 
         {clearsReview && (
-          <p className="text-xs text-amber-400">Saving will clear the rating and notes for this game.</p>
+          <p className="text-xs text-amber-400">
+            Saving will clear the rating and notes for this game.
+          </p>
         )}
 
         {showDateField && (

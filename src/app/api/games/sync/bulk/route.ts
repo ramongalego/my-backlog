@@ -47,12 +47,25 @@ export async function POST(request: NextRequest) {
   }
   const validAppIds = parsed.data.appIds;
 
-  const lookups = await Promise.all(
-    chunk(validAppIds, LOOKUP_CHUNK_SIZE).map((ids) =>
-      supabase.from('game_metadata').select(METADATA_COLUMNS).in('app_id', ids),
+  const userId = user.id;
+  const idChunks = chunk(validAppIds, LOOKUP_CHUNK_SIZE);
+  const [lookups, ownRows] = await Promise.all([
+    Promise.all(
+      idChunks.map((ids) =>
+        supabase.from('game_metadata').select(METADATA_COLUMNS).in('app_id', ids),
+      ),
     ),
-  );
-  const lookupError = lookups.find((r) => r.error)?.error;
+    Promise.all(
+      idChunks.map((ids) =>
+        supabase
+          .from('games')
+          .select('app_id, main_story_hours, metadata_synced')
+          .eq('user_id', userId)
+          .in('app_id', ids),
+      ),
+    ),
+  ]);
+  const lookupError = [...lookups, ...ownRows].find((r) => r.error)?.error;
   if (lookupError) {
     console.error(lookupError);
     return jsonError('Failed to read metadata cache', 500);
@@ -63,10 +76,19 @@ export async function POST(request: NextRequest) {
     .flatMap((r) => (r.data ?? []) as CachedMetadata[])
     .filter((row) => isCacheUsable(row, now));
 
+  // Only rows that would actually change are written (and reported as
+  // synced): never-synced rows, or ones the cache now has HLTB hours for.
+  // Games still waiting out their HLTB backoff are resolved without a write,
+  // so they don't trigger a client-side refetch on every page load.
+  const own = new Map(ownRows.flatMap((r) => r.data ?? []).map((g) => [g.app_id as number, g]));
+  const changedRows = usableRows.filter((row) => {
+    const mine = own.get(row.app_id);
+    return !mine || !mine.metadata_synced || mine.main_story_hours !== row.main_story_hours;
+  });
+
   // Copy cache hits onto the user's rows. Each row needs its own values, so
   // these are individual UPDATEs, run in concurrent batches.
-  const userId = user.id;
-  for (const batch of chunk(usableRows, DB_BATCH_SIZE)) {
+  for (const batch of chunk(changedRows, DB_BATCH_SIZE)) {
     const results = await Promise.all(
       batch.map((row) =>
         supabase
@@ -89,7 +111,9 @@ export async function POST(request: NextRequest) {
   const remaining = validAppIds.filter((id) => !resolvedIds.has(id));
 
   return NextResponse.json({
-    synced: usableRows.length,
+    // resolved: handled from cache (for progress); synced: rows actually written.
+    resolved: usableRows.length,
+    synced: changedRows.length,
     remaining,
   });
 }

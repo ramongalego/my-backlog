@@ -30,19 +30,20 @@ describe('LandingPage', () => {
       expect(screen.queryByText('Connect Your Steam')).not.toBeInTheDocument();
     });
 
-    it('opens auth modal when "Get Started" is clicked', () => {
+    // The modal is loaded with next/dynamic, so it appears asynchronously.
+    it('opens auth modal when "Get Started" is clicked', async () => {
       render(<LandingPage user={null} onConnectSteam={mockOnConnectSteam} />);
 
       fireEvent.click(screen.getAllByRole('button', { name: /get started/i })[0]);
 
-      expect(screen.getByTestId('auth-modal')).toBeInTheDocument();
+      expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
     });
 
-    it('closes auth modal when close is triggered', () => {
+    it('closes auth modal when close is triggered', async () => {
       render(<LandingPage user={null} onConnectSteam={mockOnConnectSteam} />);
 
       fireEvent.click(screen.getAllByRole('button', { name: /get started/i })[0]);
-      expect(screen.getByTestId('auth-modal')).toBeInTheDocument();
+      expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('Close'));
       expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();

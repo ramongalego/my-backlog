@@ -1,23 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient, getSessionUserId } from '@/lib/supabase/client';
-import { fetchAllRows } from '@/lib/supabase/paginate';
+import { createClient } from '@/lib/supabase/client';
+import { loadStatsGames } from '@/lib/data/loaders';
+import { useAuth } from './useAuth';
 import { queryKeys } from '@/lib/query-keys';
-
-interface GameForStats {
-  app_id: number;
-  name: string;
-  status: string | null;
-  playtime_forever: number;
-  main_story_hours: number | null;
-  tags: string[] | null;
-  rating: number | null;
-  finished_at: string | null;
-  header_image: string | null;
-  release_date: string | null;
-  deck_compat: number | null;
-}
 
 export interface TagStat {
   tag: string;
@@ -77,29 +64,13 @@ function parseYear(releaseDate: string | null): string | null {
   return m ? m[0] : null;
 }
 
-async function fetchStatsGames(): Promise<GameForStats[]> {
-  const userId = await getSessionUserId();
-  if (!userId) return [];
-
-  const supabase = createClient();
-  return fetchAllRows<GameForStats>((from, to) =>
-    supabase
-      .from('games')
-      .select(
-        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
-      )
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .not('status', 'in', '(hidden,wont_play)')
-      .order('app_id')
-      .range(from, to),
-  );
-}
-
 export function useStats() {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { data: games = [], isPending } = useQuery({
-    queryKey: queryKeys.games.stats(),
-    queryFn: fetchStatsGames,
+    queryKey: queryKeys.games.stats(userId ?? ''),
+    queryFn: () => loadStatsGames(createClient(), userId!),
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -252,5 +223,5 @@ export function useStats() {
 
   const hasPlayingGame = games.some((g) => g.status === 'playing');
 
-  return { stats, loading: isPending, hasPlayingGame };
+  return { stats, loading: !!userId && isPending, hasPlayingGame };
 }

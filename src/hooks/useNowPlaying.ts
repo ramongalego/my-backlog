@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { addToQueue, fetchQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
-import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
+import { loadCurrentlyPlaying } from '@/lib/data/loaders';
 import { updateGameStatus } from '@/lib/games/status';
 import { fetchCompletionCounts, buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
@@ -126,7 +126,7 @@ export function useNowPlaying(userId: string | null) {
 
   const { data: currentlyPlaying = null, isPending: playingPending } = useQuery({
     queryKey: playingKey,
-    queryFn: () => fetchCurrentlyPlaying(userId!),
+    queryFn: () => loadCurrentlyPlaying(createClient(), userId!),
     enabled: !!userId,
     staleTime: 30 * 1000,
   });

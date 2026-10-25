@@ -3,12 +3,9 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
-import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
 import { UrlErrorToast } from '@/components/UrlErrorToast';
 import { getBaseUrl } from '@/lib/url';
-import Providers from './providers';
 import './globals.css';
 
 const geistSans = Geist({
@@ -49,17 +46,15 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <Providers>
-          <Header />
-          <LibrarySyncGuard />
-          {children}
-          <Footer />
-          <Toaster richColors position="bottom-right" />
-          <Suspense>
-            <UrlErrorToast />
-          </Suspense>
-          <Analytics />
-        </Providers>
+        {/* The app shell (React Query, auth-aware header, library sync) lives in
+            the (app) group layout so the marketing pages don't ship it. */}
+        {children}
+        <Footer />
+        <Toaster richColors position="bottom-right" />
+        <Suspense>
+          <UrlErrorToast />
+        </Suspense>
+        <Analytics />
       </body>
     </html>
   );

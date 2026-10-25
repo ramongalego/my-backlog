@@ -275,7 +275,7 @@ function QueueLoadingSkeleton() {
   );
 }
 
-export default function PlayingQueuePage() {
+export default function PlayingQueueView() {
   const {
     currentlyPlaying,
     queue,
