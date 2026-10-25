@@ -82,7 +82,11 @@ export function useLibraryRefresh() {
           return { success: true, newGames, updatedPlaytime };
         }
 
-        invalidateGamesAndQueue();
+        // Most refreshes change nothing (you haven't played since the last one),
+        // and refetching every page's data then would be pure waste.
+        const changed =
+          (data.updatedGames ?? updatedPlaytime) > 0 || (data.updatedReviews ?? 0) > 0;
+        if (changed) invalidateGamesAndQueue();
 
         if (manual) {
           if (updatedPlaytime > 0) {

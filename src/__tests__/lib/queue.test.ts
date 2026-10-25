@@ -1,48 +1,10 @@
-import { fetchQueue, addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
+import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 beforeEach(() => {
   mockFetch.mockReset();
-});
-
-const item = (app_id: number) => ({
-  id: app_id,
-  app_id,
-  position: 0,
-  game: { name: `Game ${app_id}`, header_image: null, playtime_forever: 0, main_story_hours: null },
-});
-
-describe('fetchQueue', () => {
-  it('should return the queue items', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ queue: [item(1), item(2)] }),
-    });
-
-    await expect(fetchQueue()).resolves.toEqual([item(1), item(2)]);
-  });
-
-  it('should return an empty list when queue is missing from response', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
-
-    await expect(fetchQueue()).resolves.toEqual([]);
-  });
-
-  // Errors propagate so React Query treats them as failures instead of caching
-  // an empty queue.
-  it('should throw when response is not ok', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
-
-    await expect(fetchQueue()).rejects.toThrow('Failed to load queue (500)');
-  });
-
-  it('should throw when fetch throws', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-    await expect(fetchQueue()).rejects.toThrow('Network error');
-  });
 });
 
 describe('addToQueue', () => {

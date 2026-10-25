@@ -22,6 +22,7 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   created_at: '2026-01-01T00:00:00Z',
   release_date: null,
   last_played_at: null,
+  categories: null,
   app_id: 123,
   name: 'Test Game',
   playtime_forever: 120,

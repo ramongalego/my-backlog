@@ -1,4 +1,9 @@
-import { buildCarouselPools, type CarouselGame, type LovedGame } from '@/lib/games/carousels';
+import {
+  buildCarouselPools,
+  slimPools,
+  type CarouselGame,
+  type LovedGame,
+} from '@/lib/games/carousels';
 import { editionKey } from '@/lib/games/similarity';
 
 let nextId = 1;
@@ -114,26 +119,6 @@ describe('Hidden Gems', () => {
   });
 });
 
-describe('the queue', () => {
-  it('keeps queued games out of the picks, but not out of Recently Added', () => {
-    const queued = game({
-      name: 'Queued',
-      main_story_hours: 40,
-      playtime_forever: 10 * 60,
-      created_at: '2026-03-01T00:00:00Z',
-    });
-    const other = game({ name: 'Other', main_story_hours: 40, playtime_forever: 10 * 60 });
-    const pools = buildCarouselPools(
-      [queued, other],
-      [],
-      '2026-01-01T00:00:00Z',
-      new Set([queued.app_id]),
-    );
-    expect(names(pools.pickUpPool)).toEqual(['Other']);
-    expect(names(pools.recentlyAddedPool)).toEqual(['Queued']);
-  });
-});
-
 describe('Pick Up Where You Left Off', () => {
   it('lists games you are into, furthest along first', () => {
     const pools = build([
@@ -244,5 +229,16 @@ describe('editionKey', () => {
     ['Portal 2', 'portal 2'],
   ])('%s → %s', (name, key) => {
     expect(editionKey(name)).toBe(key);
+  });
+});
+
+describe('slimPools', () => {
+  it('drops the fields only the ranking needs before the rows are sent', () => {
+    const pools = slimPools(build([game({ name: 'Tagged', tags: ['RPG', 'Story Rich'] })]));
+    expect(pools.weekendGamesPool[0]).toMatchObject({
+      name: 'Tagged',
+      tags: null,
+      categories: null,
+    });
   });
 });

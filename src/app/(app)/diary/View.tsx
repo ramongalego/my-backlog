@@ -70,6 +70,7 @@ function HoursPlayed({ entry, size = 'sm' }: { entry: DiaryEntry; size?: 'sm' | 
   return (
     <Playtime
       compact
+      showLabel
       minutes={entry.playtime_forever}
       lastPlayedAt={entry.last_played_at}
       className="text-sm font-medium text-ink-200 tabular-nums"
@@ -173,7 +174,7 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
       </div>
 
       {/* Hours played, rating and buttons — desktop */}
-      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-16`}>
+      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-28`}>
         <HoursPlayed entry={entry} size="md" />
       </div>
       <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-20`}>

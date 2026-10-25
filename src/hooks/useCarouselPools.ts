@@ -1,9 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
-import { loadCarouselPools, type CarouselPools } from '@/lib/data/loaders';
+import type { CarouselPools } from '@/lib/data/loaders';
+import { useQueue } from './useNowPlaying';
 import {
   EMPTY_CAROUSEL_POOLS,
   MORE_LIKE_MIN_GAMES,
@@ -29,10 +29,18 @@ export function removeAppFromPools(pools: CarouselPools, appId: number): Carouse
   };
 }
 
+async function fetchCarouselPools(): Promise<CarouselPools> {
+  const res = await fetch('/api/carousels');
+  if (!res.ok) throw new Error(`Failed to load carousels (${res.status})`);
+  return res.json();
+}
+
 export function useCarouselPools(userId: string | null) {
   const { data = EMPTY_CAROUSEL_POOLS, isPending } = useQuery({
     queryKey: userId ? queryKeys.carousels.byUser(userId) : queryKeys.carousels.all,
-    queryFn: () => loadCarouselPools(createClient(), userId!),
+    // Built on the server: refetching in the browser used to download the
+    // whole backlog just to keep a few dozen games.
+    queryFn: fetchCarouselPools,
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
@@ -41,7 +49,11 @@ export function useCarouselPools(userId: string | null) {
   // order, which isn't their order on Home: a game you've started belongs in
   // Pick Up Where You Left Off, and More Like ... needs its matches before the
   // general picks take them, or it would rarely have enough to show.
-  const shown = new Set<number>();
+  // Queued games are already decided, so they aren't suggested again (Recently
+  // Added still lists them). Filtering here, from the queue the page already
+  // has, means adding or removing one updates the carousels instantly.
+  const { queuedAppIds } = useQueue(userId);
+  const shown = new Set<number>(queuedAppIds);
   const take = (pool: CarouselGame[]) => {
     const games = pool.filter((g) => !shown.has(g.app_id)).slice(0, CAROUSEL_SIZE);
     games.forEach((g) => shown.add(g.app_id));

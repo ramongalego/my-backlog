@@ -82,7 +82,8 @@ describe('useLibraryRefresh', () => {
       });
 
       expect(toast.success).toHaveBeenCalledWith('Your library is up to date');
-      expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
+      expect(mockGamesAndQueue).not.toHaveBeenCalled();
+      // Nothing changed, so nothing is refetched.
     });
 
     it('reloads the page when new games were added, without showing a toast', async () => {
@@ -180,7 +181,7 @@ describe('useLibraryRefresh', () => {
         '/api/steam/refresh',
         expect.objectContaining({ method: 'POST' }),
       );
-      expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
+      expect(mockGamesAndQueue).not.toHaveBeenCalled();
     });
 
     it('fires the refresh when there is no stored timestamp', async () => {
@@ -266,5 +267,30 @@ describe('useLibraryRefresh', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(keys().playtime)).not.toBeNull();
+  });
+
+  it('refetches page data only when Steam changed something', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ newGames: 0, updatedPlaytime: 0, updatedGames: 1, updatedReviews: 0 }),
+    });
+    const { result } = renderHook(() => useLibraryRefresh());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    // A last-played date changed even though the hours didn't.
+    expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches after new review scores too', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ newGames: 0, updatedPlaytime: 0, updatedGames: 0, updatedReviews: 3 }),
+    });
+    const { result } = renderHook(() => useLibraryRefresh());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
   });
 });

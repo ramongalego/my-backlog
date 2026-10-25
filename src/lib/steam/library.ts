@@ -42,6 +42,8 @@ async function headerImagesFor(
 export interface LibrarySyncResult {
   newGames: number;
   updatedPlaytime: number;
+  /** Rows changed at all, including a new last-played date with the same hours. */
+  updatedGames: number;
 }
 
 /**
@@ -123,6 +125,7 @@ export async function syncOwnedGames(
   return {
     newGames: newGames.length,
     updatedPlaytime: updatedGames.filter(playtimeChanged).length,
+    updatedGames: updatedGames.length,
   };
 }
 

@@ -114,7 +114,7 @@ describe('syncOwnedGames and last played', () => {
       { app_id: 2, playtime_forever: 300, last_played_at: '2026-10-24T20:00:00.000Z' },
     ]);
     expect(inserts).toEqual([expect.objectContaining({ app_id: 4, last_played_at: null })]);
-    expect(result).toEqual({ newGames: 1, updatedPlaytime: 1 });
+    expect(result).toEqual({ newGames: 1, updatedPlaytime: 1, updatedGames: 2 });
   });
 
   it('keeps a known date when Steam stops sharing it', async () => {

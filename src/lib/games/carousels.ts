@@ -175,19 +175,34 @@ function addedSinceFirstSync(games: CarouselGame[], firstImportedAt: string | un
 
 /**
  * Builds every Home carousel from the backlog (status backlog or none, type
- * game), the user's loved games and their queue. Each pool is ranked; useCarouselPools
+ * game) and the user's loved games. Queued games are filtered out later, in
+ * useCarouselPools, so queue changes don't need a refetch. Each pool is ranked; useCarouselPools
  * trims them and keeps a game out of more than one carousel.
  */
+/**
+ * The pools without the fields only the ranking needed (tags, categories), so
+ * what's sent to the browser is just what the cards show.
+ */
+export function slimPools(pools: CarouselPools): CarouselPools {
+  const slim = (games: CarouselGame[]) =>
+    games.map((g) => ({ ...g, tags: null, categories: null }));
+  return {
+    pickUpPool: slim(pools.pickUpPool),
+    moreLike: pools.moreLike && { ...pools.moreLike, games: slim(pools.moreLike.games) },
+    shortGamesPool: slim(pools.shortGamesPool),
+    weekendGamesPool: slim(pools.weekendGamesPool),
+    highlyRatedGamesPool: slim(pools.highlyRatedGamesPool),
+    hiddenGemsPool: slim(pools.hiddenGemsPool),
+    recentlyAddedPool: slim(pools.recentlyAddedPool),
+  };
+}
+
 export function buildCarouselPools(
   backlog: CarouselGame[],
   loved: LovedGame[],
   firstImportedAt: string | undefined,
-  queuedAppIds: ReadonlySet<number> = new Set(),
 ): CarouselPools {
-  // Queued games are already decided, so they aren't suggested again.
-  const candidates = oneEditionEach(
-    backlog.filter((g) => !queuedAppIds.has(g.app_id) && !isMultiplayerFirst(g)),
-  );
+  const candidates = oneEditionEach(backlog.filter((g) => !isMultiplayerFirst(g)));
   const unfinished = candidates.filter((g) => !isPlayedOut(g));
   const reviewed = unfinished.filter((g) => g.steam_review_weighted != null).sort(byWeighted);
 
@@ -213,8 +228,14 @@ export function buildCarouselPools(
       )
       .slice(0, POOL_SIZE),
     moreLike: moreLike(unfinished, loved),
-    shortGamesPool: lengthBetween(SHORT_GAME_MIN_HOURS, SHORT_GAME_MAX_HOURS, true),
-    weekendGamesPool: lengthBetween(SHORT_GAME_MAX_HOURS, WEEKEND_GAME_MAX_HOURS, false),
+    shortGamesPool: lengthBetween(SHORT_GAME_MIN_HOURS, SHORT_GAME_MAX_HOURS, true).slice(
+      0,
+      POOL_SIZE,
+    ),
+    weekendGamesPool: lengthBetween(SHORT_GAME_MAX_HOURS, WEEKEND_GAME_MAX_HOURS, false).slice(
+      0,
+      POOL_SIZE,
+    ),
     highlyRatedGamesPool: reviewed.filter((g) => g.playtime_forever === 0).slice(0, POOL_SIZE),
     hiddenGemsPool: reviewed
       .filter(

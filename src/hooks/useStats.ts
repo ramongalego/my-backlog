@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { loadStatsGames } from '@/lib/data/loaders';
+import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { useAuth } from './useAuth';
 import { useQueue } from './useNowPlaying';
 import { playedALot } from '@/lib/games/played-a-lot';
@@ -70,12 +70,18 @@ function parseYear(releaseDate: string | null): string | null {
   return m ? m[0] : null;
 }
 
+/** Stats leaves out games you've hidden or won't play. */
+const countedInStats = (games: GameItem[]) =>
+  games.filter((g) => g.status !== 'hidden' && g.status !== 'wont_play');
+
 export function useStats() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { data: games = [], isPending } = useQuery({
-    queryKey: queryKeys.games.stats(userId ?? ''),
-    queryFn: () => loadStatsGames(createClient(), userId!),
+    // The Games page's list, shared, so the library is downloaded once.
+    queryKey: queryKeys.games.list(userId ?? ''),
+    queryFn: () => loadGamesList(createClient(), userId!),
+    select: countedInStats,
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });

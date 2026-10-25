@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import {
   buildCarouselPools,
+  slimPools,
   type CarouselGame,
   type CarouselPools,
   type LovedGame,
@@ -34,51 +35,24 @@ export interface GameItem {
   /** Steam's display date, e.g. "Sep 28, 2010" or "To be announced". */
   release_date: string | null;
   last_played_at: string | null;
+  categories: string[] | null;
 }
 
+/**
+ * Every game in the library. The Games page and Stats share this one cache
+ * entry (Stats filters it with a select), so moving between them doesn't
+ * download the library twice.
+ */
 export function loadGamesList(supabase: SupabaseClient, userId: string): Promise<GameItem[]> {
   return fetchAllRows<GameItem>((from, to) =>
     supabase
       .from('games')
       .select(
-        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
+        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at, categories',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
       .order('playtime_forever', { ascending: false })
-      .order('app_id')
-      .range(from, to),
-  );
-}
-
-// ─── Stats ──────────────────────────────────────────────────────────────────
-
-export interface GameForStats {
-  app_id: number;
-  name: string;
-  status: string | null;
-  playtime_forever: number;
-  main_story_hours: number | null;
-  tags: string[] | null;
-  rating: number | null;
-  finished_at: string | null;
-  header_image: string | null;
-  release_date: string | null;
-  deck_compat: number | null;
-  categories: string[] | null;
-  last_played_at: string | null;
-}
-
-export function loadStatsGames(supabase: SupabaseClient, userId: string): Promise<GameForStats[]> {
-  return fetchAllRows<GameForStats>((from, to) =>
-    supabase
-      .from('games')
-      .select(
-        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat, categories, last_played_at',
-      )
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .not('status', 'in', '(hidden,wont_play)')
       .order('app_id')
       .range(from, to),
   );
@@ -222,11 +196,17 @@ const CAROUSEL_SELECT =
   'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
+/**
+ * The Home carousels, built where the backlog is read: on the server for the
+ * page prefetch and, through /api/carousels, for every refetch, so the browser
+ * only ever receives the finished rows. Queued games are left out in the
+ * browser (useCarouselPools), from the queue it already has.
+ */
 export async function loadCarouselPools(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<CarouselPools> {
-  const [backlog, loved, firstImported, queued] = await Promise.all([
+  const [backlog, loved, firstImported] = await Promise.all([
     // The whole backlog: the carousels need tags, editions and history to
     // rank it, which the database can't do on its own.
     fetchAllRows<CarouselGame>((from, to) =>
@@ -255,22 +235,15 @@ export async function loadCarouselPools(
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(1),
-    fetchAllRows<{ app_id: number }>((from, to) =>
-      supabase
-        .from('playing_queue')
-        .select('app_id')
-        .eq('user_id', userId)
-        .order('app_id')
-        .range(from, to),
-    ),
   ]);
   if (loved.error) throw loved.error;
   if (firstImported.error) throw firstImported.error;
 
-  return buildCarouselPools(
-    backlog,
-    (loved.data ?? []) as LovedGame[],
-    firstImported.data?.[0]?.created_at,
-    new Set(queued.map((q) => q.app_id)),
+  return slimPools(
+    buildCarouselPools(
+      backlog,
+      (loved.data ?? []) as LovedGame[],
+      firstImported.data?.[0]?.created_at,
+    ),
   );
 }

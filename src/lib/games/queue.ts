@@ -1,6 +1,4 @@
-import type { QueueItem } from '@/types/games';
-
-// Client helpers for /api/queue. All of them throw on failure so query
+// Client helpers for writing to /api/queue (reads use loadQueue directly). All of them throw on failure so query
 // functions and mutations surface errors instead of treating them as success.
 
 async function assertOk(res: Response, action: string): Promise<void> {
@@ -8,13 +6,6 @@ async function assertOk(res: Response, action: string): Promise<void> {
   const body = await res.json().catch(() => null);
   const detail = body?.error ? `: ${body.error}` : '';
   throw new Error(`${action} failed (${res.status})${detail}`);
-}
-
-export async function fetchQueue(): Promise<QueueItem[]> {
-  const res = await fetch('/api/queue');
-  if (!res.ok) throw new Error(`Failed to load queue (${res.status})`);
-  const data = await res.json();
-  return data.queue ?? [];
 }
 
 export async function addToQueue(appId: number): Promise<void> {

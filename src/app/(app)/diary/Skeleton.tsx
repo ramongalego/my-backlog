@@ -13,8 +13,8 @@ function DiaryRowSkeleton() {
         <Skeleton className="h-5 w-3/4 sm:w-72" />
         <Skeleton className="sm:hidden ml-auto h-5 w-24" />
       </div>
-      <div className="hidden sm:flex shrink-0 w-16 justify-end">
-        <Skeleton className="h-4 w-10" />
+      <div className="hidden sm:flex shrink-0 w-28 justify-end">
+        <Skeleton className="h-4 w-20" />
       </div>
       <div className="hidden sm:flex shrink-0 w-20 justify-end">
         <Skeleton className="h-4 w-12" />

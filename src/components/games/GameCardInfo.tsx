@@ -56,19 +56,24 @@ export function TimeToBeat({
 /**
  * Hours played on Steam, with when you last played in the tooltip. Used
  * wherever a game shows its playtime, so it reads the same everywhere.
- * `compact` is the meta-row form, icon and hours like its neighbours, so a
- * row fits on narrow cards; elsewhere it reads "5h played".
+ * `compact` is the meta-row form, icon and hours like its neighbours. The
+ * word "played" still shows when the row is wide enough (`showLabel` forces
+ * it), since a bare clock icon next to time-to-beat's clock is ambiguous;
+ * elsewhere it reads "5h played".
  */
 export function Playtime({
   minutes,
   lastPlayedAt,
   compact = false,
+  showLabel = false,
   iconClassName = 'w-3 h-3',
   className = '',
 }: {
   minutes: number;
   lastPlayedAt?: string | null;
   compact?: boolean;
+  /** With `compact`: always show "played", not only in a wide meta row. */
+  showLabel?: boolean;
   iconClassName?: string;
   className?: string;
 }) {
@@ -89,7 +94,8 @@ export function Playtime({
         <>
           <History className={iconClassName} aria-hidden="true" />
           <span>{hours}h</span>
-          <span className="sr-only"> played</span>
+          {/* Read out always; shown when there's room (the meta row is a container). */}
+          <span className={showLabel ? '' : 'sr-only @[16rem]:not-sr-only'}> played</span>
         </>
       ) : (
         <span>{hours}h played</span>
@@ -119,7 +125,7 @@ export function GameMetaRow({
 }: GameMetaRowProps) {
   if (!mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
+    <div className="@container flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (

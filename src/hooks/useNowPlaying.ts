@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
-import { addToQueue, fetchQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
-import { loadCurrentlyPlaying } from '@/lib/data/loaders';
+import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
+import { loadCurrentlyPlaying, loadQueue } from '@/lib/data/loaders';
 import { updateGameStatus } from '@/lib/games/status';
 import { fetchCompletionCounts, buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
@@ -68,7 +68,9 @@ function toPlayingGame(item: QueueItem): GameWithImage {
 export function useQueue(userId: string | null) {
   const { data: queue = [], isPending } = useQuery({
     queryKey: queryKeys.queue.list(userId ?? ''),
-    queryFn: fetchQueue,
+    // Straight from the database like every other query (and the same loader
+    // the server prefetch uses), not through /api/queue, which added a hop.
+    queryFn: () => loadQueue(createClient(), userId!),
     enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
@@ -93,11 +95,6 @@ export function useAddToQueue(userId: string | null) {
       const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
       queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) =>
         old.some((q) => q.app_id === game.app_id) ? old : [...old, toQueueItem(game, old.length)],
-      );
-      // Queued games leave the carousels; the invalidation on settle confirms it.
-      queryClient.setQueriesData<CarouselPools>(
-        { queryKey: queryKeys.carousels.all },
-        (pools) => pools && removeAppFromPools(pools, game.app_id),
       );
       return { previous };
     },
