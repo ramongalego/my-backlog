@@ -38,6 +38,7 @@ create table games (
   steam_review_weighted integer,
   reroll_count integer default 0,
   last_rerolled_at timestamptz,
+  last_played_at timestamptz,
   platform text,
   started_at timestamptz,
   finished_at timestamptz,

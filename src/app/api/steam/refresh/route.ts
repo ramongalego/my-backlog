@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
 import { syncOwnedGames } from '@/lib/steam/library';
@@ -8,7 +8,7 @@ import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { getSteamApiKey } from '@/lib/env.server';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -61,13 +61,18 @@ export async function POST() {
     return jsonError('Failed to update library', 500);
   }
 
-  // Review scores drift over time; keep them current. A failure here shouldn't
-  // fail the refresh, since the library itself is already up to date.
+  // Review scores drift slowly, and checking them costs a Steam call per 50
+  // games, so the app asks for them about once a day ({ reviews: false } skips
+  // them). A failure here shouldn't fail the refresh, since the library itself
+  // is already up to date.
+  const body: { reviews?: unknown } = await request.json().catch(() => ({}));
   let updatedReviews = 0;
-  try {
-    updatedReviews = await refreshReviewScores(supabase, user.id, tryCreateServiceClient());
-  } catch (error) {
-    console.error('Review score refresh failed:', error);
+  if (body.reviews !== false) {
+    try {
+      updatedReviews = await refreshReviewScores(supabase, user.id, tryCreateServiceClient());
+    } catch (error) {
+      console.error('Review score refresh failed:', error);
+    }
   }
 
   return NextResponse.json({ success: true, ...result, updatedReviews });

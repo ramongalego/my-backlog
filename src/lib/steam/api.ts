@@ -11,6 +11,8 @@ const steamGameSchema = z.object({
   playtime_forever: z.number().default(0),
   img_icon_url: z.string().default(''),
   playtime_2weeks: z.number().optional(),
+  // Unix seconds; 0 when never played. Missing when game details are private.
+  rtime_last_played: z.number().optional(),
 });
 
 const steamPlayerSummarySchema = z.object({

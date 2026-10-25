@@ -46,29 +46,40 @@ export interface LibrarySyncResult {
 
 /**
  * Brings a user's `games` rows in line with their Steam library: inserts games
- * they don't have yet and updates changed playtime. Existing rows (status,
- * rating, notes, synced metadata) are never touched otherwise.
+ * they don't have yet and updates changed playtime and last-played dates.
+ * Existing rows (status, rating, notes, synced metadata) are never touched
+ * otherwise.
  */
 export async function syncOwnedGames(
   supabase: SupabaseClient,
   userId: string,
   steamGames: SteamGame[],
 ): Promise<LibrarySyncResult> {
-  const existing = await fetchAllRows<{ app_id: number; playtime_forever: number | null }>(
-    (from, to) =>
-      supabase
-        .from('games')
-        .select('app_id, playtime_forever')
-        .eq('user_id', userId)
-        .order('app_id')
-        .range(from, to),
+  const existing = await fetchAllRows<{
+    app_id: number;
+    playtime_forever: number | null;
+    last_played_at: string | null;
+  }>((from, to) =>
+    supabase
+      .from('games')
+      .select('app_id, playtime_forever, last_played_at')
+      .eq('user_id', userId)
+      .order('app_id')
+      .range(from, to),
   );
-  const playtimeByAppId = new Map(existing.map((g) => [g.app_id, g.playtime_forever]));
+  const stored = new Map(existing.map((g) => [g.app_id, g]));
 
-  const newGames = steamGames.filter((game) => !playtimeByAppId.has(game.appid));
+  const newGames = steamGames.filter((game) => !stored.has(game.appid));
+  const playtimeChanged = (game: SteamGame) =>
+    stored.get(game.appid)?.playtime_forever !== game.playtime_forever;
+  // Only when Steam shares a date: a private profile shouldn't wipe a known one.
+  const lastPlayedChanged = (game: SteamGame) => {
+    const steam = lastPlayedAt(game);
+    const known = stored.get(game.appid)?.last_played_at;
+    return steam !== null && (!known || Date.parse(known) !== Date.parse(steam));
+  };
   const updatedGames = steamGames.filter(
-    (game) =>
-      playtimeByAppId.has(game.appid) && playtimeByAppId.get(game.appid) !== game.playtime_forever,
+    (game) => stored.has(game.appid) && (playtimeChanged(game) || lastPlayedChanged(game)),
   );
 
   const headerImages = await headerImagesFor(
@@ -85,6 +96,7 @@ export async function syncOwnedGames(
         playtime_forever: game.playtime_forever,
         img_icon_url: game.img_icon_url,
         header_image: headerImages.get(game.appid) ?? null,
+        last_played_at: lastPlayedAt(game),
       })),
     );
     if (error) throw error;
@@ -92,19 +104,31 @@ export async function syncOwnedGames(
 
   for (const batch of chunk(updatedGames, UPDATE_CONCURRENCY)) {
     const results = await Promise.all(
-      batch.map((game) =>
-        supabase
+      batch.map((game) => {
+        const lastPlayed = lastPlayedAt(game);
+        return supabase
           .from('games')
-          .update({ playtime_forever: game.playtime_forever })
+          .update({
+            playtime_forever: game.playtime_forever,
+            ...(lastPlayed ? { last_played_at: lastPlayed } : {}),
+          })
           .eq('user_id', userId)
-          .eq('app_id', game.appid),
-      ),
+          .eq('app_id', game.appid);
+      }),
     );
     const failed = results.find((r) => r.error);
     if (failed?.error) throw failed.error;
   }
 
-  return { newGames: newGames.length, updatedPlaytime: updatedGames.length };
+  return {
+    newGames: newGames.length,
+    updatedPlaytime: updatedGames.filter(playtimeChanged).length,
+  };
+}
+
+/** Steam's last-played time as ISO, or null (never played, or not shared). */
+function lastPlayedAt(game: SteamGame): string | null {
+  return game.rtime_last_played ? new Date(game.rtime_last_played * 1000).toISOString() : null;
 }
 
 /** Removes a user's library and queue, used when they link a different Steam account. */

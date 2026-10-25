@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useSyncContext } from '@/components/SyncProvider';
 import { useCarouselPools } from './useCarouselPools';
 import { useLibraryMeta } from './useLibraryMeta';
 import { useCurrentGame } from './useCurrentGame';
-import { useLibraryRefresh } from './useLibraryRefresh';
 
 export function useGameLibrary() {
   const { user, profile, authResolved } = useAuth();
@@ -18,12 +16,6 @@ export function useGameLibrary() {
 
   const steamConnected = !!profile?.steam_id;
   const isLoading = !authResolved || (steamConnected && !meta.loaded && !sync.isSyncing);
-  const { refreshIfStale } = useLibraryRefresh();
-
-  useEffect(() => {
-    if (!authResolved || !user || !steamConnected || sync.isSyncing) return;
-    refreshIfStale();
-  }, [authResolved, user, steamConnected, sync.isSyncing, refreshIfStale]);
 
   const handleConnectSteam = () => {
     // Full-page navigation is intentional: this route handler 307s to steamcommunity.com

@@ -1,21 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useLibraryRefresh } from './useLibraryRefresh';
 import { useAuth } from './useAuth';
 import { useNowPlaying } from './useNowPlaying';
 
 export function usePlayingQueuePage() {
   const { user, authResolved } = useAuth();
   const nowPlaying = useNowPlaying(user?.id ?? null);
-  const { refreshIfStale } = useLibraryRefresh();
 
   const isLoading = !authResolved || nowPlaying.isLoading;
-
-  useEffect(() => {
-    if (isLoading) return;
-    refreshIfStale();
-  }, [isLoading, refreshIfStale]);
 
   return {
     currentlyPlaying: nowPlaying.currentlyPlaying,

@@ -26,6 +26,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 
 import { CoverArt } from '@/components/games/CoverArt';
+import { LastPlayed } from '@/components/CurrentlyPlaying';
 import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
@@ -111,6 +112,7 @@ function NowPlayingRow({
                 deckCompat={game.deck_compat}
               />
             )}
+            <LastPlayed lastPlayedAt={game.last_played_at} className="mt-1.5 text-xs" />
           </div>
         </div>
 

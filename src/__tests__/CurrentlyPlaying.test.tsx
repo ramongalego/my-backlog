@@ -129,4 +129,22 @@ describe('CurrentlyPlaying', () => {
       expect(screen.queryByText('~20h to beat')).not.toBeInTheDocument();
     });
   });
+
+  describe('last played', () => {
+    it('shows when Steam says you last played', () => {
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
+      render(
+        <CurrentlyPlaying
+          game={{ ...createGame(600, 20), last_played_at: threeDaysAgo }}
+          {...defaultCallbacks}
+        />,
+      );
+      expect(screen.getByText('Last played 3 days ago')).toBeInTheDocument();
+    });
+
+    it('shows nothing when Steam does not share it', () => {
+      render(<CurrentlyPlaying game={createGame(600, 20)} {...defaultCallbacks} />);
+      expect(screen.queryByText(/Last played/)).not.toBeInTheDocument();
+    });
+  });
 });

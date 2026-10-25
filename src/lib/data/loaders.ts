@@ -111,7 +111,7 @@ export async function loadDiaryEntries(
 // ─── Now playing + queue ────────────────────────────────────────────────────
 
 export const PLAYING_GAME_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat';
+  'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat, last_played_at';
 
 export async function loadCurrentlyPlaying(
   supabase: SupabaseClient,
@@ -206,7 +206,7 @@ export async function loadLibraryMeta(
 export type { CarouselPools };
 
 const CAROUSEL_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at';
+  'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
 export async function loadCarouselPools(

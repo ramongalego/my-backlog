@@ -15,6 +15,7 @@ const game = (overrides: Partial<CarouselGame> = {}): CarouselGame => ({
   tags: ['Action', 'Adventure'],
   categories: ['Single-player'],
   created_at: '2026-01-01T00:00:00Z',
+  last_played_at: null,
   ...overrides,
 });
 
@@ -148,6 +149,27 @@ describe('Pick Up Where You Left Off', () => {
       'A quarter in',
       'No length, played a while',
     ]);
+  });
+});
+
+describe('Pick Up order', () => {
+  it('puts the most recently played first, then the furthest along', () => {
+    const pools = build([
+      game({
+        main_story_hours: 40,
+        name: 'Far along, old',
+        playtime_forever: 9 * 60,
+        last_played_at: '2025-01-01T00:00:00Z',
+      }),
+      game({
+        main_story_hours: 40,
+        name: 'Played yesterday',
+        playtime_forever: 6 * 60,
+        last_played_at: '2026-10-24T00:00:00Z',
+      }),
+      game({ name: 'No date', playtime_forever: 8 * 60, main_story_hours: 40 }),
+    ]);
+    expect(names(pools.pickUpPool)).toEqual(['Played yesterday', 'Far along, old', 'No date']);
   });
 });
 

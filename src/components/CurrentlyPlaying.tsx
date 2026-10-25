@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
 import { SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
+import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
   app_id: number;
@@ -16,6 +17,7 @@ interface Game {
   steam_review_score?: number | null;
   steam_review_count?: number | null;
   deck_compat?: number | null;
+  last_played_at?: string | null;
 }
 
 interface CurrentlyPlayingProps {
@@ -81,6 +83,23 @@ function Progress({ game }: { game: Game }) {
   );
 }
 
+/** "Last played 3 days ago", from Steam; nothing when Steam doesn't share it. */
+export function LastPlayed({
+  lastPlayedAt,
+  className = '',
+}: {
+  lastPlayedAt: string | null | undefined;
+  className?: string;
+}) {
+  const text = formatLastPlayed(lastPlayedAt);
+  // suppressHydrationWarning: the server and browser can straddle midnight.
+  return text ? (
+    <p className={`text-ink-500 ${className}`} suppressHydrationWarning>
+      {text}
+    </p>
+  ) : null;
+}
+
 export function CurrentlyPlaying({
   game,
   onFinish,
@@ -122,6 +141,7 @@ export function CurrentlyPlaying({
 
         <div className="mt-5">
           <Progress game={game} />
+          <LastPlayed lastPlayedAt={game.last_played_at} className="mt-2 text-sm" />
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">

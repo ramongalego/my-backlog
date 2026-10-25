@@ -13,6 +13,7 @@ export interface CarouselGame extends GameWithImage {
   tags: string[] | null;
   categories: string[] | null;
   created_at: string;
+  last_played_at: string | null;
 }
 
 /** A finished game rated 8 or higher, the seed for "More Like ...". */
@@ -201,9 +202,15 @@ export function buildCarouselPools(
     );
 
   return {
+    // Most recently played first (where Steam shares it), then furthest along.
     pickUpPool: candidates
       .filter(isStarted)
-      .sort((a, b) => progress(b) - progress(a) || b.playtime_forever - a.playtime_forever)
+      .sort(
+        (a, b) =>
+          (b.last_played_at ?? '').localeCompare(a.last_played_at ?? '') ||
+          progress(b) - progress(a) ||
+          b.playtime_forever - a.playtime_forever,
+      )
       .slice(0, POOL_SIZE),
     moreLike: moreLike(unfinished, loved),
     shortGamesPool: lengthBetween(SHORT_GAME_MIN_HOURS, SHORT_GAME_MAX_HOURS, true),

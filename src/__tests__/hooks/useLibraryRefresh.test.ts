@@ -149,7 +149,7 @@ describe('useLibraryRefresh', () => {
 
   describe('refreshIfStale', () => {
     it('skips the refresh when the timestamp is within the stale window', async () => {
-      localStorage.setItem(PLAYTIME_REFRESH_KEY, String(Date.now() - 30 * 60 * 1000));
+      localStorage.setItem(PLAYTIME_REFRESH_KEY, String(Date.now() - 5 * 60 * 1000));
       const fetchMock = jest.fn();
       global.fetch = fetchMock;
 
@@ -162,8 +162,8 @@ describe('useLibraryRefresh', () => {
       expect(mockGamesAndQueue).not.toHaveBeenCalled();
     });
 
-    it('fires the refresh when the timestamp is older than one hour', async () => {
-      localStorage.setItem(PLAYTIME_REFRESH_KEY, String(Date.now() - 2 * 60 * 60 * 1000));
+    it('fires the refresh when the timestamp is older than 15 minutes', async () => {
+      localStorage.setItem(PLAYTIME_REFRESH_KEY, String(Date.now() - 20 * 60 * 1000));
       mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
 
       const { result } = renderHook(() => useLibraryRefresh());
@@ -171,7 +171,10 @@ describe('useLibraryRefresh', () => {
         await result.current.refreshIfStale();
       });
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/steam/refresh', { method: 'POST' });
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/steam/refresh',
+        expect.objectContaining({ method: 'POST' }),
+      );
       expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
     });
 
@@ -196,5 +199,54 @@ describe('useLibraryRefresh', () => {
 
       expect(toast.success).not.toHaveBeenCalled();
     });
+  });
+
+  describe('review scores', () => {
+    const sentReviews = () =>
+      JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).reviews as boolean;
+
+    it('asks for them when they have not been refreshed today', async () => {
+      mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh();
+      });
+      expect(sentReviews()).toBe(true);
+      expect(localStorage.getItem('reviews_refresh_at')).not.toBeNull();
+    });
+
+    it('skips them on background refreshes within a day', async () => {
+      localStorage.setItem('reviews_refresh_at', String(Date.now() - 2 * 60 * 60 * 1000));
+      mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh();
+      });
+      expect(sentReviews()).toBe(false);
+    });
+
+    it('always includes them in a manual refresh', async () => {
+      localStorage.setItem('reviews_refresh_at', String(Date.now()));
+      mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh({ manual: true });
+      });
+      expect(sentReviews()).toBe(true);
+    });
+  });
+
+  it('waits the full interval after a failed background refresh', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+    const { result } = renderHook(() => useLibraryRefresh());
+
+    await act(async () => {
+      await result.current.refreshIfStale();
+    });
+    await act(async () => {
+      await result.current.refreshIfStale();
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });

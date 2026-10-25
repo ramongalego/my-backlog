@@ -1,14 +1,15 @@
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
+import { PlaytimeRefresher } from '@/components/PlaytimeRefresher';
 import { createClient } from '@/lib/supabase/server';
 import { queryKeys } from '@/lib/query-keys';
 import { loadLibraryMeta } from '@/lib/data/loaders';
 import type { Profile } from '@/types/games';
 import Providers from '../providers';
 
-// The app shell: React Query, the auth-aware header and background library
-// sync. The session is resolved here on the server and handed to useAuth, so
+// The app shell: React Query, the auth-aware header, background library sync
+// and playtime refreshes. The session is resolved here on the server and handed to useAuth, so
 // the header and pages don't wait on a client-side auth round trip. Layouts
 // persist across client navigations, so this runs once per full page load.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <HydrationBoundary state={dehydrate(queryClient)}>
         <Header />
         <LibrarySyncGuard />
+        <PlaytimeRefresher />
         {children}
       </HydrationBoundary>
     </Providers>
