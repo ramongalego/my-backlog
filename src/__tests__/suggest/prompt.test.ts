@@ -10,6 +10,8 @@ describe('buildSuggestionPrompt', () => {
     tags: null,
     main_story_hours: 10,
     playtime_forever: 60,
+    steam_review_score: 92,
+    steam_review_count: 12439,
     steam_review_weighted: 85,
     reroll_count: 0,
     ...overrides,
@@ -54,7 +56,7 @@ describe('buildSuggestionPrompt', () => {
 
     expect(prompt).toContain('Genres: Action, Adventure');
     expect(prompt).toContain('Length: 10h');
-    expect(prompt).toContain('Rating: 85%');
+    expect(prompt).toContain('Steam reviews: 92% positive of 12,439');
   });
 
   it('should indicate already played time', () => {

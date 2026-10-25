@@ -25,6 +25,8 @@ export interface GameForSuggestion {
   tags: string[] | null;
   main_story_hours: number | null;
   playtime_forever: number;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
   steam_review_weighted: number | null;
   reroll_count: number;
 }

@@ -1,5 +1,30 @@
-import { Clock, Star, ExternalLink } from 'lucide-react';
+import { Clock, ExternalLink, ThumbsUp } from 'lucide-react';
+import { steamReviewTitle } from '@/lib/steam/review-label';
 import { SteamDeckBadge } from './SteamDeckBadge';
+
+/**
+ * Steam's review score the way Steam shows it: percent positive with a
+ * thumbs-up (not a star, which the app uses for your own rating). The label
+ * and review count are on hover.
+ */
+export function SteamScore({
+  score,
+  count,
+  iconClassName = 'w-3 h-3',
+}: {
+  score: number;
+  count?: number | null;
+  iconClassName?: string;
+}) {
+  const title = steamReviewTitle(score, count);
+  return (
+    <span className="flex items-center gap-1" title={title}>
+      <ThumbsUp className={iconClassName} aria-hidden="true" />
+      <span>{score}%</span>
+      <span className="sr-only"> on Steam ({title})</span>
+    </span>
+  );
+}
 
 interface GameMetaRowProps {
   mainStoryHours?: number | null;
@@ -27,15 +52,7 @@ export function GameMetaRow({
           <span>{mainStoryHours}h</span>
         </span>
       ) : null}
-      {steamReviewScore ? (
-        <span
-          className="flex items-center gap-1"
-          title={`Steam reviews${steamReviewCount ? ` (${steamReviewCount.toLocaleString()} reviews)` : ''}`}
-        >
-          <Star className="w-3 h-3" aria-hidden="true" />
-          <span>{(steamReviewScore / 10).toFixed(1)}</span>
-        </span>
-      ) : null}
+      {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (
         <span
           className={`text-ink-500${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}

@@ -1,9 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ExternalLink, Archive, Check, Star, Clock, ListOrdered, X } from 'lucide-react';
+import { ExternalLink, Archive, Check, Clock, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
+import { SteamScore } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 
 interface Game {
@@ -13,6 +14,7 @@ interface Game {
   main_story_hours: number | null;
   playtime_forever: number;
   steam_review_score?: number | null;
+  steam_review_count?: number | null;
   deck_compat?: number | null;
 }
 
@@ -41,10 +43,11 @@ function Progress({ game }: { game: Game }) {
           <span>{mainStoryHours}h</span>
         </span>
         {game.steam_review_score != null && (
-          <span className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{(game.steam_review_score / 10).toFixed(1)}</span>
-          </span>
+          <SteamScore
+            score={game.steam_review_score}
+            count={game.steam_review_count}
+            iconClassName="w-3.5 h-3.5"
+          />
         )}
         <SteamDeckBadge deckCompat={game.deck_compat} />
       </div>

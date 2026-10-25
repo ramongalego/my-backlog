@@ -45,6 +45,7 @@ interface BacklogGame {
   main_story_hours: number | null;
   playtime_forever: number | null;
   steam_review_score: number | null;
+  steam_review_count: number | null;
   steam_review_weighted: number | null;
   reroll_count: number | null;
 }
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
         supabase
           .from('games')
           .select(
-            'app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_weighted, reroll_count',
+            'app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count',
           )
           .eq('user_id', userId)
           .eq('type', 'game')
@@ -209,6 +210,8 @@ export async function POST(request: NextRequest) {
       tags: g.tags,
       main_story_hours: g.main_story_hours,
       playtime_forever: g.playtime_forever ?? 0,
+      steam_review_score: g.steam_review_score,
+      steam_review_count: g.steam_review_count,
       steam_review_weighted: g.steam_review_weighted,
       reroll_count: g.reroll_count ?? 0,
     })),

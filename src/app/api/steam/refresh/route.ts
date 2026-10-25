@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
 import { syncOwnedGames } from '@/lib/steam/library';
+import { refreshReviewScores } from '@/lib/steam/reviews';
+import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { getSteamApiKey } from '@/lib/env.server';
@@ -51,11 +53,22 @@ export async function POST() {
     return jsonError('Steam API failed', 502);
   }
 
+  let result;
   try {
-    const result = await syncOwnedGames(supabase, user.id, steamGames);
-    return NextResponse.json({ success: true, ...result });
+    result = await syncOwnedGames(supabase, user.id, steamGames);
   } catch (error) {
     console.error('Library refresh failed:', error);
     return jsonError('Failed to update library', 500);
   }
+
+  // Review scores drift over time; keep them current. A failure here shouldn't
+  // fail the refresh, since the library itself is already up to date.
+  let updatedReviews = 0;
+  try {
+    updatedReviews = await refreshReviewScores(supabase, user.id, tryCreateServiceClient());
+  } catch (error) {
+    console.error('Review score refresh failed:', error);
+  }
+
+  return NextResponse.json({ success: true, ...result, updatedReviews });
 }

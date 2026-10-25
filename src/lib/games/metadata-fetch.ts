@@ -1,7 +1,6 @@
 import {
   getGameDetails,
   extractGameMetadata,
-  getSteamReviewData,
   getStoreItemInfo,
   getSteamDeckCompat,
 } from '@/lib/steam/store-api';
@@ -41,14 +40,14 @@ export async function fetchGameMetadata(
   const isGame = extracted.type === 'game';
 
   // Only fetch enriched data for actual games — skip DLC, software, etc.
-  const [mainStoryHours, steamReviewData, storeItem, deckCompat] = isGame
+  const [mainStoryHours, storeItem, deckCompat] = isGame
     ? await Promise.all([
         getMainStoryHours(nameHint || details?.data?.name || ''),
-        getSteamReviewData(appId),
         getStoreItemInfo(appId),
         getSteamDeckCompat(appId),
       ])
-    : [null, null, null, null];
+    : [null, null, null];
+  const steamReviewData = storeItem?.reviews ?? null;
 
   const weightedScore = steamReviewData
     ? calculateBayesianScore(steamReviewData.score, steamReviewData.count)

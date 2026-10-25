@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { Gamepad2, RotateCcw, Clock, Sparkles, ExternalLink, Star } from 'lucide-react';
+import { Gamepad2, RotateCcw, Clock, Sparkles, ExternalLink } from 'lucide-react';
+import { SteamScore } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
 
@@ -63,12 +64,9 @@ export function SuggestionResult({
               <span>{game.main_story_hours}h</span>
             </span>
           )}
-          {game.steam_review_score && (
-            <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5" />
-              <span>{(game.steam_review_score / 10).toFixed(1)}</span>
-            </span>
-          )}
+          {game.steam_review_score ? (
+            <SteamScore score={game.steam_review_score} iconClassName="w-3.5 h-3.5" />
+          ) : null}
           {game.genres && game.genres.length > 0 && (
             <span>{game.genres.slice(0, 2).join(', ')}</span>
           )}

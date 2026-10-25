@@ -17,16 +17,16 @@ describe('GameCardInfo', () => {
   });
 
   describe('steam review score', () => {
-    it('should show review score divided by 10', () => {
+    it('should show the percent positive, the way Steam does', () => {
       render(<GameCardInfo appId={1} name="Game" steamReviewScore={85} />);
 
-      expect(screen.getByText('8.5')).toBeInTheDocument();
+      expect(screen.getByText('85%')).toBeInTheDocument();
     });
 
-    it('should include review count in tooltip when provided', () => {
+    it('should put the Steam label and review count in the tooltip', () => {
       render(<GameCardInfo appId={1} name="Game" steamReviewScore={90} steamReviewCount={5000} />);
 
-      expect(screen.getByTitle('Steam reviews (5,000 reviews)')).toBeInTheDocument();
+      expect(screen.getByTitle('Very Positive · 5,000 Steam reviews')).toBeInTheDocument();
     });
 
     it('should not show review score when null', () => {

@@ -28,7 +28,9 @@ function formatGameForPrompt(game: GameForSuggestion): string {
     game.playtime_forever > 0
       ? `Already played: ${Math.round(game.playtime_forever / 60)}h`
       : 'Never played',
-    game.steam_review_weighted ? `Rating: ${game.steam_review_weighted}%` : null,
+    game.steam_review_score != null && game.steam_review_count
+      ? `Steam reviews: ${game.steam_review_score}% positive of ${game.steam_review_count.toLocaleString('en-US')}`
+      : null,
     game.reroll_count > 0
       ? `(Skipped ${game.reroll_count} time${game.reroll_count > 1 ? 's' : ''} before)`
       : null,
