@@ -24,13 +24,8 @@ export function useInvalidateQueries() {
         queryKeys.carousels.all,
         queryKeys.queue.all,
       ),
-    /**
-     * Invalidate after a queue change (add/remove). Also invalidates games +
-     * library because `queuedAppIds` is packaged inside the games.list and
-     * library.meta queries, so removing/adding to the queue must refresh them
-     * to keep "queued" badges accurate.
-     */
-    queue: () => invalidate(queryKeys.queue.all, queryKeys.games.all, queryKeys.library.all),
+    /** Invalidate after a queue-only change. "Queued" badges read the queue query directly. */
+    queue: () => invalidate(queryKeys.queue.all),
     /** Invalidate games + queue + carousels (after pick/cancel or library refresh) */
     gamesAndQueue: () =>
       invalidate(

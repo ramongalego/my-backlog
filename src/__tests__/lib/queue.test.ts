@@ -1,4 +1,4 @@
-import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
+import { fetchQueue, addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -7,38 +7,27 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-describe('fetchQueuedAppIds', () => {
-  it('should return a Set of app IDs from the queue', async () => {
+const item = (app_id: number) => ({
+  id: app_id,
+  app_id,
+  position: 0,
+  game: { name: `Game ${app_id}`, header_image: null, playtime_forever: 0, main_story_hours: null },
+});
+
+describe('fetchQueue', () => {
+  it('should return the queue items', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ queue: [{ app_id: 1 }, { app_id: 2 }, { app_id: 3 }] }),
+      json: async () => ({ queue: [item(1), item(2)] }),
     });
 
-    const result = await fetchQueuedAppIds();
-
-    expect(result).toEqual(new Set([1, 2, 3]));
+    await expect(fetchQueue()).resolves.toEqual([item(1), item(2)]);
   });
 
-  it('should return an empty Set when queue is empty', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ queue: [] }),
-    });
+  it('should return an empty list when queue is missing from response', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
-    const result = await fetchQueuedAppIds();
-
-    expect(result).toEqual(new Set());
-  });
-
-  it('should return an empty Set when queue is missing from response', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}),
-    });
-
-    const result = await fetchQueuedAppIds();
-
-    expect(result).toEqual(new Set());
+    await expect(fetchQueue()).resolves.toEqual([]);
   });
 
   // Errors propagate so React Query treats them as failures instead of caching
@@ -46,23 +35,22 @@ describe('fetchQueuedAppIds', () => {
   it('should throw when response is not ok', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
-    await expect(fetchQueuedAppIds()).rejects.toThrow('Failed to load queue (500)');
+    await expect(fetchQueue()).rejects.toThrow('Failed to load queue (500)');
   });
 
   it('should throw when fetch throws', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    await expect(fetchQueuedAppIds()).rejects.toThrow('Network error');
+    await expect(fetchQueue()).rejects.toThrow('Network error');
   });
 });
 
 describe('addToQueue', () => {
-  it('should return true when the request succeeds', async () => {
+  it('should POST the app id', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true });
 
-    const result = await addToQueue(42);
+    await addToQueue(42);
 
-    expect(result).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith('/api/queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -70,19 +58,49 @@ describe('addToQueue', () => {
     });
   });
 
-  it('should return false when the request fails', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false });
+  it('should throw with the API error when the request fails', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'Game already in queue' }),
+    });
 
-    const result = await addToQueue(42);
-
-    expect(result).toBe(false);
+    await expect(addToQueue(42)).rejects.toThrow(
+      'Add to queue failed (409): Game already in queue',
+    );
   });
 
-  it('should return false when fetch throws', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  it('should throw when the error body is not JSON', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 504,
+      json: async () => {
+        throw new SyntaxError('Unexpected token <');
+      },
+    });
 
-    const result = await addToQueue(42);
+    await expect(addToQueue(42)).rejects.toThrow('Add to queue failed (504)');
+  });
+});
 
-    expect(result).toBe(false);
+describe('removeFromQueue / reorderQueue', () => {
+  it('should DELETE by app id', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true });
+
+    await removeFromQueue(7);
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/queue?appId=7', { method: 'DELETE' });
+  });
+
+  it('should PATCH the new order', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true });
+
+    await reorderQueue([3, 1, 2]);
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/queue', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: [3, 1, 2] }),
+    });
   });
 });

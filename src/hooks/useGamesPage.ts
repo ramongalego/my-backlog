@@ -4,11 +4,12 @@ import { useState, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient, getSessionUserId } from '@/lib/supabase/client';
 import { fetchAllRows } from '@/lib/supabase/paginate';
-import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
+import { useAddToQueue, useQueue } from './useNowPlaying';
 
 export interface GameItem {
   app_id: number;
@@ -78,53 +79,45 @@ interface UseGamesPageReturn {
   ) => Promise<void>;
   handleCloseStatusModal: () => void;
   handleOpenDetail: (appId: number) => void;
-  handleAddToQueue: (appId: number, gameName: string) => Promise<void>;
+  handleAddToQueue: (appId: number) => Promise<void>;
   queuedAppIds: Set<number>;
 }
 
 const BATCH_SIZE = 60;
 
-interface GamesData {
-  games: GameItem[];
-  queuedAppIds: Set<number>;
-}
-
-async function fetchGamesData(): Promise<GamesData> {
+async function fetchGames(): Promise<GameItem[]> {
   const userId = await getSessionUserId();
-  if (!userId) return { games: [], queuedAppIds: new Set<number>() };
+  if (!userId) return [];
 
   const supabase = createClient();
-  const [games, queuedAppIds] = await Promise.all([
-    fetchAllRows<GameItem>((from, to) =>
-      supabase
-        .from('games')
-        .select(
-          'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
-        )
-        .eq('user_id', userId)
-        .eq('type', 'game')
-        .order('playtime_forever', { ascending: false })
-        .order('app_id')
-        .range(from, to),
-    ),
-    fetchQueuedAppIds(),
-  ]);
-
-  return { games, queuedAppIds };
+  return fetchAllRows<GameItem>((from, to) =>
+    supabase
+      .from('games')
+      .select(
+        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
+      )
+      .eq('user_id', userId)
+      .eq('type', 'game')
+      .order('playtime_forever', { ascending: false })
+      .order('app_id')
+      .range(from, to),
+  );
 }
 
 export function useGamesPage(): UseGamesPageReturn {
   const queryClient = useQueryClient();
-  const { games: invalidateGames, queue: invalidateQueue } = useInvalidateQueries();
+  const { games: invalidateGames } = useInvalidateQueries();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
-  const { data, isPending } = useQuery({
+  const { data: games = [], isPending } = useQuery({
     queryKey: queryKeys.games.list(),
-    queryFn: fetchGamesData,
+    queryFn: fetchGames,
     staleTime: 5 * 60 * 1000,
   });
 
-  const games = data?.games ?? [];
-  const queuedAppIds = data?.queuedAppIds ?? new Set<number>();
+  const { queuedAppIds } = useQueue(userId);
+  const addGameToQueue = useAddToQueue(userId);
 
   const [filter, setFilter] = useState<GameFilter>('backlog');
   const [sort, setSort] = useState<GameSort>('score');
@@ -152,25 +145,21 @@ export function useGamesPage(): UseGamesPageReturn {
     },
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.games.list() });
-      const previous = queryClient.getQueryData<GamesData>(queryKeys.games.list());
-      queryClient.setQueryData(queryKeys.games.list(), (old: GamesData | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          games: old.games.map((g) =>
-            g.app_id === vars.appId
-              ? {
-                  ...g,
-                  status: vars.status,
-                  notes: vars.notes,
-                  rating: vars.rating,
-                  ...(vars.status === 'finished' ? { finished_at: vars.date || null } : {}),
-                  ...(vars.status === 'dropped' ? { dropped_at: vars.date || null } : {}),
-                }
-              : g,
-          ),
-        };
-      });
+      const previous = queryClient.getQueryData<GameItem[]>(queryKeys.games.list());
+      queryClient.setQueryData<GameItem[]>(queryKeys.games.list(), (old) =>
+        old?.map((g) =>
+          g.app_id === vars.appId
+            ? {
+                ...g,
+                status: vars.status,
+                notes: vars.notes,
+                rating: vars.rating,
+                ...(vars.status === 'finished' ? { finished_at: vars.date || null } : {}),
+                ...(vars.status === 'dropped' ? { dropped_at: vars.date || null } : {}),
+              }
+            : g,
+        ),
+      );
       return { previous };
     },
     onError: (err, _vars, context) => {
@@ -181,25 +170,6 @@ export function useGamesPage(): UseGamesPageReturn {
       toast.error('Could not save your changes. Please try again.');
     },
     onSettled: () => invalidateGames(),
-  });
-
-  const queueMutation = useMutation({
-    mutationFn: async (vars: { appId: number; gameName: string }) => {
-      const ok = await addToQueue(vars.appId);
-      return ok;
-    },
-    onSuccess: (ok, vars) => {
-      if (ok) {
-        queryClient.setQueryData(queryKeys.games.list(), (old: GamesData | undefined) => {
-          if (!old) return old;
-          return { ...old, queuedAppIds: new Set([...old.queuedAppIds, vars.appId]) };
-        });
-        toast.success(`${vars.gameName} added to the queue!`);
-      } else {
-        toast.error(`Could not add ${vars.gameName} to the queue. Please try again.`);
-      }
-    },
-    onSettled: () => invalidateQueue(),
   });
 
   const handleOpenDetail = (appId: number) => {
@@ -243,8 +213,9 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const handleCloseStatusModal = () => setStatusModal(null);
 
-  const handleAddToQueue = async (appId: number, gameName: string) => {
-    queueMutation.mutate({ appId, gameName });
+  const handleAddToQueue = async (appId: number) => {
+    const game = games.find((g) => g.app_id === appId);
+    if (game) addGameToQueue(game);
   };
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames

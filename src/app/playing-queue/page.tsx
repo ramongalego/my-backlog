@@ -49,7 +49,7 @@ interface NowPlayingRowProps {
   game: GameWithImage;
   onFinish: () => void;
   onDrop: () => void;
-  onCancel: () => void;
+  onMoveToQueue: () => void;
   onMoveToBacklog: () => void;
   isLoading?: boolean;
 }
@@ -58,7 +58,7 @@ function NowPlayingRow({
   game,
   onFinish,
   onDrop,
-  onCancel,
+  onMoveToQueue,
   onMoveToBacklog,
   isLoading,
 }: NowPlayingRowProps) {
@@ -131,7 +131,7 @@ function NowPlayingRow({
             <span>Drop</span>
           </button>
           <button
-            onClick={onCancel}
+            onClick={onMoveToQueue}
             disabled={isLoading}
             className="hidden sm:flex cursor-pointer items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
           >
@@ -149,7 +149,7 @@ function NowPlayingRow({
         </div>
         <div className="flex items-center justify-center gap-3 mt-2 sm:hidden">
           <button
-            onClick={onCancel}
+            onClick={onMoveToQueue}
             disabled={isLoading}
             className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
           >
@@ -285,7 +285,7 @@ export default function PlayingQueuePage() {
     gameSummary,
     handleFinish,
     handleDrop,
-    handleCancel,
+    handleMoveToQueue,
     handleMoveToBacklog,
     handleConfirm,
     handleCloseStatusModal,
@@ -350,7 +350,7 @@ export default function PlayingQueuePage() {
                     game={currentlyPlaying}
                     onFinish={handleFinish}
                     onDrop={handleDrop}
-                    onCancel={handleCancel}
+                    onMoveToQueue={handleMoveToQueue}
                     onMoveToBacklog={handleMoveToBacklog}
                     isLoading={isStatusLoading}
                   />

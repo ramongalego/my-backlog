@@ -16,7 +16,8 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
-import { addToQueue } from '@/lib/games/queue';
+import { useAuth } from '@/hooks/useAuth';
+import { useAddToQueue } from '@/hooks/useNowPlaying';
 import { updateGameStatus } from '@/lib/games/status';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
@@ -372,7 +373,9 @@ function MostPlayedUnfinished({
 
 export default function StatsPage() {
   const { stats, loading, hasPlayingGame } = useStats();
-  const { games: invalidateGames, queue: invalidateQueue } = useInvalidateQueries();
+  const { games: invalidateGames } = useInvalidateQueries();
+  const { user } = useAuth();
+  const addGameToQueue = useAddToQueue(user?.id ?? null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
   const statusMutation = useMutation({
@@ -405,16 +408,17 @@ export default function StatsPage() {
     setEditModal({ appId, gameName, headerImage, mainStoryHours, playtimeMinutes, deckCompat });
   };
 
-  const handleAddToQueue = async (appId: number) => {
-    const gameName = editModal?.gameName;
+  const handleAddToQueue = () => {
+    if (!editModal) return;
     setEditModal(null);
-    const ok = await addToQueue(appId);
-    if (ok) {
-      invalidateQueue();
-      toast.success(`${gameName} added to the queue!`);
-    } else {
-      toast.error(`Could not add ${gameName} to the queue. Please try again.`);
-    }
+    addGameToQueue({
+      app_id: editModal.appId,
+      name: editModal.gameName,
+      header_image: editModal.headerImage,
+      main_story_hours: editModal.mainStoryHours,
+      playtime_forever: editModal.playtimeMinutes,
+      deck_compat: editModal.deckCompat,
+    });
   };
 
   const handleConfirm = async (
@@ -547,7 +551,7 @@ export default function StatsPage() {
           deckCompat={editModal.deckCompat}
           initialStatus="backlog"
           disablePlaying={hasPlayingGame}
-          onAddToQueue={hasPlayingGame ? () => handleAddToQueue(editModal.appId) : undefined}
+          onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}
         />
       )}
     </div>

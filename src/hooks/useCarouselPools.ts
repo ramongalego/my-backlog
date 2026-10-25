@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
 import {
@@ -11,7 +11,7 @@ import {
 } from '@/lib/games/filtering';
 import type { GameWithImage } from '@/types/games';
 
-interface CarouselPools {
+export interface CarouselPools {
   shortGamesPool: GameWithImage[];
   weekendGamesPool: GameWithImage[];
   highlyRatedGamesPool: GameWithImage[];
@@ -26,6 +26,18 @@ const EMPTY_POOLS: CarouselPools = {
   hiddenGemsPool: [],
   recentlyAddedPool: [],
 };
+
+/** Drops a game from every carousel, e.g. optimistically when it starts playing. */
+export function removeAppFromPools(pools: CarouselPools, appId: number): CarouselPools {
+  const without = (list: GameWithImage[]) => list.filter((g) => g.app_id !== appId);
+  return {
+    shortGamesPool: without(pools.shortGamesPool),
+    weekendGamesPool: without(pools.weekendGamesPool),
+    highlyRatedGamesPool: without(pools.highlyRatedGamesPool),
+    hiddenGemsPool: without(pools.hiddenGemsPool),
+    recentlyAddedPool: without(pools.recentlyAddedPool),
+  };
+}
 
 const CAROUSEL_SELECT =
   'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat';
@@ -115,8 +127,6 @@ async function fetchCarouselPools(userId: string): Promise<CarouselPools> {
 }
 
 export function useCarouselPools(userId: string | null) {
-  const queryClient = useQueryClient();
-
   const { data = EMPTY_POOLS, isPending } = useQuery({
     queryKey: userId ? queryKeys.carousels.byUser(userId) : queryKeys.carousels.all,
     queryFn: () => fetchCarouselPools(userId!),
@@ -153,38 +163,6 @@ export function useCarouselPools(userId: string | null) {
     return { highlyRatedGames: rated, hiddenGems: gems, recentlyAdded: recent };
   })();
 
-  const updatePools = (updater: (pools: CarouselPools) => CarouselPools) => {
-    if (!userId) return;
-    queryClient.setQueryData<CarouselPools>(queryKeys.carousels.byUser(userId), (old) =>
-      updater(old ?? EMPTY_POOLS),
-    );
-  };
-
-  const removeFromPools = (appId: number) => {
-    updatePools((pools) => ({
-      shortGamesPool: pools.shortGamesPool.filter((g) => g.app_id !== appId),
-      weekendGamesPool: pools.weekendGamesPool.filter((g) => g.app_id !== appId),
-      highlyRatedGamesPool: pools.highlyRatedGamesPool.filter((g) => g.app_id !== appId),
-      hiddenGemsPool: pools.hiddenGemsPool.filter((g) => g.app_id !== appId),
-      recentlyAddedPool: pools.recentlyAddedPool.filter((g) => g.app_id !== appId),
-    }));
-  };
-
-  const addBackToPool = (game: GameWithImage) => {
-    updatePools((pools) => {
-      const hours = game.main_story_hours;
-      const playtime = game.playtime_forever ?? 0;
-      if (playtime > MAX_PLAYTIME_MINUTES || hours == null) return pools;
-      if (hours >= SHORT_GAME_MIN_HOURS && hours <= SHORT_GAME_MAX_HOURS) {
-        return { ...pools, shortGamesPool: [...pools.shortGamesPool, game] };
-      }
-      if (hours > SHORT_GAME_MAX_HOURS && hours <= WEEKEND_GAME_MAX_HOURS) {
-        return { ...pools, weekendGamesPool: [...pools.weekendGamesPool, game] };
-      }
-      return pools;
-    });
-  };
-
   return {
     shortGames,
     weekendGames,
@@ -192,7 +170,5 @@ export function useCarouselPools(userId: string | null) {
     hiddenGems,
     recentlyAdded,
     carouselsLoading: !!userId && isPending,
-    removeFromPools,
-    addBackToPool,
   };
 }

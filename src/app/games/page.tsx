@@ -152,7 +152,7 @@ export default function GamesPage() {
           disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
           onAddToQueue={
             hasPlayingGame && statusModal.initialStatus === 'backlog'
-              ? () => handleAddToQueue(statusModal.appId, statusModal.gameName)
+              ? () => handleAddToQueue(statusModal.appId)
               : undefined
           }
         />

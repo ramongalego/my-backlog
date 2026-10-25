@@ -1,19 +1,17 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { fetchQueuedAppIds } from '@/lib/games/queue';
 import { queryKeys } from '@/lib/query-keys';
 
 interface LibraryMetaData {
   gameCount: number;
   historyCount: number;
-  queuedAppIds: Set<number>;
 }
 
 async function fetchLibraryMeta(userId: string): Promise<LibraryMetaData> {
   const supabase = createClient();
-  const [{ count: total }, { count: finishedOrDropped }, queueIds] = await Promise.all([
+  const [totalResult, historyResult] = await Promise.all([
     supabase
       .from('games')
       .select('id', { count: 'exact', head: true })
@@ -26,19 +24,17 @@ async function fetchLibraryMeta(userId: string): Promise<LibraryMetaData> {
       .eq('user_id', userId)
       .eq('type', 'game')
       .in('status', ['finished', 'dropped']),
-    fetchQueuedAppIds(),
   ]);
+  if (totalResult.error) throw totalResult.error;
+  if (historyResult.error) throw historyResult.error;
 
   return {
-    gameCount: total || 0,
-    historyCount: finishedOrDropped ?? 0,
-    queuedAppIds: queueIds,
+    gameCount: totalResult.count ?? 0,
+    historyCount: historyResult.count ?? 0,
   };
 }
 
 export function useLibraryMeta(userId: string | null) {
-  const queryClient = useQueryClient();
-
   const { data, isPending } = useQuery({
     queryKey: queryKeys.library.meta(userId ?? ''),
     queryFn: () => fetchLibraryMeta(userId!),
@@ -46,19 +42,9 @@ export function useLibraryMeta(userId: string | null) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const addQueuedAppId = (appId: number) => {
-    if (!userId) return;
-    queryClient.setQueryData(queryKeys.library.meta(userId), (old: LibraryMetaData | undefined) => {
-      if (!old) return old;
-      return { ...old, queuedAppIds: new Set([...old.queuedAppIds, appId]) };
-    });
-  };
-
   return {
     gameCount: data?.gameCount ?? 0,
     historyCount: data?.historyCount ?? 0,
-    queuedAppIds: data?.queuedAppIds ?? new Set<number>(),
-    addQueuedAppId,
     loaded: !isPending && !!data,
   };
 }

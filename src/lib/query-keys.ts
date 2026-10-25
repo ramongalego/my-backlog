@@ -13,7 +13,6 @@ export const queryKeys = {
   queue: {
     all: ['queue'] as const,
     list: (userId: string) => [...queryKeys.queue.all, 'list', userId] as const,
-    ids: () => [...queryKeys.queue.all, 'ids'] as const,
   },
   library: {
     all: ['library'] as const,

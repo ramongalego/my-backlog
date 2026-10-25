@@ -14,12 +14,7 @@ export function useGameLibrary() {
   const scopedUserId = profile?.steam_id ? (user?.id ?? null) : null;
   const carousels = useCarouselPools(scopedUserId);
   const meta = useLibraryMeta(scopedUserId);
-  const currentGame = useCurrentGame({
-    userId: scopedUserId,
-    removeFromPools: carousels.removeFromPools,
-    addBackToPool: carousels.addBackToPool,
-    addQueuedAppId: meta.addQueuedAppId,
-  });
+  const currentGame = useCurrentGame(scopedUserId);
 
   const steamConnected = !!profile?.steam_id;
   const isLoading = !authResolved || (steamConnected && !meta.loaded && !sync.isSyncing);
@@ -46,7 +41,7 @@ export function useGameLibrary() {
     meta: {
       gameCount: meta.gameCount,
       historyCount: meta.historyCount,
-      queuedAppIds: meta.queuedAppIds,
+      queuedAppIds: currentGame.queuedAppIds,
     },
     sync: {
       isSyncing: sync.isSyncing,
