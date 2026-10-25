@@ -1,6 +1,12 @@
 import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { Skeleton } from '@/components/layout/Skeleton';
+import {
+  CAROUSEL_CARD_WIDTH,
+  CAROUSEL_FADE_CLASS,
+  CAROUSEL_FADE_STYLE,
+  CAROUSEL_PER_PAGE,
+} from '@/components/games/carousel-layout';
 
 // Skeletons for the home dashboard. They use the same sections, padding and
 // tile sizes as HomeView and GameCarousel so the page doesn't shift on load.
@@ -28,29 +34,31 @@ export function LoadingState() {
   );
 }
 
-/** Mirrors GameCarousel: heading + arrow buttons, then a row of w-64 tiles. */
+/**
+ * Mirrors GameCarousel: the title, then a row of cards at the carousel's own
+ * widths (a page plus the peeking card under the fade). No arrows, since the
+ * carousel only shows them on hover.
+ */
 export function CarouselsLoadingState() {
   return (
     <section className={`${PAGE_CONTAINER} space-y-12`}>
       {[1, 2].map((i) => (
         <div key={i}>
-          <div className="flex items-center justify-between mb-4">
-            <Skeleton className="h-7 w-56 sm:w-72" />
-            <div className="flex gap-2">
-              <Skeleton className="w-9 h-9 rounded-full" />
-              <Skeleton className="w-9 h-9 rounded-full" />
-            </div>
-          </div>
-          <div className="flex gap-4 overflow-hidden pb-4">
-            {[1, 2, 3, 4, 5].map((j) => (
-              <div key={j} className="shrink-0 w-64">
-                <Skeleton className={`${COVER_ASPECT} rounded-lg`} />
-                <div className="pt-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2 mt-1.5" />
+          <Skeleton className="mb-4 h-7 w-56 sm:w-72" />
+          <div className={`relative ${CAROUSEL_PER_PAGE}`}>
+            <div className="flex gap-4 overflow-hidden max-sm:-mx-4 max-sm:px-4">
+              {/* Enough for the widest row: five cards and the peeking sixth. */}
+              {[1, 2, 3, 4, 5, 6].map((j) => (
+                <div key={j} className="min-w-0" style={{ flex: `0 0 ${CAROUSEL_CARD_WIDTH}` }}>
+                  <Skeleton className={`${COVER_ASPECT} rounded-lg`} />
+                  <div className="pt-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div aria-hidden="true" className={CAROUSEL_FADE_CLASS} style={CAROUSEL_FADE_STYLE} />
           </div>
         </div>
       ))}

@@ -5,6 +5,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
 import { isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
+import {
+  CAROUSEL_CARD_WIDTH as CARD_WIDTH,
+  CAROUSEL_FADE_CLASS,
+  CAROUSEL_FADE_STYLE,
+  CAROUSEL_PER_PAGE as PER_PAGE,
+} from '@/components/games/carousel-layout';
 
 interface Game {
   app_id: number;
@@ -32,16 +38,6 @@ const LOOP_MEDIA = '(min-width: 640px) and (pointer: fine)';
 const SLIDE_MS = 450;
 const SLIDE_EASING = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
-// Cards across the row, set per breakpoint. The fraction is the next card
-// peeking in under the fade: it shows there's more without hovering, and as on
-// Netflix it becomes the first card of the next page, so a jump keeps your
-// place. A page is the whole cards (2 to 5).
-const PER_PAGE =
-  '[--per-page:1.4] sm:[--per-page:2.3] md:[--per-page:3.3] lg:[--per-page:4.3] xl:[--per-page:5.3]';
-// A card's width when exactly --per-page cards and their 1rem gaps fill the
-// row. Inside the track, 100% is the row's width (for flex-basis, and for
-// translateX, which is relative to the track itself).
-const CARD_WIDTH = 'calc((100% - (var(--per-page) - 1) * 1rem) / var(--per-page))';
 // The same width from the row's container width, to size the arrows to the art.
 const CARD_WIDTH_CQ = '((100cqw - (var(--per-page) - 1) * 1rem) / var(--per-page))';
 const COVER_HEIGHT = `calc(${CARD_WIDTH_CQ} * 215 / 460)`;
@@ -164,11 +160,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
 
         {/* Always there when the row has more: the arrows only appear on hover. */}
         {hasMore && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 max-sm:-right-4 z-[5] w-24"
-            style={{ background: 'linear-gradient(to right, transparent, var(--color-ink-950))' }}
-          />
+          <div aria-hidden="true" className={CAROUSEL_FADE_CLASS} style={CAROUSEL_FADE_STYLE} />
         )}
 
         {/* The clipping box. The browser scrolls it to show a focused element, which
