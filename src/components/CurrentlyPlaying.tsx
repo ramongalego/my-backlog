@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { ExternalLink, Archive, Check, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
-import { SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
+import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
@@ -56,7 +56,11 @@ function Progress({ game }: { game: Game }) {
   if (playedHours >= mainStoryHours) {
     return (
       <p className="text-sm">
-        <span className="text-ink-200">{playedHours}h played</span>
+        <Playtime
+          minutes={game.playtime_forever}
+          lastPlayedAt={game.last_played_at}
+          className="text-ink-200"
+        />
         <span className="text-ink-400"> · past the ~{mainStoryHours}h estimate</span>
       </p>
     );
@@ -65,7 +69,11 @@ function Progress({ game }: { game: Game }) {
   return (
     <div className="max-w-sm">
       <div className="flex items-center justify-between text-sm mb-2">
-        <span className="text-ink-200">{playedHours}h played</span>
+        <Playtime
+          minutes={game.playtime_forever}
+          lastPlayedAt={game.last_played_at}
+          className="text-ink-200"
+        />
         <span className="text-ink-400">~{mainStoryHours}h to beat</span>
       </div>
       <div className="h-1.5 bg-ink-800 rounded-full overflow-hidden">

@@ -13,6 +13,8 @@ describe('SuggestionResult', () => {
       tags: ['Singleplayer', 'Story Rich', 'Open World'],
       steam_review_score: 92,
       steam_review_count: 12439,
+      playtime_forever: 0,
+      last_played_at: null,
     },
     reasoning: 'This game perfectly matches your mood for adventure and has great reviews.',
   };

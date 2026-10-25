@@ -77,6 +77,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
           steamReviewScore={game.steam_review_score}
           steamReviewCount={game.steam_review_count}
           playtimeMinutes={game.playtime_forever}
+          lastPlayedAt={game.last_played_at}
           deckCompat={game.deck_compat}
         />
       </div>

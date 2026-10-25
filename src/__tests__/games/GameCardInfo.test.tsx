@@ -56,7 +56,25 @@ describe('GameCardInfo', () => {
     it('should show playtime when at least 60 minutes', () => {
       render(<GameCardInfo appId={1} name="Game" playtimeMinutes={120} />);
 
-      expect(screen.getByText('2h played')).toBeInTheDocument();
+      // Once on the card, once more in the tooltip it falls back to.
+      expect(screen.getAllByText('2h played')[0]).toBeVisible();
+    });
+
+    it('should say when you last played in the tooltip', () => {
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
+      render(
+        <GameCardInfo appId={1} name="Game" playtimeMinutes={600} lastPlayedAt={threeDaysAgo} />,
+      );
+
+      const tooltip = screen.getByRole('tooltip');
+      expect(tooltip).toHaveTextContent('Last played 3 days ago');
+      expect(tooltip).toHaveTextContent('10h played on Steam');
+    });
+
+    it('should fall back to the playtime source when Steam has no date', () => {
+      render(<GameCardInfo appId={1} name="Game" playtimeMinutes={600} />);
+
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Playtime from Steam');
     });
 
     it('should not show playtime when under 60 minutes', () => {

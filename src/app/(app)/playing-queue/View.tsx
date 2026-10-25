@@ -27,7 +27,7 @@ import { useState } from 'react';
 
 import { CoverArt } from '@/components/games/CoverArt';
 import { LastPlayed } from '@/components/CurrentlyPlaying';
-import { GameMetaRow } from '@/components/games/GameCardInfo';
+import { GameMetaRow, Playtime } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
@@ -89,13 +89,18 @@ function NowPlayingRow({
           <div className="mt-2">
             {isPastEstimate ? (
               <p className="text-xs">
-                <span className="text-ink-200">{playedHours}h played</span>
+                <Playtime
+                  minutes={game.playtime_forever}
+                  lastPlayedAt={game.last_played_at}
+                  className="text-ink-200"
+                />
                 <span className="text-ink-400"> · past the ~{estimateHours}h estimate</span>
               </p>
             ) : progressPct !== null ? (
               <div className="max-w-56">
                 <p className="text-xs text-ink-400">
-                  {playedHours}h played · ~{estimateHours}h to beat
+                  <Playtime minutes={game.playtime_forever} lastPlayedAt={game.last_played_at} /> ·
+                  ~{estimateHours}h to beat
                 </p>
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
                   <div
@@ -108,7 +113,9 @@ function NowPlayingRow({
               <GameMetaRow
                 mainStoryHours={estimateHours}
                 steamReviewScore={game.steam_review_score}
+                steamReviewCount={game.steam_review_count}
                 playtimeMinutes={game.playtime_forever}
+                lastPlayedAt={game.last_played_at}
                 deckCompat={game.deck_compat}
               />
             )}
@@ -213,7 +220,9 @@ function QueueItemRow({
           <GameMetaRow
             mainStoryHours={item.game.main_story_hours}
             steamReviewScore={item.game.steam_review_score}
+            steamReviewCount={item.game.steam_review_count}
             playtimeMinutes={item.game.playtime_forever}
+            lastPlayedAt={item.game.last_played_at}
             deckCompat={item.game.deck_compat}
           />
         </div>

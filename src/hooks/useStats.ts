@@ -37,6 +37,7 @@ export interface PlayedALotGame {
   main_story_hours: number | null;
   header_image: string | null;
   deck_compat: number | null;
+  last_played_at: string | null;
 }
 
 export interface Stats {
@@ -186,6 +187,7 @@ export function useStats() {
       main_story_hours: g.main_story_hours,
       header_image: g.header_image,
       deck_compat: g.deck_compat ?? null,
+      last_played_at: g.last_played_at ?? null,
     }));
 
     // Largest-remainder method so percentages always sum to exactly 100

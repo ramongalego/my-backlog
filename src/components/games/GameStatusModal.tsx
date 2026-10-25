@@ -39,6 +39,7 @@ interface GameDetailModalProps {
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
   playtimeMinutes?: number;
+  lastPlayedAt?: string | null;
   deckCompat?: number | null;
 }
 
@@ -72,6 +73,7 @@ export function GameDetailModal({
   steamReviewScore,
   steamReviewCount,
   playtimeMinutes,
+  lastPlayedAt,
   deckCompat,
 }: GameDetailModalProps) {
   const today = todayIso();
@@ -173,6 +175,7 @@ export function GameDetailModal({
           steamReviewScore={steamReviewScore}
           steamReviewCount={steamReviewCount}
           playtimeMinutes={playtimeMinutes}
+          lastPlayedAt={lastPlayedAt}
           deckCompat={deckCompat}
         />
       </div>

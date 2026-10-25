@@ -18,6 +18,7 @@ const MAX_DROPPED_IN_PROMPT = 10;
 
 interface BacklogGame extends GameForSuggestion {
   header_image: string | null;
+  last_played_at: string | null;
 }
 
 interface HistoryRow extends HistoryGame {
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
         supabase
           .from('games')
           .select(
-            'app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at',
+            'app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at',
           )
           .eq('user_id', userId)
           .eq('type', 'game')
@@ -233,6 +234,8 @@ export async function POST(request: NextRequest) {
         tags: suggestedGame.tags,
         steam_review_score: suggestedGame.steam_review_score,
         steam_review_count: suggestedGame.steam_review_count,
+        playtime_forever: suggestedGame.playtime_forever ?? 0,
+        last_played_at: suggestedGame.last_played_at,
       },
       reasoning,
     },

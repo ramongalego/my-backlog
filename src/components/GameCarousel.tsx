@@ -21,6 +21,7 @@ interface Game {
   steam_review_score?: number | null;
   steam_review_count?: number | null;
   deck_compat?: number | null;
+  last_played_at?: string | null;
 }
 
 interface GameCarouselProps {
@@ -225,6 +226,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                       steamReviewScore={game.steam_review_score}
                       steamReviewCount={game.steam_review_count}
                       playtimeMinutes={game.playtime_forever}
+                      lastPlayedAt={game.last_played_at}
                       deckCompat={game.deck_compat}
                     />
                   </div>

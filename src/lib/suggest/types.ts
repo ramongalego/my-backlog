@@ -47,6 +47,8 @@ export interface SuggestionResult {
     tags: string[] | null;
     steam_review_score: number | null;
     steam_review_count: number | null;
+    playtime_forever: number;
+    last_played_at: string | null;
   };
   reasoning: string;
 }

@@ -40,6 +40,8 @@ export interface QueueItem {
     playtime_forever: number;
     main_story_hours: number | null;
     steam_review_score: number | null;
+    steam_review_count?: number | null;
     deck_compat?: number | null;
+    last_played_at?: string | null;
   };
 }

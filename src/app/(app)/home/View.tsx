@@ -224,6 +224,7 @@ export default function HomeView() {
           steamReviewScore={carouselModal.game.steam_review_score}
           steamReviewCount={carouselModal.game.steam_review_count}
           playtimeMinutes={carouselModal.game.playtime_forever}
+          lastPlayedAt={carouselModal.game.last_played_at}
           deckCompat={carouselModal.game.deck_compat}
           initialStatus="backlog"
           disablePlaying={!!currentlyPlaying}

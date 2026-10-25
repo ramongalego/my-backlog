@@ -72,7 +72,7 @@ describe('CurrentlyPlaying', () => {
     it('should show "Xh played" and "Yh to beat" at exactly 1 hour', () => {
       render(<CurrentlyPlaying game={createGame(60, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('1h played')).toBeInTheDocument();
+      expect(screen.getAllByText('1h played')[0]).toBeInTheDocument();
       expect(screen.getByText('~20h to beat')).toBeInTheDocument();
     });
 
@@ -80,7 +80,7 @@ describe('CurrentlyPlaying', () => {
       // 750 minutes = 12.5 hours → rounds to 13h
       render(<CurrentlyPlaying game={createGame(750, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('13h played')).toBeInTheDocument();
+      expect(screen.getAllByText('13h played')[0]).toBeInTheDocument();
       expect(screen.getByText('~20h to beat')).toBeInTheDocument();
     });
 
@@ -105,7 +105,7 @@ describe('CurrentlyPlaying', () => {
       // 1200 min = 20h = exactly the 20h estimate
       render(<CurrentlyPlaying game={createGame(1200, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('20h played')).toBeInTheDocument();
+      expect(screen.getAllByText('20h played')[0]).toBeInTheDocument();
       expect(screen.getByText(/past the ~20h estimate/)).toBeInTheDocument();
     });
 
@@ -113,7 +113,7 @@ describe('CurrentlyPlaying', () => {
       // 1800 min = 30h, estimate is 20h
       render(<CurrentlyPlaying game={createGame(1800, 20)} {...defaultCallbacks} />);
 
-      expect(screen.getByText('30h played')).toBeInTheDocument();
+      expect(screen.getAllByText('30h played')[0]).toBeInTheDocument();
       expect(screen.getByText(/past the ~20h estimate/)).toBeInTheDocument();
     });
 
@@ -139,7 +139,7 @@ describe('CurrentlyPlaying', () => {
           {...defaultCallbacks}
         />,
       );
-      expect(screen.getByText('Last played 3 days ago')).toBeInTheDocument();
+      expect(screen.getAllByText('Last played 3 days ago')).toHaveLength(2);
     });
 
     it('shows nothing when Steam does not share it', () => {

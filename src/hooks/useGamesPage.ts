@@ -84,6 +84,7 @@ interface GamesPageStatusModal {
   steamReviewScore: number | null;
   steamReviewCount: number | null;
   playtimeMinutes: number;
+  lastPlayedAt: string | null;
   deckCompat?: number | null;
 }
 
@@ -214,6 +215,7 @@ export function useGamesPage(): UseGamesPageReturn {
       steamReviewScore: game.steam_review_score,
       steamReviewCount: game.steam_review_count,
       playtimeMinutes: game.playtime_forever,
+      lastPlayedAt: game.last_played_at,
       deckCompat: game.deck_compat,
     });
   };

@@ -1,6 +1,7 @@
 import { Clock, ExternalLink, ThumbsUp } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { steamReviewLabel } from '@/lib/steam/review-label';
+import { formatLastPlayed } from '@/lib/games/last-played';
 import { SteamDeckBadge } from './SteamDeckBadge';
 
 /**
@@ -52,11 +53,43 @@ export function TimeToBeat({
   );
 }
 
+/**
+ * Hours played on Steam, with when you last played in the tooltip. Used
+ * wherever a game shows its playtime, so it reads the same everywhere.
+ */
+export function Playtime({
+  minutes,
+  lastPlayedAt,
+  className = '',
+}: {
+  minutes: number;
+  lastPlayedAt?: string | null;
+  className?: string;
+}) {
+  const hours = Math.round(minutes / 60);
+  const lastPlayed = formatLastPlayed(lastPlayedAt);
+  return (
+    <Tooltip
+      className={className}
+      content={
+        lastPlayed ? (
+          <TooltipText title={lastPlayed} detail={`${hours}h played on Steam`} />
+        ) : (
+          <TooltipText title={`${hours}h played`} detail="Playtime from Steam" />
+        )
+      }
+    >
+      <span>{hours}h played</span>
+    </Tooltip>
+  );
+}
+
 interface GameMetaRowProps {
   mainStoryHours?: number | null;
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
   playtimeMinutes?: number;
+  lastPlayedAt?: string | null;
   deckCompat?: number | null;
   hidePlaytimeOnMobile?: boolean;
 }
@@ -66,6 +99,7 @@ export function GameMetaRow({
   steamReviewScore,
   steamReviewCount,
   playtimeMinutes = 0,
+  lastPlayedAt,
   deckCompat,
   hidePlaytimeOnMobile,
 }: GameMetaRowProps) {
@@ -75,9 +109,11 @@ export function GameMetaRow({
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (
-        <span className={`text-ink-500${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}>
-          {Math.round(playtimeMinutes / 60)}h played
-        </span>
+        <Playtime
+          minutes={playtimeMinutes}
+          lastPlayedAt={lastPlayedAt}
+          className={hidePlaytimeOnMobile ? 'max-sm:hidden' : ''}
+        />
       ) : null}
       <SteamDeckBadge deckCompat={deckCompat} />
     </div>
@@ -91,6 +127,7 @@ interface GameCardInfoProps {
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
   playtimeMinutes?: number;
+  lastPlayedAt?: string | null;
   deckCompat?: number | null;
 }
 
@@ -101,6 +138,7 @@ export function GameCardInfo({
   steamReviewScore,
   steamReviewCount,
   playtimeMinutes = 0,
+  lastPlayedAt,
   deckCompat,
 }: GameCardInfoProps) {
   return (
@@ -124,6 +162,7 @@ export function GameCardInfo({
           steamReviewScore={steamReviewScore}
           steamReviewCount={steamReviewCount}
           playtimeMinutes={playtimeMinutes}
+          lastPlayedAt={lastPlayedAt}
           deckCompat={deckCompat}
         />
       </div>

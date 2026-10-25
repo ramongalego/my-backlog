@@ -5,6 +5,7 @@ import { Gamepad2 } from 'lucide-react';
 
 import { useMutation } from '@tanstack/react-query';
 import { CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
+import { Playtime } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +13,7 @@ import { useAddToQueue } from '@/hooks/useNowPlaying';
 import { updateGameStatus } from '@/lib/games/status';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
-import type { Stats } from '@/hooks/useStats';
+import type { PlayedALotGame, Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
@@ -21,14 +22,7 @@ import { ToggleGroup } from '@/components/ui/ToggleGroup';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { StatsContentSkeleton } from './Skeleton';
 
-interface EditModalState {
-  appId: number;
-  gameName: string;
-  headerImage: string | null;
-  mainStoryHours: number | null;
-  playtimeMinutes: number;
-  deckCompat: number | null;
-}
+type EditModalState = PlayedALotGame;
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -295,20 +289,7 @@ function TagCompletion({ stats }: { stats: Stats }) {
  * Backlog games that are probably not backlog any more (see playedALot), with
  * a quick way to mark them. The other half of Home's Pick Up row.
  */
-function PlayedALot({
-  stats,
-  onEdit,
-}: {
-  stats: Stats;
-  onEdit: (
-    appId: number,
-    gameName: string,
-    headerImage: string | null,
-    mainStoryHours: number | null,
-    playtimeMinutes: number,
-    deckCompat: number | null,
-  ) => void;
-}) {
+function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALotGame) => void }) {
   return (
     <Panel>
       <SectionTitle>Played a lot, still in your backlog</SectionTitle>
@@ -317,41 +298,39 @@ function PlayedALot({
         and pace honest.
       </p>
       <ul className="space-y-3">
-        {stats.playedALot.map(
-          ({ app_id, name, playtime_forever, main_story_hours, header_image, deck_compat }) => {
-            const edit = () =>
-              onEdit(app_id, name, header_image, main_story_hours, playtime_forever, deck_compat);
-            return (
-              <li key={app_id} className="flex items-center gap-3">
-                <button
-                  onClick={edit}
-                  aria-label={`Update ${name}`}
-                  className="group shrink-0 rounded-md cursor-pointer"
-                >
-                  <CoverThumb src={header_image} alt="" className="w-16">
-                    <CoverEditHint />
-                  </CoverThumb>
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
-                  <p className="mt-0.5 text-xs text-ink-400">
-                    {Math.round(playtime_forever / 60)}h played
-                    {main_story_hours ? ` · story is ${main_story_hours}h` : ''}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={edit}
-                  aria-label={`Update ${name}`}
-                  className="shrink-0 cursor-pointer"
-                >
-                  Update
-                </Button>
-              </li>
-            );
-          },
-        )}
+        {stats.playedALot.map((game) => {
+          const { app_id, name, playtime_forever, main_story_hours, header_image } = game;
+          const edit = () => onEdit(game);
+          return (
+            <li key={app_id} className="flex items-center gap-3">
+              <button
+                onClick={edit}
+                aria-label={`Update ${name}`}
+                className="group shrink-0 rounded-md cursor-pointer"
+              >
+                <CoverThumb src={header_image} alt="" className="w-16">
+                  <CoverEditHint />
+                </CoverThumb>
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
+                <p className="mt-0.5 text-xs text-ink-400">
+                  <Playtime minutes={playtime_forever} lastPlayedAt={game.last_played_at} />
+                  {main_story_hours ? ` · story is ${main_story_hours}h` : ''}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={edit}
+                aria-label={`Update ${name}`}
+                className="shrink-0 cursor-pointer"
+              >
+                Update
+              </Button>
+            </li>
+          );
+        })}
       </ul>
     </Panel>
   );
@@ -385,28 +364,12 @@ export default function StatsView() {
     onSettled: () => invalidateGames(),
   });
 
-  const handleEdit = (
-    appId: number,
-    gameName: string,
-    headerImage: string | null,
-    mainStoryHours: number | null,
-    playtimeMinutes: number,
-    deckCompat: number | null,
-  ) => {
-    setEditModal({ appId, gameName, headerImage, mainStoryHours, playtimeMinutes, deckCompat });
-  };
+  const handleEdit = (game: PlayedALotGame) => setEditModal(game);
 
   const handleAddToQueue = () => {
     if (!editModal) return;
     setEditModal(null);
-    addGameToQueue({
-      app_id: editModal.appId,
-      name: editModal.gameName,
-      header_image: editModal.headerImage,
-      main_story_hours: editModal.mainStoryHours,
-      playtime_forever: editModal.playtimeMinutes,
-      deck_compat: editModal.deckCompat,
-    });
+    addGameToQueue(editModal);
   };
 
   const handleConfirm = async (
@@ -416,7 +379,7 @@ export default function StatsView() {
     rating: number | null,
   ) => {
     if (!editModal) return;
-    statusMutation.mutate({ appId: editModal.appId, status, date, notes, rating });
+    statusMutation.mutate({ appId: editModal.app_id, status, date, notes, rating });
     setEditModal(null);
   };
 
@@ -428,11 +391,12 @@ export default function StatsView() {
             isOpen={true}
             onClose={() => setEditModal(null)}
             onConfirm={handleConfirm}
-            gameName={editModal.gameName}
-            headerImage={editModal.headerImage}
-            mainStoryHours={editModal.mainStoryHours}
-            playtimeMinutes={editModal.playtimeMinutes}
-            deckCompat={editModal.deckCompat}
+            gameName={editModal.name}
+            headerImage={editModal.header_image}
+            mainStoryHours={editModal.main_story_hours}
+            playtimeMinutes={editModal.playtime_forever}
+            lastPlayedAt={editModal.last_played_at}
+            deckCompat={editModal.deck_compat}
             initialStatus="backlog"
             disablePlaying={hasPlayingGame}
             onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}

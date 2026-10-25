@@ -21,6 +21,7 @@ jest.mock('next/image', () => ({
 const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   created_at: '2026-01-01T00:00:00Z',
   release_date: null,
+  last_played_at: null,
   app_id: 123,
   name: 'Test Game',
   playtime_forever: 120,
@@ -49,7 +50,7 @@ describe('GameCard', () => {
     it('should show playtime when at least 1 hour', () => {
       render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
 
-      expect(screen.getByText('2h played')).toBeInTheDocument();
+      expect(screen.getAllByText('2h played')[0]).toBeInTheDocument();
     });
 
     it('should not show playtime when zero', () => {

@@ -26,7 +26,12 @@ export type QueueableGame = Pick<
   GameWithImage,
   'app_id' | 'name' | 'header_image' | 'main_story_hours' | 'playtime_forever'
 > &
-  Partial<Pick<GameWithImage, 'steam_review_score' | 'deck_compat'>>;
+  Partial<
+    Pick<
+      GameWithImage,
+      'steam_review_score' | 'steam_review_count' | 'deck_compat' | 'last_played_at'
+    >
+  >;
 
 function toQueueItem(game: QueueableGame, position: number): QueueItem {
   return {
@@ -39,7 +44,9 @@ function toQueueItem(game: QueueableGame, position: number): QueueItem {
       playtime_forever: game.playtime_forever,
       main_story_hours: game.main_story_hours,
       steam_review_score: game.steam_review_score ?? null,
+      steam_review_count: game.steam_review_count ?? null,
       deck_compat: game.deck_compat ?? null,
+      last_played_at: game.last_played_at ?? null,
     },
   };
 }

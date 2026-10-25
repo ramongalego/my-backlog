@@ -84,6 +84,7 @@ export default function GamesView() {
             steamReviewScore={statusModal.steamReviewScore}
             steamReviewCount={statusModal.steamReviewCount}
             playtimeMinutes={statusModal.playtimeMinutes}
+            lastPlayedAt={statusModal.lastPlayedAt}
             deckCompat={statusModal.deckCompat}
             disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
             onAddToQueue={

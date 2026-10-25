@@ -33,6 +33,7 @@ export interface GameItem {
   created_at: string;
   /** Steam's display date, e.g. "Sep 28, 2010" or "To be announced". */
   release_date: string | null;
+  last_played_at: string | null;
 }
 
 export function loadGamesList(supabase: SupabaseClient, userId: string): Promise<GameItem[]> {
@@ -40,7 +41,7 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
     supabase
       .from('games')
       .select(
-        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date',
+        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
@@ -65,6 +66,7 @@ export interface GameForStats {
   release_date: string | null;
   deck_compat: number | null;
   categories: string[] | null;
+  last_played_at: string | null;
 }
 
 export function loadStatsGames(supabase: SupabaseClient, userId: string): Promise<GameForStats[]> {
@@ -72,7 +74,7 @@ export function loadStatsGames(supabase: SupabaseClient, userId: string): Promis
     supabase
       .from('games')
       .select(
-        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat, categories',
+        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat, categories, last_played_at',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
@@ -111,7 +113,7 @@ export async function loadDiaryEntries(
 // ─── Now playing + queue ────────────────────────────────────────────────────
 
 export const PLAYING_GAME_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, deck_compat, last_played_at';
+  'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, deck_compat, last_played_at';
 
 export async function loadCurrentlyPlaying(
   supabase: SupabaseClient,
@@ -141,7 +143,7 @@ export async function loadQueue(supabase: SupabaseClient, userId: string): Promi
   const { data: games, error: gamesError } = await supabase
     .from('games')
     .select(
-      'app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, deck_compat',
+      'app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at',
     )
     .eq('user_id', userId)
     .in(
@@ -163,7 +165,9 @@ export async function loadQueue(supabase: SupabaseClient, userId: string): Promi
         playtime_forever: g?.playtime_forever ?? 0,
         main_story_hours: g?.main_story_hours ?? null,
         steam_review_score: g?.steam_review_score ?? null,
+        steam_review_count: g?.steam_review_count ?? null,
         deck_compat: g?.deck_compat ?? null,
+        last_played_at: g?.last_played_at ?? null,
       },
     };
   });
