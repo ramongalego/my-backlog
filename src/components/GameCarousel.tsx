@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
+import { scrollBehavior } from '@/lib/motion';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
 
 interface Game {
@@ -77,7 +78,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
       setCanScrollLeft(target > 0);
       setCanScrollRight(target + clientWidth < scrollWidth - 1);
 
-      scrollRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+      scrollRef.current.scrollBy({ left: delta, behavior: scrollBehavior() });
     }
   };
 
@@ -130,7 +131,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
               >
                 <CoverArt
                   src={game.header_image}
-                  alt={game.name}
+                  alt=""
                   sizes="256px"
                   priority={priority && i < 4 ? true : undefined}
                   interactive

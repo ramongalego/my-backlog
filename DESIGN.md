@@ -202,7 +202,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `EmptyState`: icon, title and a sentence that teaches what will appear here and how.
 - `Input`, `fieldClass()`, `FIELD_LABEL`: every text field, textarea and search box. Focus brightens the border; it doesn't turn orange.
 - `Modal`, `Dropdown`.
-- `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover, focus or tap). It renders at page level, so clipping containers can't cut it off. Never use the native `title` attribute for this.
+- `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover or tap). It renders at page level, so clipping containers can't cut it off. Triggers aren't tab stops (the text reaches screen readers via `aria-describedby`), so keep anything essential visible. Never use the native `title` attribute for this.
 
 **Games:** `src/components/games/`
 - `CoverArt`: any game image at the 460:215 ratio. `interactive` brightens the edge on hover, `CoverEditHint` adds the hover pencil, and `CoverThumb` is the small size for list rows.

@@ -94,7 +94,7 @@ export function CurrentlyPlaying({
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
       <CoverArt
         src={game.header_image}
-        alt={game.name}
+        alt=""
         rounded="xl"
         priority
         sizes="(max-width: 768px) 100vw, 480px"

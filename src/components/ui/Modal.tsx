@@ -10,6 +10,8 @@ interface ModalProps {
   title?: string;
   /** Accessible name for dialogs that render their own heading instead of `title`. */
   ariaLabel?: string;
+  /** Id of a heading inside the content that names the dialog, when it renders its own. */
+  labelledBy?: string;
   size?: 'md' | 'lg' | 'xl';
 }
 
@@ -23,7 +25,15 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
 
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-export function Modal({ isOpen, onClose, children, title, ariaLabel, size = 'md' }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  children,
+  title,
+  ariaLabel,
+  labelledBy,
+  size = 'md',
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -85,14 +95,14 @@ export function Modal({ isOpen, onClose, children, title, ariaLabel, size = 'md'
           className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-ink-900 rounded-2xl border border-ink-800`}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={title ? titleId : undefined}
-          aria-label={title ? undefined : ariaLabel}
+          aria-labelledby={title ? titleId : labelledBy}
+          aria-label={title || labelledBy ? undefined : ariaLabel}
         >
           {onClose && (
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 text-ink-400 hover:text-ink-100 hover:bg-ink-800 rounded-lg transition-colors z-10"
-              aria-label="Close modal"
+              aria-label="Close"
             >
               <X className="w-5 h-5" aria-hidden="true" />
             </button>

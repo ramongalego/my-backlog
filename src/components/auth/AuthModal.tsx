@@ -13,6 +13,8 @@ interface AuthModalContentProps {
   onLoginSuccess: () => void;
 }
 
+const TITLE_ID = 'auth-modal-title';
+
 const TITLES: Record<AuthMode, string> = {
   login: 'Welcome Back',
   signup: 'Create Account',
@@ -24,7 +26,9 @@ function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-ink-100 mb-6">{TITLES[mode]}</h2>
+      <h2 id={TITLE_ID} className="text-xl font-semibold tracking-tight text-ink-50 mb-6">
+        {TITLES[mode]}
+      </h2>
       {mode === 'login' && (
         <LoginForm
           onSuccess={onLoginSuccess}
@@ -42,8 +46,8 @@ function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps
 
 function SigningInContent() {
   return (
-    <div className="flex flex-col items-center justify-center py-8 gap-3">
-      <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
+    <div className="flex flex-col items-center justify-center py-8 gap-3" role="status">
+      <Loader2 className="w-8 h-8 text-accent-400 animate-spin" aria-hidden="true" />
       <p className="text-sm text-ink-400">Signing in…</p>
     </div>
   );
@@ -64,7 +68,12 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={isSigningIn ? undefined : onClose}>
+    <Modal
+      isOpen={isOpen}
+      onClose={isSigningIn ? undefined : onClose}
+      labelledBy={isSigningIn ? undefined : TITLE_ID}
+      ariaLabel="Signing in"
+    >
       {isOpen &&
         (isSigningIn ? (
           <SigningInContent />

@@ -46,7 +46,7 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         {day ?? ''}
       </div>
 
-      <CoverThumb src={entry.header_image} alt={entry.name} />
+      <CoverThumb src={entry.header_image} alt="" />
 
       {/* Title, the mobile rating, and the note */}
       <div className="min-w-0 flex-1 min-h-[30px] sm:min-h-[52px] flex flex-col justify-center">

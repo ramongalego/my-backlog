@@ -30,6 +30,24 @@ export function UserMenu({
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [cooldownLabel, setCooldownLabel] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Enabled items only: a disabled one (refresh on cooldown) can't take focus.
+  const menuItems = () =>
+    Array.from(
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ??
+        [],
+    );
+
+  const closeMenu = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) triggerRef.current?.focus();
+  };
+
+  // Opening moves focus to the first item, as the menu button pattern expects.
+  useEffect(() => {
+    if (open) menuItems()[0]?.focus();
+  }, [open]);
 
   useEffect(() => {
     if (!isRefreshDisabled || !open) return;
@@ -67,16 +85,20 @@ export function UserMenu({
   };
 
   const handleMenuKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && open) {
-      setOpen(false);
+    if (!open) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeMenu(true);
       return;
     }
-    if (!open) return;
+    if (e.key === 'Tab') {
+      closeMenu(false);
+      return;
+    }
 
-    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
-    if (!items?.length) return;
-
-    const focused = Array.from(items).indexOf(document.activeElement as HTMLButtonElement);
+    const items = menuItems();
+    if (!items.length) return;
+    const focused = items.indexOf(document.activeElement as HTMLButtonElement);
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -84,16 +106,23 @@ export function UserMenu({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       items[(focused - 1 + items.length) % items.length].focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      items[0].focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      items[items.length - 1].focus();
     }
   };
 
   return (
     <div className="relative" ref={menuRef} onKeyDown={handleMenuKeyDown}>
       <button
+        ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
         className="cursor-pointer block rounded overflow-hidden hover:ring-2 hover:ring-ink-600 transition-all"
         aria-label="Open user menu"
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={open}
       >
         {steamAvatar ? (
@@ -115,8 +144,9 @@ export function UserMenu({
         <div
           className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900 p-2 shadow-2xl"
           role="menu"
+          aria-label="Account"
         >
-          <div className="px-3 py-2 mb-1 border-b border-ink-800">
+          <div className="px-3 py-2 mb-1 border-b border-ink-800" role="none">
             <p className="text-sm font-medium text-ink-100 truncate">
               {steamUsername ?? user.email}
             </p>

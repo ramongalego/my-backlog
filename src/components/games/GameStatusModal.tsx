@@ -151,7 +151,7 @@ export function GameDetailModal({
         {headerImage ? (
           <Image
             src={headerImage}
-            alt={gameName}
+            alt=""
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, 544px"

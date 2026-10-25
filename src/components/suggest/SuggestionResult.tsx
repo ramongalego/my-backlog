@@ -33,7 +33,7 @@ export function SuggestionResult({
         {game.header_image ? (
           <Image
             src={game.header_image}
-            alt={game.name}
+            alt=""
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, 544px"

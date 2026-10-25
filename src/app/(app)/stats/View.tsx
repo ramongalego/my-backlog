@@ -333,7 +333,7 @@ function MostPlayedUnfinished({
                   aria-label={`Edit ${name}`}
                   className="group shrink-0 rounded-md cursor-pointer"
                 >
-                  <CoverThumb src={header_image} alt={name} className="w-16">
+                  <CoverThumb src={header_image} alt="" className="w-16">
                     <CoverEditHint />
                   </CoverThumb>
                 </button>

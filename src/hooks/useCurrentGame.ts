@@ -9,6 +9,7 @@ import { RANDOM_PICK_MAX_PLAYTIME_MINUTES } from '@/lib/games/filtering';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { useNowPlaying } from './useNowPlaying';
 import type { GameWithImage } from '@/types/games';
+import { scrollBehavior } from '@/lib/motion';
 
 /** Home page: the shared now-playing actions plus carousel detail and random pick. */
 export function useCurrentGame(userId: string | null) {
@@ -17,7 +18,7 @@ export function useCurrentGame(userId: string | null) {
   const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
 
   const handlePickGame = async (game: GameWithImage) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
     await nowPlaying.pick(game);
   };
 

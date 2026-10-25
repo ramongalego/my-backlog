@@ -26,6 +26,7 @@ export function GamesSort({ value, onChange }: GamesSortProps) {
       onChange={onChange}
       icon={<ArrowUpDown className="w-4 h-4 text-ink-500" />}
       align="responsive"
+      aria-label="Sort by"
     />
   );
 }

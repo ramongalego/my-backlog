@@ -2,7 +2,7 @@
 
 import { ListOrdered, Star } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
-import type { GameStatus } from '@/lib/games/status-style';
+import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { StatusBadge } from './StatusBadge';
@@ -17,6 +17,17 @@ interface GameCardProps {
 
 export function GameCard({ game, onOpenDetail, queued, showStatus = true }: GameCardProps) {
   const status = (game.status ?? 'backlog') as GameStatus;
+  const showRating = (status === 'finished' || status === 'dropped') && game.rating != null;
+  // The name includes the badges shown on the art, so it matches what's on
+  // screen (WCAG 2.5.3, label in name), e.g. "Open details for Celeste, Finished 9/10".
+  const badgeText = queued
+    ? 'Queued'
+    : showStatus && status !== 'backlog'
+      ? STATUS_STYLE[status].label
+      : null;
+  // The badges read in on-screen order as one phrase ("Finished 9/10").
+  const badges = [badgeText, showRating ? `${game.rating}/10` : null].filter(Boolean).join(' ');
+  const label = `Open details for ${game.name}${badges ? `, ${badges}` : ''}`;
 
   return (
     // content-visibility lets the browser skip layout/paint for off-screen
@@ -27,11 +38,11 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
       <button
         onClick={() => onOpenDetail(game.app_id)}
         className="cursor-pointer block w-full rounded-lg select-none focus-visible:-outline-offset-2"
-        aria-label={`Open details for ${game.name}`}
+        aria-label={label}
       >
         <CoverArt
           src={game.header_image}
-          alt={game.name}
+          alt=""
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
           interactive
         >
@@ -49,7 +60,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
               showStatus && <StatusBadge status={status} />
             )}
           </div>
-          {(game.status === 'finished' || game.status === 'dropped') && game.rating != null && (
+          {showRating && (
             <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-ink-950/90 text-xs font-medium">
               <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
               <span className="text-ink-200">{game.rating}/10</span>

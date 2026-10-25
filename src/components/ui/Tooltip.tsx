@@ -6,10 +6,13 @@ import { createPortal } from 'react-dom';
 const EDGE_GAP = 8;
 
 /**
- * A small custom tooltip that shows instantly on hover, keyboard focus, or a
- * tap (taps focus the trigger). Use it for compact indicators whose meaning
- * needs a word of explanation; the trigger's visible content should still make
- * sense without it.
+ * A small custom tooltip that shows instantly on hover or a tap. Use it for
+ * compact indicators whose meaning needs a word of explanation; the trigger's
+ * visible content should still make sense without it, and screen readers get
+ * the full text through aria-describedby.
+ *
+ * Triggers are focusable by tap (tabIndex -1) but not tab stops: a grid of
+ * game cards would otherwise add three stops per card for supplementary text.
  *
  * The bubble renders at the page level with fixed positioning, so containers
  * that clip their contents (game cards use content-visibility, carousels
@@ -62,13 +65,13 @@ export function Tooltip({
   return (
     <span
       ref={triggerRef}
-      tabIndex={0}
+      tabIndex={-1}
       aria-describedby={id}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
-      className={`inline-flex items-center gap-1 rounded-sm cursor-default focus-visible:outline-offset-1 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-sm cursor-default focus:outline-none ${className}`}
     >
       {children}
       {/* The description screen readers announce; the visible bubble below is decorative. */}

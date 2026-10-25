@@ -14,7 +14,8 @@ export const ROW_REVEAL =
   'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity';
 
 const LINK_BUTTON =
-  'cursor-pointer text-xs font-medium text-ink-400 hover:text-ink-100 transition-colors';
+  // py-1 -my-1 enlarges the hit area to about 24px without moving the layout.
+  'cursor-pointer py-1 -my-1 text-xs font-medium text-ink-400 hover:text-ink-100 transition-colors';
 
 /** A diary entry's note, clamped to two lines with a toggle when it runs longer. */
 export function DiaryNoteText({

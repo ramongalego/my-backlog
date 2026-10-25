@@ -69,7 +69,7 @@ function NowPlayingRow({
   return (
     <Panel padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-4">
       <div className="flex items-center gap-4 min-w-0 flex-1">
-        <CoverThumb src={game.header_image} alt={game.name} />
+        <CoverThumb src={game.header_image} alt="" />
 
         <div className="flex-1 min-w-0">
           <p className="font-medium text-ink-50 sm:truncate">{game.name}</p>
@@ -179,7 +179,7 @@ function QueueItemRow({
         {index + 1}
       </span>
 
-      <CoverThumb src={item.game.header_image} alt={item.game.name} />
+      <CoverThumb src={item.game.header_image} alt="" />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink-100 truncate mb-1">{item.game.name}</p>

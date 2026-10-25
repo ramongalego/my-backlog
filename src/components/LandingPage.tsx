@@ -318,7 +318,10 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 them.
               </p>
               <p className="mt-3 text-sm text-ink-400 h-5 leading-5" aria-live="off">
-                <span key={teaseIndex} className="inline-block animate-[resultPop_0.3s_ease-out]">
+                <span
+                  key={teaseIndex}
+                  className="inline-block animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
+                >
                   {HERO_TEASES[teaseIndex]}
                 </span>
               </p>
@@ -419,12 +422,12 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </div>
               <div
                 key={pickedGame.title}
-                className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out]"
+                className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
                 aria-live="polite"
               >
                 <Image
                   src={pickedGame.image}
-                  alt={pickedGame.title}
+                  alt=""
                   width={56}
                   height={56}
                   className="w-14 h-14 rounded-lg object-cover shrink-0"
@@ -454,7 +457,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   <div key={game.title} className="flex items-center gap-3.5 px-5 py-3">
                     <Image
                       src={game.image}
-                      alt={game.title}
+                      alt=""
                       width={36}
                       height={36}
                       className="w-9 h-9 rounded-md object-cover shrink-0"
@@ -514,7 +517,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                       </span>
                       <Image
                         src={game.image}
-                        alt={game.name}
+                        alt=""
                         width={24}
                         height={24}
                         className="w-6 h-6 rounded object-cover shrink-0"
@@ -528,7 +531,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               <div className="px-5 py-4 flex items-start gap-4">
                 <Image
                   src="/lp_hk.jpeg"
-                  alt="Hollow Knight"
+                  alt=""
                   width={40}
                   height={40}
                   className="w-10 h-10 rounded-lg object-cover shrink-0"

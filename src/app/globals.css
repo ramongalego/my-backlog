@@ -155,16 +155,6 @@
   border-color: var(--color-accent-500);
 }
 
-/* Stats bars grow in once, from the baseline */
-@keyframes barGrow {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-
 /* Result card swap when the mood picker returns a new game */
 @keyframes resultPop {
   from {
@@ -177,37 +167,10 @@
   }
 }
 
-/* Celebration animation */
-@keyframes celebration {
-  0% {
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-.animate-celebration {
-  animation: celebration 3s ease-out forwards;
-}
-
-/* Respect the OS "reduce motion" setting. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+/* "Reduce motion" is handled where motion happens rather than by a global
+   kill switch, which also froze loading spinners and other useful feedback:
+   smooth scrolling goes through scrollBehavior(), and movement-based
+   animations use motion-reduce:animate-none. */
 
 /* Horizontally scrollable rows (filter pills) without a visible scrollbar. */
 @utility scrollbar-none {
