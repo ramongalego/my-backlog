@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
-import { checkRateLimit, getClientIp, type RateLimitConfig } from '@/lib/rate-limit';
+import {
+  checkRateLimit,
+  getClientIp,
+  ipRateLimitKey,
+  type RateLimitConfig,
+} from '@/lib/rate-limit';
 
 const config: RateLimitConfig = { limit: 3, windowMs: 60_000 };
 
@@ -116,5 +121,27 @@ describe('getClientIp', () => {
     const ip = getClientIp(makeRequest());
 
     expect(ip).toBe('unknown');
+  });
+});
+
+describe('ipRateLimitKey', () => {
+  it('keeps IPv4 addresses as-is', () => {
+    expect(ipRateLimitKey('203.0.113.7')).toBe('203.0.113.7');
+  });
+
+  it('groups IPv6 addresses by their /64 prefix', () => {
+    expect(ipRateLimitKey('2001:db8:abcd:12:1::5')).toBe('2001:db8:abcd:12::/64');
+    expect(ipRateLimitKey('2001:db8:abcd:12:ffff::1')).toBe('2001:db8:abcd:12::/64');
+  });
+
+  it('expands compressed addresses before taking the prefix', () => {
+    expect(ipRateLimitKey('2001:db8::1')).toBe('2001:db8:0:0::/64');
+    expect(ipRateLimitKey('2001:DB8:0000:0012::9')).toBe('2001:db8:0:12::/64');
+    expect(ipRateLimitKey('::1')).toBe('0:0:0:0::/64');
+  });
+
+  it('treats IPv4-mapped IPv6 as IPv4 and ignores zone ids', () => {
+    expect(ipRateLimitKey('::ffff:203.0.113.7')).toBe('203.0.113.7');
+    expect(ipRateLimitKey('fe80::1%eth0')).toBe('fe80:0:0:0::/64');
   });
 });

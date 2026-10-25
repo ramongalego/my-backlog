@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
 
 // header_image is re-fetched server-side by the OG route (next/og ImageResponse
 // requires a raw <img src>). Restrict it to Steam's CDNs so we can't be tricked
@@ -43,7 +43,7 @@ const shareSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const ip = getClientIp(request);
+  const ip = ipRateLimitKey(getClientIp(request));
   const rateLimitResult = checkRateLimit(`share:${ip}`, RATE_LIMITS.gameStatus);
 
   if (!rateLimitResult.success) {

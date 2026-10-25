@@ -10,7 +10,7 @@ import {
 } from '@/lib/steam/api';
 import { getSteamTags } from '@/lib/steam/store-api';
 import { getSteamApiKey, getOpenAIApiKey } from '@/lib/env.server';
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkSharedRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
 import { buildRoastPrompt } from '@/lib/roast/prompt';
 import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
 import { getBlacklistMessage } from '@/lib/roast/blacklist';
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ blacklisted: true, message: blacklistMessage });
   }
 
-  const ip = getClientIp(request);
-  const lookupLimit = checkRateLimit(`roast-lookup:${ip}`, RATE_LIMITS.roastLookup);
+  const ip = ipRateLimitKey(getClientIp(request));
+  const lookupLimit = await checkSharedRateLimit(`roast-lookup:${ip}`, RATE_LIMITS.roastLookup);
   if (!lookupLimit.success) {
     return jsonError('Too many requests. Try again later.', 429, {
       'Retry-After': Math.ceil((lookupLimit.resetAt - Date.now()) / 1000).toString(),
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   if (cached) return NextResponse.json(cached);
 
   // Rate limit only when we need to generate a new roast
-  const rateLimitResult = checkRateLimit(`roast:${ip}`, RATE_LIMITS.roast);
+  const rateLimitResult = await checkSharedRateLimit(`roast:${ip}`, RATE_LIMITS.roast);
 
   if (!rateLimitResult.success) {
     return jsonError('Too many roasts. Try again later.', 429, {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
   // Global circuit breaker on fresh generations — bounds worst-case OpenAI spend
   // even if per-IP limits are bypassed by a distributed attacker. Checked last so
   // only requests that actually reach OpenAI count against it.
-  const globalLimit = checkRateLimit('roast:global', RATE_LIMITS.roastGlobal);
+  const globalLimit = await checkSharedRateLimit('roast:global', RATE_LIMITS.roastGlobal);
   if (!globalLimit.success) {
     return jsonError('Roasts are temporarily unavailable. Try again tomorrow.', 429);
   }

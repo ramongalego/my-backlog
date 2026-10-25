@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { fetchAllRows } from '@/lib/supabase/paginate';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { getOpenAIApiKey } from '@/lib/env.server';
 import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
@@ -95,7 +95,10 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting per user (not IP) — authenticated endpoint, so each user gets
   // their own OpenAI quota and shared NATs don't throttle each other.
-  const rateLimitResult = checkRateLimit(`suggestion:${user.id}`, RATE_LIMITS.suggestion);
+  const rateLimitResult = await checkSharedRateLimit(
+    `suggestion:${user.id}`,
+    RATE_LIMITS.suggestion,
+  );
   if (!rateLimitResult.success) {
     return rateLimited(rateLimitResult);
   }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
 import { syncOwnedGames } from '@/lib/steam/library';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { getSteamApiKey } from '@/lib/env.server';
 
@@ -17,7 +17,10 @@ export async function POST() {
   }
 
   // Rate limiting per user (not IP) — this is an authenticated endpoint
-  const rateLimitResult = checkRateLimit(`steam-refresh:${user.id}`, RATE_LIMITS.steamRefresh);
+  const rateLimitResult = await checkSharedRateLimit(
+    `steam-refresh:${user.id}`,
+    RATE_LIMITS.steamRefresh,
+  );
   if (!rateLimitResult.success) {
     return rateLimited(rateLimitResult);
   }

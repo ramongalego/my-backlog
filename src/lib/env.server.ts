@@ -16,3 +16,9 @@ export function getSteamApiKey(): string {
 export function getOpenAIApiKey(): string {
   return required('OPENAI_API_KEY');
 }
+
+// A Supabase secret key (sb_secret_…), which bypasses RLS. The legacy
+// service_role JWT still works under its old variable name.
+export function getSupabaseSecretKey(): string {
+  return process.env.SUPABASE_SECRET_KEY || required('SUPABASE_SERVICE_ROLE_KEY');
+}

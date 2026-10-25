@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkSharedRateLimit } from '@/lib/rate-limit';
 
 const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
 
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const rateLimitResult = checkRateLimit(`support:${user.id}`, SUPPORT_RATE_LIMIT);
+  const rateLimitResult = await checkSharedRateLimit(`support:${user.id}`, SUPPORT_RATE_LIMIT);
   if (!rateLimitResult.success) {
     return NextResponse.json(
       { error: 'Too many tickets submitted. Please try again later.' },

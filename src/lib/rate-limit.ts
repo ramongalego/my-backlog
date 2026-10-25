@@ -1,3 +1,5 @@
+import { tryCreateServiceClient } from '@/lib/supabase/service';
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
@@ -77,6 +79,70 @@ export function checkRateLimit(identifier: string, config: RateLimitConfig): Rat
     remaining: config.limit - entry.count,
     resetAt: entry.resetAt,
   };
+}
+
+/**
+ * Rate-limit key for an IP. IPv6 users are typically assigned a whole /64, so
+ * keying on the full address would let one client rotate through endless keys.
+ */
+export function ipRateLimitKey(ip: string): string {
+  if (!ip.includes(':')) return ip;
+  const address = ip.split('%')[0]; // drop any zone id
+  // IPv4-mapped IPv6 (::ffff:1.2.3.4) is really an IPv4 client.
+  if (address.includes('.')) return address.slice(address.lastIndexOf(':') + 1);
+
+  // Expand "::" so the first four groups really are the /64 prefix.
+  const [head, tail] = address.split('::');
+  const headGroups = head ? head.split(':') : [];
+  const tailGroups = tail ? tail.split(':') : [];
+  const groups =
+    tail === undefined
+      ? headGroups
+      : [
+          ...headGroups,
+          ...Array(Math.max(0, 8 - headGroups.length - tailGroups.length)).fill('0'),
+          ...tailGroups,
+        ];
+  const prefix = groups.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, ''));
+  return `${prefix.join(':')}::/64`;
+}
+
+/**
+ * Like checkRateLimit, but counted in Postgres (consume_rate_limit) so the
+ * limit holds across serverless instances and cold starts. Falls back to the
+ * in-memory limiter if the service key or the function isn't available.
+ */
+export async function checkSharedRateLimit(
+  identifier: string,
+  config: RateLimitConfig,
+): Promise<RateLimitResult> {
+  const client = tryCreateServiceClient();
+  if (client) {
+    const { data, error } = await client
+      .rpc('consume_rate_limit', {
+        p_key: identifier,
+        p_limit: config.limit,
+        p_window_seconds: Math.ceil(config.windowMs / 1000),
+      })
+      .single<{ allowed: boolean; remaining: number; reset_at: string }>();
+    if (!error && data) {
+      return {
+        success: data.allowed,
+        limit: config.limit,
+        remaining: data.remaining,
+        resetAt: new Date(data.reset_at).getTime(),
+      };
+    }
+    warnSharedLimiterOnce(error);
+  }
+  return checkRateLimit(identifier, config);
+}
+
+let warnedSharedLimiter = false;
+function warnSharedLimiterOnce(error: unknown) {
+  if (warnedSharedLimiter) return;
+  warnedSharedLimiter = true;
+  console.error('Shared rate limiter unavailable, using in-memory fallback:', error);
 }
 
 export function getClientIp(request: Request): string {
