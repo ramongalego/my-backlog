@@ -83,29 +83,30 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-40 border-b border-ink-800 bg-ink-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 self-stretch">
             <Link href={user ? '/home' : '/'} className="flex items-center gap-2">
-              <Gamepad2 className="w-6 h-6 text-violet-400 shrink-0" aria-hidden="true" />
-              <span className="text-lg font-semibold text-zinc-100">MyBacklog</span>
+              <Gamepad2 className="w-6 h-6 text-accent-400 shrink-0" aria-hidden="true" />
+              <span className="text-lg font-semibold tracking-tight text-ink-50">MyBacklog</span>
             </Link>
             {isLoading && (
               <div className="hidden md:flex items-center gap-6">
-                <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
-                <div className="h-4 w-12 bg-zinc-800 rounded animate-pulse" />
-                <div className="h-4 w-11 bg-zinc-800 rounded animate-pulse" />
-                <div className="h-4 w-10 bg-zinc-800 rounded animate-pulse" />
-                <div className="h-4 w-9 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-4 w-10 bg-ink-800 rounded animate-pulse" />
+                <div className="h-4 w-12 bg-ink-800 rounded animate-pulse" />
+                <div className="h-4 w-11 bg-ink-800 rounded animate-pulse" />
+                <div className="h-4 w-10 bg-ink-800 rounded animate-pulse" />
+                <div className="h-4 w-9 bg-ink-800 rounded animate-pulse" />
               </div>
             )}
             {!isLoading && (
-              <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
+              <nav className="hidden md:flex self-stretch gap-6" aria-label="Main navigation">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`text-sm transition-colors hover:text-zinc-100 ${pathname === link.href ? 'text-zinc-100' : 'text-zinc-400'}`}
+                    aria-current={pathname === link.href ? 'page' : undefined}
+                    className={`relative flex items-center text-sm font-medium transition-colors hover:text-ink-50 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:transition-colors ${pathname === link.href ? 'text-ink-50 after:bg-accent-500' : 'text-ink-400 after:bg-transparent'}`}
                   >
                     {link.label}
                   </Link>
@@ -116,7 +117,7 @@ export function Header() {
 
           <div className="flex items-center gap-3">
             {isLoading ? (
-              <div className="w-10 h-10 bg-zinc-800 rounded animate-pulse" />
+              <div className="w-10 h-10 bg-ink-800 rounded animate-pulse" />
             ) : user ? (
               <UserMenu
                 user={user}
@@ -140,7 +141,7 @@ export function Header() {
             {!isLoading && navLinks.length > 0 && (
               <button
                 onClick={() => setMenuOpenedOn(mobileMenuOpen ? null : pathname)}
-                className="md:hidden p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+                className="md:hidden p-2 text-ink-400 hover:text-ink-100 transition-colors"
                 aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={mobileMenuOpen}
                 aria-controls="mobile-navigation"
@@ -155,7 +156,7 @@ export function Header() {
         {mobileMenuOpen && !isLoading && (
           <nav
             id="mobile-navigation"
-            className="md:hidden border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md"
+            className="md:hidden border-t border-ink-800 bg-ink-950"
             aria-label="Mobile navigation"
           >
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
@@ -164,7 +165,8 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   onClick={closeMobileMenu}
-                  className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? 'text-zinc-100 bg-zinc-800' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'}`}
+                  aria-current={pathname === link.href ? 'page' : undefined}
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? 'text-ink-50 bg-ink-800' : 'text-ink-400 hover:text-ink-100 hover:bg-ink-800/50'}`}
                 >
                   {link.label}
                 </Link>

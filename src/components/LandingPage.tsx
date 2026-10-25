@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
 import Image, { getImageProps } from 'next/image';
 import dynamic from 'next/dynamic';
@@ -22,13 +22,13 @@ const MOCK_LIBRARY = [
     image: '/lp_hades.jpg',
     title: 'Hades',
     status: 'Playing',
-    pill: 'bg-sky-500/15 text-sky-400',
+    pill: 'bg-accent-500 text-ink-950',
   },
   {
     image: '/lp_disco.jpeg',
     title: 'Disco Elysium',
     status: 'Backlog',
-    pill: 'bg-violet-500/15 text-violet-400',
+    pill: 'bg-ink-800 text-ink-300',
   },
   {
     image: '/lp_hk.jpeg',
@@ -46,26 +46,8 @@ const MOCK_LIBRARY = [
     image: '/lp_cyberpunk.jpg',
     title: 'Cyberpunk 2077',
     status: 'Backlog',
-    pill: 'bg-violet-500/15 text-violet-400',
+    pill: 'bg-ink-800 text-ink-300',
   },
-];
-
-const HERO_PARTICLES = [
-  { left: 8, top: 78, duration: 11, delay: 0 },
-  { left: 22, top: 88, duration: 14, delay: 2.5 },
-  { left: 38, top: 72, duration: 12, delay: 5 },
-  { left: 55, top: 90, duration: 15, delay: 1.2 },
-  { left: 68, top: 80, duration: 13, delay: 3.8 },
-  { left: 82, top: 85, duration: 11, delay: 6 },
-  { left: 92, top: 74, duration: 14, delay: 4.3 },
-];
-
-const CTA_PARTICLES = [
-  { left: 15, top: 82, duration: 12, delay: 0.5 },
-  { left: 32, top: 90, duration: 14, delay: 3 },
-  { left: 50, top: 78, duration: 11, delay: 1.8 },
-  { left: 70, top: 88, duration: 13, delay: 4.5 },
-  { left: 88, top: 80, duration: 15, delay: 2.2 },
 ];
 
 const HERO_TEASES = [
@@ -259,11 +241,81 @@ function pickGame(mood: Mood, energy: Energy, time: Time): PickerGame {
   return best;
 }
 
+// Box art for the hero shelf, in three columns. The middle column sits lower
+// so the covers read as a stack you're browsing, not a uniform grid.
+const HERO_SHELF: { image: string; title: string; playing?: boolean }[][] = [
+  [
+    { image: '/lp_eldenring.jpg', title: 'Elden Ring' },
+    { image: '/lp_stardew.png', title: 'Stardew Valley' },
+  ],
+  [
+    { image: '/lp_hades.jpg', title: 'Hades', playing: true },
+    { image: '/lp_outerwilds.jpg', title: 'Outer Wilds' },
+  ],
+  [
+    { image: '/lp_bg3.jpg', title: "Baldur's Gate 3" },
+    { image: '/lp_dave.webp', title: 'Dave the Diver' },
+  ],
+];
+
+const BREAKDOWN = [
+  { label: 'Finished', pct: 18, color: 'bg-emerald-500' },
+  { label: 'Dropped', pct: 9, color: 'bg-rose-500' },
+  { label: 'Backlog', pct: 73, color: 'bg-ink-500' },
+];
+
+function ChoiceGroup<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div>
+      <p className="text-sm text-ink-300 mb-2.5">{label}</p>
+      <div className="flex gap-1.5 flex-wrap" role="group" aria-label={label}>
+        {options.map((option) => {
+          const selected = option === value;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onChange(option)}
+              aria-pressed={selected}
+              className={`h-8 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                selected
+                  ? 'bg-ink-100 text-ink-950'
+                  : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
+              }`}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SectionCopy({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="max-w-lg">
+      <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-ink-50 leading-tight mb-5">
+        {title}
+      </h2>
+      <div className="space-y-4 text-ink-400 leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
 export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
-  const [statsVisible, setStatsVisible] = useState(false);
-  const statsRef = useRef<HTMLDivElement | null>(null);
 
   const [mood, setMood] = useState<Mood>('Adrenaline');
   const [energy, setEnergy] = useState<Energy>('High');
@@ -273,27 +325,11 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   const [teaseIndex, setTeaseIndex] = useState(0);
 
   useEffect(() => {
-    const el = statsRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setStatsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.4 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     // Keep the first tagline still for users who asked for reduced motion.
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const id = window.setInterval(() => {
       setTeaseIndex((i) => (i + 1) % HERO_TEASES.length);
-    }, 2800);
+    }, 3200);
     return () => window.clearInterval(id);
   }, []);
 
@@ -314,176 +350,127 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
     setIsAuthModalOpen(true);
   };
 
+  const primaryCta = user ? (
+    <Button size="lg" onClick={onConnectSteam}>
+      Connect Your Steam
+    </Button>
+  ) : (
+    <Button size="lg" onClick={() => openModal('signup')}>
+      Get Started
+    </Button>
+  );
+
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
+    <div className="min-h-screen bg-ink-950 flex flex-col">
       <main id="main-content" className="pt-16 flex-1">
         {/* ── Hero ── */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[900px] h-[600px] bg-violet-600/8 rounded-full blur-3xl animate-[orbBreathe_10s_ease-in-out_infinite]" />
-          </div>
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,26rem)] gap-14 lg:gap-20 items-center">
+            <div>
+              <h1 className="text-5xl md:text-6xl font-semibold text-ink-50 leading-[1.05] tracking-tight">
+                Stop scrolling.
+                <br />
+                <span className="text-accent-400">Start playing.</span>
+              </h1>
+              <p className="mt-6 text-lg md:text-xl text-ink-300 max-w-lg leading-relaxed">
+                Your Steam library has hundreds of games. We help you actually play them, and finish
+                them.
+              </p>
+              <p className="mt-3 text-sm text-ink-400 h-5 leading-5" aria-live="off">
+                <span key={teaseIndex} className="inline-block animate-[resultPop_0.3s_ease-out]">
+                  {HERO_TEASES[teaseIndex]}
+                </span>
+              </p>
 
-          {/* Drifting particles */}
-          <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
-            {HERO_PARTICLES.map((p, i) => (
-              <span
-                key={i}
-                className="absolute block w-1 h-1 rounded-full bg-violet-300/50"
-                style={{
-                  left: `${p.left}%`,
-                  top: `${p.top}%`,
-                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite backwards`,
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="relative max-w-4xl mx-auto px-6 py-32 md:py-48 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 mb-8">
-              <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-400" />
-              </span>
-              <span className="text-xs text-violet-300 font-medium tracking-wide">
-                Free forever · Syncs with Steam
-              </span>
+              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+                {primaryCta}
+                {user ? (
+                  <p className="text-sm text-ink-400">Free · syncs with your Steam library</p>
+                ) : (
+                  <button
+                    onClick={() => openModal('login')}
+                    className="text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
+                  >
+                    Already have an account?{' '}
+                    <span className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4">
+                      Sign in
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold text-zinc-100 leading-[1.1] tracking-tight mb-6">
-              Stop scrolling <br />
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-fuchsia-400 to-violet-400 bg-[length:200%_auto] animate-[gradientShimmer_8s_ease-in-out_infinite]">
-                Start playing
-              </span>
-            </h1>
-            <p className="text-xl text-zinc-400 mb-4 max-w-lg mx-auto leading-relaxed">
-              Your Steam library has hundreds of games. We help you actually play them, and finish
-              them.
-            </p>
-
-            <p className="text-sm mb-12 h-5 leading-5 text-center">
-              <span
-                key={teaseIndex}
-                className="inline-block text-violet-300/90 animate-[resultPop_0.4s_ease-out]"
-              >
-                {HERO_TEASES[teaseIndex]}
-              </span>
-            </p>
-
-            {user ? (
-              <Button size="lg" onClick={onConnectSteam}>
-                Connect Your Steam
-              </Button>
-            ) : (
-              <div className="flex flex-col items-center gap-4">
-                <Button size="lg" onClick={() => openModal('signup')}>
-                  Get Started
-                </Button>
-                <button
-                  onClick={() => openModal('login')}
-                  className="text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
-                >
-                  Already have an account? Sign in
-                </button>
-              </div>
-            )}
+            {/* Shelf of box art */}
+            <div
+              className="grid grid-cols-3 gap-3 sm:gap-4 max-w-sm sm:max-w-md lg:max-w-none"
+              aria-hidden="true"
+            >
+              {HERO_SHELF.map((column, c) => (
+                <div key={c} className={`space-y-3 sm:space-y-4 ${c === 1 ? 'pt-10' : ''}`}>
+                  {column.map((game, r) => (
+                    <div
+                      key={game.title}
+                      // Phones get one row of covers so the shelf doesn't fill the screen.
+                      className={`${r > 0 ? 'hidden sm:block ' : ''}relative aspect-[2/3] overflow-hidden rounded-lg bg-ink-900 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/10`}
+                    >
+                      <Image
+                        src={game.image}
+                        alt=""
+                        fill
+                        priority
+                        sizes="(max-width: 1024px) 30vw, 140px"
+                        className="object-cover"
+                      />
+                      {game.playing && (
+                        <span className="absolute left-2 bottom-2 z-10 inline-flex items-center gap-1.5 rounded-md bg-accent-500 px-2 py-0.5 text-xs font-semibold text-ink-950">
+                          Playing
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* ── Section 1: Game Picker ── */}
-        <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            <div>
-              <p className="text-xs text-violet-400 uppercase tracking-widest mb-4 font-medium">
-                Stop staring at your library
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
-                We pick the game. <span className="text-zinc-500">You just play it.</span>
-              </h2>
-              <p className="text-zinc-400 leading-relaxed mb-4">
+        {/* ── Game picker ── */}
+        <section className="border-t border-ink-900">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
+            <SectionCopy title="Three questions, one game for tonight">
+              <p>
                 You know the drill: you sit down to play, spend 20 minutes scrolling through your
-                library, and end up watching YouTube instead. We fix that.
+                library, and end up watching YouTube instead.
               </p>
-              <p className="text-zinc-500 leading-relaxed">
+              <p>
                 Answer three quick questions about your mood, your energy, and how much time you
-                have. We&apos;ll surface the right game from your own library.
+                have. We&apos;ll surface the right game from your own library. Try it:
               </p>
-            </div>
+            </SectionCopy>
 
-            {/* Picker — interactive */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5">
-              <div>
-                <p className="text-xs text-zinc-500 mb-3">What do you want to feel?</p>
-                <div className="flex gap-2 flex-wrap">
-                  {MOODS.map((m) => {
-                    const selected = m === mood;
-                    return (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setMood(m)}
-                        aria-pressed={selected}
-                        className={`px-3 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-                          selected
-                            ? 'bg-violet-600 text-white'
-                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500 mb-3">How much mental energy do you have?</p>
-                <div className="flex gap-2 flex-wrap">
-                  {ENERGIES.map((e) => {
-                    const selected = e === energy;
-                    return (
-                      <button
-                        key={e}
-                        type="button"
-                        onClick={() => setEnergy(e)}
-                        aria-pressed={selected}
-                        className={`px-3 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-                          selected
-                            ? 'bg-violet-600 text-white'
-                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                        }`}
-                      >
-                        {e}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500 mb-3">Time commitment?</p>
-                <div className="flex gap-2 flex-wrap">
-                  {TIMES.map((t) => {
-                    const selected = t === time;
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setTime(t)}
-                        aria-pressed={selected}
-                        className={`px-3 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-                          selected
-                            ? 'bg-violet-600 text-white'
-                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="h-px bg-zinc-800" />
+            <div className="bg-ink-900 rounded-2xl p-5 sm:p-6 space-y-5">
+              <ChoiceGroup
+                label="What do you want to feel?"
+                options={MOODS}
+                value={mood}
+                onChange={setMood}
+              />
+              <ChoiceGroup
+                label="How much mental energy do you have?"
+                options={ENERGIES}
+                value={energy}
+                onChange={setEnergy}
+              />
+              <ChoiceGroup
+                label="How much time do you have?"
+                options={TIMES}
+                value={time}
+                onChange={setTime}
+              />
               <div
                 key={pickedGame.title}
-                className="flex items-center gap-4 bg-zinc-950 rounded-xl p-4 border border-zinc-800/60 animate-[resultPop_0.35s_ease-out]"
+                className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out]"
+                aria-live="polite"
               >
                 <Image
                   src={pickedGame.image}
@@ -493,35 +480,28 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   className="w-14 h-14 rounded-lg object-cover shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-100 mb-0.5">{pickedGame.title}</p>
-                  <p className="text-xs text-zinc-500">{pickedGame.meta}</p>
+                  <p className="font-medium text-ink-50">{pickedGame.title}</p>
+                  <p className="text-sm text-ink-400">{pickedGame.meta}</p>
                 </div>
-                <div className="text-xs px-3 py-1.5 bg-violet-600 rounded-lg text-white shrink-0">
+                <span className="text-sm font-medium px-3 h-8 inline-flex items-center bg-accent-500 rounded-lg text-ink-950 shrink-0">
                   Play this
-                </div>
+                </span>
               </div>
             </div>
           </div>
         </section>
 
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="h-px bg-zinc-900" />
-        </div>
-
-        {/* ── Section 2: Library ── */}
-        <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            {/* Library mock */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden order-last lg:order-first">
-              <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-300">My Library</span>
-                <span className="text-xs text-zinc-600">
-                  <CountUp to={457} /> games
-                </span>
+        {/* ── Library ── */}
+        <section className="border-t border-ink-900">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
+            <div className="bg-ink-900 rounded-2xl overflow-hidden order-last lg:order-first">
+              <div className="px-5 py-4 border-b border-ink-800 flex items-center justify-between">
+                <span className="text-sm font-medium text-ink-200">My Library</span>
+                <span className="text-sm text-ink-400">457 games</span>
               </div>
-              <div className="divide-y divide-zinc-800/60">
-                {MOCK_LIBRARY.map((game, i) => (
-                  <div key={i} className="flex items-center gap-3.5 px-5 py-3.5">
+              <div className="divide-y divide-ink-800/70">
+                {MOCK_LIBRARY.map((game) => (
+                  <div key={game.title} className="flex items-center gap-3.5 px-5 py-3">
                     <Image
                       src={game.image}
                       alt={game.title}
@@ -529,18 +509,12 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                       height={36}
                       className="w-9 h-9 rounded-md object-cover shrink-0"
                     />
-                    <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">
+                    <span className="text-sm text-ink-200 flex-1 min-w-0 truncate">
                       {game.title}
                     </span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full shrink-0 inline-flex items-center gap-1.5 ${game.pill}`}
+                      className={`text-xs font-medium px-2 py-0.5 rounded-md shrink-0 ${game.pill}`}
                     >
-                      {game.status === 'Playing' && (
-                        <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
-                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-400" />
-                        </span>
-                      )}
                       {game.status}
                     </span>
                   </div>
@@ -548,65 +522,48 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </div>
             </div>
 
-            <div>
-              <p className="text-xs text-violet-400 uppercase tracking-widest mb-4 font-medium">
-                Everything in one place
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
-                Your backlog, <span className="text-zinc-500">under control.</span>
-              </h2>
-              <p className="text-zinc-400 leading-relaxed mb-4">
+            <SectionCopy title="Your whole Steam library, finally sorted">
+              <p>
                 Hundreds of games, bought across years of sales. You probably have no idea what you
                 actually own anymore.
               </p>
-              <p className="text-zinc-500 leading-relaxed">
+              <p>
                 MyBacklog pulls your full Steam library and lets you see it all clearly. Mark games
                 as playing, finished, dropped, or hidden. Rate the ones you finish, jot down your
-                thoughts. Filter and sort however you want. Know exactly what&apos;s waiting for
-                you.
+                thoughts. Filter and sort however you want.
               </p>
-            </div>
+            </SectionCopy>
           </div>
         </section>
 
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="h-px bg-zinc-900" />
-        </div>
-
-        {/* ── Section 3: Momentum ── */}
-        <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            <div>
-              <p className="text-xs text-violet-400 uppercase tracking-widest mb-4 font-medium">
-                Queue · Diary · Stats
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 leading-tight mb-6">
-                Build momentum. <span className="text-zinc-500">Watch the backlog shrink.</span>
-              </h2>
-              <p className="text-zinc-400 leading-relaxed mb-4">
+        {/* ── Momentum ── */}
+        <section className="border-t border-ink-900">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
+            <SectionCopy title="A queue, a diary, and stats that keep you finishing">
+              <p>
                 Finishing one game feels good. Finishing ten feels like you&apos;re actually making
-                progress. MyBacklog is built to keep that momentum going.
+                progress.
               </p>
-              <p className="text-zinc-500 leading-relaxed">
+              <p>
                 Queue up what&apos;s next so you never start a session without a plan. Log every
                 game you finish, with a rating and notes. Then open Stats and watch your completion
-                rate climb. The backlog was always finite. Now you&apos;ll believe it.
+                rate climb.
               </p>
-            </div>
+            </SectionCopy>
 
-            {/* Momentum mock */}
-            <div className="space-y-3">
-              {/* Queue */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-700">
-                <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Up next</p>
-                <div className="space-y-2.5">
+            <div className="bg-ink-900 rounded-2xl divide-y divide-ink-800">
+              <div className="px-5 py-4">
+                <p className="text-sm font-medium text-ink-200 mb-3">Up next</p>
+                <ol className="space-y-2.5">
                   {[
                     { name: 'Disco Elysium', image: '/lp_disco.jpeg' },
                     { name: 'Celeste', image: '/lp_celeste.png' },
                     { name: 'Portal 2', image: '/lp_portal.jpg' },
                   ].map((game, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-700 font-mono w-4 shrink-0">{i + 1}</span>
+                    <li key={game.name} className="flex items-center gap-3">
+                      <span className="text-sm text-ink-500 w-3 shrink-0 tabular-nums">
+                        {i + 1}
+                      </span>
                       <Image
                         src={game.image}
                         alt={game.name}
@@ -614,14 +571,13 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                         height={24}
                         className="w-6 h-6 rounded object-cover shrink-0"
                       />
-                      <span className="text-sm text-zinc-400">{game.name}</span>
-                    </div>
+                      <span className="text-sm text-ink-300">{game.name}</span>
+                    </li>
                   ))}
-                </div>
+                </ol>
               </div>
 
-              {/* Diary entry */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-start gap-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-700">
+              <div className="px-5 py-4 flex items-start gap-4">
                 <Image
                   src="/lp_hk.jpeg"
                   alt="Hollow Knight"
@@ -630,39 +586,38 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                   className="w-10 h-10 rounded-lg object-cover shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-zinc-300">Hollow Knight</span>
-                    <span className="text-xs text-zinc-600">Jan 2025</span>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-ink-200">Hollow Knight</span>
+                    <span className="text-xs text-ink-400">Jan 2025</span>
                   </div>
-                  <div className="flex gap-0.5 mb-1.5">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-600 truncate">
+                  <p className="mt-1 flex items-center gap-1 text-sm text-ink-200">
+                    <Star
+                      className="w-3.5 h-3.5 fill-amber-400 text-amber-400"
+                      aria-hidden="true"
+                    />
+                    10/10
+                  </p>
+                  <p className="mt-1 text-sm text-ink-400 truncate">
                     One of the best I&apos;ve ever played.
                   </p>
                 </div>
               </div>
 
-              {/* Stats callout */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-700">
-                <div ref={statsRef} className="flex items-end gap-1 h-10">
-                  {[40, 60, 45, 80, 65, 90, 70].map((h, i) => (
-                    <div
-                      key={i}
-                      className={`w-3 bg-violet-500/30 rounded-sm origin-bottom ${
-                        statsVisible ? 'animate-[barGrow_0.7s_ease-out_backwards]' : 'scale-y-0'
-                      }`}
-                      style={{ height: `${h}%`, animationDelay: `${i * 90}ms` }}
-                    />
+              <div className="px-5 py-4">
+                <p className="text-sm font-medium text-ink-200 mb-3">Library breakdown</p>
+                <div className="flex h-2 rounded-full overflow-hidden gap-px">
+                  {BREAKDOWN.map((s) => (
+                    <div key={s.label} className={s.color} style={{ width: `${s.pct}%` }} />
                   ))}
                 </div>
-                <div>
-                  <p className="text-xl font-bold text-zinc-100">
-                    <CountUp to={47} trigger={statsVisible} />
-                  </p>
-                  <p className="text-xs text-zinc-500">games finished this year</p>
+                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                  {BREAKDOWN.map((s) => (
+                    <span key={s.label} className="flex items-center gap-2 text-sm text-ink-400">
+                      <span className={`w-2 h-2 rounded-full ${s.color}`} aria-hidden="true" />
+                      {s.label}
+                      <span className="text-ink-200 font-medium">{s.pct}%</span>
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -670,57 +625,17 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         </section>
 
         {/* ── Final CTA ── */}
-        <section className="relative overflow-hidden border-t border-zinc-900">
-          {/* Violet orb — bookend the hero */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          >
-            <div className="w-[700px] h-[420px] bg-violet-600/10 rounded-full blur-3xl animate-[orbBreathe_10s_ease-in-out_infinite]" />
-          </div>
-
-          {/* Drifting particles — mirror the hero */}
-          <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
-            {CTA_PARTICLES.map((p, i) => (
-              <span
-                key={i}
-                className="absolute block w-1 h-1 rounded-full bg-violet-300/50"
-                style={{
-                  left: `${p.left}%`,
-                  top: `${p.top}%`,
-                  animation: `floatUp ${p.duration}s ease-in-out ${p.delay}s infinite backwards`,
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="relative max-w-2xl mx-auto px-6 py-24 md:py-32 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4 leading-tight">
-              Start clearing your backlog{' '}
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-fuchsia-400 to-violet-400 bg-[length:200%_auto] animate-[gradientShimmer_8s_ease-in-out_infinite]">
-                tonight
-              </span>
-            </h2>
-            <p className="text-zinc-500 mb-10">
-              Free to use. Your Steam library, synced and ready to go.
-            </p>
-            {user ? (
-              <Button
-                size="lg"
-                onClick={onConnectSteam}
-                className="shadow-lg shadow-violet-600/25 transition-all hover:shadow-[0_0_32px_rgba(124,58,237,0.45)] hover:-translate-y-0.5"
-              >
-                Connect Your Steam
-              </Button>
-            ) : (
-              <Button
-                size="lg"
-                onClick={() => openModal('signup')}
-                className="shadow-lg shadow-violet-600/25 transition-all hover:shadow-[0_0_32px_rgba(124,58,237,0.45)] hover:-translate-y-0.5"
-              >
-                Get Started
-              </Button>
-            )}
+        <section className="border-t border-ink-900">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+            <div className="max-w-xl">
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-ink-50 leading-tight">
+                Start clearing your backlog tonight
+              </h2>
+              <p className="mt-3 text-ink-400">
+                Free to use. Your Steam library, synced and ready to go.
+              </p>
+            </div>
+            <div className="shrink-0">{primaryCta}</div>
           </div>
         </section>
       </main>
@@ -730,58 +645,4 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
       )}
     </div>
   );
-}
-
-function CountUp({
-  to,
-  durationMs = 1400,
-  trigger,
-}: {
-  to: number;
-  durationMs?: number;
-  trigger?: boolean;
-}) {
-  const [value, setValue] = useState(0);
-  const nodeRef = useRef<HTMLSpanElement | null>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    if (started.current) return;
-
-    const start = () => {
-      if (started.current) return;
-      started.current = true;
-      const startTime = performance.now();
-      const tick = (now: number) => {
-        const elapsed = now - startTime;
-        const t = Math.min(1, elapsed / durationMs);
-        // ease-out cubic
-        const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(to * eased));
-        if (t < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    };
-
-    if (trigger !== undefined) {
-      if (trigger) start();
-      return;
-    }
-
-    const el = nodeRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          start();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [to, durationMs, trigger]);
-
-  return <span ref={nodeRef}>{value.toLocaleString()}</span>;
 }

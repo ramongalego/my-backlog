@@ -53,8 +53,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         height: '630',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#09090b',
-        color: '#fafafa',
+        backgroundColor: '#0f0d0b',
+        color: '#f7f5f2',
         fontFamily: 'sans-serif',
         position: 'relative',
         overflow: 'hidden',
@@ -85,7 +85,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           left: 0,
           width: '1200px',
           height: '630px',
-          background: 'linear-gradient(to top, #09090b 30%, transparent 100%)',
+          background: 'linear-gradient(to top, #0f0d0b 30%, transparent 100%)',
           display: 'flex',
         }}
       />
@@ -114,7 +114,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           <span
             style={{
               fontSize: '20px',
-              color: '#a1a1aa',
+              color: '#a5a19c',
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
               fontWeight: 600,
@@ -149,7 +149,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           {steamHours > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '36px', fontWeight: 700 }}>{steamHours}h</span>
-              <span style={{ fontSize: '16px', color: '#71717a' }}>playtime</span>
+              <span style={{ fontSize: '16px', color: '#8d8884' }}>playtime</span>
             </div>
           )}
 
@@ -157,9 +157,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '36px', fontWeight: 700 }}>{data.rating}</span>
-                <span style={{ fontSize: '20px', color: '#71717a' }}>/10</span>
+                <span style={{ fontSize: '20px', color: '#8d8884' }}>/10</span>
               </div>
-              <span style={{ fontSize: '16px', color: '#71717a' }}>rating</span>
+              <span style={{ fontSize: '16px', color: '#8d8884' }}>rating</span>
             </div>
           )}
 
@@ -168,7 +168,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
               <span style={{ fontSize: '36px', fontWeight: 700 }}>
                 {data.games_finished}/{data.total_games}
               </span>
-              <span style={{ fontSize: '16px', color: '#71717a' }}>games finished</span>
+              <span style={{ fontSize: '16px', color: '#8d8884' }}>games finished</span>
             </div>
           )}
         </div>
@@ -184,7 +184,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
             gap: '8px',
           }}
         >
-          <span style={{ fontSize: '18px', color: '#52525b', fontWeight: 600 }}>MyBacklog</span>
+          <span style={{ fontSize: '18px', color: '#8d8884', fontWeight: 600 }}>MyBacklog</span>
         </div>
       </div>
     </div>,

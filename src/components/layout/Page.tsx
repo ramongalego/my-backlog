@@ -8,7 +8,7 @@ export const PAGE_CONTAINER = 'max-w-7xl mx-auto px-4 sm:px-6';
 /** Full-height page with the standard container. Modals can be passed as `overlay`. */
 export function Page({ children, overlay }: { children: ReactNode; overlay?: ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-ink-950">
       <main id="main-content" className={`pt-20 sm:pt-24 pb-16 ${PAGE_CONTAINER}`}>
         {children}
       </main>
@@ -37,10 +37,12 @@ export function PageHeader({
     <div className="mb-8 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-zinc-100">{title}</h1>
+          <h1 className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-ink-50">
+            {title}
+          </h1>
           {/* Rendered (empty) while a description is still loading, so the header keeps its height. */}
           {description !== undefined && (
-            <div className="text-sm text-zinc-500 mt-1 min-h-5">{description}</div>
+            <div className="text-sm text-ink-400 mt-1 min-h-5">{description}</div>
           )}
         </div>
         {actions && <div className="max-w-full">{actions}</div>}
@@ -50,7 +52,7 @@ export function PageHeader({
   );
 }
 
-/** Small uppercase label used above groups of content (stats cards, queue sections). */
+/** Heading for a group of content inside a page (stats cards, queue sections). */
 export function SectionLabel({
   children,
   className = '',
@@ -58,9 +60,5 @@ export function SectionLabel({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <h2 className={`text-xs font-semibold text-zinc-500 uppercase tracking-widest ${className}`}>
-      {children}
-    </h2>
-  );
+  return <h2 className={`text-sm font-semibold text-ink-200 ${className}`}>{children}</h2>;
 }

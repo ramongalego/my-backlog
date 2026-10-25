@@ -73,8 +73,8 @@ export function ResetPasswordForm() {
           <div className="p-3 rounded-full bg-emerald-500/10">
             <CheckCircle2 className="w-8 h-8 text-emerald-400" aria-hidden="true" />
           </div>
-          <p className="text-zinc-100 font-medium">Password updated</p>
-          <p className="text-sm text-zinc-400">You can now use your new password to sign in.</p>
+          <p className="text-ink-100 font-medium">Password updated</p>
+          <p className="text-sm text-ink-400">You can now use your new password to sign in.</p>
         </div>
         <Button className="w-full" onClick={() => router.push('/home')}>
           Continue
@@ -86,10 +86,7 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {serverError && (
-        <div
-          className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
-          role="alert"
-        >
+        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
           {serverError}
         </div>
       )}

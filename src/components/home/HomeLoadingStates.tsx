@@ -1,19 +1,22 @@
+import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { Skeleton } from '@/components/layout/Skeleton';
 
 // Skeletons for the home dashboard. They use the same sections, padding and
-// card sizes as HomeView and GameCarousel so the page doesn't shift on load.
+// tile sizes as HomeView and GameCarousel so the page doesn't shift on load.
 
 /** Full home skeleton: the "What are you playing next?" area plus carousels. */
 export function LoadingState() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col" role="status" aria-busy="true">
+    <div className="min-h-screen bg-ink-950 flex flex-col" role="status" aria-busy="true">
       <span className="sr-only">Loading…</span>
-      <div className="pt-16 flex-1">
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-20">
-          <div className="flex flex-col items-center gap-4">
-            <Skeleton className="h-6 w-48" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-12 w-44 rounded-lg" />
+      <div className="pt-20 sm:pt-24 pb-16 flex-1">
+        <section className={`${PAGE_CONTAINER} pb-14`}>
+          <div className="max-w-xl">
+            <Skeleton className="h-8 sm:h-9 w-72 sm:w-96 max-w-full" />
+            <Skeleton className="h-4 w-full mt-3" />
+            <Skeleton className="h-4 w-2/3 mt-2" />
+            <div className="mt-6 flex items-center gap-2">
+              <Skeleton className="h-12 w-40 rounded-lg" />
               <Skeleton className="h-12 w-32 rounded-lg" />
             </div>
           </div>
@@ -24,14 +27,14 @@ export function LoadingState() {
   );
 }
 
-/** Mirrors GameCarousel: heading + arrow buttons, then a row of w-64 cards. */
+/** Mirrors GameCarousel: heading + arrow buttons, then a row of w-64 tiles. */
 export function CarouselsLoadingState() {
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 space-y-16">
+    <section className={`${PAGE_CONTAINER} space-y-12`}>
       {[1, 2].map((i) => (
         <div key={i}>
-          <div className="flex items-center justify-between mb-6">
-            <Skeleton className="h-7 sm:h-8 w-56 sm:w-72" />
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-7 w-56 sm:w-72" />
             <div className="flex gap-2">
               <Skeleton className="w-9 h-9 rounded-full" />
               <Skeleton className="w-9 h-9 rounded-full" />
@@ -39,14 +42,11 @@ export function CarouselsLoadingState() {
           </div>
           <div className="flex gap-4 overflow-hidden pb-4">
             {[1, 2, 3, 4, 5].map((j) => (
-              <div
-                key={j}
-                className="shrink-0 w-64 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800"
-              >
-                <Skeleton className="h-32 rounded-none" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2 mt-2" />
+              <div key={j} className="shrink-0 w-64">
+                <Skeleton className="aspect-[460/215] rounded-lg" />
+                <div className="pt-3">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2 mt-1.5" />
                 </div>
               </div>
             ))}
@@ -60,17 +60,16 @@ export function CarouselsLoadingState() {
 /** Mirrors CurrentlyPlaying while the now-playing game is being resolved. */
 export function StatusLoadingState() {
   return (
-    <div className="w-full max-w-md mx-auto">
-      <Skeleton className="h-5 w-28 mx-auto mb-3" />
-      <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-        <Skeleton className="h-48 rounded-none" />
-        <div className="p-5 space-y-4">
-          <Skeleton className="h-7 w-3/4" />
-          <Skeleton className="h-4 w-1/3" />
-          <div className="flex gap-3 pt-2">
-            <Skeleton className="flex-1 h-10 rounded-lg" />
-            <Skeleton className="flex-1 h-10 rounded-lg" />
-          </div>
+    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
+      <Skeleton className="aspect-[460/215] rounded-xl" />
+      <div>
+        <Skeleton className="h-8 sm:h-9 w-3/4" />
+        <Skeleton className="h-4 w-24 mt-3" />
+        <Skeleton className="h-4 w-full max-w-sm mt-6" />
+        <Skeleton className="h-1.5 w-full max-w-sm mt-3 rounded-full" />
+        <div className="mt-6 flex gap-2">
+          <Skeleton className="h-10 w-28 rounded-lg" />
+          <Skeleton className="h-10 w-24 rounded-lg" />
         </div>
       </div>
     </div>

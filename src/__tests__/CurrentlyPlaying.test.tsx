@@ -88,7 +88,7 @@ describe('CurrentlyPlaying', () => {
       render(<CurrentlyPlaying game={createGame(600, 20)} {...defaultCallbacks} />);
 
       // 600 min = 10h played / 20h to beat = 50%
-      const bar = document.querySelector('.bg-sky-500');
+      const bar = screen.getByRole('progressbar');
       expect(bar).toBeInTheDocument();
       expect(bar).toHaveStyle({ width: '50%' });
     });
@@ -120,7 +120,7 @@ describe('CurrentlyPlaying', () => {
     it('should not render a progress bar when over estimate', () => {
       render(<CurrentlyPlaying game={createGame(1800, 20)} {...defaultCallbacks} />);
 
-      expect(document.querySelector('.bg-sky-500')).not.toBeInTheDocument();
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 
     it('should not show "Xh to beat" label when over estimate', () => {

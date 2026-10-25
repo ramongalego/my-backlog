@@ -22,7 +22,7 @@ export function GamesSort({ value, onChange }: GamesSortProps) {
       value={value}
       options={SORT_OPTIONS}
       onChange={onChange}
-      icon={<ArrowUpDown className="w-4 h-4 text-zinc-500" />}
+      icon={<ArrowUpDown className="w-4 h-4 text-ink-500" />}
       align="left"
     />
   );

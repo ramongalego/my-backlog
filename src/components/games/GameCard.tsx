@@ -1,18 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import {
-  Archive,
-  Ban,
-  Check,
-  EyeOff,
-  Gamepad2,
-  ListOrdered,
-  Pencil,
-  Play,
-  Star,
-  X,
-} from 'lucide-react';
+import { Ban, Check, EyeOff, Gamepad2, ListOrdered, Pencil, Play, Star, X } from 'lucide-react';
 import type { GameItem } from '@/hooks/useGamesPage';
 import { GameCardInfo } from './GameCardInfo';
 
@@ -26,12 +15,12 @@ const STATUS_BADGE: Record<
   string,
   { label: string; className: string; icon: React.ComponentType<{ className?: string }> }
 > = {
-  finished: { label: 'Finished', className: 'bg-emerald-950/95 text-emerald-400', icon: Check },
-  playing: { label: 'Playing', className: 'bg-sky-950/95 text-sky-400', icon: Play },
-  dropped: { label: 'Dropped', className: 'bg-rose-950/95 text-rose-400', icon: X },
-  wont_play: { label: "Won't Play", className: 'bg-amber-950/95 text-amber-400', icon: Ban },
-  hidden: { label: 'Hidden', className: 'bg-zinc-900/95 text-zinc-400', icon: EyeOff },
-  backlog: { label: 'Backlog', className: 'bg-violet-950/95 text-violet-400', icon: Archive },
+  finished: { label: 'Finished', className: 'bg-ink-950/90 text-emerald-400', icon: Check },
+  playing: { label: 'Playing', className: 'bg-accent-500 text-ink-950', icon: Play },
+  dropped: { label: 'Dropped', className: 'bg-ink-950/90 text-rose-400', icon: X },
+  wont_play: { label: "Won't Play", className: 'bg-ink-950/90 text-ink-300', icon: Ban },
+  hidden: { label: 'Hidden', className: 'bg-ink-950/90 text-ink-300', icon: EyeOff },
+  // Backlog is the default state, so it gets no badge.
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -56,11 +45,11 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
     // cards, so a large library scrolls smoothly without DOM virtualization.
     // contain-intrinsic-size reserves an approximate height so the scrollbar
     // stays stable before a card is first rendered.
-    <div className="group bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all sm:hover:scale-[1.02] [content-visibility:auto] [contain-intrinsic-size:auto_16rem]">
-      {/* Clickable image area */}
+    <div className="group min-w-0 [content-visibility:auto] [contain-intrinsic-size:auto_14rem]">
+      {/* Clickable cover art */}
       <button
         onClick={() => onOpenDetail(game.app_id)}
-        className="cursor-pointer relative h-40 sm:h-36 w-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500 select-none"
+        className="cursor-pointer relative block w-full aspect-[460/215] overflow-hidden rounded-lg bg-ink-900 select-none focus-visible:-outline-offset-2 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/8 after:transition-colors hover:after:ring-white/20"
         aria-label={`Open details for ${game.name}`}
       >
         {game.header_image ? (
@@ -69,23 +58,23 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
             alt={game.name}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
             draggable={false}
           />
         ) : (
-          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-            <Gamepad2 className="w-8 h-8 text-zinc-700" />
+          <div className="w-full h-full flex items-center justify-center">
+            <Gamepad2 className="w-8 h-8 text-ink-700" />
           </div>
         )}
 
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
           <Pencil className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
         </div>
 
         {queued ? (
           <div
-            className="absolute top-2 right-2 px-2 py-0.5 bg-sky-950/95 text-sky-400 text-xs font-medium rounded flex items-center gap-1"
+            className="absolute top-2 right-2 px-2 py-0.5 bg-ink-950/90 text-ink-200 text-xs font-medium rounded flex items-center gap-1"
             title="In playing queue"
           >
             <ListOrdered className="w-3 h-3" aria-hidden="true" />
@@ -97,15 +86,14 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
           </div>
         )}
         {game.status === 'finished' && game.rating != null && (
-          <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-zinc-950/90 text-xs font-medium rounded flex items-center gap-1">
+          <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-ink-950/90 text-xs font-medium rounded flex items-center gap-1">
             <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
-            <span className="text-zinc-200">{game.rating}/10</span>
+            <span className="text-ink-200">{game.rating}/10</span>
           </div>
         )}
       </button>
 
-      {/* Card info */}
-      <div className="p-4">
+      <div className="pt-3">
         <GameCardInfo
           appId={game.app_id}
           name={game.name}

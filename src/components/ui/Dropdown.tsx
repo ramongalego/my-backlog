@@ -91,7 +91,7 @@ export function Dropdown<T extends string>({
             return !o;
           });
         }}
-        className="flex items-center gap-2 text-zinc-400 text-base hover:text-zinc-200 transition-colors"
+        className="flex items-center gap-2 h-10 text-sm font-medium text-ink-300 hover:text-ink-50 transition-colors cursor-pointer"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -103,7 +103,7 @@ export function Dropdown<T extends string>({
         <ul
           ref={listRef}
           role="listbox"
-          className={`absolute top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg z-10 min-w-[140px] ${align === 'left' ? 'left-0' : 'right-0'}`}
+          className={`absolute top-full mt-1 bg-ink-900 border border-ink-700 rounded-lg shadow-lg z-10 min-w-[140px] ${align === 'left' ? 'left-0' : 'right-0'}`}
         >
           {options.map((option, i) => (
             <li key={option.value} role="option" aria-selected={value === option.value}>
@@ -115,14 +115,14 @@ export function Dropdown<T extends string>({
                 }}
                 onMouseEnter={() => setFocusedIndex(i)}
                 className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                  focusedIndex === i ? 'bg-zinc-800' : ''
+                  focusedIndex === i ? 'bg-ink-800' : ''
                 }`}
               >
-                <span className={value === option.value ? 'text-zinc-100' : 'text-zinc-400'}>
+                <span className={value === option.value ? 'text-ink-100' : 'text-ink-400'}>
                   {option.label}
                 </span>
                 {value === option.value && (
-                  <Check className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
+                  <Check className="w-3.5 h-3.5 text-ink-400" aria-hidden="true" />
                 )}
               </button>
             </li>

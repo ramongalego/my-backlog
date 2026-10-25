@@ -3,7 +3,7 @@ export function celebrateGameFinished() {
   // canvas-confetti out of the main bundle.
   import('canvas-confetti')
     .then(({ default: confetti }) => {
-      const colors = ['#a855f7', '#d946ef', '#fbbf24', '#f59e0b', '#ffffff'];
+      const colors = ['#f97934', '#ff9451', '#fbbf24', '#34d399', '#f7f5f2'];
 
       // Single satisfying burst from center
       confetti({

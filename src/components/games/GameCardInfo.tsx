@@ -20,7 +20,7 @@ export function GameMetaRow({
 }: GameMetaRowProps) {
   if (!mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat) return null;
   return (
-    <div className="flex items-center gap-3 text-xs text-zinc-500">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
       {mainStoryHours ? (
         <span className="flex items-center gap-1" title="Time to beat">
           <Clock className="w-3 h-3" aria-hidden="true" />
@@ -38,7 +38,7 @@ export function GameMetaRow({
       ) : null}
       {playtimeMinutes >= 60 ? (
         <span
-          className={`text-zinc-600${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}
+          className={`text-ink-500${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}
           title="Time played"
         >
           {Math.round(playtimeMinutes / 60)}h played
@@ -75,7 +75,7 @@ export function GameCardInfo({
         target="_blank"
         rel="noopener noreferrer"
         title={name}
-        className="group/title flex items-center gap-1 text-zinc-200 font-medium hover:text-white transition-colors cursor-pointer"
+        className="group/title flex items-center gap-1 text-ink-100 font-medium hover:text-ink-50 transition-colors cursor-pointer"
       >
         <span className="truncate min-w-0">{name}</span>
         <ExternalLink
@@ -83,7 +83,7 @@ export function GameCardInfo({
           aria-hidden="true"
         />
       </a>
-      <div className="mt-2">
+      <div className="mt-1">
         <GameMetaRow
           mainStoryHours={mainStoryHours}
           steamReviewScore={steamReviewScore}

@@ -49,20 +49,20 @@ export default function SharedRoastView({ steamId }: { steamId: string }) {
       {isPending && (
         <div className="text-center py-16">
           <div className="relative inline-block">
-            <div className="w-16 h-16 border-4 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
-            <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-violet-400" />
+            <div className="w-16 h-16 border-4 border-ink-700 border-t-accent-400 rounded-full animate-spin" />
+            <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-accent-400" />
           </div>
-          <p className="mt-6 text-zinc-400">Loading roast...</p>
+          <p className="mt-6 text-ink-400">Loading roast...</p>
         </div>
       )}
 
       {/* Error */}
       {error && !isPending && (
         <div className="text-center py-16">
-          <p className="text-zinc-400 mb-4">{error.message}</p>
+          <p className="text-ink-400 mb-4">{error.message}</p>
           <Link
             href="/roast"
-            className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+            className="text-sm text-accent-400 hover:text-accent-300 transition-colors"
           >
             Roast a profile
           </Link>
@@ -75,10 +75,7 @@ export default function SharedRoastView({ steamId }: { steamId: string }) {
       {/* CTA to roast another */}
       {result && !isPending && (
         <div className="text-center mt-6">
-          <Link
-            href="/roast"
-            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
+          <Link href="/roast" className="text-sm text-ink-500 hover:text-ink-300 transition-colors">
             Roast someone else
           </Link>
         </div>

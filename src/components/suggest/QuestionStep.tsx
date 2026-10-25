@@ -11,23 +11,23 @@ interface QuestionStepProps<T> {
 export function QuestionStep<T>({ title, options, onSelect }: QuestionStepProps<T>) {
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 text-center mb-8">{title}</h2>
+      <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-ink-50 text-center mb-8">
+        {title}
+      </h2>
 
       <div className="grid gap-3 w-full max-w-md">
         {options.map((option) => (
           <button
             key={String(option.value)}
             onClick={() => onSelect(option.value)}
-            className="group flex items-center gap-4 p-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 rounded-xl transition-all cursor-pointer text-left"
+            className="group flex items-center gap-4 p-4 bg-ink-800/60 hover:bg-ink-800 rounded-xl transition-colors cursor-pointer text-left"
           >
-            <option.icon className={`w-5 h-5 shrink-0 transition-colors ${option.iconClassName}`} />
+            <option.icon className="w-5 h-5 shrink-0 text-ink-400 group-hover:text-accent-400 transition-colors" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-zinc-100 group-hover:text-white transition-colors">
+              <p className="font-medium text-ink-100 group-hover:text-ink-50 transition-colors">
                 {option.label}
               </p>
-              <p className="text-sm text-zinc-500 group-hover:text-zinc-400 transition-colors">
-                {option.description}
-              </p>
+              <p className="text-sm text-ink-400">{option.description}</p>
             </div>
           </button>
         ))}

@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { Archive, Gamepad2, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import {
   DndContext,
   DragOverlay,
@@ -35,21 +36,21 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
     return (
-      <div className="relative w-16 h-10 sm:w-24 sm:h-[60px] rounded overflow-hidden shrink-0">
+      <div className="relative w-16 h-[30px] sm:w-28 sm:h-[52px] rounded-md overflow-hidden shrink-0 bg-ink-800">
         <Image
           src={src}
           alt={alt}
           fill
           className="object-cover"
-          sizes="(max-width: 640px) 64px, 96px"
+          sizes="(max-width: 640px) 64px, 112px"
           quality={90}
         />
       </div>
     );
   }
   return (
-    <div className="w-16 h-10 sm:w-24 sm:h-[60px] bg-zinc-800 rounded flex items-center justify-center shrink-0">
-      <Gamepad2 className="w-4 h-4 text-zinc-600" />
+    <div className="w-16 h-[30px] sm:w-28 sm:h-[52px] bg-ink-800 rounded-md flex items-center justify-center shrink-0">
+      <Gamepad2 className="w-4 h-4 text-ink-500" />
     </div>
   );
 }
@@ -82,95 +83,74 @@ function NowPlayingRow({
       ? Math.min((playedHours / estimateHours) * 100, 100)
       : null;
 
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-3 sm:p-4">
-      <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-        <span className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
-          <Play className="w-3.5 h-3.5 fill-sky-400" />
-        </span>
+  const secondaryAction =
+    'cursor-pointer flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
 
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-ink-900 rounded-xl p-4">
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         <GameThumbnail src={game.header_image} alt={game.name} />
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-zinc-100 sm:truncate mb-1">{game.name}</p>
-          {isPastEstimate ? (
-            <p className="text-xs mt-0.5">
-              <span className="text-amber-400">{playedHours}h played</span>
-              <span className="text-zinc-500"> · past the ~{estimateHours}h estimate</span>
-            </p>
-          ) : progressPct !== null ? (
-            <div className="w-fit">
-              <p className="text-xs text-zinc-500 mt-0.5">
-                {playedHours}h played · ~{estimateHours}h to beat
+          <p className="font-medium text-ink-50 sm:truncate">{game.name}</p>
+          <p className="mt-0.5 flex items-center gap-2 text-xs font-medium text-accent-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-500" aria-hidden="true" />
+            Playing now
+          </p>
+          <div className="mt-2">
+            {isPastEstimate ? (
+              <p className="text-xs tabular-nums">
+                <span className="text-ink-200">{playedHours}h played</span>
+                <span className="text-ink-400"> · past the ~{estimateHours}h estimate</span>
               </p>
-              <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full bg-sky-500 rounded-full"
-                  style={{ width: `${progressPct}%` }}
-                />
+            ) : progressPct !== null ? (
+              <div className="max-w-56">
+                <p className="text-xs text-ink-400 tabular-nums">
+                  {playedHours}h played · ~{estimateHours}h to beat
+                </p>
+                <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
+                  <div
+                    className="h-full bg-accent-500 rounded-full"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          ) : (
-            <GameMetaRow
-              mainStoryHours={estimateHours}
-              steamReviewScore={game.steam_review_score}
-              playtimeMinutes={game.playtime_forever}
-              deckCompat={game.deck_compat}
-            />
-          )}
+            ) : (
+              <GameMetaRow
+                mainStoryHours={estimateHours}
+                steamReviewScore={game.steam_review_score}
+                playtimeMinutes={game.playtime_forever}
+                deckCompat={game.deck_compat}
+              />
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="shrink-0">
-        <div className="flex items-center justify-center sm:justify-start gap-2">
-          <button
-            onClick={onFinish}
-            disabled={isLoading}
-            className="cursor-pointer h-8 flex items-center gap-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
-          >
-            <Check className="w-3.5 h-3.5" />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 shrink-0">
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onFinish} disabled={isLoading} className="cursor-pointer">
+            <Check className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Finish</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={onDrop}
             disabled={isLoading}
-            className="cursor-pointer h-8 flex items-center gap-1.5 px-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+            className="cursor-pointer"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Drop</span>
-          </button>
-          <button
-            onClick={onMoveToQueue}
-            disabled={isLoading}
-            className="hidden sm:flex cursor-pointer items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
-          >
-            <ListOrdered className="w-3.5 h-3.5" />
-            <span>Move to Queue</span>
-          </button>
-          <button
-            onClick={onMoveToBacklog}
-            disabled={isLoading}
-            className="hidden sm:flex cursor-pointer items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
-          >
-            <Archive className="w-3.5 h-3.5" />
-            <span>Move to Backlog</span>
-          </button>
+          </Button>
         </div>
-        <div className="flex items-center justify-center gap-3 mt-2 sm:hidden">
-          <button
-            onClick={onMoveToQueue}
-            disabled={isLoading}
-            className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
-          >
-            <ListOrdered className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-4">
+          <button onClick={onMoveToQueue} disabled={isLoading} className={secondaryAction}>
+            <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Move to Queue</span>
           </button>
-          <button
-            onClick={onMoveToBacklog}
-            disabled={isLoading}
-            className="cursor-pointer flex items-center gap-1.5 px-2 py-1.5 disabled:opacity-50 text-zinc-500 hover:text-zinc-300 text-xs font-medium transition-colors"
-          >
-            <Archive className="w-3.5 h-3.5" />
+          <button onClick={onMoveToBacklog} disabled={isLoading} className={secondaryAction}>
+            <Archive className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Move to Backlog</span>
           </button>
         </div>
@@ -211,18 +191,18 @@ function QueueItemRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-800 p-3 sm:p-4 transition-opacity ${
+      className={`flex items-center gap-3 sm:gap-4 rounded-lg px-2 py-3 sm:px-3 transition-[opacity,background-color] ${
         isDragging ? 'opacity-0' : 'opacity-100'
-      } ${isOverlay ? 'shadow-2xl scale-[1.02] border-zinc-600' : ''}`}
+      } ${isOverlay ? 'bg-ink-800 shadow-xl shadow-black/40' : 'hover:bg-ink-900'}`}
     >
-      <span className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-zinc-800 text-zinc-400 text-sm font-semibold shrink-0">
+      <span className="w-5 text-right text-sm font-medium text-ink-500 tabular-nums shrink-0">
         {index + 1}
       </span>
 
       <GameThumbnail src={item.game.header_image} alt={item.game.name} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-100 truncate mb-1">{item.game.name}</p>
+        <p className="text-sm font-medium text-ink-100 truncate mb-1">{item.game.name}</p>
         <GameMetaRow
           mainStoryHours={item.game.main_story_hours}
           steamReviewScore={item.game.steam_review_score}
@@ -234,20 +214,21 @@ function QueueItemRow({
 
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {canPlay && (
-          <button
+          <Button
+            size="sm"
             onClick={() => onPick(item.app_id)}
             disabled={isLoading}
             aria-label={`Play ${item.game.name}`}
-            className="cursor-pointer flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+            className="cursor-pointer px-2.5 sm:px-3"
           >
-            <Play className="w-3.5 h-3.5 fill-white" aria-hidden="true" />
+            <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
             <span className="hidden sm:inline">Play</span>
-          </button>
+          </Button>
         )}
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1.5 text-zinc-500 hover:text-zinc-400 transition-colors rounded"
+          className="cursor-grab active:cursor-grabbing p-1.5 text-ink-500 hover:text-ink-200 transition-colors rounded"
           aria-label={`Reorder ${item.game.name}`}
         >
           <GripVertical className="w-4 h-4" aria-hidden="true" />
@@ -256,7 +237,8 @@ function QueueItemRow({
           onClick={() => onRemove(item.app_id)}
           disabled={isLoading}
           title="Remove from queue"
-          className="cursor-pointer p-1.5 text-zinc-600 hover:text-zinc-400 disabled:opacity-50 transition-colors rounded"
+          aria-label={`Remove ${item.game.name} from queue`}
+          className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 disabled:opacity-50 transition-colors rounded"
         >
           <X className="w-4 h-4" />
         </button>
@@ -333,23 +315,26 @@ export default function PlayingQueueView() {
         </>
       }
     >
-      <PageHeader title="Playing Queue" description="Your upcoming games" />
+      <PageHeader
+        title="Playing Queue"
+        description="What you're playing now and what's up next. Drag to reorder."
+      />
 
       {isLoading ? (
         <QueueListSkeleton />
       ) : isEmpty ? (
-        <div className="text-center py-16">
-          <ListOrdered className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
-          <p className="text-zinc-500">Your queue is empty.</p>
-          <p className="text-zinc-500 text-sm mt-1">
+        <div className="py-16 flex flex-col items-center text-center">
+          <ListOrdered className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
+          <p className="text-ink-200 font-medium">Your queue is empty.</p>
+          <p className="text-ink-400 text-sm mt-1 max-w-sm">
             Pick a game to play first, then queue up what&apos;s next from your library.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div>
           {currentlyPlaying && (
             <>
-              <SectionLabel className="pb-1">Now Playing</SectionLabel>
+              <SectionLabel className="sr-only">Now Playing</SectionLabel>
               <NowPlayingRow
                 game={currentlyPlaying}
                 onFinish={handleFinish}
@@ -362,7 +347,7 @@ export default function PlayingQueueView() {
           )}
 
           {currentlyPlaying && queue.length > 0 && (
-            <SectionLabel className="pt-4 pb-1">Up Next</SectionLabel>
+            <SectionLabel className="mt-10 mb-2">Up Next</SectionLabel>
           )}
 
           {queue.length > 0 && (
@@ -377,7 +362,7 @@ export default function PlayingQueueView() {
                 items={queue.map((q) => q.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-3">
+                <div className="divide-y divide-ink-800/70">
                   {queue.map((item, index) => (
                     <QueueItemRow
                       key={item.id}

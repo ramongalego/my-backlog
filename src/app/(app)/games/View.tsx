@@ -9,20 +9,28 @@ import { GamesFilter } from '@/components/games/GamesFilter';
 import { GamesPageSkeleton } from '@/components/games/GamesPageSkeleton';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
-import { useGamesPage } from '@/hooks/useGamesPage';
+import { useGamesPage, type GameFilter } from '@/hooks/useGamesPage';
 import { Page, PageHeader } from '@/components/layout/Page';
 
-function EmptyState({ searching }: { searching: boolean }) {
+const EMPTY_COPY: Record<GameFilter, string> = {
+  all: 'Your Steam library is empty, or still syncing.',
+  backlog: "Your backlog is clear. Games you haven't started or decided on show up here.",
+  finished:
+    'Nothing finished yet. Mark a game as finished from its details to log it in your diary.',
+  dropped: 'No dropped games. Games you give up on end up here.',
+  wont_play: "Nothing marked Won't Play. Use it for games you never plan to start.",
+  hidden: 'No hidden games.',
+};
+
+function EmptyState({ searching, filter }: { searching: boolean; filter: GameFilter }) {
   return (
-    <div className="text-center py-16">
-      <Gamepad2 className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
-      <p className="text-zinc-500">
+    <div className="py-16 flex flex-col items-center text-center">
+      <Gamepad2 className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
+      <p className="text-ink-200 font-medium">
         {searching ? 'No games match your search.' : 'Nothing here yet.'}
       </p>
-      <p className="text-zinc-600 text-sm mt-1">
-        {searching
-          ? 'Try a different search or switch filters.'
-          : 'Games will show up here once they match this filter.'}
+      <p className="text-ink-400 text-sm mt-1 max-w-sm">
+        {searching ? 'Try a different name or tag, or switch filters.' : EMPTY_COPY[filter]}
       </p>
     </div>
   );
@@ -104,8 +112,8 @@ export default function GamesView() {
         title="My Games"
         description={
           <span className="flex flex-wrap items-center gap-1" role="status" aria-live="polite">
-            <span>{counts[filter]}</span>
-            {searchQuery && <span className="text-violet-400 font-medium">{searchQuery}</span>}
+            <span className="tabular-nums">{counts[filter]}</span>
+            {searchQuery && <span className="text-ink-100 font-medium">“{searchQuery}”</span>}
             <span>
               {counts[filter] === 1 ? 'game' : 'games'}{' '}
               {filter === 'all'
@@ -131,10 +139,10 @@ export default function GamesView() {
       </PageHeader>
 
       {visibleGames.length === 0 ? (
-        <EmptyState searching={searchQuery.trim().length > 0} />
+        <EmptyState searching={searchQuery.trim().length > 0} filter={filter} />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
             {visibleGames.map((game) => (
               <GameCard
                 key={game.app_id}

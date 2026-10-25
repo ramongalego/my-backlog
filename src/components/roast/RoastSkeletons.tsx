@@ -8,7 +8,7 @@ export function RoastFormSkeleton() {
         <Skeleton className="h-12 flex-1 rounded-xl" />
         <Skeleton className="h-12 w-28 rounded-xl" />
       </div>
-      <Skeleton className="h-3 w-72 max-w-full mt-2" />
+      <Skeleton className="h-4 w-80 max-w-full mt-2" />
     </div>
   );
 }
@@ -21,7 +21,7 @@ export function RoastResultSkeleton() {
         <Skeleton className="w-9 h-9 rounded-md" />
         <Skeleton className="h-4 w-64 max-w-[70%]" />
       </div>
-      <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl space-y-3">
+      <div className="p-5 sm:p-6 bg-ink-900 rounded-xl space-y-3">
         {['w-full', 'w-11/12', 'w-full', 'w-4/5', 'w-full', 'w-2/3'].map((w, i) => (
           <Skeleton key={i} className={`h-4 ${w}`} />
         ))}

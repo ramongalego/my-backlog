@@ -53,7 +53,7 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
   return (
     <div className="space-y-6">
       {/* Profile strip */}
-      <div className="flex items-center gap-2 text-sm text-zinc-500">
+      <div className="flex items-center gap-2 text-sm text-ink-500">
         <Image
           src={result.profile.avatar}
           alt={result.profile.name}
@@ -65,21 +65,23 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
           href={result.profile.profileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="font-medium text-ink-400 hover:text-ink-200 transition-colors"
         >
           {result.profile.name}
         </a>
-        <span className="text-zinc-700">&middot;</span>
+        <span className="text-ink-700">&middot;</span>
         <span>{result.stats.totalGames} games</span>
-        <span className="text-zinc-700">&middot;</span>
+        <span className="text-ink-700">&middot;</span>
         <span>{result.stats.totalHours.toLocaleString()}h played</span>
-        <span className="text-zinc-700">&middot;</span>
+        <span className="text-ink-700">&middot;</span>
         <span>{result.stats.neverPlayed} never launched</span>
       </div>
 
       {/* The roast */}
-      <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <div className="text-zinc-300 leading-relaxed whitespace-pre-line">{result.roast}</div>
+      <div className="p-5 sm:p-6 bg-ink-900 rounded-xl">
+        <div className="text-ink-200 leading-relaxed whitespace-pre-line max-w-[68ch]">
+          {result.roast}
+        </div>
       </div>
 
       {/* Actions */}
@@ -89,36 +91,36 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
           role="group"
           aria-labelledby="roast-share-heading"
         >
-          <h2 id="roast-share-heading" className="text-xs uppercase tracking-wider text-zinc-600">
+          <h2 id="roast-share-heading" className="text-sm font-medium text-ink-300">
             Share
           </h2>
           <div className="flex items-center gap-4">
             <button
               onClick={handleReddit}
               aria-label="Share on Reddit"
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
             >
               <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Reddit</span>
             </button>
-            <span className="text-zinc-700" aria-hidden="true">
+            <span className="text-ink-700" aria-hidden="true">
               &middot;
             </span>
             <button
               onClick={handleTwitter}
               aria-label="Share on Twitter"
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
             >
               <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Twitter</span>
             </button>
-            <span className="text-zinc-700" aria-hidden="true">
+            <span className="text-ink-700" aria-hidden="true">
               &middot;
             </span>
             <button
               onClick={handleCopyLink}
               aria-label="Copy share link"
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
             >
               {copied ? (
                 <>
@@ -137,7 +139,7 @@ export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
         {onRoastAnother && (
           <button
             onClick={onRoastAnother}
-            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
           >
             Roast someone else
           </button>

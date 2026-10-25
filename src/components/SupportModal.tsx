@@ -65,7 +65,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
     <Modal isOpen={open} onClose={handleClose} title="Report an issue" size="md">
       <div className="space-y-4">
         <div>
-          <p className="mb-2 text-xs font-medium text-zinc-400">Type</p>
+          <p className="mb-2 text-xs font-medium text-ink-400">Type</p>
           <div className="flex gap-2">
             {(Object.keys(TYPE_LABELS) as TicketType[]).map((t) => (
               <button
@@ -74,8 +74,8 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
                 onClick={() => setType(t)}
                 className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs transition-colors ${
                   type === t
-                    ? 'border-zinc-600 bg-zinc-800 text-zinc-100 font-medium'
-                    : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                    ? 'border-ink-600 bg-ink-800 text-ink-100 font-medium'
+                    : 'border-ink-700 text-ink-400 hover:bg-ink-800 hover:text-ink-200'
                 }`}
               >
                 {TYPE_LABELS[t]}
@@ -85,7 +85,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
         </div>
 
         <div>
-          <label htmlFor="support-message" className="text-xs font-medium text-zinc-400">
+          <label htmlFor="support-message" className="text-xs font-medium text-ink-400">
             Message
           </label>
           <textarea
@@ -94,21 +94,21 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
             onChange={(e) => setMessage(e.target.value)}
             rows={5}
             placeholder="Describe your issue or feedback..."
-            className={`mt-1.5 block w-full resize-none rounded-lg border bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-colors ${
+            className={`mt-1.5 block w-full resize-none rounded-lg border bg-ink-800 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 transition-colors ${
               error
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-zinc-700 focus:border-zinc-600 focus:ring-zinc-600'
+                ? 'border-rose-500 focus:ring-rose-500'
+                : 'border-ink-700 focus:border-ink-600 focus:ring-ink-600'
             }`}
           />
-          {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
-          <p className="mt-1 text-xs text-zinc-600 text-right">{message.length}/2000</p>
+          {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
+          <p className="mt-1 text-xs text-ink-500 text-right">{message.length}/2000</p>
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
           <button
             type="button"
             onClick={handleClose}
-            className="cursor-pointer rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+            className="cursor-pointer rounded-lg px-3 py-1.5 text-sm text-ink-400 hover:bg-ink-800 hover:text-ink-200 transition-colors"
           >
             Cancel
           </button>
@@ -116,7 +116,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
             type="button"
             onClick={handleSubmit}
             disabled={pending}
-            className="cursor-pointer rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-1.5 text-sm font-medium text-white transition-colors"
+            className="cursor-pointer rounded-lg bg-accent-500 hover:bg-accent-400 disabled:opacity-50 px-4 py-1.5 text-sm font-medium text-ink-950 transition-colors"
           >
             {pending ? 'Sending...' : 'Send'}
           </button>

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/Button';
+import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { SyncProgress } from '@/components/SyncProgress';
@@ -88,72 +89,78 @@ export default function HomeView() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <main id="main-content" className="pt-16 flex-1">
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-20">
-          <h1 className="sr-only">Home</h1>
-          <div className="flex flex-col items-center text-center">
-            {/* Main content area */}
-            {isSyncing ? (
+    <div className="min-h-screen bg-ink-950 flex flex-col">
+      <main id="main-content" className="pt-20 sm:pt-24 pb-16 flex-1">
+        <section className={`${PAGE_CONTAINER} pb-14`}>
+          {isSyncing ? (
+            <>
+              <h1 className="sr-only">Home</h1>
               <SyncProgress progress={syncProgress} games={syncingGames} />
-            ) : currentlyPlaying ? (
-              <>
-                <CurrentlyPlaying
-                  game={currentlyPlaying}
-                  onFinish={handleFinishGame}
-                  onDrop={handleDropGame}
-                  onCancel={handleCancelGame}
-                  onMoveToQueue={handleMoveCurrentToQueue}
-                  isLoading={isStatusLoading}
-                />
-                <div className="flex flex-col items-center gap-1.5 mt-10">
+            </>
+          ) : currentlyPlaying ? (
+            <CurrentlyPlaying
+              game={currentlyPlaying}
+              onFinish={handleFinishGame}
+              onDrop={handleDropGame}
+              onCancel={handleCancelGame}
+              onMoveToQueue={handleMoveCurrentToQueue}
+              isLoading={isStatusLoading}
+              footer={
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <Button
-                    size="lg"
+                    variant="secondary"
                     className="cursor-pointer"
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
-                    <Sparkles className="w-5 h-5" />
+                    <Sparkles className="w-4 h-4" aria-hidden="true" />
                     <span>Pick My Next Game</span>
                   </Button>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="text-sm text-ink-400">
                     The picked game will be added to your{' '}
                     <Link
                       href="/playing-queue"
-                      className="font-medium text-zinc-400 hover:text-zinc-300 transition-colors"
+                      className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors"
                     >
                       queue
                     </Link>
+                    .
                   </p>
                 </div>
-              </>
-            ) : isStatusLoading ? (
-              <StatusLoadingState />
-            ) : (
-              <div className="flex flex-col items-center gap-4">
-                <p className="text-zinc-400">What are you playing next?</p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="lg"
-                    className="cursor-pointer"
-                    onClick={() => setIsSuggestionModalOpen(true)}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    <span>Pick My Game</span>
-                  </Button>
-                  <Button
-                    onClick={handleRandomPick}
-                    variant="secondary"
-                    size="lg"
-                    className="cursor-pointer"
-                    title="Pick a random game"
-                  >
-                    <Dices className="w-5 h-5" />
-                    <span>Random</span>
-                  </Button>
-                </div>
+              }
+            />
+          ) : isStatusLoading ? (
+            <StatusLoadingState />
+          ) : (
+            <div className="max-w-xl">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
+                What are you playing next?
+              </h1>
+              <p className="mt-2 text-ink-400">
+                Answer a few quick questions and we&apos;ll pick something from your backlog, or
+                leave it to chance.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-2">
+                <Button
+                  size="lg"
+                  className="cursor-pointer"
+                  onClick={() => setIsSuggestionModalOpen(true)}
+                >
+                  <Sparkles className="w-5 h-5" aria-hidden="true" />
+                  <span>Pick My Game</span>
+                </Button>
+                <Button
+                  onClick={handleRandomPick}
+                  variant="secondary"
+                  size="lg"
+                  className="cursor-pointer"
+                  title="Pick a random game"
+                >
+                  <Dices className="w-5 h-5" aria-hidden="true" />
+                  <span>Random</span>
+                </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         {/* Game carousels */}
@@ -166,7 +173,7 @@ export default function HomeView() {
             highlyRatedGames.length > 0 ||
             hiddenGems.length > 0 ||
             recentlyAdded.length > 0) && (
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 space-y-16">
+            <section className={`${PAGE_CONTAINER} space-y-12`}>
               {shortGames.length > 0 && (
                 <GameCarousel
                   title="Top-Rated Games Under 5 Hours"

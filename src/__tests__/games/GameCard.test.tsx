@@ -72,13 +72,18 @@ describe('GameCard', () => {
       ['finished', 'Finished'],
       ['dropped', 'Dropped'],
       ['hidden', 'Hidden'],
-      ['backlog', 'Backlog'],
       ['playing', 'Playing'],
       ['wont_play', "Won't Play"],
     ])('should show %s badge', (status, label) => {
       render(<GameCard game={createGame({ status })} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText(label)).toBeInTheDocument();
+    });
+
+    it('should not badge backlog games, since backlog is the default', () => {
+      render(<GameCard game={createGame({ status: 'backlog' })} onOpenDetail={mockOnOpenDetail} />);
+
+      expect(screen.queryByText('Backlog')).not.toBeInTheDocument();
     });
   });
 

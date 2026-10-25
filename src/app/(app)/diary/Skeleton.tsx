@@ -3,11 +3,11 @@ import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/
 /** Mirrors DiaryRow: day, cover, title, rating, notes and edit columns. */
 function DiaryRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-zinc-800/60">
+    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-ink-800/70">
       <div className="w-6 shrink-0 flex justify-end">
         <Skeleton className="h-4 w-4" />
       </div>
-      <Skeleton className="w-16 h-10 sm:w-28 sm:h-16 shrink-0" />
+      <Skeleton className="w-16 h-[30px] sm:w-28 sm:h-[52px] rounded-md shrink-0" />
       <div className="min-w-0 flex-[2]">
         <Skeleton className="h-4 w-3/4 sm:w-72" />
         <Skeleton className="h-3 w-12 mt-2 sm:hidden" />
@@ -25,13 +25,13 @@ function DiaryRowSkeleton() {
 export function DiaryListSkeleton() {
   return (
     <div>
-      <div className="mt-2 pb-1 border-b border-zinc-800">
-        <Skeleton className="h-6 w-14 mb-0.5" />
+      <div className="mt-2 pb-2 border-b border-ink-800">
+        <Skeleton className="h-7 w-14" />
       </div>
       {[3, 2].map((rows, m) => (
         <div key={m}>
-          <div className="pt-5 pb-2">
-            <Skeleton className="h-4 w-10" />
+          <div className="pt-6 pb-1">
+            <Skeleton className="h-5 w-16" />
           </div>
           {Array.from({ length: rows }, (_, i) => (
             <DiaryRowSkeleton key={i} />

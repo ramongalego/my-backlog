@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-// The header's Gamepad2 logo on the app's violet, rendered as a PNG for the
+// The header's Gamepad2 logo on the app's orange accent, rendered as a PNG for the
 // PWA manifest and home-screen icons.
 export function renderAppIcon(size: number) {
   return new ImageResponse(
@@ -11,7 +11,7 @@ export function renderAppIcon(size: number) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#7c3aed',
+        background: '#f97934',
       }}
     >
       <svg
@@ -19,7 +19,7 @@ export function renderAppIcon(size: number) {
         height={size * 0.62}
         viewBox="0 0 24 24"
         fill="none"
-        stroke="white"
+        stroke="#0f0d0b"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"

@@ -91,7 +91,7 @@ export function UserMenu({
     <div className="relative" ref={menuRef} onKeyDown={handleMenuKeyDown}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="cursor-pointer block rounded overflow-hidden hover:ring-2 hover:ring-zinc-600 transition-all"
+        className="cursor-pointer block rounded overflow-hidden hover:ring-2 hover:ring-ink-600 transition-all"
         aria-label="Open user menu"
         aria-haspopup="true"
         aria-expanded={open}
@@ -105,7 +105,7 @@ export function UserMenu({
             className="rounded"
           />
         ) : (
-          <div className="w-10 h-10 bg-zinc-700 rounded flex items-center justify-center text-zinc-300 text-sm font-medium">
+          <div className="w-10 h-10 bg-ink-700 rounded flex items-center justify-center text-ink-300 text-sm font-medium">
             {steamUsername?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
@@ -113,14 +113,14 @@ export function UserMenu({
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-900 p-2 shadow-2xl"
+          className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900 p-2 shadow-2xl"
           role="menu"
         >
-          <div className="px-3 py-2 mb-1 border-b border-zinc-800">
-            <p className="text-sm font-medium text-zinc-100 truncate">
+          <div className="px-3 py-2 mb-1 border-b border-ink-800">
+            <p className="text-sm font-medium text-ink-100 truncate">
               {steamUsername ?? user.email}
             </p>
-            {gameCount != null && <p className="text-xs text-zinc-500 mt-0.5">{gameCount} games</p>}
+            {gameCount != null && <p className="text-xs text-ink-500 mt-0.5">{gameCount} games</p>}
           </div>
 
           {onRefresh && (
@@ -128,7 +128,7 @@ export function UserMenu({
               role="menuitem"
               onClick={onRefresh}
               disabled={isRefreshing || isRefreshDisabled}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw
                 className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
@@ -150,7 +150,7 @@ export function UserMenu({
               setOpen(false);
               setIsReportOpen(true);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer"
           >
             <Bug className="w-4 h-4" aria-hidden="true" />
             <span>Report an issue</span>
@@ -159,7 +159,7 @@ export function UserMenu({
           <button
             role="menuitem"
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-400 hover:bg-ink-800 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" aria-hidden="true" />
             <span>Sign Out</span>

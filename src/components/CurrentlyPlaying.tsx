@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Image from 'next/image';
 import { ExternalLink, Archive, Check, Star, Clock, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -22,6 +23,62 @@ interface CurrentlyPlayingProps {
   onCancel: () => void;
   onMoveToQueue: () => void;
   isLoading?: boolean;
+  /** Rendered under the game's actions (the "pick my next game" prompt). */
+  footer?: ReactNode;
+}
+
+function Progress({ game }: { game: Game }) {
+  const mainStoryHours = game.main_story_hours ?? 0;
+  const playedHours = Math.round(game.playtime_forever / 60);
+
+  if (!mainStoryHours) return null;
+
+  if (game.playtime_forever < 60) {
+    return (
+      <div className="flex items-center gap-3 text-sm text-ink-400">
+        <span className="flex items-center gap-1" title="Time to beat">
+          <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>{mainStoryHours}h</span>
+        </span>
+        {game.steam_review_score != null && (
+          <span className="flex items-center gap-1">
+            <Star className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>{(game.steam_review_score / 10).toFixed(1)}</span>
+          </span>
+        )}
+        <SteamDeckBadge deckCompat={game.deck_compat} />
+      </div>
+    );
+  }
+
+  if (playedHours >= mainStoryHours) {
+    return (
+      <p className="text-sm">
+        <span className="text-ink-200">{playedHours}h played</span>
+        <span className="text-ink-400"> · past the ~{mainStoryHours}h estimate</span>
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-w-sm">
+      <div className="flex items-center justify-between text-sm mb-2">
+        <span className="text-ink-200">{playedHours}h played</span>
+        <span className="text-ink-400">~{mainStoryHours}h to beat</span>
+      </div>
+      <div className="h-1.5 bg-ink-800 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-accent-500 rounded-full"
+          style={{ width: `${Math.min((playedHours / mainStoryHours) * 100, 100)}%` }}
+          role="progressbar"
+          aria-label="Progress toward the time to beat"
+          aria-valuenow={playedHours}
+          aria-valuemin={0}
+          aria-valuemax={mainStoryHours}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function CurrentlyPlaying({
@@ -31,123 +88,84 @@ export function CurrentlyPlaying({
   onCancel,
   onMoveToQueue,
   isLoading,
+  footer,
 }: CurrentlyPlayingProps) {
-  const mainStoryHours = game.main_story_hours ?? 0;
   return (
-    <div className="w-full max-w-md mx-auto">
-      <p className="text-sm text-zinc-500 uppercase tracking-wide mb-3 text-center">Now Playing</p>
-      <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-        <div className="relative h-48">
-          {game.header_image ? (
-            <Image
-              src={game.header_image}
-              alt={game.name}
-              fill
-              priority
-              className="object-cover"
-              sizes="448px"
-            />
-          ) : (
-            <div className="w-full h-full bg-zinc-800" />
-          )}
-        </div>
-        <div className="p-5">
+    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
+      <div className="relative aspect-[460/215] overflow-hidden rounded-xl bg-ink-900">
+        {game.header_image && (
+          <Image
+            src={game.header_image}
+            alt={game.name}
+            fill
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 480px"
+          />
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
           <a
             href={`https://store.steampowered.com/app/${game.app_id}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/title inline-flex items-center gap-1.5 text-xl font-semibold text-zinc-100 mb-1 hover:text-white transition-colors cursor-pointer"
+            className="group/title inline hover:underline decoration-ink-600 decoration-2 underline-offset-4"
           >
             {game.name}
             <ExternalLink
-              className="w-4 h-4 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity"
+              className="inline w-4 h-4 ml-2 align-baseline text-ink-500 opacity-0 group-hover/title:opacity-100 transition-opacity"
               aria-hidden="true"
             />
           </a>
-          {mainStoryHours > 0 && (
-            <div className="mb-5">
-              {game.playtime_forever >= 60 ? (
-                game.playtime_forever / 60 >= mainStoryHours ? (
-                  <p className="text-sm">
-                    <span className="text-amber-400">
-                      {Math.round(game.playtime_forever / 60)}h played
-                    </span>
-                    <span className="text-zinc-500"> · past the ~{mainStoryHours}h estimate</span>
-                  </p>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="text-zinc-400">
-                        {Math.round(game.playtime_forever / 60)}h played
-                      </span>
-                      <span className="text-zinc-500">~{mainStoryHours}h to beat</span>
-                    </div>
-                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-sky-500 rounded-full"
-                        style={{
-                          width: `${Math.min((game.playtime_forever / 60 / mainStoryHours) * 100, 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </>
-                )
-              ) : (
-                <div className="flex items-center justify-center gap-3 text-sm text-zinc-500">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" aria-hidden="true" />
-                    <span>{game.main_story_hours}h</span>
-                  </span>
-                  {game.steam_review_score != null && (
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3 h-3" aria-hidden="true" />
-                      <span>{(game.steam_review_score / 10).toFixed(1)}</span>
-                    </span>
-                  )}
-                  <SteamDeckBadge deckCompat={game.deck_compat} />
-                </div>
-              )}
-            </div>
-          )}
-          <div className="flex gap-3">
-            <Button
-              onClick={onFinish}
-              disabled={isLoading}
-              variant="success"
-              className="flex-1 cursor-pointer"
-            >
-              <Check className="w-4 h-4" />
+        </h1>
+        <p className="mt-2 flex items-center gap-2 text-sm font-medium text-accent-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-400" aria-hidden="true" />
+          Playing now
+        </p>
+
+        <div className="mt-5">
+          <Progress game={game} />
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <div className="flex gap-2">
+            <Button onClick={onFinish} disabled={isLoading} className="cursor-pointer">
+              <Check className="w-4 h-4" aria-hidden="true" />
               <span>Finish</span>
             </Button>
             <Button
               onClick={onDrop}
               disabled={isLoading}
-              variant="danger"
-              className="flex-1 cursor-pointer"
+              variant="secondary"
+              className="cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
               <span>Drop</span>
             </Button>
           </div>
-          <div className="mt-5 flex items-center justify-center gap-6">
+          <div className="flex items-center gap-5">
             <button
               onClick={onMoveToQueue}
               disabled={isLoading}
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
             >
-              <ListOrdered className="w-3.5 h-3.5" />
+              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Move to Queue</span>
             </button>
             <button
               onClick={onCancel}
               disabled={isLoading}
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-400 transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
             >
-              <Archive className="w-3.5 h-3.5" />
+              <Archive className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Move to Backlog</span>
             </button>
           </div>
         </div>
+
+        {footer && <div className="mt-6 pt-6 border-t border-ink-800">{footer}</div>}
       </div>
     </div>
   );

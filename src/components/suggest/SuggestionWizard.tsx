@@ -36,7 +36,7 @@ export function SuggestionWizard({
         {canGoBack && (
           <button
             onClick={onBack}
-            className="absolute left-0 flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="absolute left-0 flex items-center gap-1 text-ink-500 hover:text-ink-300 transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
             <span className="text-sm">Back</span>
@@ -49,11 +49,7 @@ export function SuggestionWizard({
             <div
               key={num}
               className={`w-2 h-2 rounded-full transition-colors ${
-                num === stepNumber
-                  ? 'bg-zinc-100'
-                  : num < stepNumber
-                    ? 'bg-zinc-500'
-                    : 'bg-zinc-700'
+                num === stepNumber ? 'bg-ink-100' : num < stepNumber ? 'bg-ink-500' : 'bg-ink-700'
               }`}
             />
           ))}
@@ -87,7 +83,7 @@ export function SuggestionWizard({
 
       {/* History warning — shown on all steps */}
       {showHistoryWarning && (
-        <p className="text-xs text-zinc-500 text-center mt-6">
+        <p className="text-xs text-ink-500 text-center mt-6">
           Suggestions improve as you finish, drop, and rate more games.
         </p>
       )}

@@ -21,13 +21,14 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'inline-flex items-center justify-center gap-1.5 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg';
+    'inline-flex items-center justify-center gap-1.5 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-ink-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg';
 
   const variants = {
-    primary: 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500',
-    secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 focus:ring-zinc-500',
-    ghost: 'bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 focus:ring-zinc-500',
-    success: 'bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-500',
+    // A faded accent reads as muddy brown, so a disabled (not loading) primary goes neutral.
+    primary: `bg-accent-500 text-ink-950 hover:bg-accent-400 focus:ring-accent-500${isLoading ? '' : ' disabled:bg-ink-800 disabled:text-ink-500 disabled:opacity-100'}`,
+    secondary: 'bg-ink-800 text-ink-100 hover:bg-ink-700 focus:ring-ink-500',
+    ghost: 'bg-transparent text-ink-300 hover:bg-ink-800 hover:text-ink-100 focus:ring-ink-500',
+    success: 'bg-emerald-500 text-ink-950 hover:bg-emerald-400 focus:ring-emerald-500',
     danger: 'bg-rose-600 text-white hover:bg-rose-500 focus:ring-rose-500',
   };
 

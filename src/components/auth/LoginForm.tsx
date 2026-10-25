@@ -90,10 +90,7 @@ export function LoginForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {serverError && (
-        <div
-          className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
-          role="alert"
-        >
+        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
           {serverError}
         </div>
       )}
@@ -125,7 +122,7 @@ export function LoginForm({
             <button
               type="button"
               onClick={onSwitchToForgotPassword}
-              className="text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors"
+              className="text-sm text-accent-400 hover:text-accent-300 font-medium transition-colors"
             >
               Forgot password?
             </button>
@@ -138,12 +135,12 @@ export function LoginForm({
       </Button>
 
       {onSwitchToSignUp && (
-        <p className="text-center text-sm text-zinc-400">
+        <p className="text-center text-sm text-ink-400">
           Don&apos;t have an account?{' '}
           <button
             type="button"
             onClick={onSwitchToSignUp}
-            className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
+            className="text-accent-400 hover:text-accent-300 font-medium transition-colors"
           >
             Sign up
           </button>

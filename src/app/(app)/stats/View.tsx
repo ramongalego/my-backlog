@@ -2,16 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import {
-  Gamepad2,
-  Clock,
-  Inbox,
-  Trophy,
-  Star,
-  Hourglass,
-  Pencil,
-  CalendarDays,
-} from 'lucide-react';
+import { Gamepad2, Pencil } from 'lucide-react';
 
 import { useMutation } from '@tanstack/react-query';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
@@ -40,6 +31,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <SectionLabel className="mb-4">{children}</SectionLabel>;
 }
 
+const PANEL = 'bg-ink-900 rounded-xl p-5 sm:p-6';
+
 function formatYears(years: number): string {
   if (years < 1) return 'under a year';
   const rounded = years < 10 ? Math.round(years * 10) / 10 : Math.round(years);
@@ -50,53 +43,39 @@ function formatYears(years: number): string {
 function BacklogPace({ stats }: { stats: Stats }) {
   const { backlog, finishedLastYear } = stats;
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col">
+    <div className={PANEL}>
       <SectionTitle>Backlog pace</SectionTitle>
-      <div className="flex-1 flex flex-col justify-center items-center text-center gap-2 py-4">
-        <Hourglass className="w-8 h-8 text-violet-400 mb-2" aria-hidden="true" />
-        {finishedLastYear > 0 ? (
-          <>
-            <p className="text-4xl font-bold text-zinc-100">
-              {formatYears(backlog / finishedLastYear)}
-            </p>
-            <p className="text-sm text-zinc-500 max-w-xs">
-              to clear {backlog} backlog games at your current pace of {finishedLastYear} finished
-              in the last 12 months.
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-zinc-500 max-w-xs">
-            You haven&apos;t finished a game in the last 12 months. Finish one to see how long your
-            backlog would take at your pace.
+      {finishedLastYear > 0 ? (
+        <>
+          <p className="text-3xl font-semibold tracking-tight text-ink-50">
+            {formatYears(backlog / finishedLastYear)}
           </p>
-        )}
-      </div>
+          <p className="mt-2 text-sm text-ink-400 max-w-sm">
+            to clear {backlog} backlog games at your current pace of {finishedLastYear} finished in
+            the last 12 months.
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-ink-400 max-w-sm">
+          You haven&apos;t finished a game in the last 12 months. Finish one to see how long your
+          backlog would take at your pace.
+        </p>
+      )}
     </div>
   );
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  sub?: string;
-  accent?: string;
-}) {
+function Summary({ items }: { items: { label: string; value: string | number; sub?: string }[] }) {
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-zinc-500 text-xs">
-        <Icon className={`w-3.5 h-3.5 ${accent ?? ''}`} />
-        <span>{label}</span>
-      </div>
-      <p className="text-3xl font-bold text-zinc-100 leading-none">{value}</p>
-      {sub && <p className="text-xs text-zinc-600">{sub}</p>}
-    </div>
+    <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px overflow-hidden rounded-xl bg-ink-800">
+      {items.map(({ label, value, sub }) => (
+        <div key={label} className="bg-ink-900 px-5 py-4 flex flex-col">
+          <dt className="text-sm text-ink-400">{label}</dt>
+          <dd className="order-first text-2xl font-semibold tracking-tight text-ink-50">{value}</dd>
+          {sub && <dd className="mt-0.5 text-xs text-ink-500">{sub}</dd>}
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -104,11 +83,11 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
   const segments = [
     { label: 'Finished', pct: stats.finishedPct, count: stats.finished, color: 'bg-emerald-500' },
     { label: 'Dropped', pct: stats.droppedPct, count: stats.dropped, color: 'bg-rose-500' },
-    { label: 'Backlog', pct: stats.backlogPct, count: stats.backlog, color: 'bg-violet-600' },
+    { label: 'Backlog', pct: stats.backlogPct, count: stats.backlog, color: 'bg-ink-500' },
   ].filter((s) => s.count > 0);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+    <div className={PANEL}>
       <SectionTitle>Library breakdown</SectionTitle>
       <div className="flex h-2.5 rounded-full overflow-hidden gap-px mb-5">
         {segments.map((s) => (
@@ -122,10 +101,10 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
       <div className="flex flex-wrap gap-x-6 gap-y-3">
         {segments.map((s) => (
           <div key={s.label} className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${s.color}`} />
-            <span className="text-sm text-zinc-400">{s.label}</span>
-            <span className="text-sm font-semibold text-zinc-100">{s.count}</span>
-            <span className="text-xs text-zinc-600">({s.pct}%)</span>
+            <div className={`w-2 h-2 rounded-full ${s.color}`} aria-hidden="true" />
+            <span className="text-sm text-ink-400">{s.label}</span>
+            <span className="text-sm font-semibold text-ink-100 tabular-nums">{s.count}</span>
+            <span className="text-xs text-ink-500 tabular-nums">{s.pct}%</span>
           </div>
         ))}
       </div>
@@ -136,9 +115,9 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
 function TopTags({ stats }: { stats: Stats }) {
   if (stats.topTags.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <div className={PANEL}>
         <SectionTitle>Top tags in your library</SectionTitle>
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-ink-500">
           No tag data yet. Tags fill in on the next metadata sync.
         </p>
       </div>
@@ -148,19 +127,21 @@ function TopTags({ stats }: { stats: Stats }) {
   const max = stats.topTags[0].count;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+    <div className={PANEL}>
       <SectionTitle>Top tags in your library</SectionTitle>
       <div className="space-y-3">
         {stats.topTags.map(({ tag, count }) => (
           <div key={tag} className="flex items-center gap-3">
-            <span className="text-sm text-zinc-400 w-20 sm:w-32 truncate shrink-0">{tag}</span>
-            <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <span className="text-sm text-ink-300 w-20 sm:w-32 truncate shrink-0">{tag}</span>
+            <div className="flex-1 h-1.5 bg-ink-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-violet-500 rounded-full"
+                className="h-full bg-ink-400 rounded-full"
                 style={{ width: `${(count / max) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-zinc-500 w-6 text-right shrink-0">{count}</span>
+            <span className="text-xs text-ink-400 w-6 text-right shrink-0 tabular-nums">
+              {count}
+            </span>
           </div>
         ))}
       </div>
@@ -182,51 +163,43 @@ function YearChart({ stats }: { stats: Stats }) {
       : 'No release year data yet. Sync your library to fill this in.';
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col">
+    <div className={`${PANEL} flex flex-col`}>
       <div className="flex items-center justify-between mb-4">
         <SectionLabel>Games by year</SectionLabel>
-        <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-xs">
-          <button
-            onClick={() => setView('finished')}
-            className={`px-2.5 py-1 cursor-pointer transition-colors ${
-              view === 'finished'
-                ? 'bg-zinc-700 text-zinc-100'
-                : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            Finished
-          </button>
-          <button
-            onClick={() => setView('released')}
-            className={`px-2.5 py-1 cursor-pointer transition-colors ${
-              view === 'released'
-                ? 'bg-zinc-700 text-zinc-100'
-                : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            Released
-          </button>
+        <div className="flex gap-0.5 rounded-lg bg-ink-800 p-0.5 text-xs font-medium" role="group">
+          {(['finished', 'released'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              aria-pressed={view === v}
+              className={`px-2.5 py-1 rounded-md cursor-pointer capitalize transition-colors ${
+                view === v ? 'bg-ink-600 text-ink-50' : 'text-ink-400 hover:text-ink-100'
+              }`}
+            >
+              {v}
+            </button>
+          ))}
         </div>
       </div>
 
       {data.length === 0 ? (
-        <p className="text-sm text-zinc-600">{empty}</p>
+        <p className="text-sm text-ink-500">{empty}</p>
       ) : (
         <div className="flex-1 flex items-end gap-1.5 min-h-[160px]">
           {data.map(({ year, count }, i) => (
             <div key={year} className="self-stretch flex-1 flex flex-col items-center min-w-0">
               <div className="flex-1" />
-              <span className="text-xs font-semibold text-zinc-300 mb-1">{count}</span>
+              <span className="text-xs font-semibold text-ink-300 mb-1 tabular-nums">{count}</span>
               <div
                 className={`w-full rounded-sm transition-colors ${
                   view === 'finished'
                     ? 'bg-emerald-500/80 hover:bg-emerald-500'
-                    : 'bg-violet-500/80 hover:bg-violet-500'
+                    : 'bg-ink-500 hover:bg-ink-400'
                 }`}
                 style={{ height: `${Math.max((count / max) * 65, 3)}%` }}
               />
               <span
-                className={`text-[10px] mt-1 ${data.length <= 14 || i % 2 === 0 ? 'text-zinc-600' : 'invisible'}`}
+                className={`text-[11px] mt-1 tabular-nums ${data.length <= 14 || i % 2 === 0 ? 'text-ink-400' : 'invisible'}`}
               >
                 {year}
               </span>
@@ -246,23 +219,23 @@ function RatingHistogram({ stats }: { stats: Stats }) {
   const BAR_MAX_HEIGHT = 80;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+    <div className={PANEL}>
       <SectionTitle>Rating distribution</SectionTitle>
       <div className="flex items-end gap-2">
         {stats.ratingDistribution.map(({ rating, count }) => (
           <div key={rating} className="flex-1 flex flex-col items-center gap-1.5">
             <span
-              className={`text-xs font-semibold ${count > 0 ? 'text-zinc-300' : 'text-transparent'}`}
+              className={`text-xs font-semibold tabular-nums ${count > 0 ? 'text-ink-300' : 'text-transparent'}`}
             >
               {count}
             </span>
             <div
-              className="w-full bg-amber-500/70 hover:bg-amber-500 rounded-sm transition-colors"
+              className={`w-full rounded-sm transition-colors ${count > 0 ? 'bg-amber-400/80 hover:bg-amber-400' : 'bg-ink-800'}`}
               style={{
                 height: `${Math.max((count / max) * BAR_MAX_HEIGHT, count > 0 ? 4 : 2)}px`,
               }}
             />
-            <span className="text-xs text-zinc-500">{rating}</span>
+            <span className="text-xs text-ink-400 tabular-nums">{rating}</span>
           </div>
         ))}
       </div>
@@ -274,24 +247,24 @@ function TagCompletion({ stats }: { stats: Stats }) {
   if (stats.tagCompletion.length === 0) return null;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+    <div className={PANEL}>
       <SectionTitle>Completion rate by tag</SectionTitle>
-      <p className="text-xs text-zinc-600 mb-5 -mt-2">Tags with 3+ games in your library</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <p className="text-sm text-ink-400 mb-5 -mt-2">Tags with 3+ games in your library</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
         {stats.tagCompletion.map(({ tag, total, finished, pct }) => (
-          <div key={tag} className="bg-zinc-800/50 border border-zinc-800 rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-zinc-200 truncate pr-2">{tag}</span>
+          <div key={tag} className="min-w-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-medium text-ink-200 truncate">{tag}</span>
               <span
-                className={`text-base font-bold shrink-0 ${pct >= 50 ? 'text-emerald-400' : 'text-zinc-400'}`}
+                className={`text-sm font-semibold tabular-nums shrink-0 ${pct >= 50 ? 'text-emerald-400' : 'text-ink-300'}`}
               >
                 {pct}%
               </span>
             </div>
-            <div className="h-1 bg-zinc-700 rounded-full overflow-hidden">
+            <div className="mt-2 h-1 bg-ink-800 rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
             </div>
-            <p className="text-xs text-zinc-600">
+            <p className="mt-1.5 text-xs text-ink-500 tabular-nums">
               {finished} of {total} finished
             </p>
           </div>
@@ -318,7 +291,7 @@ function MostPlayedUnfinished({
   if (stats.mostPlayedUnfinished.length === 0) return null;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+    <div className={PANEL}>
       <SectionTitle>Most played but still in backlog</SectionTitle>
       <div className="space-y-3">
         {stats.mostPlayedUnfinished.map(
@@ -341,7 +314,8 @@ function MostPlayedUnfinished({
                       deck_compat,
                     )
                   }
-                  className="group relative w-16 h-9 shrink-0 rounded overflow-hidden bg-zinc-800 cursor-pointer"
+                  aria-label={`Edit ${name}`}
+                  className="group relative w-16 h-[30px] shrink-0 rounded-md overflow-hidden bg-ink-800 cursor-pointer"
                 >
                   {header_image && (
                     <Image
@@ -354,19 +328,19 @@ function MostPlayedUnfinished({
                     />
                   )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Pencil className="w-3.5 h-3.5 text-white" />
+                    <Pencil className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                   </div>
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 truncate">{name}</p>
+                  <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-1 bg-ink-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-violet-500/70 rounded-full"
+                        className="h-full bg-ink-400 rounded-full"
                         style={{ width: `${barPct}%` }}
                       />
                     </div>
-                    <span className="text-xs text-zinc-500 shrink-0 w-20 text-right tabular-nums">
+                    <span className="text-xs text-ink-400 shrink-0 w-20 text-right tabular-nums">
                       {hours}h{main_story_hours ? ` / ${main_story_hours}h` : ' played'}
                     </span>
                   </div>
@@ -465,72 +439,50 @@ export default function StatsView() {
     >
       <PageHeader
         title="Stats"
-        description={
-          <>
-            A look at your gaming library{' '}
-            <span className="text-zinc-600">· hidden and won&apos;t play games excluded</span>
-          </>
-        }
+        description={<>Your library at a glance, not counting hidden and won&apos;t play games.</>}
       />
 
       {loading ? (
         <StatsContentSkeleton />
       ) : !stats ? (
-        <div className="text-center py-20">
-          <Gamepad2 className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-          <p className="text-zinc-500">No data yet. Sync your Steam library to see your stats.</p>
+        <div className="py-16 flex flex-col items-center text-center">
+          <Gamepad2 className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
+          <p className="text-ink-200 font-medium">No stats yet</p>
+          <p className="text-ink-400 text-sm mt-1 max-w-sm">
+            Sync your Steam library to see your stats.
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <StatCard
-              icon={Gamepad2}
-              label="Total games"
-              value={stats.total}
-              sub="non-hidden"
-              accent="text-zinc-400"
-            />
-            <StatCard
-              icon={Trophy}
-              label="Finished"
-              value={stats.finished}
-              sub={`${stats.finishedPct}% of library`}
-              accent="text-emerald-400"
-            />
-            <StatCard
-              icon={Clock}
-              label="Hours played"
-              value={`${stats.totalPlaytimeHours.toLocaleString()}h`}
-              sub="across all games"
-              accent="text-amber-400"
-            />
-            <StatCard
-              icon={CalendarDays}
-              label="Days played"
-              value={`${stats.totalPlaytimeDays}d`}
-              sub="of your life"
-              accent="text-amber-400"
-            />
-            <StatCard
-              icon={Inbox}
-              label="Backlog hours"
-              value={`~${stats.estimatedBacklogHours.toLocaleString()}h`}
-              sub="estimated to beat"
-              accent="text-violet-400"
-            />
-            <StatCard
-              icon={Star}
-              label="Avg rating"
-              value={stats.avgRating !== null ? `${stats.avgRating}/10` : '—'}
-              sub={
-                stats.ratedCount > 0
-                  ? `from ${stats.ratedCount} rated game${stats.ratedCount === 1 ? '' : 's'}`
-                  : 'no ratings yet'
-              }
-              accent="text-amber-400"
-            />
-          </div>
+          <Summary
+            items={[
+              { label: 'Games', value: stats.total, sub: 'not counting hidden' },
+              {
+                label: 'Finished',
+                value: stats.finished,
+                sub: `${stats.finishedPct}% of library`,
+              },
+              {
+                label: 'Hours played',
+                value: `${stats.totalPlaytimeHours.toLocaleString()}h`,
+                sub: 'across all games',
+              },
+              { label: 'Days played', value: `${stats.totalPlaytimeDays}d`, sub: 'of your life' },
+              {
+                label: 'Backlog hours',
+                value: `~${stats.estimatedBacklogHours.toLocaleString()}h`,
+                sub: 'estimated to beat',
+              },
+              {
+                label: 'Avg rating',
+                value: stats.avgRating !== null ? `${stats.avgRating}/10` : '—',
+                sub:
+                  stats.ratedCount > 0
+                    ? `from ${stats.ratedCount} rated game${stats.ratedCount === 1 ? '' : 's'}`
+                    : 'no ratings yet',
+              },
+            ]}
+          />
 
           {/* Library breakdown */}
           <LibraryBreakdown stats={stats} />

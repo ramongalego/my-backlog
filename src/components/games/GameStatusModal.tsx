@@ -61,37 +61,37 @@ const STATUS_OPTIONS: {
     value: 'backlog',
     label: 'Backlog',
     icon: <Archive className="w-3.5 h-3.5" />,
-    activeClass: 'bg-violet-600 text-white border-violet-600',
+    activeClass: 'bg-ink-100 text-ink-950',
   },
   {
     value: 'playing',
     label: 'Playing',
     icon: <Play className="w-3.5 h-3.5" />,
-    activeClass: 'bg-sky-600 text-white border-sky-600',
+    activeClass: 'bg-accent-500 text-ink-950',
   },
   {
     value: 'finished',
     label: 'Finished',
     icon: <Check className="w-3.5 h-3.5" />,
-    activeClass: 'bg-emerald-600 text-white border-emerald-600',
+    activeClass: 'bg-emerald-500 text-ink-950',
   },
   {
     value: 'dropped',
     label: 'Dropped',
     icon: <X className="w-3.5 h-3.5" />,
-    activeClass: 'bg-rose-600 text-white border-rose-600',
+    activeClass: 'bg-rose-500 text-ink-950',
   },
   {
     value: 'wont_play',
     label: "Won't Play",
     icon: <Ban className="w-3.5 h-3.5" />,
-    activeClass: 'bg-amber-600 text-white border-amber-600',
+    activeClass: 'bg-ink-100 text-ink-950',
   },
   {
     value: 'hidden',
     label: 'Hidden',
     icon: <EyeOff className="w-3.5 h-3.5" />,
-    activeClass: 'bg-zinc-700 text-white border-zinc-600',
+    activeClass: 'bg-ink-100 text-ink-950',
   },
 ];
 
@@ -210,12 +210,12 @@ export function GameDetailModal({
             sizes="(max-width: 640px) 100vw, 512px"
           />
         ) : (
-          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-zinc-600" />
+          <div className="w-full h-full bg-ink-800 flex items-center justify-center">
+            <Gamepad2 className="w-10 h-10 text-ink-500" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
-        <h2 className="absolute bottom-2 left-4 sm:left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
+        <h2 className="absolute bottom-2 left-4 sm:left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
           {gameName}
         </h2>
       </div>
@@ -233,7 +233,7 @@ export function GameDetailModal({
       <div className="space-y-5 mt-4">
         {/* Status pills */}
         <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2.5">Status</p>
+          <p className="text-sm font-medium text-ink-300 mb-2">Status</p>
           <div
             className={`grid gap-2 grid-cols-3 ${
               disablePlaying && !onAddToQueue ? 'sm:grid-cols-5' : 'sm:grid-cols-6'
@@ -249,10 +249,10 @@ export function GameDetailModal({
                     key="queue"
                     onClick={() => handleStatusChange('queue')}
                     aria-pressed={isActive}
-                    className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors whitespace-nowrap ${
+                    className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                       isActive
-                        ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
+                        ? 'bg-accent-500 text-ink-950'
+                        : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
                     }`}
                   >
                     <ListOrdered className="w-3.5 h-3.5" />
@@ -265,10 +265,10 @@ export function GameDetailModal({
                   key={opt.value}
                   onClick={() => handleStatusChange(opt.value)}
                   aria-pressed={status === opt.value}
-                  className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                     status === opt.value
                       ? opt.activeClass
-                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
+                      : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
                   }`}
                 >
                   {opt.icon}
@@ -292,11 +292,11 @@ export function GameDetailModal({
                 if (checked && !date) setDate(today);
                 setCalendarOpen(false);
               }}
-              className="w-4 h-4 rounded accent-violet-500 cursor-pointer shrink-0"
+              className="w-4 h-4 rounded accent-accent-500 cursor-pointer shrink-0"
             />
             <label
               htmlFor="date-toggle"
-              className="text-sm text-zinc-300 cursor-pointer select-none shrink-0"
+              className="text-sm text-ink-300 cursor-pointer select-none shrink-0"
             >
               {hasDate ? dateLabel : 'No date selected'}
             </label>
@@ -307,14 +307,14 @@ export function GameDetailModal({
                   data-testid="detail-date"
                   onClick={() => setCalendarOpen((o) => !o)}
                   aria-expanded={calendarOpen}
-                  className="cursor-pointer flex items-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 rounded-lg px-2.5 py-1 text-sm text-zinc-100 transition-colors"
+                  className="cursor-pointer flex items-center gap-1.5 bg-ink-800 hover:bg-ink-700 rounded-lg px-2.5 py-1 text-sm text-ink-100 transition-colors"
                 >
-                  <CalendarDays className="w-3.5 h-3.5 text-zinc-400" />
+                  <CalendarDays className="w-3.5 h-3.5 text-ink-400" />
                   <span>{formatDateLabel(date)}</span>
                 </button>
 
                 {calendarOpen && (
-                  <div className="absolute left-0 top-full mt-2 sm:left-full sm:top-1/2 sm:-translate-y-1/2 sm:mt-0 sm:ml-2 z-50 bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl px-4 py-2">
+                  <div className="absolute left-0 top-full mt-2 sm:left-full sm:top-1/2 sm:-translate-y-1/2 sm:mt-0 sm:ml-2 z-50 bg-ink-800 border border-ink-700 rounded-xl shadow-2xl px-4 py-2">
                     <DayPicker
                       mode="single"
                       captionLayout="dropdown"
@@ -347,7 +347,7 @@ export function GameDetailModal({
             {/* Rating */}
             <div>
               <label
-                className="block text-xs text-zinc-500 uppercase tracking-wider mb-1.5"
+                className="block text-sm font-medium text-ink-300 mb-1.5"
                 htmlFor="detail-rating"
               >
                 Your rating (0–10)
@@ -365,7 +365,7 @@ export function GameDetailModal({
                 placeholder="Unrated"
                 aria-invalid={ratingError ? true : undefined}
                 aria-describedby={ratingError ? 'detail-rating-error' : undefined}
-                className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none placeholder:text-zinc-600 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-zinc-700 focus:border-zinc-500'}`}
+                className={`w-full bg-ink-800 border rounded-lg px-3 py-2 text-ink-100 text-sm focus:outline-none placeholder:text-ink-500 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-ink-700 focus:border-ink-500'}`}
               />
               {ratingError && (
                 <p id="detail-rating-error" className="text-rose-400 text-xs mt-1" role="alert">
@@ -377,16 +377,13 @@ export function GameDetailModal({
             {/* Notes */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label
-                  className="text-xs text-zinc-500 uppercase tracking-wider"
-                  htmlFor="detail-notes"
-                >
+                <label className="text-sm font-medium text-ink-300" htmlFor="detail-notes">
                   Notes
                 </label>
                 {notes.length > 0 && (
                   <span
                     id="detail-notes-count"
-                    className={`text-xs ${notes.length >= 1000 ? 'text-rose-400' : 'text-zinc-500'}`}
+                    className={`text-xs tabular-nums ${notes.length >= 1000 ? 'text-rose-400' : 'text-ink-500'}`}
                   >
                     {notes.length}/1000
                   </span>
@@ -400,7 +397,7 @@ export function GameDetailModal({
                 placeholder="Any thoughts?"
                 rows={4}
                 maxLength={1000}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600 resize-none"
+                className="w-full bg-ink-800 border border-ink-700 rounded-lg px-3 py-2 text-ink-100 text-sm focus:outline-none focus:border-ink-500 placeholder:text-ink-500 resize-none"
               />
             </div>
           </>
@@ -411,14 +408,14 @@ export function GameDetailModal({
           <button
             onClick={onClose}
             disabled={saving}
-            className="cursor-pointer flex-1 py-2 px-4 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-300 text-sm font-medium rounded-lg transition-colors"
+            className="cursor-pointer flex-1 h-10 px-4 bg-ink-800 hover:bg-ink-700 disabled:opacity-50 disabled:cursor-not-allowed text-ink-100 text-sm font-medium rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={saving}
-            className="cursor-pointer flex-1 py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="cursor-pointer flex-1 h-10 px-4 bg-accent-500 hover:bg-accent-400 disabled:opacity-50 disabled:cursor-not-allowed text-ink-950 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             {saving ? (
               <>

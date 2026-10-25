@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       'Stop buying new games and start finishing the ones you own. Track your Steam backlog and pick what to play next.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#09090b',
-    theme_color: '#7c3aed',
+    background_color: '#0f0d0b',
+    theme_color: '#f97934',
     icons: [
       {
         src: '/favicon.ico',

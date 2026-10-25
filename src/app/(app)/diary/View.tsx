@@ -18,27 +18,41 @@ import { useUrlState } from '@/hooks/useUrlState';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { DiaryListSkeleton } from './Skeleton';
 import type { DiaryEntry } from '@/hooks/useDiary';
-import { getMonthKey, formatMonthLabel, formatDay } from '@/lib/diary/date-utils';
+import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 function EmptyState() {
   return (
-    <div className="text-center py-20">
-      <Trophy className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
-      <p className="text-zinc-500">No finished games yet</p>
+    <div className="py-16 flex flex-col items-center text-center">
+      <Trophy className="w-8 h-8 text-ink-600 mb-4" aria-hidden="true" />
+      <p className="text-ink-200 font-medium">No finished games yet</p>
+      <p className="text-ink-400 text-sm mt-1 max-w-sm">
+        When you finish a game, it lands here with the date, your rating and any notes.
+      </p>
     </div>
   );
+}
+
+function monthName(isoDate: string): string {
+  const d = new Date(Number(isoDate.slice(0, 4)), Number(isoDate.slice(5, 7)) - 1, 1);
+  return d.toLocaleString('en-US', { month: 'long' });
 }
 
 function NotesTooltip({ text }: { text: string }) {
   return (
     <div className="relative group/notes">
-      <MessageCircle
-        className="w-4 h-4 text-zinc-500 hover:text-zinc-400 transition-colors cursor-default"
-        aria-hidden="true"
-      />
-      <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 hidden group-hover/notes:block z-50 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 w-72 whitespace-normal shadow-xl">
+      <button
+        type="button"
+        aria-label="Show notes"
+        className="block p-1 text-ink-500 hover:text-ink-200 transition-colors cursor-default rounded"
+      >
+        <MessageCircle className="w-4 h-4" aria-hidden="true" />
+      </button>
+      <div
+        role="tooltip"
+        className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover/notes:block group-focus-within/notes:block z-50 bg-ink-800 border border-ink-700 rounded-lg px-3 py-2 text-sm text-ink-200 w-72 whitespace-normal shadow-xl shadow-black/40"
+      >
         {text}
       </div>
     </div>
@@ -55,12 +69,12 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
   const day = hasDate ? formatDay(entry.finished_at!) : null;
 
   return (
-    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-zinc-800/60">
+    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-ink-800/70">
       {/* Day */}
-      <div className="w-6 shrink-0 text-right text-sm text-zinc-500">{day ?? ''}</div>
+      <div className="w-6 shrink-0 text-right text-sm text-ink-400 tabular-nums">{day ?? ''}</div>
 
       {/* Cover image */}
-      <div className="relative w-16 h-10 sm:w-28 sm:h-16 shrink-0 rounded overflow-hidden bg-zinc-800 flex items-center justify-center">
+      <div className="relative w-16 h-[30px] sm:w-28 sm:h-[52px] shrink-0 rounded-md overflow-hidden bg-ink-800 flex items-center justify-center">
         {entry.header_image ? (
           <Image
             src={entry.header_image}
@@ -71,7 +85,7 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
             quality={90}
           />
         ) : (
-          <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600" />
+          <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 text-ink-500" />
         )}
       </div>
 
@@ -82,13 +96,13 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
           target="_blank"
           rel="noopener noreferrer"
           title={entry.name}
-          className="group/title inline-flex items-center gap-1 font-medium text-zinc-100 hover:text-white transition-colors sm:truncate max-w-full text-base"
+          className="group/title inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors sm:truncate max-w-full"
         >
           <span className="sm:truncate min-w-0">{entry.name}</span>
           <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px" />
         </a>
         {entry.rating != null && (
-          <p className="flex items-center gap-1 text-sm text-zinc-400 sm:hidden mt-0.5">
+          <p className="flex items-center gap-1 text-sm text-ink-300 tabular-nums sm:hidden mt-0.5">
             <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" />
             <span>{entry.rating}/10</span>
           </p>
@@ -98,7 +112,7 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
       {/* Rating — desktop only */}
       <div className="hidden sm:block shrink-0 w-20 text-right">
         {entry.rating != null && (
-          <span className="flex items-center justify-end gap-1 text-base text-zinc-300">
+          <span className="flex items-center justify-end gap-1 text-sm font-medium text-ink-200 tabular-nums">
             <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
             <span>{entry.rating}/10</span>
           </span>
@@ -114,7 +128,7 @@ function DiaryRow({ entry, onEdit }: DiaryRowProps) {
       <button
         onClick={() => onEdit(entry.app_id)}
         aria-label={`Edit ${entry.name}`}
-        className="cursor-pointer shrink-0 p-1.5 text-zinc-500 hover:text-zinc-100 transition-colors"
+        className="cursor-pointer shrink-0 p-1.5 text-ink-500 hover:text-ink-100 transition-colors"
       >
         <Pencil className="w-4 h-4" />
       </button>
@@ -247,20 +261,19 @@ export default function DiaryView() {
             <div key={yg.year}>
               {selectedYear === 'all' && (
                 <h2
-                  className={`text-lg font-bold text-zinc-100 pb-1 border-b border-zinc-800 ${yi === 0 ? 'mt-2' : 'mt-10'}`}
+                  className={`text-xl font-semibold tracking-tight text-ink-50 pb-2 border-b border-ink-800 ${yi === 0 ? 'mt-2' : 'mt-12'}`}
                 >
                   {yg.year}
                 </h2>
               )}
               {yg.months.map((mg) => {
-                const { month } = formatMonthLabel(mg.entries[0].finished_at!);
                 return (
                   <div key={mg.key}>
-                    <p
-                      className={`text-sm font-semibold text-zinc-400 tracking-wide pb-2 ${selectedYear !== 'all' && yi === 0 ? 'pt-2' : 'pt-5'}`}
+                    <h3
+                      className={`text-sm font-medium text-ink-300 pb-1 ${selectedYear !== 'all' && yi === 0 ? 'pt-2' : 'pt-6'}`}
                     >
-                      {month}
-                    </p>
+                      {monthName(mg.entries[0].finished_at!)}
+                    </h3>
                     {mg.entries.map((entry) => (
                       <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
                     ))}
@@ -272,8 +285,8 @@ export default function DiaryView() {
 
           {/* Undated entries */}
           {filteredUndated.length > 0 && (
-            <div className="mt-8">
-              <SectionLabel className="mb-3">No date</SectionLabel>
+            <div className="mt-12">
+              <SectionLabel className="pb-2 border-b border-ink-800">No date</SectionLabel>
               {filteredUndated.map((entry) => (
                 <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
               ))}

@@ -17,7 +17,7 @@ export function Skeleton({
     <div
       aria-hidden="true"
       style={style}
-      className={`bg-zinc-800 rounded animate-pulse ${className}`}
+      className={`bg-ink-800 rounded animate-pulse ${className}`}
     />
   );
 }
@@ -25,7 +25,7 @@ export function Skeleton({
 /** Same outer layout as <Page>, announced to assistive tech as loading. */
 export function PageSkeleton({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950" role="status" aria-busy="true">
+    <div className="min-h-screen bg-ink-950" role="status" aria-busy="true">
       <span className="sr-only">Loading…</span>
       <div className={`pt-20 sm:pt-24 pb-16 ${PAGE_CONTAINER}`}>{children}</div>
     </div>
@@ -48,7 +48,7 @@ export function PageHeaderSkeleton({
     <div className="mb-8 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Skeleton className={`h-8 ${titleWidth}`} />
+          <Skeleton className={`h-8 sm:h-9 ${titleWidth}`} />
           <Skeleton className={`h-4 mt-2 ${descriptionWidth}`} />
         </div>
         {actions && <div className="max-w-full">{actions}</div>}
@@ -58,7 +58,7 @@ export function PageHeaderSkeleton({
   );
 }
 
-/** A bordered card placeholder matching the app's zinc-900 cards. */
+/** A panel placeholder matching the app's ink-900 panels. */
 export function CardSkeleton({
   className = '',
   children,
@@ -66,7 +66,5 @@ export function CardSkeleton({
   className?: string;
   children?: ReactNode;
 }) {
-  return (
-    <div className={`bg-zinc-900 border border-zinc-800 rounded-xl ${className}`}>{children}</div>
-  );
+  return <div className={`bg-ink-900 rounded-xl ${className}`}>{children}</div>;
 }

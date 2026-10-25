@@ -180,12 +180,12 @@ export function GameSummaryModal({
             sizes="(max-width: 640px) 100vw, 512px"
           />
         ) : (
-          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-zinc-600" />
+          <div className="w-full h-full bg-ink-800 flex items-center justify-center">
+            <Gamepad2 className="w-10 h-10 text-ink-500" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
-        <h2 className="absolute bottom-3 left-6 right-12 text-xl font-bold text-white leading-tight line-clamp-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
+        <h2 className="absolute bottom-3 left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
           {gameName}
         </h2>
       </div>
@@ -194,7 +194,7 @@ export function GameSummaryModal({
         {/* Tagline */}
         <div className="flex items-center gap-2 text-sm">
           <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
-          <p className="text-zinc-400 uppercase tracking-wider font-medium">You finished it!</p>
+          <p className="text-ink-100 font-medium">You finished it!</p>
         </div>
 
         {/* Playtime + estimate */}
@@ -202,17 +202,17 @@ export function GameSummaryModal({
           <div data-testid="estimate-text" className="flex items-center gap-2 text-sm">
             {estimate ? estimate.icon : null}
             <span className="flex items-center gap-1 flex-wrap">
-              <span className="font-semibold text-zinc-100">{steamHours}h of playtime</span>
+              <span className="font-semibold text-ink-100">{steamHours}h of playtime</span>
               {estimate && (
                 <>
-                  <span className="text-zinc-600">·</span>
-                  <span className="text-zinc-400">
+                  <span className="text-ink-500">·</span>
+                  <span className="text-ink-400">
                     {estimate.value === 'Right on'
                       ? 'right on'
                       : `${estimate.value} ${estimate.middle}`}
                   </span>
                   {estimate.pct && (
-                    <span className="font-semibold text-zinc-100">{estimate.pct}</span>
+                    <span className="font-semibold text-ink-100">{estimate.pct}</span>
                   )}
                 </>
               )}
@@ -225,28 +225,30 @@ export function GameSummaryModal({
           <div className="flex items-center gap-2 text-sm">
             <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
             <span className="flex items-center gap-1.5">
-              <span className="text-zinc-400">You rated it</span>
-              <span className="text-zinc-100 font-semibold">{rating}</span>
-              <span className="text-zinc-500">/ 10</span>
+              <span className="text-ink-400">You rated it</span>
+              <span className="text-ink-100 font-semibold">{rating}</span>
+              <span className="text-ink-500">/ 10</span>
             </span>
           </div>
         )}
 
         {/* Impact stats */}
         {(totalGames > 0 || backlogHoursRemoved) && (
-          <div className="flex divide-x divide-zinc-800 py-3">
+          <div className="flex divide-x divide-ink-800 py-3">
             {totalGames > 0 && (
               <div className={`text-center ${backlogHoursRemoved ? 'flex-1 pr-3' : 'w-full'}`}>
-                <p className="text-2xl font-bold text-zinc-100">
+                <p className="text-2xl font-semibold tracking-tight text-ink-50">
                   {gamesFinished}/{totalGames}
                 </p>
-                <p className="text-xs text-zinc-500 mt-1">games finished</p>
+                <p className="text-xs text-ink-500 mt-1">games finished</p>
               </div>
             )}
             {backlogHoursRemoved && (
               <div className={`text-center ${totalGames > 0 ? 'flex-1 pl-3' : 'w-full'}`}>
-                <p className="text-2xl font-bold text-emerald-400">-{backlogHoursRemoved}h</p>
-                <p className="text-xs text-zinc-500 mt-1">from backlog</p>
+                <p className="text-2xl font-semibold tracking-tight text-emerald-400">
+                  -{backlogHoursRemoved}h
+                </p>
+                <p className="text-xs text-ink-500 mt-1">from backlog</p>
               </div>
             )}
           </div>
@@ -255,18 +257,18 @@ export function GameSummaryModal({
         {/* Next up */}
         {nextGame && (
           <div className="flex items-center gap-2 text-sm">
-            <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
-            <span className="text-zinc-400">Next up:</span>
-            <span className="font-semibold text-zinc-100 truncate pr-1">{nextGame}</span>
+            <ChevronRight className="w-4 h-4 text-ink-400 shrink-0" />
+            <span className="text-ink-400">Next up:</span>
+            <span className="font-semibold text-ink-100 truncate pr-1">{nextGame}</span>
           </div>
         )}
 
         {/* Share section */}
-        <div className="pt-4 border-t border-zinc-800">
+        <div className="pt-4 border-t border-ink-800">
           {shareState === 'idle' && (
             <button
               onClick={handleShare}
-              className="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer w-full"
+              className="flex items-center justify-center gap-2 text-sm text-ink-500 hover:text-ink-300 transition-colors cursor-pointer w-full"
             >
               <Share2 className="w-4 h-4" />
               <span>Share</span>
@@ -274,7 +276,7 @@ export function GameSummaryModal({
           )}
 
           {shareState === 'loading' && (
-            <div className="flex items-center justify-center gap-2 text-sm text-zinc-500">
+            <div className="flex items-center justify-center gap-2 text-sm text-ink-500">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Creating share link...</span>
             </div>
@@ -285,7 +287,7 @@ export function GameSummaryModal({
               <button
                 onClick={handleReddit}
                 aria-label="Share on Reddit"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-800 text-ink-400 hover:text-ink-200 hover:bg-ink-700 transition-colors text-sm cursor-pointer"
               >
                 <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Reddit</span>
@@ -293,7 +295,7 @@ export function GameSummaryModal({
               <button
                 onClick={handleTwitter}
                 aria-label="Share on Twitter"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-800 text-ink-400 hover:text-ink-200 hover:bg-ink-700 transition-colors text-sm cursor-pointer"
               >
                 <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Twitter</span>
@@ -301,7 +303,7 @@ export function GameSummaryModal({
               <button
                 onClick={handleCopyLink}
                 aria-label="Copy share link"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors text-sm cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-800 text-ink-400 hover:text-ink-200 hover:bg-ink-700 transition-colors text-sm cursor-pointer"
               >
                 {copied ? (
                   <>

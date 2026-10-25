@@ -16,10 +16,10 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-center px-6">
-      <Gamepad2 className="w-8 h-8 text-violet-400 mb-8" />
-      <h1 className="text-2xl font-bold text-zinc-100 mb-2">Something went wrong</h1>
-      <p className="text-zinc-400 mb-8 max-w-md">
+    <div className="min-h-screen bg-ink-950 flex flex-col items-center justify-center text-center px-6">
+      <Gamepad2 className="w-8 h-8 text-accent-400 mb-8" />
+      <h1 className="text-2xl font-bold text-ink-100 mb-2">Something went wrong</h1>
+      <p className="text-ink-400 mb-8 max-w-md">
         An unexpected error occurred. Try refreshing the page.
       </p>
       <Button onClick={reset} variant="secondary">

@@ -19,11 +19,11 @@ export function PublicHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-40 border-b border-ink-800 bg-ink-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Gamepad2 className="w-6 h-6 text-violet-400 shrink-0" aria-hidden="true" />
-            <span className="text-lg font-semibold text-zinc-100">MyBacklog</span>
+            <Gamepad2 className="w-6 h-6 text-accent-400 shrink-0" aria-hidden="true" />
+            <span className="text-lg font-semibold tracking-tight text-ink-50">MyBacklog</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => setAuthMode('login')}>

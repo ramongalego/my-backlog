@@ -79,14 +79,10 @@ export function Modal({ isOpen, onClose, children, title, ariaLabel, size = 'md'
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="min-h-full flex items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-          onClick={onClose}
-          aria-hidden="true"
-        />
+        <div className="fixed inset-0 bg-black/75" onClick={onClose} aria-hidden="true" />
         <div
           ref={dialogRef}
-          className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800`}
+          className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-ink-900 rounded-2xl border border-ink-800`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? titleId : undefined}
@@ -95,7 +91,7 @@ export function Modal({ isOpen, onClose, children, title, ariaLabel, size = 'md'
           {onClose && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors z-10"
+              className="absolute top-4 right-4 p-2 text-ink-400 hover:text-ink-100 hover:bg-ink-800 rounded-lg transition-colors z-10"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" aria-hidden="true" />
@@ -103,7 +99,7 @@ export function Modal({ isOpen, onClose, children, title, ariaLabel, size = 'md'
           )}
           {title && (
             <div className="p-4 sm:p-6 pb-0 sm:pb-0">
-              <h2 id={titleId} className="text-xl font-semibold text-zinc-100">
+              <h2 id={titleId} className="text-xl font-semibold tracking-tight text-ink-50">
                 {title}
               </h2>
             </div>

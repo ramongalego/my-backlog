@@ -24,7 +24,7 @@ function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-zinc-100 mb-6">{TITLES[mode]}</h2>
+      <h2 className="text-xl font-semibold text-ink-100 mb-6">{TITLES[mode]}</h2>
       {mode === 'login' && (
         <LoginForm
           onSuccess={onLoginSuccess}
@@ -43,8 +43,8 @@ function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps
 function SigningInContent() {
   return (
     <div className="flex flex-col items-center justify-center py-8 gap-3">
-      <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-      <p className="text-sm text-zinc-400">Signing in…</p>
+      <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
+      <p className="text-sm text-ink-400">Signing in…</p>
     </div>
   );
 }

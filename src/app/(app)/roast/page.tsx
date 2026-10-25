@@ -75,13 +75,13 @@ export default function RoastPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Enter Steam URL, Username, or Profile ID"
               aria-label="Steam profile URL or username"
-              className="w-full h-12 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 transition-colors"
+              className="w-full h-12 px-4 pr-10 bg-ink-900 border border-ink-800 rounded-xl text-ink-100 placeholder:text-ink-500 focus:outline-none focus:border-ink-600 transition-colors"
             />
             {input && (
               <button
                 type="button"
                 onClick={() => setInput('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-500 hover:text-ink-300 transition-colors cursor-pointer"
                 aria-label="Clear input"
               >
                 <X className="w-4 h-4" />
@@ -107,14 +107,14 @@ export default function RoastPage() {
             )}
           </Button>
         </div>
-        <p className="text-xs text-zinc-600 mt-2">
+        <p className="text-sm text-ink-400 mt-2">
           Paste the full Steam profile URL for best results. Steam profile must be public.
         </p>
       </form>
 
       {/* Error */}
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-8">
+        <div className="p-4 bg-rose-500/10 rounded-xl text-rose-300 text-sm mb-8" role="alert">
           {error}
         </div>
       )}
@@ -122,15 +122,15 @@ export default function RoastPage() {
       {/* Blacklisted profile */}
       {blacklistMessage && (
         <div className="text-center py-16">
-          <ShieldOff className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
-          <p className="text-lg text-zinc-300">{blacklistMessage}</p>
+          <ShieldOff className="w-10 h-10 text-ink-500 mx-auto mb-4" />
+          <p className="text-lg text-ink-300">{blacklistMessage}</p>
           <button
             onClick={() => {
               setBlacklistMessage(null);
               roastMutation.reset();
               setInput('');
             }}
-            className="mt-6 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="mt-6 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
           >
             Roast someone else
           </button>
@@ -141,10 +141,10 @@ export default function RoastPage() {
       {roastMutation.isPending && (
         <div className="text-center py-16">
           <div className="relative inline-block">
-            <div className="w-16 h-16 border-4 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
-            <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-violet-400" />
+            <div className="w-16 h-16 border-4 border-ink-700 border-t-accent-400 rounded-full animate-spin" />
+            <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-accent-400" />
           </div>
-          <p className="mt-6 text-zinc-400">Analyzing your shameful library...</p>
+          <p className="mt-6 text-ink-400">Analyzing your shameful library...</p>
         </div>
       )}
 

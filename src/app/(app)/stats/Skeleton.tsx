@@ -8,23 +8,15 @@ import {
 // Each block mirrors the real section's padding and content rows rather than
 // using fixed heights, so the skeleton and the loaded page line up.
 
-function SectionTitleSkeleton() {
-  return <Skeleton className="h-4 w-36 mb-4" />;
-}
+const PANEL = 'p-5 sm:p-6';
 
-function StatCardSkeleton() {
-  return (
-    <CardSkeleton className="p-5 flex flex-col gap-3">
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-[30px] w-16" />
-      <Skeleton className="h-4 w-24" />
-    </CardSkeleton>
-  );
+function SectionTitleSkeleton() {
+  return <Skeleton className="h-5 w-36 mb-4" />;
 }
 
 function BarListSkeleton({ rows }: { rows: number }) {
   return (
-    <CardSkeleton className="p-6">
+    <CardSkeleton className={PANEL}>
       <SectionTitleSkeleton />
       <div className="space-y-3">
         {Array.from({ length: rows }, (_, i) => (
@@ -42,13 +34,17 @@ function BarListSkeleton({ rows }: { rows: number }) {
 export function StatsContentSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px overflow-hidden rounded-xl bg-ink-800">
         {Array.from({ length: 6 }, (_, i) => (
-          <StatCardSkeleton key={i} />
+          <div key={i} className="bg-ink-900 px-5 py-4">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-5 w-24 mt-0.5" />
+            <Skeleton className="h-4 w-20 mt-0.5" />
+          </div>
         ))}
       </div>
 
-      <CardSkeleton className="p-6">
+      <CardSkeleton className={PANEL}>
         <SectionTitleSkeleton />
         <Skeleton className="h-2.5 w-full rounded-full mb-5" />
         <div className="flex flex-wrap gap-x-6 gap-y-3">
@@ -60,10 +56,10 @@ export function StatsContentSkeleton() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BarListSkeleton rows={10} />
-        <CardSkeleton className="p-6 flex flex-col">
+        <CardSkeleton className={`${PANEL} flex flex-col`}>
           <div className="flex items-center justify-between mb-4">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-6 w-32 rounded-lg" />
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-7 w-36 rounded-lg" />
           </div>
           <div className="flex-1 min-h-[160px] flex items-end gap-1.5">
             {[96, 56, 128, 72, 112].map((h, i) => (
@@ -73,12 +69,16 @@ export function StatsContentSkeleton() {
         </CardSkeleton>
       </div>
 
-      <CardSkeleton className="p-6">
+      <CardSkeleton className={PANEL}>
         <SectionTitleSkeleton />
-        <Skeleton className="h-3 w-52 mb-5 -mt-2" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <Skeleton className="h-4 w-52 mb-5 -mt-2" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
           {Array.from({ length: 8 }, (_, i) => (
-            <Skeleton key={i} className="h-[84px] rounded-lg" />
+            <div key={i}>
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-1 w-full mt-2 rounded-full" />
+              <Skeleton className="h-4 w-20 mt-1.5" />
+            </div>
           ))}
         </div>
       </CardSkeleton>

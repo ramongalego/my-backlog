@@ -25,8 +25,11 @@ jest.mock('@/components/suggest', () => ({
     isOpen ? <div data-testid="suggestion-modal" data-mode={mode} /> : null,
 }));
 jest.mock('@/components/CurrentlyPlaying', () => ({
-  CurrentlyPlaying: ({ game }: { game: GameWithImage }) => (
-    <div data-testid="currently-playing">{game.name}</div>
+  CurrentlyPlaying: ({ game, footer }: { game: GameWithImage; footer?: React.ReactNode }) => (
+    <div data-testid="currently-playing">
+      {game.name}
+      {footer}
+    </div>
   ),
 }));
 

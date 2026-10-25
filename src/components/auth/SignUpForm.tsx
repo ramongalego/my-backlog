@@ -84,11 +84,11 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
     return (
       <div className="space-y-4">
         <div className="flex flex-col items-center text-center gap-3 py-4">
-          <div className="p-3 rounded-full bg-violet-500/10">
-            <MailCheck className="w-8 h-8 text-violet-400" aria-hidden="true" />
+          <div className="p-3 rounded-full bg-accent-500/10">
+            <MailCheck className="w-8 h-8 text-accent-400" aria-hidden="true" />
           </div>
-          <p className="text-zinc-100 font-medium">Check your email</p>
-          <p className="text-sm text-zinc-400">
+          <p className="text-ink-100 font-medium">Check your email</p>
+          <p className="text-sm text-ink-400">
             We sent a confirmation link to {submittedEmail}. Click the link to activate your
             account.
           </p>
@@ -105,10 +105,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {serverError && (
-        <div
-          className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
-          role="alert"
-        >
+        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
           {serverError}
         </div>
       )}
@@ -151,12 +148,12 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
       </Button>
 
       {onSwitchToLogin && (
-        <p className="text-center text-sm text-zinc-400">
+        <p className="text-center text-sm text-ink-400">
           Already have an account?{' '}
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
+            className="text-accent-400 hover:text-accent-300 font-medium transition-colors"
           >
             Sign in
           </button>
