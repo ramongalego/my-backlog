@@ -36,9 +36,10 @@ export function useCarouselPools(userId: string | null) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // No game appears in two of the picks carousels. Earlier carousels claim
-  // first: a game you've started belongs in Pick Up Where You Left Off, then
-  // in More Like ..., before the general picks.
+  // No game appears in two of the picks carousels. They claim games in this
+  // order, which isn't their order on Home: a game you've started belongs in
+  // Pick Up Where You Left Off, and More Like ... needs its matches before the
+  // general picks take them, or it would rarely have enough to show.
   const shown = new Set<number>();
   const take = (pool: CarouselGame[]) => {
     const games = pool.filter((g) => !shown.has(g.app_id)).slice(0, CAROUSEL_SIZE);

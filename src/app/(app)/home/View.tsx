@@ -42,17 +42,18 @@ export default function HomeView() {
     hiddenGems,
     recentlyAdded,
   } = carousels;
-  // Started games and the personal picks lead; empty carousels are left out.
+  // Started games lead; empty carousels are left out. More Like sits lower
+  // but still claims its games first (see useCarouselPools).
   const carouselRows = [
     { key: 'pick-up', title: 'Pick Up Where You Left Off', games: pickUp },
+    { key: 'short', title: 'Top-Rated Games Under 5 Hours', games: shortGames },
+    { key: 'rated', title: 'Highly Rated, Never Played', games: highlyRatedGames },
+    { key: 'weekend', title: 'Finish It in a Weekend', games: weekendGames },
     {
       key: 'more-like',
       title: moreLike ? `More Like ${moreLike.basedOn}` : '',
       games: moreLike?.games ?? [],
     },
-    { key: 'short', title: 'Top-Rated Games Under 5 Hours', games: shortGames },
-    { key: 'rated', title: 'Highly Rated, Never Played', games: highlyRatedGames },
-    { key: 'weekend', title: 'Finish It in a Weekend', games: weekendGames },
     { key: 'gems', title: 'Hidden Gems', games: hiddenGems },
     { key: 'recent', title: 'Recently Added', games: recentlyAdded },
   ].filter((row) => row.games.length > 0);

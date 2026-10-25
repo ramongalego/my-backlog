@@ -89,24 +89,47 @@ describe('length carousels', () => {
 });
 
 describe('Hidden Gems', () => {
-  it('finds very well reviewed games outside the big hits, ranked by weighted score', () => {
+  const gem = (name: string, steam_review_score: number, steam_review_count: number) =>
+    game({ name, steam_review_score, steam_review_count });
+
+  it('takes games rated 90%+ by 50 to 5,000 reviewers', () => {
     const pools = build([
-      game({ name: 'Big hit', steam_review_score: 97, steam_review_count: 200000 }),
-      game({
-        name: 'Gem',
-        steam_review_score: 93,
-        steam_review_count: 2600,
-        steam_review_weighted: 90,
-      }),
-      game({
-        name: 'Tiny sample',
-        steam_review_score: 100,
-        steam_review_count: 12,
-        steam_review_weighted: 70,
-      }),
-      game({ name: 'Mixed', steam_review_score: 70, steam_review_count: 900 }),
+      gem('Big hit', 97, 200000),
+      gem('Gem', 93, 2600),
+      gem('Tiny sample', 100, 12),
+      gem('Good, not great', 88, 900),
+      gem('Just in', 90, 5000),
     ]);
-    expect(names(pools.hiddenGemsPool)).toEqual(['Gem', 'Tiny sample']);
+    expect(names(pools.hiddenGemsPool)).toEqual(['Gem', 'Just in']);
+  });
+
+  it('ranks by score, then the less-known game first', () => {
+    const pools = build([
+      gem('Well known', 94, 4800),
+      gem('Top score', 97, 3000),
+      gem('Barely known', 94, 120),
+    ]);
+    expect(names(pools.hiddenGemsPool)).toEqual(['Top score', 'Barely known', 'Well known']);
+  });
+});
+
+describe('the queue', () => {
+  it('keeps queued games out of the picks, but not out of Recently Added', () => {
+    const queued = game({
+      name: 'Queued',
+      main_story_hours: 40,
+      playtime_forever: 10 * 60,
+      created_at: '2026-03-01T00:00:00Z',
+    });
+    const other = game({ name: 'Other', main_story_hours: 40, playtime_forever: 10 * 60 });
+    const pools = buildCarouselPools(
+      [queued, other],
+      [],
+      '2026-01-01T00:00:00Z',
+      new Set([queued.app_id]),
+    );
+    expect(names(pools.pickUpPool)).toEqual(['Other']);
+    expect(names(pools.recentlyAddedPool)).toEqual(['Queued']);
   });
 });
 

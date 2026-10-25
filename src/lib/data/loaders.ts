@@ -212,7 +212,7 @@ export async function loadCarouselPools(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<CarouselPools> {
-  const [backlog, loved, firstImported] = await Promise.all([
+  const [backlog, loved, firstImported, queued] = await Promise.all([
     // The whole backlog: the carousels need tags, editions and history to
     // rank it, which the database can't do on its own.
     fetchAllRows<CarouselGame>((from, to) =>
@@ -241,6 +241,14 @@ export async function loadCarouselPools(
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(1),
+    fetchAllRows<{ app_id: number }>((from, to) =>
+      supabase
+        .from('playing_queue')
+        .select('app_id')
+        .eq('user_id', userId)
+        .order('app_id')
+        .range(from, to),
+    ),
   ]);
   if (loved.error) throw loved.error;
   if (firstImported.error) throw firstImported.error;
@@ -249,5 +257,6 @@ export async function loadCarouselPools(
     backlog,
     (loved.data ?? []) as LovedGame[],
     firstImported.data?.[0]?.created_at,
+    new Set(queued.map((q) => q.app_id)),
   );
 }

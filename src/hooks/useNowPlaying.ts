@@ -87,6 +87,11 @@ export function useAddToQueue(userId: string | null) {
       queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) =>
         old.some((q) => q.app_id === game.app_id) ? old : [...old, toQueueItem(game, old.length)],
       );
+      // Queued games leave the carousels; the invalidation on settle confirms it.
+      queryClient.setQueriesData<CarouselPools>(
+        { queryKey: queryKeys.carousels.all },
+        (pools) => pools && removeAppFromPools(pools, game.app_id),
+      );
       return { previous };
     },
     onSuccess: (_data, game) => toast.success(`${game.name} added to the queue!`),

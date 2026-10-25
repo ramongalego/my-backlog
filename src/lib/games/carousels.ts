@@ -56,10 +56,18 @@ const STARTED_MIN_SHARE = 0.1;
 // Without an HLTB time there's no share, so ask for a bit more playtime.
 const STARTED_MIN_MINUTES_UNKNOWN_LENGTH = 120;
 
-// Hidden Gems: very well reviewed, but by fewer people than the big hits.
-const GEM_MIN_SCORE = 85;
-const GEM_MIN_REVIEWS = 10;
+// Hidden Gems: loved by the people who played them, but far fewer people than
+// the big hits. Enough reviews that the score means something.
+const GEM_MIN_SCORE = 90;
+const GEM_MIN_REVIEWS = 50;
 const GEM_MAX_REVIEWS = 5000;
+
+// Best score first; on a tie, the less-known game. (The weighted score would
+// put the most-reviewed, least hidden games first.)
+const byGemRank = (a: CarouselGame, b: CarouselGame) =>
+  (b.steam_review_score ?? 0) - (a.steam_review_score ?? 0) ||
+  (a.steam_review_count ?? 0) - (b.steam_review_count ?? 0) ||
+  a.app_id - b.app_id;
 
 // More Like ...: how close a backlog game must be to the loved game, and how
 // many it needs before the carousel is worth showing.
@@ -157,17 +165,20 @@ function addedSinceFirstSync(games: CarouselGame[], firstImportedAt: string | un
 
 /**
  * Builds every Home carousel from the backlog (status backlog or none, type
- * game) and the user's loved games. Each pool is ranked; useCarouselPools
+ * game), the user's loved games and their queue. Each pool is ranked; useCarouselPools
  * trims them and keeps a game out of more than one carousel.
  */
 export function buildCarouselPools(
   backlog: CarouselGame[],
   loved: LovedGame[],
   firstImportedAt: string | undefined,
+  queuedAppIds: ReadonlySet<number> = new Set(),
 ): CarouselPools {
+  // Queued games are already decided, so they aren't suggested again.
   const candidates = oneEditionEach(
     backlog.filter(
       (g) =>
+        !queuedAppIds.has(g.app_id) &&
         g.categories?.includes('Single-player') &&
         multiplayerFocus({ categories: g.categories, tags: g.tags }) < MULTIPLAYER_FIRST,
     ),
@@ -198,9 +209,10 @@ export function buildCarouselPools(
       .filter(
         (g) =>
           (g.steam_review_score ?? 0) >= GEM_MIN_SCORE &&
-          (g.steam_review_count ?? 0) > GEM_MIN_REVIEWS &&
-          (g.steam_review_count ?? 0) < GEM_MAX_REVIEWS,
+          (g.steam_review_count ?? 0) >= GEM_MIN_REVIEWS &&
+          (g.steam_review_count ?? 0) <= GEM_MAX_REVIEWS,
       )
+      .sort(byGemRank)
       .slice(0, POOL_SIZE),
     // A factual list of new arrivals, so it isn't filtered like the picks.
     recentlyAddedPool: addedSinceFirstSync(backlog, firstImportedAt),

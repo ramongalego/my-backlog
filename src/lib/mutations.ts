@@ -24,8 +24,11 @@ export function useInvalidateQueries() {
         queryKeys.carousels.all,
         queryKeys.queue.all,
       ),
-    /** Invalidate after a queue-only change. "Queued" badges read the queue query directly. */
-    queue: () => invalidate(queryKeys.queue.all),
+    /**
+     * Invalidate after a queue-only change. "Queued" badges read the queue
+     * query directly; the carousels leave queued games out.
+     */
+    queue: () => invalidate(queryKeys.queue.all, queryKeys.carousels.all),
     /** Invalidate games + queue + carousels (after pick/cancel or library refresh) */
     gamesAndQueue: () =>
       invalidate(
