@@ -86,9 +86,12 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-ink-50">{title}</h2>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        {/* Titles can be long ("More Like ..."), so they wrap and the arrows keep their size. */}
+        <h2 className="min-w-0 text-lg sm:text-xl font-semibold tracking-tight text-ink-50">
+          {title}
+        </h2>
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}

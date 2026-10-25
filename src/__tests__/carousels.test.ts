@@ -1,0 +1,203 @@
+import { buildCarouselPools, type CarouselGame, type LovedGame } from '@/lib/games/carousels';
+import { editionKey } from '@/lib/games/similarity';
+
+let nextId = 1;
+const game = (overrides: Partial<CarouselGame> = {}): CarouselGame => ({
+  app_id: nextId++,
+  name: `Game ${nextId}`,
+  header_image: null,
+  main_story_hours: 10,
+  playtime_forever: 0,
+  steam_review_score: 90,
+  steam_review_count: 20000,
+  steam_review_weighted: 85,
+  deck_compat: null,
+  tags: ['Action', 'Adventure'],
+  categories: ['Single-player'],
+  created_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+
+const loved = (
+  name: string,
+  tags: string[],
+  rating = 9,
+  finished_at = '2026-06-01',
+): LovedGame => ({
+  name,
+  rating,
+  tags,
+  finished_at,
+});
+
+const names = (games: CarouselGame[]) => games.map((g) => g.name);
+const build = (backlog: CarouselGame[], lovedGames: LovedGame[] = []) =>
+  buildCarouselPools(backlog, lovedGames, '2026-01-01T00:00:00Z');
+
+describe('every carousel', () => {
+  it('keeps one edition of a game, the better reviewed', () => {
+    const pools = build([
+      game({ name: 'Ori and the Blind Forest', steam_review_weighted: 80 }),
+      game({ name: 'Ori and the Blind Forest: Definitive Edition', steam_review_weighted: 90 }),
+      game({ name: 'Portal' }),
+      game({ name: 'Portal 2' }),
+    ]);
+    expect(names(pools.weekendGamesPool)).toEqual([
+      'Ori and the Blind Forest: Definitive Edition',
+      'Portal',
+      'Portal 2',
+    ]);
+  });
+
+  it('leaves out multiplayer-first games that also list single-player', () => {
+    const pools = build([
+      game({ name: 'Alien Swarm', tags: ['Twin Stick Shooter', 'PvE', 'Co-op', 'Shooter'] }),
+      game({ name: 'Pummel Party', tags: ['Party Game', 'Multiplayer', 'Local Multiplayer'] }),
+      game({ name: 'Solo game' }),
+    ]);
+    expect(names(pools.weekendGamesPool)).toEqual(['Solo game']);
+  });
+
+  it('leaves out games you have played most of', () => {
+    const pools = build([
+      game({ name: 'Beaten', main_story_hours: 2.5, playtime_forever: 4 * 60 }),
+      game({ name: 'Fresh', main_story_hours: 2.5 }),
+    ]);
+    expect(names(pools.shortGamesPool)).toEqual(['Fresh']);
+  });
+});
+
+describe('length carousels', () => {
+  it('sort into under 5 hours and a weekend', () => {
+    const pools = build([
+      game({ name: 'Two hours', main_story_hours: 2 }),
+      game({ name: 'Five hours', main_story_hours: 5 }),
+      game({ name: 'Nine hours', main_story_hours: 9 }),
+      game({ name: 'Forty hours', main_story_hours: 40 }),
+    ]);
+    expect(names(pools.shortGamesPool).sort()).toEqual(['Five hours', 'Two hours']);
+    expect(names(pools.weekendGamesPool)).toEqual(['Nine hours']);
+  });
+
+  it('skip fighting games, whose time is only the story mode', () => {
+    const pools = build([
+      game({ name: 'TEKKEN 7', main_story_hours: 3.6, tags: ['Fighting', '3D Fighter'] }),
+      game({ name: 'Short adventure', main_story_hours: 3 }),
+    ]);
+    expect(names(pools.shortGamesPool)).toEqual(['Short adventure']);
+  });
+});
+
+describe('Hidden Gems', () => {
+  it('finds very well reviewed games outside the big hits, ranked by weighted score', () => {
+    const pools = build([
+      game({ name: 'Big hit', steam_review_score: 97, steam_review_count: 200000 }),
+      game({
+        name: 'Gem',
+        steam_review_score: 93,
+        steam_review_count: 2600,
+        steam_review_weighted: 90,
+      }),
+      game({
+        name: 'Tiny sample',
+        steam_review_score: 100,
+        steam_review_count: 12,
+        steam_review_weighted: 70,
+      }),
+      game({ name: 'Mixed', steam_review_score: 70, steam_review_count: 900 }),
+    ]);
+    expect(names(pools.hiddenGemsPool)).toEqual(['Gem', 'Tiny sample']);
+  });
+});
+
+describe('Pick Up Where You Left Off', () => {
+  it('lists games you are into, furthest along first', () => {
+    const pools = build([
+      game({ name: 'Halfway', main_story_hours: 60, playtime_forever: 29 * 60 }),
+      game({ name: 'A quarter in', main_story_hours: 40, playtime_forever: 10 * 60 }),
+      game({ name: 'Barely tried', main_story_hours: 57, playtime_forever: 60 }),
+      game({ name: 'Untouched', main_story_hours: 10 }),
+      game({ name: 'Done', main_story_hours: 5, playtime_forever: 6 * 60 }),
+      game({ name: 'No length, played a while', main_story_hours: null, playtime_forever: 180 }),
+    ]);
+    expect(names(pools.pickUpPool)).toEqual([
+      'Halfway',
+      'A quarter in',
+      'No length, played a while',
+    ]);
+  });
+});
+
+describe('More Like ...', () => {
+  const jrpg = ['JRPG', 'Turn-Based Combat', 'Anime', 'Story Rich', 'RPG'];
+  const shooter = ['FPS', 'Shooter', 'Multiplayer', 'Military'];
+
+  it('seeds from your best-loved game and lists the backlog games most like it', () => {
+    const pools = build(
+      [
+        game({ name: 'Trails of Cold Steel IV', tags: jrpg }),
+        game({ name: 'Tales of Arise', tags: ['JRPG', 'Anime', 'Action RPG', 'Story Rich'] }),
+        game({ name: 'Dragon Quest XI', tags: ['JRPG', 'Turn-Based Combat', 'RPG'] }),
+        game({ name: 'DOOM', tags: shooter }),
+      ],
+      [
+        loved('Castlevania Collection', ['Metroidvania', 'Platformer'], 8, '2026-09-01'),
+        loved('Trails of Cold Steel III', jrpg, 9, '2026-01-01'),
+      ],
+    );
+    expect(pools.moreLike?.basedOn).toBe('Trails of Cold Steel III');
+    expect(pools.moreLike && names(pools.moreLike.games)).toEqual([
+      'Trails of Cold Steel IV',
+      'Dragon Quest XI',
+      'Tales of Arise',
+    ]);
+  });
+
+  it('skips poorly reviewed matches', () => {
+    const pools = build(
+      [
+        game({ name: 'Great JRPG 1', tags: jrpg }),
+        game({ name: 'Great JRPG 2', tags: jrpg }),
+        game({ name: 'Poor JRPG', tags: jrpg, steam_review_score: 55 }),
+      ],
+      [loved('Trails of Cold Steel III', jrpg)],
+    );
+    expect(pools.moreLike).toBeNull();
+  });
+
+  it('is left out until you have rated a game 8 or higher', () => {
+    const backlog = [1, 2, 3].map((i) => game({ name: `JRPG ${i}`, tags: jrpg }));
+    expect(build(backlog).moreLike).toBeNull();
+    expect(build(backlog, [loved('Okay JRPG', jrpg, 7)]).moreLike).toBeNull();
+  });
+});
+
+describe('Recently Added', () => {
+  it('lists games that arrived after the first import, newest first, unfiltered', () => {
+    const pools = buildCarouselPools(
+      [
+        game({ name: 'First import', created_at: '2026-01-01T00:10:00Z' }),
+        game({ name: 'Bought later', created_at: '2026-03-01T00:00:00Z' }),
+        game({
+          name: 'Multiplayer, bought last',
+          created_at: '2026-04-01T00:00:00Z',
+          categories: ['Multi-player'],
+        }),
+      ],
+      [],
+      '2026-01-01T00:00:00Z',
+    );
+    expect(names(pools.recentlyAddedPool)).toEqual(['Multiplayer, bought last', 'Bought later']);
+  });
+});
+
+describe('editionKey', () => {
+  it.each([
+    ['Little Nightmares Enhanced Edition', 'little nightmares'],
+    ['Ori and the Blind Forest: Definitive Edition', 'ori and blind forest'],
+    ['Halcyon 6: Starbase Commander (CLASSIC)', 'halcyon 6 starbase commander'],
+    ['Portal 2', 'portal 2'],
+  ])('%s → %s', (name, key) => {
+    expect(editionKey(name)).toBe(key);
+  });
+});

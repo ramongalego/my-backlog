@@ -55,6 +55,8 @@ const baseLibrary = {
     games: [],
   },
   carousels: {
+    pickUp: [],
+    moreLike: null,
     shortGames: [],
     weekendGames: [],
     highlyRatedGames: [],

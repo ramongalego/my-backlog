@@ -15,67 +15,7 @@ export const MAX_PLAYTIME_MINUTES = 240;
 // Random pick uses a stricter "barely touched" playtime bound than the pools.
 export const RANDOM_PICK_MAX_PLAYTIME_MINUTES = 120;
 
-/**
- * Checks if a game is eligible for the short games pool (1-5 hours)
- */
-export function isShortGameEligible(game: GameForFiltering): boolean {
-  // Must be a game (not DLC/software)
-  if (game.type !== 'game') return false;
-
-  // Must have main story hours data
-  if (game.main_story_hours == null) return false;
-
-  // Must have weighted review score (for sorting)
-  if (game.steam_review_weighted == null) return false;
-
-  // Must be between 1-5 hours
-  if (game.main_story_hours < SHORT_GAME_MIN_HOURS) return false;
-  if (game.main_story_hours > SHORT_GAME_MAX_HOURS) return false;
-
-  // Must not have been played too much (< 4 hours)
-  if (game.playtime_forever != null && game.playtime_forever > MAX_PLAYTIME_MINUTES) {
-    return false;
-  }
-
-  // Must be single-player
-  if (!game.categories?.includes('Single-player')) return false;
-
-  // Must be in backlog or have no status
-  if (game.status != null && game.status !== 'backlog') return false;
-
-  return true;
-}
-
-/**
- * Checks if a game is eligible for the weekend games pool (5-12 hours)
- */
-export function isWeekendGameEligible(game: GameForFiltering): boolean {
-  // Must be a game (not DLC/software)
-  if (game.type !== 'game') return false;
-
-  // Must have main story hours data
-  if (game.main_story_hours == null) return false;
-
-  // Must have weighted review score (for sorting)
-  if (game.steam_review_weighted == null) return false;
-
-  // Must be between 5-12 hours (exclusive of 5 since that's in short games)
-  if (game.main_story_hours <= WEEKEND_GAME_MIN_HOURS) return false;
-  if (game.main_story_hours > WEEKEND_GAME_MAX_HOURS) return false;
-
-  // Must not have been played too much (< 4 hours)
-  if (game.playtime_forever != null && game.playtime_forever > MAX_PLAYTIME_MINUTES) {
-    return false;
-  }
-
-  // Must be single-player
-  if (!game.categories?.includes('Single-player')) return false;
-
-  // Must be in backlog or have no status
-  if (game.status != null && game.status !== 'backlog') return false;
-
-  return true;
-}
+// The short and weekend carousels are built in carousels.ts.
 
 /**
  * Checks if a game is eligible for random pick (broader criteria)

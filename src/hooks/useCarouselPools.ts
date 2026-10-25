@@ -4,22 +4,22 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
 import { loadCarouselPools, type CarouselPools } from '@/lib/data/loaders';
-import type { GameWithImage } from '@/types/games';
+import {
+  EMPTY_CAROUSEL_POOLS,
+  MORE_LIKE_MIN_GAMES,
+  type CarouselGame,
+} from '@/lib/games/carousels';
 
 export type { CarouselPools };
 
-const EMPTY_POOLS: CarouselPools = {
-  shortGamesPool: [],
-  weekendGamesPool: [],
-  highlyRatedGamesPool: [],
-  hiddenGemsPool: [],
-  recentlyAddedPool: [],
-};
+const CAROUSEL_SIZE = 10;
 
 /** Drops a game from every carousel, e.g. optimistically when it starts playing. */
 export function removeAppFromPools(pools: CarouselPools, appId: number): CarouselPools {
-  const without = (list: GameWithImage[]) => list.filter((g) => g.app_id !== appId);
+  const without = (list: CarouselGame[]) => list.filter((g) => g.app_id !== appId);
   return {
+    pickUpPool: without(pools.pickUpPool),
+    moreLike: pools.moreLike && { ...pools.moreLike, games: without(pools.moreLike.games) },
     shortGamesPool: without(pools.shortGamesPool),
     weekendGamesPool: without(pools.weekendGamesPool),
     highlyRatedGamesPool: without(pools.highlyRatedGamesPool),
@@ -29,44 +29,41 @@ export function removeAppFromPools(pools: CarouselPools, appId: number): Carouse
 }
 
 export function useCarouselPools(userId: string | null) {
-  const { data = EMPTY_POOLS, isPending } = useQuery({
+  const { data = EMPTY_CAROUSEL_POOLS, isPending } = useQuery({
     queryKey: userId ? queryKeys.carousels.byUser(userId) : queryKeys.carousels.all,
     queryFn: () => loadCarouselPools(createClient(), userId!),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
 
-  const {
-    shortGamesPool,
-    weekendGamesPool,
-    highlyRatedGamesPool,
-    hiddenGemsPool,
-    recentlyAddedPool,
-  } = data;
+  // No game appears in two of the picks carousels. Earlier carousels claim
+  // first: a game you've started belongs in Pick Up Where You Left Off, then
+  // in More Like ..., before the general picks.
+  const shown = new Set<number>();
+  const take = (pool: CarouselGame[]) => {
+    const games = pool.filter((g) => !shown.has(g.app_id)).slice(0, CAROUSEL_SIZE);
+    games.forEach((g) => shown.add(g.app_id));
+    return games;
+  };
 
-  const shortGames = shortGamesPool.slice(0, 10);
-  const weekendGames = weekendGamesPool.slice(0, 10);
+  const pickUp = take(data.pickUpPool);
+  const moreLikeGames = data.moreLike ? take(data.moreLike.games) : [];
+  const shortGames = take(data.shortGamesPool);
+  const weekendGames = take(data.weekendGamesPool);
+  const highlyRatedGames = take(data.highlyRatedGamesPool);
+  const hiddenGems = take(data.hiddenGemsPool);
 
   // Recently Added is a factual list of new arrivals, so it's exempt from
   // de-duplication: a new game shows there even if another carousel has it.
-  const recentlyAdded = recentlyAddedPool.slice(0, 10);
-
-  // Build a running exclusion set so no game appears in two of the picks carousels
-  const { highlyRatedGames, hiddenGems } = (() => {
-    const shown = new Set([
-      ...shortGames.map((g) => g.app_id),
-      ...weekendGames.map((g) => g.app_id),
-    ]);
-
-    const rated = highlyRatedGamesPool.filter((g) => !shown.has(g.app_id)).slice(0, 10);
-    rated.forEach((g) => shown.add(g.app_id));
-
-    const gems = hiddenGemsPool.filter((g) => !shown.has(g.app_id)).slice(0, 10);
-
-    return { highlyRatedGames: rated, hiddenGems: gems };
-  })();
+  const recentlyAdded = data.recentlyAddedPool.slice(0, CAROUSEL_SIZE);
 
   return {
+    pickUp,
+    moreLike:
+      // Only worth a row if enough are left after the started games.
+      data.moreLike && moreLikeGames.length >= MORE_LIKE_MIN_GAMES
+        ? { basedOn: data.moreLike.basedOn, games: moreLikeGames }
+        : null,
     shortGames,
     weekendGames,
     highlyRatedGames,

@@ -33,7 +33,29 @@ export default function HomeView() {
   const { user, profile, isLoading } = auth;
   const { historyCount, queuedAppIds } = meta;
   const { isSyncing, progress: syncProgress, games: syncingGames } = sync;
-  const { shortGames, weekendGames, highlyRatedGames, hiddenGems, recentlyAdded } = carousels;
+  const {
+    pickUp,
+    moreLike,
+    shortGames,
+    weekendGames,
+    highlyRatedGames,
+    hiddenGems,
+    recentlyAdded,
+  } = carousels;
+  // Started games and the personal picks lead; empty carousels are left out.
+  const carouselRows = [
+    { key: 'pick-up', title: 'Pick Up Where You Left Off', games: pickUp },
+    {
+      key: 'more-like',
+      title: moreLike ? `More Like ${moreLike.basedOn}` : '',
+      games: moreLike?.games ?? [],
+    },
+    { key: 'short', title: 'Top-Rated Games Under 5 Hours', games: shortGames },
+    { key: 'rated', title: 'Highly Rated, Never Played', games: highlyRatedGames },
+    { key: 'weekend', title: 'Finish It in a Weekend', games: weekendGames },
+    { key: 'gems', title: 'Hidden Gems', games: hiddenGems },
+    { key: 'recent', title: 'Recently Added', games: recentlyAdded },
+  ].filter((row) => row.games.length > 0);
   const carouselsLoading = carousels.loading;
   const {
     currentlyPlaying,
@@ -161,52 +183,19 @@ export default function HomeView() {
         {/* Game carousels */}
         {!isSyncing && carouselsLoading && <CarouselsLoadingState />}
 
-        {!isSyncing &&
-          !carouselsLoading &&
-          (shortGames.length > 0 ||
-            weekendGames.length > 0 ||
-            highlyRatedGames.length > 0 ||
-            hiddenGems.length > 0 ||
-            recentlyAdded.length > 0) && (
-            <section className={`${PAGE_CONTAINER} space-y-12`}>
-              {shortGames.length > 0 && (
-                <GameCarousel
-                  title="Top-Rated Games Under 5 Hours"
-                  games={shortGames}
-                  onOpenDetail={handleOpenCarouselDetail}
-                  priority
-                />
-              )}
-              {highlyRatedGames.length > 0 && (
-                <GameCarousel
-                  title="Highly Rated, Never Played"
-                  games={highlyRatedGames}
-                  onOpenDetail={handleOpenCarouselDetail}
-                />
-              )}
-              {weekendGames.length > 0 && (
-                <GameCarousel
-                  title="Finish It in a Weekend"
-                  games={weekendGames}
-                  onOpenDetail={handleOpenCarouselDetail}
-                />
-              )}
-              {hiddenGems.length > 0 && (
-                <GameCarousel
-                  title="Hidden Gems"
-                  games={hiddenGems}
-                  onOpenDetail={handleOpenCarouselDetail}
-                />
-              )}
-              {recentlyAdded.length > 0 && (
-                <GameCarousel
-                  title="Recently Added"
-                  games={recentlyAdded}
-                  onOpenDetail={handleOpenCarouselDetail}
-                />
-              )}
-            </section>
-          )}
+        {!isSyncing && !carouselsLoading && carouselRows.length > 0 && (
+          <section className={`${PAGE_CONTAINER} space-y-12`}>
+            {carouselRows.map((row, i) => (
+              <GameCarousel
+                key={row.key}
+                title={row.title}
+                games={row.games}
+                onOpenDetail={handleOpenCarouselDetail}
+                priority={i === 0}
+              />
+            ))}
+          </section>
+        )}
       </main>
 
       {isSuggestionModalOpen && (

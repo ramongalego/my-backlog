@@ -4,11 +4,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import {
-  SHORT_GAME_MIN_HOURS,
-  SHORT_GAME_MAX_HOURS,
-  WEEKEND_GAME_MAX_HOURS,
-  MAX_PLAYTIME_MINUTES,
-} from '@/lib/games/filtering';
+  buildCarouselPools,
+  type CarouselGame,
+  type CarouselPools,
+  type LovedGame,
+} from '@/lib/games/carousels';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
 // ─── Games page ─────────────────────────────────────────────────────────────
@@ -202,85 +202,39 @@ export async function loadLibraryMeta(
   };
 }
 
-export interface CarouselPools {
-  shortGamesPool: GameWithImage[];
-  weekendGamesPool: GameWithImage[];
-  highlyRatedGamesPool: GameWithImage[];
-  hiddenGemsPool: GameWithImage[];
-  recentlyAddedPool: GameWithImage[];
-}
+export type { CarouselPools };
 
 const CAROUSEL_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, deck_compat';
-const SINGLE_PLAYER = ['Single-player'];
+  'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at';
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
 export async function loadCarouselPools(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<CarouselPools> {
-  const results = await Promise.all([
+  const [backlog, loved, firstImported] = await Promise.all([
+    // The whole backlog: the carousels need tags, editions and history to
+    // rank it, which the database can't do on its own.
+    fetchAllRows<CarouselGame>((from, to) =>
+      supabase
+        .from('games')
+        .select(CAROUSEL_SELECT)
+        .eq('user_id', userId)
+        .eq('type', 'game')
+        .or(BACKLOG_FILTER)
+        .order('app_id')
+        .range(from, to),
+    ),
     supabase
       .from('games')
-      .select(CAROUSEL_SELECT)
+      .select('name, rating, tags, finished_at')
       .eq('user_id', userId)
       .eq('type', 'game')
-      .not('main_story_hours', 'is', null)
-      .not('steam_review_weighted', 'is', null)
-      .gte('main_story_hours', SHORT_GAME_MIN_HOURS)
-      .lte('main_story_hours', SHORT_GAME_MAX_HOURS)
-      .lte('playtime_forever', MAX_PLAYTIME_MINUTES)
-      .contains('categories', SINGLE_PLAYER)
-      .or(BACKLOG_FILTER)
-      .order('steam_review_weighted', { ascending: false }),
-    supabase
-      .from('games')
-      .select(CAROUSEL_SELECT)
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .not('main_story_hours', 'is', null)
-      .not('steam_review_weighted', 'is', null)
-      .gt('main_story_hours', SHORT_GAME_MAX_HOURS)
-      .lte('main_story_hours', WEEKEND_GAME_MAX_HOURS)
-      .lte('playtime_forever', MAX_PLAYTIME_MINUTES)
-      .contains('categories', SINGLE_PLAYER)
-      .or(BACKLOG_FILTER)
-      .order('steam_review_weighted', { ascending: false }),
-    supabase
-      .from('games')
-      .select(CAROUSEL_SELECT)
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .not('steam_review_weighted', 'is', null)
-      .eq('playtime_forever', 0)
-      .contains('categories', SINGLE_PLAYER)
-      .or(BACKLOG_FILTER)
-      .order('steam_review_weighted', { ascending: false })
+      .eq('status', 'finished')
+      .gte('rating', 8)
+      .order('finished_at', { ascending: false, nullsFirst: false })
       .limit(20),
-    // Hidden Gems: high score, few reviews
-    supabase
-      .from('games')
-      .select(CAROUSEL_SELECT)
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .gte('steam_review_score', 80)
-      .gt('steam_review_count', 10)
-      .lte('steam_review_count', 500)
-      .contains('categories', SINGLE_PLAYER)
-      .or(BACKLOG_FILTER)
-      .order('steam_review_score', { ascending: false })
-      .limit(20),
-    // Recently Added: newest arrivals in the library (see below).
-    supabase
-      .from('games')
-      .select(`${CAROUSEL_SELECT}, created_at`)
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .or(BACKLOG_FILTER)
-      .order('created_at', { ascending: false })
-      .order('app_id', { ascending: false })
-      .limit(20),
-    // When the library was first imported.
+    // When the library was first imported, for Recently Added.
     supabase
       .from('games')
       .select('created_at')
@@ -288,33 +242,12 @@ export async function loadCarouselPools(
       .order('created_at', { ascending: true })
       .limit(1),
   ]);
+  if (loved.error) throw loved.error;
+  if (firstImported.error) throw firstImported.error;
 
-  const failed = results.find((r) => r.error);
-  if (failed?.error) throw failed.error;
-  const [short, weekend, highlyRated, hiddenGems, recent, firstImported] = results.map(
-    (r) => (r.data ?? []) as (GameWithImage & { created_at: string })[],
+  return buildCarouselPools(
+    backlog,
+    (loved.data ?? []) as LovedGame[],
+    firstImported.data?.[0]?.created_at,
   );
-
-  return {
-    shortGamesPool: short,
-    weekendGamesPool: weekend,
-    highlyRatedGamesPool: highlyRated,
-    hiddenGemsPool: hiddenGems,
-    recentlyAddedPool: addedSinceFirstSync(recent, firstImported[0]?.created_at),
-  };
-}
-
-// The first sync imports the whole library at once, so those rows all share
-// roughly the same created_at and say nothing about when each game was
-// bought. Steam doesn't expose purchase dates, so "recently added" means
-// games that first appeared in a later sync.
-const FIRST_SYNC_WINDOW_MS = 60 * 60 * 1000;
-
-function addedSinceFirstSync<T extends { created_at: string }>(
-  games: T[],
-  firstImportedAt: string | undefined,
-): T[] {
-  if (!firstImportedAt) return [];
-  const cutoff = Date.parse(firstImportedAt) + FIRST_SYNC_WINDOW_MS;
-  return games.filter((g) => Date.parse(g.created_at) > cutoff);
 }

@@ -1,4 +1,11 @@
 import { isSoftware } from '@/lib/games/software';
+import {
+  multiplayerFocus,
+  seriesKey,
+  seriesMatch,
+  similarity,
+  topTags,
+} from '@/lib/games/similarity';
 import type { EnergyLevel, MoodType, SuggestionPreferences, TimeCommitment } from './types';
 
 /**
@@ -63,44 +70,6 @@ const SESSION_TAGS = new Set([
   'Time Attack',
   "Shoot 'Em Up",
   'Card Battler',
-]);
-
-// Tags that say nothing about how a game plays.
-const GENERIC_TAGS = new Set([
-  'Singleplayer',
-  'Multiplayer',
-  'Great Soundtrack',
-  'Indie',
-  'Controller',
-  'Classic',
-  'Early Access',
-  'Free to Play',
-  'Kickstarter',
-  'Crowdfunded',
-  'Remake',
-  'Reboot',
-  'Quick-Time Events',
-  '3D Vision',
-  'Moddable',
-  'Steam Trading Cards',
-]);
-
-// Games that list single-player but are built around playing with others.
-const MULTIPLAYER_FOCUS = new Set([
-  'Multiplayer',
-  'Massively Multiplayer',
-  'MMORPG',
-  'Battle Royale',
-  'MOBA',
-  'PvP',
-  'Online Co-Op',
-  'Co-op',
-  'eSports',
-  'Competitive',
-  'Team-Based',
-  'Hero Shooter',
-  'Party Game',
-  'Local Multiplayer',
 ]);
 
 const IDLE_TAGS = new Set(['Idler', 'Clicker', 'Incremental']);
@@ -371,32 +340,10 @@ const LIKES_ENERGY = Object.fromEntries(
   ]),
 ) as Record<EnergyLevel, { likes: Set<string>; dislikes: Set<string> }>;
 
-/** Steam orders tags by votes, so earlier tags describe a game better. */
-function tagWeight(index: number) {
-  return 1 / (1 + index * 0.15);
-}
-
-function topTags(tags: string[] | null, limit = 12): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const tag of tags ?? []) {
-    if (GENERIC_TAGS.has(tag)) continue;
-    out.set(tag, tagWeight(out.size));
-    if (out.size >= limit) break;
-  }
-  return out;
-}
-
-export { isSoftware };
+export { isSoftware, seriesKey, seriesMatch };
 
 export function isMultiplayerOnly(game: Pick<CandidateGame, 'categories'>) {
   return !!game.categories?.length && !game.categories.includes('Single-player');
-}
-
-/** 0 to 1: how much the top tags are about playing with other people. */
-function multiplayerFocus(game: Pick<CandidateGame, 'categories' | 'tags'>) {
-  if (game.categories?.includes('MMO')) return 1;
-  const count = (game.tags ?? []).slice(0, 5).filter((t) => MULTIPLAYER_FOCUS.has(t)).length;
-  return Math.min(1, count / 3);
 }
 
 function isIdleGame(game: Pick<CandidateGame, 'tags'>) {
@@ -437,63 +384,11 @@ function tagFit(tags: Map<string, number>, fit: { likes: Set<string>; dislikes: 
   return Math.tanh(sum / 1.5);
 }
 
-/** Weighted overlap of two tag lists, 0 to 1. */
-function similarity(a: Map<string, number>, b: Map<string, number>) {
-  let shared = 0;
-  let total = 0;
-  for (const [tag, wa] of a) {
-    const wb = b.get(tag) ?? 0;
-    shared += Math.min(wa, wb);
-    total += Math.max(wa, wb);
-  }
-  for (const [tag, wb] of b) if (!a.has(tag)) total += wb;
-  return total > 0 ? shared / total : 0;
-}
-
 /** How much a history game says "more like this", from -1 to 1. */
 export function historyWeight(game: HistoryGame) {
   if (game.status === 'dropped') return -0.6;
   if (game.rating == null) return 0.3;
   return Math.max(-1, Math.min(1, (game.rating - 6) / 3));
-}
-
-/** "The Legend of Heroes: Trails of Cold Steel IV" → "legend of heroes: trails of cold steel". */
-export function seriesKey(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[™®©]/g, '')
-    .replace(/\(.*?\)/g, ' ')
-    .replace(/[–—]/g, '-')
-    .replace(
-      /\b(the|definitive|remastered|remaster|complete|goty|game of the year|enhanced|ultimate|deluxe|edition|director's cut|hd)\b/g,
-      ' ',
-    )
-    .replace(/[^a-z0-9:\- ]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[\s:-]+(?:[ivx]{1,4}|\d{1,2})$/, '')
-    .replace(/^[\s:-]+|[\s:-]+$/g, '');
-}
-
-/** The franchise part of a series key: "castlevania: lords of shadow" → "castlevania". */
-function franchiseKey(key: string) {
-  return key.split(/\s*(?::|\s-\s)\s*/)[0];
-}
-
-function startsWithWords(text: string, prefix: string) {
-  return prefix.length >= 5 && (text === prefix || text.startsWith(`${prefix} `));
-}
-
-/** Same series (1), same franchise (0.5), or unrelated (0). */
-export function seriesMatch(a: string, b: string) {
-  const ka = seriesKey(a);
-  const kb = seriesKey(b);
-  if (!ka || !kb || a === b) return 0;
-  if (ka === kb) return 1;
-  const fa = franchiseKey(ka);
-  const fb = franchiseKey(kb);
-  if (fa === fb && fa.length >= 5) return 0.5;
-  if (startsWithWords(kb, fa) || startsWithWords(ka, fb)) return 0.5;
-  return 0;
 }
 
 function rerollPenalty(game: CandidateGame, now: number) {

@@ -49,6 +49,8 @@ export function useGameLibrary() {
       games: sync.syncingGames,
     },
     carousels: {
+      pickUp: carousels.pickUp,
+      moreLike: carousels.moreLike,
       shortGames: carousels.shortGames,
       weekendGames: carousels.weekendGames,
       highlyRatedGames: carousels.highlyRatedGames,
