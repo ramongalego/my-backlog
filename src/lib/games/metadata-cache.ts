@@ -1,3 +1,4 @@
+import { parseReleaseDate } from './release-date';
 import { isMetadataFresh } from './scoring';
 import type { GameMetadata } from './metadata-fetch';
 
@@ -6,11 +7,22 @@ export const METADATA_COLUMNS =
 
 export type CachedMetadata = GameMetadata & { hltb_attempts: number | null };
 
-// Backoff for games HLTB has no entry for, indexed by consecutive misses.
-// Without it every user who owns such a game would re-trigger the full
-// ~5-request upstream fetch on each sync.
-const HLTB_BACKOFF_DAYS = [0, 7, 14, 28, 56, 91];
+// Backoff for games HLTB has no entry for, indexed by consecutive misses,
+// then monthly. New releases often get an entry a few weeks after launch, so
+// the early retries are close together. Without a backoff every user who owns
+// such a game would re-trigger the full ~5-request upstream fetch on each sync.
+const HLTB_BACKOFF_DAYS = [0, 3, 7, 14, 28];
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Early HLTB times come from a handful of submissions and move a lot in a
+// game's first months, so recent releases are re-checked monthly.
+const RECENT_RELEASE_DAYS = 365;
+const RECENT_RELEASE_REFRESH_DAYS = 30;
+
+export function isRecentRelease(releaseDate: string | null, now: number): boolean {
+  const released = parseReleaseDate(releaseDate);
+  return released !== null && released <= now && now - released < RECENT_RELEASE_DAYS * DAY_MS;
+}
 
 function hltbRetryDue(row: CachedMetadata, now: number): boolean {
   const attempts = row.hltb_attempts ?? 0;
@@ -22,8 +34,10 @@ function hltbRetryDue(row: CachedMetadata, now: number): boolean {
 /** Whether a shared-cache row can be used as-is instead of re-fetching upstream. */
 export function isCacheUsable(row: CachedMetadata | null, now = Date.now()): boolean {
   if (!row || !isMetadataFresh(row.synced_at)) return false;
-  if (row.type !== 'game' || row.main_story_hours !== null) return true;
-  return !hltbRetryDue(row, now);
+  if (row.type !== 'game') return true;
+  if (row.main_story_hours === null) return !hltbRetryDue(row, now);
+  if (!isRecentRelease(row.release_date, now)) return true;
+  return now - new Date(row.synced_at).getTime() < RECENT_RELEASE_REFRESH_DAYS * DAY_MS;
 }
 
 const ENRICHMENT_FIELDS = [

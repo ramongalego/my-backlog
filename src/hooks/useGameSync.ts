@@ -46,7 +46,7 @@ export function useGameSync() {
   const [syncingGames, setSyncingGames] = useState<Game[]>([]);
   const syncingRef = useRef(false);
 
-  const startSync = async (games: Game[]) => {
+  const startSync = async (games: (Game & { metadata_synced?: boolean | null })[]) => {
     if (syncingRef.current) return;
     syncingRef.current = true;
 
@@ -61,10 +61,17 @@ export function useGameSync() {
         return;
       }
 
+      // The setup screen is for games that have never been synced. Re-checks
+      // of games that already have their details (HLTB retries, monthly
+      // refreshes of recent releases) happen quietly in the background.
+      const showProgress = remainingGames.some((g) => !g.metadata_synced);
+
       let completed = resolved;
-      setIsSyncing(true);
-      setSyncingGames(games);
-      setSyncProgress({ current: completed, total: games.length });
+      if (showProgress) {
+        setIsSyncing(true);
+        setSyncingGames(games);
+        setSyncProgress({ current: completed, total: games.length });
+      }
 
       // Step 2: individually sync only cache misses
       const syncOne = async (game: Game): Promise<void> => {
@@ -91,7 +98,7 @@ export function useGameSync() {
           break;
         }
         completed++;
-        setSyncProgress({ current: completed, total: games.length });
+        if (showProgress) setSyncProgress({ current: completed, total: games.length });
       };
 
       for (const batch of chunk(remainingGames, BATCH_SIZE)) {

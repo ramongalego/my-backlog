@@ -4,6 +4,7 @@ import { useState, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { loadGamesList, type GameItem } from '@/lib/data/loaders';
+import { parseReleaseDate } from '@/lib/games/release-date';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
@@ -22,8 +23,7 @@ export type GameSort = (typeof GAME_SORTS)[number];
 // Steam gives display dates like "Sep 28, 2010"; "To be announced" and missing
 // dates parse to NaN and sort last.
 function releaseTime(game: GameItem): number {
-  const time = game.release_date ? Date.parse(game.release_date) : NaN;
-  return Number.isNaN(time) ? -Infinity : time;
+  return parseReleaseDate(game.release_date) ?? -Infinity;
 }
 
 // Ratings only mean something on finished or dropped games. Some older rows
