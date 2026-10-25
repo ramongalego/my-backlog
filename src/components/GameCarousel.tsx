@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
-import { scrollBehavior } from '@/lib/motion';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
+import { isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
 
 interface Game {
   app_id: number;
@@ -25,138 +25,236 @@ interface GameCarouselProps {
   priority?: boolean;
 }
 
-export function GameCarousel({ title, games, onOpenDetail, priority = false }: GameCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const isAnimatingRef = useRef(false);
+// The endless, arrow-driven loop is for a mouse on a wide screen. Touch
+// screens and phones swipe a native scroller instead, as Netflix does.
+const LOOP_MEDIA = '(min-width: 640px) and (pointer: fine)';
+const SLIDE_MS = 650;
+const SLIDE_EASING = 'cubic-bezier(0.5, 0, 0.1, 1)';
 
+// Cards per page, set per breakpoint on the row. Below sm it's fractional so
+// the next card peeks in, hinting that the row swipes.
+const PER_PAGE =
+  '[--per-page:1.4] sm:[--per-page:2] md:[--per-page:3] lg:[--per-page:4] xl:[--per-page:5]';
+// A card's width when exactly --per-page cards and their 1rem gaps fill the
+// row. Inside the track, 100% is the row's width (for flex-basis, and for
+// translateX, which is relative to the track itself).
+const CARD_WIDTH = 'calc((100% - (var(--per-page) - 1) * 1rem) / var(--per-page))';
+// The same width from the row's container width, to size the arrows to the art.
+const COVER_HEIGHT = 'calc((100cqw - (var(--per-page) - 1) * 1rem) / var(--per-page) * 215 / 460)';
+const COVER_SIZES =
+  '(max-width: 640px) 70vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 250px';
+
+function subscribeToLoopMedia(onChange: () => void) {
+  if (typeof window.matchMedia !== 'function') return () => {};
+  const media = window.matchMedia(LOOP_MEDIA);
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+}
+
+/** Whether to loop. False on the server, so the first render is the scroller everywhere. */
+function useLoopMode() {
+  return useSyncExternalStore(
+    subscribeToLoopMedia,
+    () => typeof window.matchMedia === 'function' && window.matchMedia(LOOP_MEDIA).matches,
+    () => false,
+  );
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+/** The row's --per-page, kept current as the window resizes. */
+function usePerPage(rowRef: React.RefObject<HTMLDivElement | null>) {
+  const [perPage, setPerPage] = useState(4);
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    function syncButtons() {
-      if (el) {
-        const { scrollLeft, scrollWidth, clientWidth } = el;
-        setCanScrollLeft(scrollLeft > 0);
-        setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-      }
-    }
-
-    syncButtons();
-
-    function handleScroll() {
-      // Skip mid-animation updates — the optimistic state is already correct
-      if (!isAnimatingRef.current) syncButtons();
-    }
-
-    function handleScrollEnd() {
-      isAnimatingRef.current = false;
-      syncButtons();
-    }
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    el.addEventListener('scrollend', handleScrollEnd, { passive: true });
-    window.addEventListener('resize', syncButtons);
-
-    return () => {
-      el.removeEventListener('scroll', handleScroll);
-      el.removeEventListener('scrollend', handleScrollEnd);
-      window.removeEventListener('resize', syncButtons);
+    const row = rowRef.current;
+    if (!row) return;
+    const read = () => {
+      const value = parseFloat(getComputedStyle(row).getPropertyValue('--per-page'));
+      if (value > 0) setPerPage(value);
     };
-  }, [games]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      const scrollAmount = 272;
-      const delta = direction === 'left' ? -scrollAmount : scrollAmount;
-      const target = Math.max(0, Math.min(scrollLeft + delta, scrollWidth - clientWidth));
-
-      // Set optimistic state and suppress scroll-event overrides until scrollend
-      isAnimatingRef.current = true;
-      setCanScrollLeft(target > 0);
-      setCanScrollRight(target + clientWidth < scrollWidth - 1);
-
-      scrollRef.current.scrollBy({ left: delta, behavior: scrollBehavior() });
+    read();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', read);
+      return () => window.removeEventListener('resize', read);
     }
+    const observer = new ResizeObserver(read);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [rowRef]);
+  return perPage;
+}
+
+export function GameCarousel({ title, games, onOpenDetail, priority = false }: GameCarouselProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const perPage = usePerPage(rowRef);
+  const loopMode = useLoopMode();
+
+  // The first visible game. While sliding it can step past either end of the
+  // list; once the slide finishes it's wrapped back into 0..count-1.
+  const [offset, setOffset] = useState(0);
+  const [sliding, setSliding] = useState(false);
+  // Like Netflix, the left arrow only appears once you've moved.
+  const [hasMoved, setHasMoved] = useState(false);
+
+  const count = games.length;
+  const pageSize = Math.max(1, Math.round(perPage));
+  const loop = loopMode && count > pageSize;
+  const { before, after } = loop ? loopCopies(count, pageSize) : { before: 0, after: 0 };
+  const first = loop ? (sliding ? offset : wrap(offset, count)) : 0;
+  const start = before * count + first;
+
+  const finishSlide = () => {
+    setSliding(false);
+    setOffset((o) => wrap(o, count));
   };
 
-  if (games.length < 3) return null;
+  // transitionend doesn't fire if the slide is interrupted or the tab is
+  // hidden, so a timer finishes the slide regardless.
+  useEffect(() => {
+    if (!sliding) return;
+    const id = setTimeout(finishSlide, SLIDE_MS + 150);
+    return () => clearTimeout(id);
+  });
+
+  const slide = (direction: 1 | -1) => {
+    if (!loop || sliding) return;
+    setHasMoved(true);
+    const next = wrap(offset, count) + direction * pageSize;
+    if (prefersReducedMotion()) {
+      setOffset(wrap(next, count));
+      return;
+    }
+    setOffset(next);
+    setSliding(true);
+  };
+
+  if (count < 3) return null;
+
+  const positions = loop
+    ? Array.from({ length: (before + 1 + after) * count }, (_, i) => i)
+    : games.map((_, i) => i);
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-4">
-        {/* Titles can be long ("More Like ..."), so they wrap and the arrows keep their size. */}
-        <h2 className="min-w-0 text-lg sm:text-xl font-semibold tracking-tight text-ink-50">
-          {title}
-        </h2>
-        <div className="flex shrink-0 gap-2">
-          <button
-            onClick={() => scroll('left')}
-            disabled={!canScrollLeft}
-            className="p-2 rounded-full bg-ink-800 hover:bg-ink-700 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-ink-800"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="w-5 h-5 text-ink-300" aria-hidden="true" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            disabled={!canScrollRight}
-            className="p-2 rounded-full bg-ink-800 hover:bg-ink-700 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-ink-800"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="w-5 h-5 text-ink-300" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
+      <h2 className="mb-4 text-lg sm:text-xl font-semibold tracking-tight text-ink-50">{title}</h2>
 
-      <div className="relative overflow-hidden" role="region" aria-label={title}>
-        <div
-          className="absolute right-0 top-0 bottom-4 w-24 z-10 pointer-events-none"
-          aria-hidden="true"
-          style={{
-            background: 'linear-gradient(to right, transparent, var(--color-ink-950))',
-          }}
-        />
+      <div
+        ref={rowRef}
+        role="region"
+        aria-label={title}
+        className={`group/row relative @container ${PER_PAGE}`}
+      >
+        {loop && hasMoved && <ArrowButton direction="previous" onClick={() => slide(-1)} />}
 
+        {/* The clipping box. The browser scrolls it to show a focused element, which
+            would shift the whole row on top of the transform, so it's pinned at 0. */}
         <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-4"
-          style={{ scrollbarWidth: 'none' }}
+          className={loop ? 'overflow-hidden' : undefined}
+          onScroll={loop ? (e) => (e.currentTarget.scrollLeft = 0) : undefined}
         >
-          {games.map((game, i) => (
-            <div key={game.app_id} className="group shrink-0 w-64 relative">
-              <button
-                onClick={() => onOpenDetail?.(game)}
-                className="block w-full rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
-                aria-label={`Open details for ${game.name}`}
-              >
-                <CoverArt
-                  src={game.header_image}
-                  alt=""
-                  sizes="256px"
-                  priority={priority && i < 4 ? true : undefined}
-                  interactive
+          <div
+            onTransitionEnd={(e) => {
+              if (e.target === e.currentTarget) finishSlide();
+            }}
+            className={
+              loop
+                ? 'flex gap-4'
+                : 'flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 scroll-px-4 sm:mx-0 sm:px-0 sm:scroll-px-0'
+            }
+            style={
+              loop
+                ? {
+                    transform: `translateX(calc(-1 * ${start} * (${CARD_WIDTH} + 1rem)))`,
+                    transition: sliding ? `transform ${SLIDE_MS}ms ${SLIDE_EASING}` : 'none',
+                  }
+                : { scrollbarWidth: 'none' }
+            }
+          >
+            {positions.map((position) => {
+              const game = games[position % count];
+              // Off-screen cards (including every copy) can't be tabbed to or
+              // read out: focusing one would scroll the row out of place. Nothing
+              // is reachable mid-slide, when the incoming page is still off screen.
+              const hidden = loop && (sliding || !isOnScreen(position, start, pageSize));
+              const indexInList = position - before * count;
+              return (
+                <div
+                  key={`${Math.floor(position / count)}-${game.app_id}`}
+                  className={`relative min-w-0 ${loop ? '' : 'snap-start'}`}
+                  style={{ flex: `0 0 ${CARD_WIDTH}` }}
+                  aria-hidden={hidden || undefined}
+                  inert={hidden || undefined}
                 >
-                  <CoverEditHint />
-                </CoverArt>
-              </button>
-              <div className="pt-3">
-                <GameCardInfo
-                  appId={game.app_id}
-                  name={game.name}
-                  mainStoryHours={game.main_story_hours}
-                  steamReviewScore={game.steam_review_score}
-                  steamReviewCount={game.steam_review_count}
-                  playtimeMinutes={game.playtime_forever}
-                  deckCompat={game.deck_compat}
-                />
-              </div>
-            </div>
-          ))}
+                  <button
+                    onClick={() => onOpenDetail?.(game)}
+                    className="group block w-full rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
+                    aria-label={`Open details for ${game.name}`}
+                  >
+                    <CoverArt
+                      src={game.header_image}
+                      alt=""
+                      sizes={COVER_SIZES}
+                      priority={priority && indexInList >= 0 && indexInList < 4 ? true : undefined}
+                      interactive
+                    >
+                      <CoverEditHint />
+                    </CoverArt>
+                  </button>
+                  <div className="pt-3">
+                    <GameCardInfo
+                      appId={game.app_id}
+                      name={game.name}
+                      mainStoryHours={game.main_story_hours}
+                      steamReviewScore={game.steam_review_score}
+                      steamReviewCount={game.steam_review_count}
+                      playtimeMinutes={game.playtime_forever}
+                      deckCompat={game.deck_compat}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+
+        {loop && <ArrowButton direction="next" onClick={() => slide(1)} />}
       </div>
     </div>
+  );
+}
+
+/** A full-height arrow over the edge of the art, shown while hovering the row. */
+function ArrowButton({
+  direction,
+  onClick,
+}: {
+  direction: 'previous' | 'next';
+  onClick: () => void;
+}) {
+  const isNext = direction === 'next';
+  const Icon = isNext ? ChevronRight : ChevronLeft;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={isNext ? 'Show more games' : 'Show previous games'}
+      className={`group/arrow absolute top-0 z-10 flex w-12 items-center justify-center cursor-pointer opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 focus-visible:-outline-offset-2 ${
+        isNext ? 'right-0 rounded-r-lg' : 'left-0 rounded-l-lg'
+      }`}
+      style={{
+        height: COVER_HEIGHT,
+        background: `linear-gradient(to ${isNext ? 'left' : 'right'}, color-mix(in oklch, var(--color-ink-950) 85%, transparent), transparent)`,
+      }}
+    >
+      <Icon
+        className="w-7 h-7 text-ink-50 transition-transform group-hover/arrow:scale-125 motion-reduce:transition-none"
+        aria-hidden="true"
+      />
+    </button>
   );
 }

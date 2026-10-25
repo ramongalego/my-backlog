@@ -12,7 +12,8 @@ import {
 
 export type { CarouselPools };
 
-const CAROUSEL_SIZE = 10;
+// Three pages at five per page on wide screens.
+const CAROUSEL_SIZE = 15;
 
 /** Drops a game from every carousel, e.g. optimistically when it starts playing. */
 export function removeAppFromPools(pools: CarouselPools, appId: number): CarouselPools {

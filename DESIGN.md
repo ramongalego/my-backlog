@@ -183,7 +183,7 @@ The exceptions are things that float above the page: modals (`border-ink-800` on
 - `rounded-lg` (8px): buttons, fields, chips, game tiles.
 - `rounded-xl` (12px): panels and the large "now playing" cover.
 - `rounded-2xl` (16px): modals only.
-- `rounded-full`: progress bars, legend dots, round icon buttons (carousel arrows).
+- `rounded-full`: progress bars, legend dots, round icon buttons.
 
 Every game image uses the Steam header ratio, 460:215 (`COVER_ASPECT`), with a hairline inner ring (`ring-white/8`) so dark art doesn't melt into the page. Box art on the landing page is 2:3.
 
@@ -207,7 +207,8 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 **Games:** `src/components/games/`
 - `CoverArt`: any game image at the 460:215 ratio. `interactive` brightens the edge on hover, `CoverEditHint` adds the hover pencil, and `CoverThumb` is the small size for list rows.
 - `StatusBadge`: status chip on art and in lists. Backlog is the default and shows no badge unless `showBacklog` is set.
-- `GameCard` (grid tile: art with title and meta underneath, no box), `GameCarousel`, `GameMetaRow` / `GameCardInfo`.
+- `GameCard` (grid tile: art with title and meta underneath, no box), `GameMetaRow` / `GameCardInfo`.
+- `GameCarousel`: a Netflix-style row. With a mouse on a wide screen it shows whole pages (2, 3, 4 or 5 cards by width) and loops endlessly; arrows sit over the left and right edges of the art, appear on hover or keyboard focus, and the left one only after the first move. On phones and touch screens it's a native swipe row with the next card peeking in. Only on-screen cards are reachable by keyboard.
 - `TimeToBeat`, `SteamScore`, `SteamDeckBadge`: the meta-row indicators (clock + hours, thumbs-up + percent, status icon + "Deck"), each with its tooltip.
 - `STATUS_STYLE` and `GAME_STATUSES` in `src/lib/games/status-style.ts`: label, icon, text, solid and fill classes for every status.
 
