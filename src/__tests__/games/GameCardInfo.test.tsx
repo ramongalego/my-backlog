@@ -12,7 +12,7 @@ describe('GameCardInfo', () => {
     it('should not show hours when null', () => {
       render(<GameCardInfo appId={1} name="Game" mainStoryHours={null} />);
 
-      expect(screen.queryByTitle('Time to beat')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     });
   });
 
@@ -26,14 +26,30 @@ describe('GameCardInfo', () => {
     it('should put the Steam label and review count in the tooltip', () => {
       render(<GameCardInfo appId={1} name="Game" steamReviewScore={90} steamReviewCount={5000} />);
 
-      expect(screen.getByTitle('Very Positive · 5,000 Steam reviews')).toBeInTheDocument();
+      const tooltip = screen.getByRole('tooltip');
+      expect(tooltip).toHaveTextContent('Very Positive');
+      expect(tooltip).toHaveTextContent('90% of 5,000 Steam reviews are positive');
     });
 
     it('should not show review score when null', () => {
       render(<GameCardInfo appId={1} name="Game" steamReviewScore={null} />);
 
-      expect(screen.queryByTitle(/steam reviews/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     });
+  });
+
+  it('should explain the time to beat is the main story, from HowLongToBeat', () => {
+    render(<GameCardInfo appId={1} name="Game" mainStoryHours={8} />);
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Time to beat: Main Story');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('From HowLongToBeat');
+  });
+
+  it('should label the Steam Deck rating and describe it on focus', () => {
+    render(<GameCardInfo appId={1} name="Game" deckCompat={3} />);
+
+    expect(screen.getByText('Deck')).toBeInTheDocument();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Steam Deck Verified');
   });
 
   describe('playtime', () => {

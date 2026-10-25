@@ -1,10 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ExternalLink, Archive, Check, Clock, ListOrdered, X } from 'lucide-react';
+import { ExternalLink, Archive, Check, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
-import { SteamScore } from '@/components/games/GameCardInfo';
+import { SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 
 interface Game {
@@ -38,10 +38,7 @@ function Progress({ game }: { game: Game }) {
   if (game.playtime_forever < 60) {
     return (
       <div className="flex items-center gap-3 text-sm text-ink-400">
-        <span className="flex items-center gap-1" title="Time to beat">
-          <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{mainStoryHours}h</span>
-        </span>
+        <TimeToBeat hours={mainStoryHours} iconClassName="w-3.5 h-3.5" />
         {game.steam_review_score != null && (
           <SteamScore
             score={game.steam_review_score}

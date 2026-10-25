@@ -1,11 +1,12 @@
 import { Clock, ExternalLink, ThumbsUp } from 'lucide-react';
-import { steamReviewTitle } from '@/lib/steam/review-label';
+import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
+import { steamReviewLabel } from '@/lib/steam/review-label';
 import { SteamDeckBadge } from './SteamDeckBadge';
 
 /**
  * Steam's review score the way Steam shows it: percent positive with a
- * thumbs-up (not a star, which the app uses for your own rating). The label
- * and review count are on hover.
+ * thumbs-up (not a star, which the app uses for your own rating). Steam's
+ * label and the review count are in the tooltip.
  */
 export function SteamScore({
   score,
@@ -16,13 +17,38 @@ export function SteamScore({
   count?: number | null;
   iconClassName?: string;
 }) {
-  const title = steamReviewTitle(score, count);
+  const label = count != null ? steamReviewLabel(score, count) : null;
+  const detail =
+    count != null
+      ? `${score}% of ${count.toLocaleString('en-US')} Steam review${count === 1 ? '' : 's'} are positive`
+      : `${score}% of Steam reviews are positive`;
   return (
-    <span className="flex items-center gap-1" title={title}>
+    <Tooltip
+      content={
+        label ? <TooltipText title={label} detail={detail} /> : <TooltipText title={detail} />
+      }
+    >
       <ThumbsUp className={iconClassName} aria-hidden="true" />
       <span>{score}%</span>
-      <span className="sr-only"> on Steam ({title})</span>
-    </span>
+      <span className="sr-only"> on Steam</span>
+    </Tooltip>
+  );
+}
+
+/** HowLongToBeat's main story time, with what the number means in the tooltip. */
+export function TimeToBeat({
+  hours,
+  iconClassName = 'w-3 h-3',
+}: {
+  hours: number;
+  iconClassName?: string;
+}) {
+  return (
+    <Tooltip content={<TooltipText title="Time to beat: Main Story" detail="From HowLongToBeat" />}>
+      <Clock className={iconClassName} aria-hidden="true" />
+      <span>{hours}h</span>
+      <span className="sr-only"> to beat the main story</span>
+    </Tooltip>
   );
 }
 
@@ -46,18 +72,10 @@ export function GameMetaRow({
   if (!mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
-      {mainStoryHours ? (
-        <span className="flex items-center gap-1" title="Time to beat">
-          <Clock className="w-3 h-3" aria-hidden="true" />
-          <span>{mainStoryHours}h</span>
-        </span>
-      ) : null}
+      {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (
-        <span
-          className={`text-ink-500${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}
-          title="Time played"
-        >
+        <span className={`text-ink-500${hidePlaytimeOnMobile ? ' hidden sm:inline' : ''}`}>
           {Math.round(playtimeMinutes / 60)}h played
         </span>
       ) : null}

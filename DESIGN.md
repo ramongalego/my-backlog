@@ -202,11 +202,13 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `EmptyState`: icon, title and a sentence that teaches what will appear here and how.
 - `Input`, `fieldClass()`, `FIELD_LABEL`: every text field, textarea and search box. Focus brightens the border; it doesn't turn orange.
 - `Modal`, `Dropdown`.
+- `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover, focus or tap). It renders at page level, so clipping containers can't cut it off. Never use the native `title` attribute for this.
 
 **Games:** `src/components/games/`
 - `CoverArt`: any game image at the 460:215 ratio. `interactive` brightens the edge on hover, `CoverEditHint` adds the hover pencil, and `CoverThumb` is the small size for list rows.
 - `StatusBadge`: status chip on art and in lists. Backlog is the default and shows no badge unless `showBacklog` is set.
 - `GameCard` (grid tile: art with title and meta underneath, no box), `GameCarousel`, `GameMetaRow` / `GameCardInfo`.
+- `TimeToBeat`, `SteamScore`, `SteamDeckBadge`: the meta-row indicators (clock + hours, thumbs-up + percent, status icon + "Deck"), each with its tooltip.
 - `STATUS_STYLE` and `GAME_STATUSES` in `src/lib/games/status-style.ts`: label, icon, text, solid and fill classes for every status.
 
 **Interaction states:** every control needs hover, keyboard focus (the global `:focus-visible` orange outline covers buttons and links; it lives in the base layer, so a component can replace it, as text fields do with their border), disabled and loading states. A disabled primary button goes neutral grey rather than faded orange.
