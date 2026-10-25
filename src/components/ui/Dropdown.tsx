@@ -13,9 +13,16 @@ interface DropdownProps<T extends string> {
   options: DropdownOption<T>[];
   onChange: (value: T) => void;
   icon?: ReactNode;
-  align?: 'left' | 'right';
+  /** Which edge the menu lines up with. `responsive`: left on phones, right from `sm` up. */
+  align?: 'left' | 'right' | 'responsive';
   'aria-label'?: string;
 }
+
+const ALIGN_CLASS = {
+  left: 'left-0',
+  right: 'right-0',
+  responsive: 'left-0 sm:left-auto sm:right-0',
+};
 
 export function Dropdown<T extends string>({
   value,
@@ -103,7 +110,7 @@ export function Dropdown<T extends string>({
         <ul
           ref={listRef}
           role="listbox"
-          className={`absolute top-full mt-1 bg-ink-900 border border-ink-700 rounded-lg shadow-lg z-10 min-w-[140px] ${align === 'left' ? 'left-0' : 'right-0'}`}
+          className={`absolute top-full mt-1 bg-ink-900 border border-ink-700 rounded-lg shadow-lg z-10 w-max min-w-40 ${ALIGN_CLASS[align]}`}
         >
           {options.map((option, i) => (
             <li key={option.value} role="option" aria-selected={value === option.value}>
@@ -114,7 +121,7 @@ export function Dropdown<T extends string>({
                   setOpen(false);
                 }}
                 onMouseEnter={() => setFocusedIndex(i)}
-                className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                className={`w-full flex items-center justify-between gap-4 whitespace-nowrap px-3 py-2 text-sm text-left transition-colors first:rounded-t-lg last:rounded-b-lg ${
                   focusedIndex === i ? 'bg-ink-800' : ''
                 }`}
               >
