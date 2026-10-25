@@ -10,11 +10,14 @@ import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
+import { useUrlState } from './useUrlState';
 
 export type { GameItem };
 
-export type GameFilter = 'all' | 'backlog' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
-export type GameSort = 'playtime' | 'score' | 'recent' | 'length';
+const GAME_FILTERS = ['all', 'backlog', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
+const GAME_SORTS = ['playtime', 'score', 'recent', 'length'] as const;
+export type GameFilter = (typeof GAME_FILTERS)[number];
+export type GameSort = (typeof GAME_SORTS)[number];
 
 export interface FilterCounts {
   all: number;
@@ -86,9 +89,12 @@ export function useGamesPage(): UseGamesPageReturn {
   const { queuedAppIds } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
 
-  const [filter, setFilter] = useState<GameFilter>('backlog');
-  const [sort, setSort] = useState<GameSort>('score');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Filter, sort and search live in the URL so they survive navigating away
+  // and back. Search keeps local state too so typing stays instant.
+  const [filter, setFilter] = useUrlState<GameFilter>('filter', 'backlog', GAME_FILTERS);
+  const [sort, setSort] = useUrlState<GameSort>('sort', 'score', GAME_SORTS);
+  const [urlSearch, setUrlSearch] = useUrlState<string>('q', '');
+  const [searchQuery, setSearchQueryState] = useState(urlSearch);
   const [statusModal, setStatusModal] = useState<GamesPageStatusModal | null>(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
@@ -282,7 +288,8 @@ export function useGamesPage(): UseGamesPageReturn {
   };
 
   const setSearchQueryAndReset = (q: string) => {
-    setSearchQuery(q);
+    setSearchQueryState(q);
+    setUrlSearch(q.trim());
     setVisibleCount(BATCH_SIZE);
   };
 

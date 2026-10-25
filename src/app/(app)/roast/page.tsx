@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
 import { Flame, Loader2, ShieldOff, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -34,7 +35,7 @@ export default function RoastPage() {
     },
     onSuccess: (data) => {
       // Seed the shared roast page cache so /roast/[steamId] is instant
-      queryClient.setQueryData(['roast', data.steamId], data);
+      queryClient.setQueryData(queryKeys.roast.byId(data.steamId), data);
     },
     onError: (err) => {
       if (typeof err === 'object' && err !== null && 'blacklisted' in err) {

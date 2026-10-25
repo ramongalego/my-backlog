@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
 import {
   ExternalLink,
   Gamepad2,
@@ -15,6 +14,7 @@ import {
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { useDiary } from '@/hooks/useDiary';
+import { useUrlState } from '@/hooks/useUrlState';
 import type { DiaryEntry } from '@/hooks/useDiary';
 import { getMonthKey, formatMonthLabel, formatDay } from '@/lib/diary/date-utils';
 
@@ -158,7 +158,7 @@ export default function DiaryView() {
     handleConfirmDetail,
   } = useDiary();
 
-  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useUrlState<string>('year', 'all');
 
   // Split into dated and undated
   const datedEntries = entries.filter((e) => e.finished_at);

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Return cached result if available (no rate limit cost)
-  const cached = getCachedRoast(steamId);
+  const cached = await getCachedRoast(steamId);
   if (cached) return NextResponse.json(cached);
 
   // Rate limit only when we need to generate a new roast
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    setCachedRoast(steamId, response);
+    await setCachedRoast(steamId, response);
 
     return NextResponse.json(response);
   } catch (err) {

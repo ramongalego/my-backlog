@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid Steam ID' }, { status: 400 });
   }
 
-  const cached = getCachedRoast(steamId);
+  const cached = await getCachedRoast(steamId);
   if (cached) {
     return NextResponse.json(cached, {
       headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' },

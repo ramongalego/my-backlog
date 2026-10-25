@@ -11,6 +11,7 @@ export function celebrateGameFinished() {
         spread: 60,
         origin: { y: 0.6 },
         colors,
+        disableForReducedMotion: true,
       });
     })
     .catch(() => {

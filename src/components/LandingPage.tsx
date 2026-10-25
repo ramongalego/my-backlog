@@ -289,6 +289,8 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
   }, []);
 
   useEffect(() => {
+    // Keep the first tagline still for users who asked for reduced motion.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const id = window.setInterval(() => {
       setTeaseIndex((i) => (i + 1) % HERO_TEASES.length);
     }, 2800);

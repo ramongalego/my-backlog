@@ -41,7 +41,8 @@ function evictIfOverCapacity(): void {
   }
 }
 
-export function getCachedRoast(steamId: string): RoastResponse | null {
+// Async so callers are ready for a shared (non in-memory) store.
+export async function getCachedRoast(steamId: string): Promise<RoastResponse | null> {
   const now = Date.now();
   cleanupIfDue(now);
   const cached = roastCache.get(steamId);
@@ -49,7 +50,7 @@ export function getCachedRoast(steamId: string): RoastResponse | null {
   return null;
 }
 
-export function setCachedRoast(steamId: string, response: RoastResponse): void {
+export async function setCachedRoast(steamId: string, response: RoastResponse): Promise<void> {
   roastCache.set(steamId, { response, expiresAt: Date.now() + CACHE_TTL_MS });
   evictIfOverCapacity();
 }

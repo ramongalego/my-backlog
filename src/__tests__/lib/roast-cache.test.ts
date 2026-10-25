@@ -19,38 +19,38 @@ const mockRoast: RoastResponse = {
 };
 
 describe('roast cache', () => {
-  it('should return null for uncached steam ID', () => {
-    expect(getCachedRoast('nonexistent-id')).toBeNull();
+  it('should return null for uncached steam ID', async () => {
+    expect(await getCachedRoast('nonexistent-id')).toBeNull();
   });
 
-  it('should return cached roast after setting it', () => {
+  it('should return cached roast after setting it', async () => {
     const id = `test-${Date.now()}`;
-    setCachedRoast(id, mockRoast);
+    await setCachedRoast(id, mockRoast);
 
-    const result = getCachedRoast(id);
+    const result = await getCachedRoast(id);
 
     expect(result).toEqual(mockRoast);
   });
 
-  it('should return the correct roast for each steam ID', () => {
+  it('should return the correct roast for each steam ID', async () => {
     const id1 = `user-a-${Date.now()}`;
     const id2 = `user-b-${Date.now()}`;
     const roast2 = { ...mockRoast, roast: 'Different roast', steamId: id2 };
 
-    setCachedRoast(id1, mockRoast);
-    setCachedRoast(id2, roast2);
+    await setCachedRoast(id1, mockRoast);
+    await setCachedRoast(id2, roast2);
 
-    expect(getCachedRoast(id1)?.roast).toBe('You have 500 games and played 3 of them.');
-    expect(getCachedRoast(id2)?.roast).toBe('Different roast');
+    expect((await getCachedRoast(id1))?.roast).toBe('You have 500 games and played 3 of them.');
+    expect((await getCachedRoast(id2))?.roast).toBe('Different roast');
   });
 
-  it('should overwrite existing cache entry', () => {
+  it('should overwrite existing cache entry', async () => {
     const id = `overwrite-${Date.now()}`;
-    setCachedRoast(id, mockRoast);
+    await setCachedRoast(id, mockRoast);
 
     const updated = { ...mockRoast, roast: 'Updated roast' };
-    setCachedRoast(id, updated);
+    await setCachedRoast(id, updated);
 
-    expect(getCachedRoast(id)?.roast).toBe('Updated roast');
+    expect((await getCachedRoast(id))?.roast).toBe('Updated roast');
   });
 });

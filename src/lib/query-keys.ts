@@ -18,6 +18,9 @@ export const queryKeys = {
     all: ['library'] as const,
     meta: (userId: string) => [...queryKeys.library.all, 'meta', userId] as const,
   },
+  roast: {
+    byId: (steamId: string) => ['roast', steamId] as const,
+  },
   carousels: {
     all: ['carousels'] as const,
     byUser: (userId: string) => [...queryKeys.carousels.all, userId] as const,

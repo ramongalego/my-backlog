@@ -29,22 +29,24 @@ interface RoastResultProps {
 export function RoastResult({ result, onRoastAnother }: RoastResultProps) {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `${window.location.origin}/roast/${result.steamId}`;
+  // Built on click rather than during render: this component is server-rendered
+  // on the shared roast page, where `window` doesn't exist.
+  const shareUrl = () => `${window.location.origin}/roast/${result.steamId}`;
   const shareText = `Check out this roast of ${result.profile.name}'s Steam profile`;
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(shareUrl);
+    await navigator.clipboard.writeText(shareUrl());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleReddit = () => {
-    const url = `https://www.reddit.com/submit?title=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    const url = `https://www.reddit.com/submit?title=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl())}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleTwitter = () => {
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl())}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
