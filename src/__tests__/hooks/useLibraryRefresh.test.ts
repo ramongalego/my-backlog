@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { toast } from 'sonner';
-import { useLibraryRefresh, PLAYTIME_REFRESH_KEY } from '@/hooks/useLibraryRefresh';
+import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { reloadPage } from '@/lib/reload';
 
@@ -12,6 +12,10 @@ jest.mock('sonner', () => ({
 }));
 
 jest.mock('@/lib/mutations');
+
+let mockUserId = 'user-1';
+jest.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: mockUserId } }) }));
+const keys = () => refreshKeys(mockUserId);
 
 jest.mock('@/lib/reload', () => ({
   reloadPage: jest.fn(),
@@ -36,6 +40,7 @@ describe('useLibraryRefresh', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    mockUserId = 'user-1';
     (useInvalidateQueries as jest.Mock).mockReturnValue({
       gamesAndQueue: mockGamesAndQueue,
       games: jest.fn(),
@@ -54,7 +59,7 @@ describe('useLibraryRefresh', () => {
 
       expect(toast.success).toHaveBeenCalledWith('Updated playtime for 3 games');
       expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
-      expect(localStorage.getItem(PLAYTIME_REFRESH_KEY)).toBeTruthy();
+      expect(localStorage.getItem(keys().playtime)).toBeTruthy();
     });
 
     it('singularizes the toast for exactly one updated game', async () => {
@@ -149,7 +154,7 @@ describe('useLibraryRefresh', () => {
 
   describe('refreshIfStale', () => {
     it('skips the refresh when the timestamp is within the stale window', async () => {
-      localStorage.setItem(PLAYTIME_REFRESH_KEY, String(Date.now() - 5 * 60 * 1000));
+      localStorage.setItem(keys().playtime, String(Date.now() - 5 * 60 * 1000));
       const fetchMock = jest.fn();
       global.fetch = fetchMock;
 
@@ -163,7 +168,7 @@ describe('useLibraryRefresh', () => {
     });
 
     it('fires the refresh when the timestamp is older than 15 minutes', async () => {
-      localStorage.setItem(PLAYTIME_REFRESH_KEY, String(Date.now() - 20 * 60 * 1000));
+      localStorage.setItem(keys().playtime, String(Date.now() - 20 * 60 * 1000));
       mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
 
       const { result } = renderHook(() => useLibraryRefresh());
@@ -212,11 +217,11 @@ describe('useLibraryRefresh', () => {
         await result.current.refresh();
       });
       expect(sentReviews()).toBe(true);
-      expect(localStorage.getItem('reviews_refresh_at')).not.toBeNull();
+      expect(localStorage.getItem(keys().reviews)).not.toBeNull();
     });
 
     it('skips them on background refreshes within a day', async () => {
-      localStorage.setItem('reviews_refresh_at', String(Date.now() - 2 * 60 * 60 * 1000));
+      localStorage.setItem(keys().reviews, String(Date.now() - 2 * 60 * 60 * 1000));
       mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
       const { result } = renderHook(() => useLibraryRefresh());
       await act(async () => {
@@ -226,7 +231,7 @@ describe('useLibraryRefresh', () => {
     });
 
     it('always includes them in a manual refresh', async () => {
-      localStorage.setItem('reviews_refresh_at', String(Date.now()));
+      localStorage.setItem(keys().reviews, String(Date.now()));
       mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
       const { result } = renderHook(() => useLibraryRefresh());
       await act(async () => {
@@ -248,5 +253,18 @@ describe('useLibraryRefresh', () => {
     });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps timestamps per account, so switching accounts refreshes straight away', async () => {
+    localStorage.setItem(refreshKeys('someone-else').playtime, String(Date.now()));
+    mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
+    const { result } = renderHook(() => useLibraryRefresh());
+
+    await act(async () => {
+      await result.current.refreshIfStale();
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(keys().playtime)).not.toBeNull();
   });
 });

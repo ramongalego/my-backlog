@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { RefreshCw, LogOut, Bug } from 'lucide-react';
 import { SupportModal } from '@/components/SupportModal';
+import { refreshKeys } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -52,7 +53,7 @@ export function UserMenu({
   useEffect(() => {
     if (!isRefreshDisabled || !open) return;
 
-    const last = localStorage.getItem('playtime_refresh_at');
+    const last = localStorage.getItem(refreshKeys(user.id).playtime);
     if (!last) return;
 
     const remaining = Math.max(0, 2 * 60 * 1000 - (Date.now() - parseInt(last)));
@@ -66,7 +67,7 @@ export function UserMenu({
     }
 
     return () => timeouts.forEach(clearTimeout);
-  }, [isRefreshDisabled, open]);
+  }, [isRefreshDisabled, open, user.id]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

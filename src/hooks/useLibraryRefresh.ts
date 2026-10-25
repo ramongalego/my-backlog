@@ -4,14 +4,25 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { reloadPage } from '@/lib/reload';
+import { useAuth } from './useAuth';
 
-export const PLAYTIME_REFRESH_KEY = 'playtime_refresh_at';
 // Playtime is one Steam call for the whole library, so it can be checked often.
 export const LIBRARY_REFRESH_STALE_MS = 15 * 60 * 1000;
-const PLAYTIME_ATTEMPT_KEY = 'playtime_refresh_attempt_at';
 // Review scores cost a call per 50 games and barely move, so once a day.
-const REVIEWS_REFRESH_KEY = 'reviews_refresh_at';
 const REVIEWS_REFRESH_STALE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * When each kind of refresh last ran, kept per account: switching accounts in
+ * the same browser must not inherit the other account's timestamps.
+ */
+export const refreshKeys = (userId: string | null | undefined) => {
+  const suffix = userId ?? 'signed-out';
+  return {
+    playtime: `playtime_refresh_at:${suffix}`,
+    attempt: `playtime_refresh_attempt_at:${suffix}`,
+    reviews: `reviews_refresh_at:${suffix}`,
+  };
+};
 
 function isStale(key: string, maxAgeMs: number) {
   const last = localStorage.getItem(key);
@@ -37,13 +48,15 @@ let staleRefreshInFlight: Promise<RefreshResult> | null = null;
 
 export function useLibraryRefresh() {
   const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
+  const { user } = useAuth();
+  const keys = refreshKeys(user?.id);
 
   const refresh = useCallback(
     async (options: RefreshOptions = {}): Promise<RefreshResult> => {
       const { manual = false } = options;
 
       // A manual refresh brings everything up to date.
-      const reviews = manual || isStale(REVIEWS_REFRESH_KEY, REVIEWS_REFRESH_STALE_MS);
+      const reviews = manual || isStale(keys.reviews, REVIEWS_REFRESH_STALE_MS);
 
       try {
         const res = await fetch('/api/steam/refresh', {
@@ -60,8 +73,8 @@ export function useLibraryRefresh() {
         const newGames: number = data.newGames ?? 0;
         const updatedPlaytime: number = data.updatedPlaytime ?? 0;
 
-        localStorage.setItem(PLAYTIME_REFRESH_KEY, Date.now().toString());
-        if (reviews) localStorage.setItem(REVIEWS_REFRESH_KEY, Date.now().toString());
+        localStorage.setItem(keys.playtime, Date.now().toString());
+        if (reviews) localStorage.setItem(keys.reviews, Date.now().toString());
 
         if (newGames > 0) {
           // New games need metadata sync which runs on mount — reload to re-enter that flow.
@@ -88,21 +101,21 @@ export function useLibraryRefresh() {
         return failedResult;
       }
     },
-    [invalidateGamesAndQueue],
+    [invalidateGamesAndQueue, keys.playtime, keys.reviews],
   );
 
   const refreshIfStale = useCallback(async () => {
     if (typeof window === 'undefined' || staleRefreshInFlight) return;
-    if (!isStale(PLAYTIME_REFRESH_KEY, LIBRARY_REFRESH_STALE_MS)) return;
+    if (!isStale(keys.playtime, LIBRARY_REFRESH_STALE_MS)) return;
     // A failed attempt (rate limited, Steam down) waits the same interval,
     // instead of retrying every time the tab comes back into view.
-    if (!isStale(PLAYTIME_ATTEMPT_KEY, LIBRARY_REFRESH_STALE_MS)) return;
-    localStorage.setItem(PLAYTIME_ATTEMPT_KEY, Date.now().toString());
+    if (!isStale(keys.attempt, LIBRARY_REFRESH_STALE_MS)) return;
+    localStorage.setItem(keys.attempt, Date.now().toString());
     staleRefreshInFlight = refresh().finally(() => {
       staleRefreshInFlight = null;
     });
     await staleRefreshInFlight;
-  }, [refresh]);
+  }, [refresh, keys.playtime, keys.attempt]);
 
   return { refresh, refreshIfStale };
 }

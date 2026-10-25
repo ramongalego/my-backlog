@@ -9,7 +9,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { UserMenu } from '@/components/UserMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { useLibraryMeta } from '@/hooks/useLibraryMeta';
-import { useLibraryRefresh, PLAYTIME_REFRESH_KEY } from '@/hooks/useLibraryRefresh';
+import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
 import type { AuthMode } from '@/types/auth';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
@@ -22,7 +22,7 @@ export function Header() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const last = localStorage.getItem(PLAYTIME_REFRESH_KEY);
+    const last = localStorage.getItem(refreshKeys(user?.id).playtime);
     return !!last && Date.now() - Number(last) < REFRESH_COOLDOWN_MS;
   });
   const { refresh } = useLibraryRefresh();
@@ -35,12 +35,12 @@ export function Header() {
   // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
     if (!isRefreshDisabled) return;
-    const last = localStorage.getItem(PLAYTIME_REFRESH_KEY);
+    const last = localStorage.getItem(refreshKeys(user?.id).playtime);
     if (!last) return;
     const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - Number(last)));
     const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
     return () => clearTimeout(id);
-  }, [isRefreshDisabled]);
+  }, [isRefreshDisabled, user?.id]);
 
   const handleRefreshLibrary = async () => {
     setIsRefreshing(true);
