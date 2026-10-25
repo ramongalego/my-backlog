@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react'],
+    // Reuse visited signed-in pages from the client router cache instead of
+    // re-requesting them (and waiting on their server prefetch) on every
+    // navigation. Their data lives in React Query, which mutations already
+    // invalidate, so this matches the queries' 5-minute staleTime.
+    staleTimes: { dynamic: 300 },
   },
   images: {
     formats: ['image/avif', 'image/webp'],
