@@ -1,11 +1,6 @@
 import { HydrationBoundary } from '@tanstack/react-query';
 import { prefetchForUser } from '@/lib/data/prefetch';
-import {
-  loadCarouselPools,
-  loadCurrentlyPlaying,
-  loadLibraryMeta,
-  loadQueue,
-} from '@/lib/data/loaders';
+import { loadCarouselPools, loadCurrentlyPlaying, loadQueue } from '@/lib/data/loaders';
 import { queryKeys } from '@/lib/query-keys';
 import HomeView from './View';
 
@@ -16,7 +11,6 @@ export default async function HomePage() {
       queryFn: () => loadCurrentlyPlaying(supabase, userId),
     },
     { queryKey: queryKeys.queue.list(userId), queryFn: () => loadQueue(supabase, userId) },
-    { queryKey: queryKeys.library.meta(userId), queryFn: () => loadLibraryMeta(supabase, userId) },
     {
       queryKey: queryKeys.carousels.byUser(userId),
       queryFn: () => loadCarouselPools(supabase, userId),

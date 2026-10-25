@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
 import {
   METADATA_COLUMNS,
@@ -58,9 +59,13 @@ export async function POST(request: NextRequest) {
     const fresh = await fetchGameMetadata(appId, libraryName);
     if (fresh) {
       metadata = mergeForCache(fresh, existing);
-      const { error: cacheError } = await supabase
-        .from('game_metadata')
-        .upsert(metadata, { onConflict: 'app_id' });
+      // The shared cache is only writable with the secret key, so users can't
+      // write arbitrary metadata into it. The data here comes from our own
+      // upstream fetch, never from the request.
+      const service = tryCreateServiceClient();
+      const { error: cacheError } = service
+        ? await service.from('game_metadata').upsert(metadata, { onConflict: 'app_id' })
+        : { error: new Error('SUPABASE_SECRET_KEY not configured; skipping metadata cache write') };
       if (cacheError) {
         // Non-fatal: the shared cache write failed but we can still update the
         // user's own row below. Surface it so we notice systemic cache failures.

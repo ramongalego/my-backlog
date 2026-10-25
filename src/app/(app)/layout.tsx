@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
 import { createClient } from '@/lib/supabase/server';
 import { queryKeys } from '@/lib/query-keys';
+import { loadLibraryMeta } from '@/lib/data/loaders';
 import type { Profile } from '@/types/games';
 import Providers from '../providers';
 
@@ -28,6 +29,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const queryClient = new QueryClient();
   queryClient.setQueryData(queryKeys.auth.session(), { user, profile });
+  // The header's game count. Prefetched here rather than by pages: a query the
+  // header has already created can only be hydrated after mount, which made
+  // the server render a loading state that the client then replaced.
+  if (user) {
+    await queryClient.prefetchQuery({
+      queryKey: queryKeys.library.meta(user.id),
+      queryFn: () => loadLibraryMeta(supabase, user.id),
+    });
+  }
 
   return (
     <Providers>

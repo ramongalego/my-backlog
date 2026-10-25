@@ -48,7 +48,7 @@ Steam linking is a separate OpenID 2.0 flow. The resolved 64-bit Steam ID is sto
 
 ### Data Model and Row-Level Security
 
-The schema is split between **per-user state** (library, queue, shared completions) and a **shared, deduplicated metadata cache** keyed by `app_id`. Enriching one user's library warms the cache for everyone. RLS restricts per-user rows to `auth.uid()`; the metadata cache is readable by authenticated users and writable only by the service role used during sync.
+The schema is split between **per-user state** (library, queue, shared completions) and a **shared, deduplicated metadata cache** keyed by `app_id`. Enriching one user's library warms the cache for everyone. RLS restricts per-user rows to `auth.uid()`; the metadata cache is readable by authenticated users and writable only by the server (Supabase secret key) during sync. The full schema lives in `supabase/schema.sql`; `supabase/migrations/` holds the incremental changes.
 
 ### Atomic Queue Reordering in PL/pgSQL
 
