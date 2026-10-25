@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
@@ -123,7 +122,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       return { previous };
     },
     onError: (err, _appId, context) => {
-      Sentry.captureException(err);
+      console.error(err);
       if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to remove game from queue');
     },
@@ -153,7 +152,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       return { previous };
     },
     onError: (err, _appIds, context) => {
-      Sentry.captureException(err);
+      console.error(err);
       if (context?.previous) queryClient.setQueryData(queueKey, context.previous);
       toast.error('Failed to reorder queue');
     },
@@ -197,7 +196,6 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       return { previousPlaying, previousQueue };
     },
     onError: (err, _game, context) => {
-      Sentry.captureException(err);
       console.error('Failed to move game to queue:', err);
       toast.error('Failed to move game to queue');
       if (context?.previousPlaying !== undefined) {
@@ -259,7 +257,6 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       }
     },
     onError: (err, variables) => {
-      Sentry.captureException(err);
       console.error(`Failed to ${variables.status} game:`, err);
       toast.error(`Failed to ${variables.status} game`);
     },
@@ -307,7 +304,6 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       if (freshGame) queryClient.setQueryData(playingKey, freshGame);
     },
     onError: (err, _appId, context) => {
-      Sentry.captureException(err);
       console.error('Failed to pick game from queue:', err);
       toast.error('Failed to start playing');
       if (context?.previousPlaying !== undefined) {
@@ -331,7 +327,6 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       return { previousPlaying };
     },
     onError: (err, _game, context) => {
-      Sentry.captureException(err);
       console.error('Failed to move game to backlog:', err);
       toast.error('Failed to move game to backlog');
       if (context?.previousPlaying !== undefined) {

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import * as Sentry from '@sentry/nextjs';
 import type { Game, SyncProgress } from '@/types/games';
 
 export function useGameSync() {
@@ -63,7 +62,6 @@ export function useGameSync() {
             continue;
           }
         } catch (err) {
-          Sentry.captureException(err);
           console.error(`Failed to sync ${game.name}:`, err);
         }
         break;

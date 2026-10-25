@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import * as Sentry from '@sentry/nextjs';
 import { toast } from 'sonner';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { reloadPage } from '@/lib/reload';
@@ -61,7 +60,6 @@ export function useLibraryRefresh() {
 
         return { success: true, newGames, updatedPlaytime };
       } catch (err) {
-        Sentry.captureException(err);
         console.error('Failed to refresh library:', err);
         if (manual) toast.error('Failed to refresh library');
         return failedResult;

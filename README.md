@@ -32,7 +32,6 @@ A full-stack web app that helps Steam players stop doomscrolling their library a
 
 **Observability & Ops**
 
-- Sentry (with a `/monitoring` tunnel route and custom event scrubbing)
 - Vercel Analytics
 - Vercel Cron for scheduled metadata refresh
 
@@ -80,7 +79,6 @@ Multiple overlapping defenses:
 - **SSRF hardening** on every endpoint that accepts an image URL via a hostname allowlist, checked on both write and read paths.
 - **Constant-time comparison** for bearer-token checks.
 - **Zod schemas** on every request body with explicit upper bounds and typed error responses.
-- **Sentry scrubbing** strips auth headers, cookies, IP headers, query strings, and sensitive body fields before events leave the server.
 - **Origin-based CSRF** in middleware.
 - **Console stripping** in production builds.
 
@@ -90,7 +88,7 @@ Per-endpoint token-bucket limiters with differentiated caps tuned to typical usa
 
 ### Observability
 
-Sentry is integrated with a tunnel rewrite so ad-blockers don't drop events, source maps upload for usable stack traces, and all events pass through the custom scrubber before send. Vercel Analytics tracks page views and custom events (game picked, finished, dropped).
+Server errors are logged with `console.error` and surface in the Vercel function logs. Vercel Analytics tracks page views and custom events (game picked, finished, dropped).
 
 ### Performance Engineering
 

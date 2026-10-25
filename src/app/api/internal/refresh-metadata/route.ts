@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { createServiceClient } from '@/lib/supabase/server';
 import { fetchGameMetadata } from '@/lib/games/metadata-fetch';
 import { getCronSecret } from '@/lib/env.server';
@@ -96,7 +95,7 @@ export async function GET(request: NextRequest) {
       ...counters,
     });
   } catch (err) {
-    Sentry.captureException(err);
+    console.error(err);
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
       { ok: false, error: message, duration: Date.now() - startedAt },
@@ -185,7 +184,7 @@ async function processBucket(
         counters.succeeded++;
       } catch (err) {
         counters.failed++;
-        Sentry.captureException(err, { tags: { app_id: String(candidate.app_id) } });
+        console.error(`Failed to refresh metadata for app ${candidate.app_id}:`, err);
       }
     }
   }

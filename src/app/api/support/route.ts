@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
     .insert({ user_id: user.id, type, message });
 
   if (error) {
-    Sentry.captureException(error);
+    console.error(error);
     return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
   }
 

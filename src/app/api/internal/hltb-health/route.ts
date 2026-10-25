@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { getMainStoryHours, resetHltbCache } from '@/lib/hltb/api';
 import { getCronSecret } from '@/lib/env.server';
 import { verifyBearerToken } from '@/lib/crypto/compare';
@@ -78,7 +77,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const duration = Date.now() - start;
     const message = err instanceof Error ? err.message : String(err);
-    Sentry.captureException(err);
+    console.error(err);
     await pingPulsemon('fail', `${message} (after ${duration}ms)`);
     return NextResponse.json({ ok: false, error: message, duration }, { status: 500 });
   }

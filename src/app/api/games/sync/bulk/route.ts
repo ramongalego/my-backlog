@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { isMetadataFresh } from '@/lib/games/scoring';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
   // Bulk update user's games table for all cache hits.
   // Writes run in concurrent batches; a failed write previously returned
   // { synced } as if it succeeded — capture errors so silent data loss
-  // surfaces in Sentry and the client sees a 500.
+  // is logged and the client sees a 500.
   const userId = user.id;
   for (let i = 0; i < freshRows.length; i += DB_BATCH_SIZE) {
     const batch = freshRows.slice(i, i + DB_BATCH_SIZE);
@@ -89,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     const failed = results.find((r) => r.error);
     if (failed?.error) {
-      Sentry.captureException(failed.error);
+      console.error(failed.error);
       return jsonError('Failed to sync game metadata', 500);
     }
   }

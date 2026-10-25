@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { isMetadataFresh } from '@/lib/games/scoring';
 import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
       if (cacheError) {
         // Non-fatal: the shared cache write failed but we can still update the
         // user's own row below. Surface it so we notice systemic cache failures.
-        Sentry.captureException(cacheError);
+        console.error(cacheError);
       }
     }
   }
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
       .eq('app_id', appId);
 
     if (updateError) {
-      Sentry.captureException(updateError);
+      console.error(updateError);
       return jsonError('Failed to save game metadata', 500);
     }
 
@@ -123,7 +122,7 @@ export async function POST(request: NextRequest) {
       .eq('app_id', appId);
 
     if (markError) {
-      Sentry.captureException(markError);
+      console.error(markError);
       return jsonError('Failed to update game', 500);
     }
 

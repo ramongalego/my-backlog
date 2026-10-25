@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
 import type {
   SuggestionPreferences,
   SuggestionResult,
@@ -112,7 +111,7 @@ export function useSuggestion(): UseSuggestionReturn {
       setSuggestion(data.data);
       setStep('result');
     } catch (err) {
-      Sentry.captureException(err);
+      console.error(err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setStep('result');
     } finally {

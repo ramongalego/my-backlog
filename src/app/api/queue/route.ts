@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { jsonError } from '@/lib/api/response';
 import {
@@ -26,7 +25,7 @@ export async function GET() {
     .order('position', { ascending: true });
 
   if (error) {
-    Sentry.captureException(error);
+    console.error(error);
     return jsonError('Failed to load queue', 500);
   }
 
@@ -111,7 +110,7 @@ export async function POST(request: NextRequest) {
       // Unique constraint violation — game already in queue
       return jsonError('Game already in queue', 409);
     }
-    Sentry.captureException(error);
+    console.error(error);
     return jsonError('Failed to add to queue', 500);
   }
 
@@ -145,11 +144,11 @@ export async function PATCH(request: NextRequest) {
 
   if (error) {
     // Postgres raise_exception (P0001) for our validation errors → 400.
-    // Everything else is a real server problem → Sentry + 500.
+    // Everything else is a real server problem → log + 500.
     if (error.code === 'P0001' || error.code === '22023') {
       return jsonError(error.message, 400);
     }
-    Sentry.captureException(error);
+    console.error(error);
     return jsonError('Failed to reorder queue', 500);
   }
 
@@ -186,7 +185,7 @@ export async function DELETE(request: NextRequest) {
     .eq('app_id', appId);
 
   if (error) {
-    Sentry.captureException(error);
+    console.error(error);
     return jsonError('Failed to remove from queue', 500);
   }
 

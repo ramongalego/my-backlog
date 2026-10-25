@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
@@ -89,7 +88,6 @@ export async function POST(request: NextRequest) {
   });
 
   if (error) {
-    Sentry.captureException(error);
     console.error('Failed to save shared completion:', error);
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
   }

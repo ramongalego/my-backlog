@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -97,7 +96,6 @@ export async function POST() {
       updatedPlaytime: updatedGames.length,
     });
   } catch (error) {
-    Sentry.captureException(error);
     console.error('Steam API error:', error);
     return NextResponse.json({ error: 'Steam API failed' }, { status: 500 });
   }

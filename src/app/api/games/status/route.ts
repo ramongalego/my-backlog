@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
     .eq('app_id', appId);
 
   if (error) {
-    Sentry.captureException(error);
+    console.error(error);
     return jsonError('Failed to update game status', 500);
   }
 

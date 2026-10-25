@@ -11,10 +11,6 @@ jest.mock('sonner', () => ({
   },
 }));
 
-jest.mock('@sentry/nextjs', () => ({
-  captureException: jest.fn(),
-}));
-
 jest.mock('@/lib/mutations');
 
 jest.mock('@/lib/reload', () => ({

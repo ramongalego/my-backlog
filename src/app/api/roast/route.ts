@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
 import OpenAI from 'openai';
 import {
   parseSteamInput,
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
       getWishlistCount(steamId),
     ]);
   } catch (err) {
-    Sentry.captureException(err);
+    console.error(err);
     return jsonError('Could not fetch Steam data. The profile may be private.', 502);
   }
 
@@ -161,7 +160,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (err) {
-    Sentry.captureException(err);
     console.error('OpenAI API error:', err);
     return jsonError('AI service temporarily unavailable', 503);
   }
