@@ -57,8 +57,7 @@ describe('promoteNextFromQueue', () => {
       queueData: { app_id: 42 },
       gameData: { app_id: 42, name: 'Hollow Knight' },
     });
-    mockFetch.mockResolvedValueOnce({ ok: true }); // promote to playing
-    mockFetch.mockResolvedValueOnce({ ok: true }); // remove from queue
+    mockFetch.mockResolvedValueOnce({ ok: true }); // promote to playing (also dequeues)
 
     const result = await promoteNextFromQueue(userId, supabase);
 
@@ -71,7 +70,8 @@ describe('promoteNextFromQueue', () => {
         body: JSON.stringify({ appId: 42, status: 'playing' }),
       }),
     );
-    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/queue?appId=42', { method: 'DELETE' });
+    // The status route removes the game from the queue in the same request.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it('throws when the status-update fetch fails', async () => {
@@ -83,19 +83,5 @@ describe('promoteNextFromQueue', () => {
 
     await expect(promoteNextFromQueue(userId, supabase)).rejects.toThrow(/Failed to promote/);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('throws when the remove-from-queue fetch fails', async () => {
-    // Regression guard: a silent failure here used to leave the promoted
-    // game in both "Now Playing" and "Up Next" because its playing_queue
-    // row was never deleted.
-    const supabase = makeSupabase({ queueData: { app_id: 42 } });
-    mockFetch.mockResolvedValueOnce({ ok: true }); // promote ok
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 }); // delete fails
-
-    await expect(promoteNextFromQueue(userId, supabase)).rejects.toThrow(
-      /Failed to remove promoted game/,
-    );
-    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

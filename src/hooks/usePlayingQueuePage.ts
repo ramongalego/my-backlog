@@ -44,10 +44,15 @@ const ANONYMOUS_QUEUE_KEY = [...queryKeys.queue.all, 'list', 'anonymous'] as con
 
 async function fetchQueue(): Promise<QueueItem[]> {
   const res = await fetch('/api/queue');
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`Failed to load queue (${res.status})`);
   const data = await res.json();
   return data.queue ?? [];
 }
+
+// Every mutation here touches the queue and/or the playing game. Sharing a
+// scope makes React Query run them one at a time, so e.g. two quick reorders
+// can't reach the server out of order or roll back over each other.
+const QUEUE_SCOPE = { id: 'queue' };
 
 async function assertOk(res: Response, action: string): Promise<void> {
   if (res.ok) return;
@@ -75,6 +80,7 @@ interface ConfirmResult {
   totalGames: number;
   status: string;
   rating: number | null;
+  promoteFailed: boolean;
 }
 
 export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
@@ -109,6 +115,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   // ─── Mutations ──────────────────────────────────────────────────────────────
 
   const removeMutation = useMutation({
+    scope: QUEUE_SCOPE,
     mutationFn: async (appId: number) => {
       const res = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
       await assertOk(res, 'Remove from queue');
@@ -130,6 +137,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   });
 
   const reorderMutation = useMutation({
+    scope: QUEUE_SCOPE,
     mutationFn: async (appIds: number[]) => {
       const res = await fetch('/api/queue', {
         method: 'PATCH',
@@ -160,6 +168,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   });
 
   const cancelMutation = useMutation({
+    scope: QUEUE_SCOPE,
     mutationFn: async (game: GameWithImage) => {
       await updateGameStatus(game.app_id, 'backlog');
       const res = await fetch('/api/queue', {
@@ -209,6 +218,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   });
 
   const confirmMutation = useMutation<ConfirmResult, Error, ConfirmInput>({
+    scope: QUEUE_SCOPE,
     mutationFn: async ({ status, date, notes, rating }) => {
       if (!currentlyPlaying) throw new Error('No currently playing game');
       if (!userId) throw new Error('Not authenticated');
@@ -221,22 +231,41 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
         rating,
       });
 
+      // The finish/drop is saved; the follow-ups are best-effort so a failed
+      // promote doesn't report the whole action as failed.
       const supabase = createClient();
-      const [counts, promotedGame] = await Promise.all([
+      const [countsResult, promotedResult] = await Promise.allSettled([
         fetchCompletionCounts(supabase, userId),
         promoteNextFromQueue(userId, supabase),
       ]);
+      const counts =
+        countsResult.status === 'fulfilled'
+          ? countsResult.value
+          : { gamesFinished: 0, totalGames: 0 };
+      if (promotedResult.status === 'rejected') {
+        console.error('Failed to start next queued game:', promotedResult.reason);
+      }
 
       return {
         finishedGame,
-        promoted: promotedGame,
+        promoted: promotedResult.status === 'fulfilled' ? promotedResult.value : null,
         gamesFinished: counts.gamesFinished,
         totalGames: counts.totalGames,
         status,
         rating,
+        promoteFailed: promotedResult.status === 'rejected',
       };
     },
-    onSuccess: ({ finishedGame, promoted, gamesFinished, totalGames, status, rating }) => {
+    onSuccess: ({
+      finishedGame,
+      promoted,
+      gamesFinished,
+      totalGames,
+      status,
+      rating,
+      promoteFailed,
+    }) => {
+      if (promoteFailed) toast.error("Couldn't start the next game from your queue.");
       queryClient.setQueryData(playingKey, promoted);
       if (promoted) {
         queryClient.setQueryData(queueKey, (old: QueueItem[] | undefined) =>
@@ -257,20 +286,19 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
       }
     },
     onError: (err, variables) => {
-      console.error(`Failed to ${variables.status} game:`, err);
-      toast.error(`Failed to ${variables.status} game`);
+      console.error(`Failed to set game to ${variables.status}:`, err);
+      toast.error('Could not update the game. Please try again.');
     },
     onSettled: () => invalidateGamesAndQueue(),
   });
 
   const pickMutation = useMutation({
+    scope: QUEUE_SCOPE,
     mutationFn: async (appId: number) => {
       if (!userId) throw new Error('Not authenticated');
 
+      // The status route also removes the game from the queue.
       await updateGameStatus(appId, 'playing');
-      const res = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
-      await assertOk(res, 'Remove from queue');
-
       return fetchCurrentlyPlaying(userId);
     },
     onMutate: async (appId) => {
@@ -317,6 +345,7 @@ export function usePlayingQueuePage(): UsePlayingQueuePageReturn {
   });
 
   const backlogMutation = useMutation({
+    scope: QUEUE_SCOPE,
     mutationFn: async (game: GameWithImage) => {
       await updateGameStatus(game.app_id, 'backlog');
     },

@@ -108,6 +108,9 @@ export const RATE_LIMITS = {
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // 20 requests per minute for AI suggestions (accounts for rerolls)
   suggestion: { limit: 20, windowMs: 60 * 1000 },
+  // 60 profile lookups per hour per IP. Resolving a vanity name spends the
+  // shared Steam API key quota, so it's limited before any Steam call.
+  roastLookup: { limit: 60, windowMs: 60 * 60 * 1000 },
   // 10 roasts per hour per IP (public, uses OpenAI)
   roast: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Global circuit breaker: cap fresh roast generations across all users per day.

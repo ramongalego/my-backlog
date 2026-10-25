@@ -16,11 +16,3 @@ export function getSteamApiKey(): string {
 export function getOpenAIApiKey(): string {
   return required('OPENAI_API_KEY');
 }
-
-export function getCronSecret(): string {
-  return required('CRON_SECRET');
-}
-
-export function getSupabaseServiceRoleKey(): string {
-  return required('SUPABASE_SERVICE_ROLE_KEY');
-}

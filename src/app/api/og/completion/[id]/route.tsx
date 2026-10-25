@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
 
 export const runtime = 'nodejs';
 
@@ -31,7 +32,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data } = await supabase.from('shared_completions').select('*').eq('id', id).single();
+  const { data } = await supabase
+    .from('shared_completions')
+    .select(SHARED_COMPLETION_COLUMNS)
+    .eq('id', id)
+    .maybeSingle();
 
   if (!data) {
     return new Response('Not found', { status: 404 });

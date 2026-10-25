@@ -6,11 +6,13 @@ export const PLAYING_GAME_SELECT =
 
 export async function fetchCurrentlyPlaying(userId: string): Promise<GameWithImage | null> {
   const supabase = createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('games')
     .select(PLAYING_GAME_SELECT)
     .eq('user_id', userId)
     .eq('status', 'playing')
+    .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return data ?? null;
 }

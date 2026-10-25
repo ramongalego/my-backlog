@@ -4,12 +4,19 @@ import { fetchWithTimeout, TIMEOUTS } from '@/lib/fetch-with-timeout';
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const BASE_URL = 'https://howlongtobeat.com';
+const BASE_HEADERS = { 'User-Agent': USER_AGENT, Referer: BASE_URL };
+
+// Used if the endpoint can't be discovered from the bundle (it was
+// /api/search/site as of Oct 2026).
+const FALLBACK_SEARCH_ENDPOINT = '/api/search/site';
 
 interface HLTBConfig {
   searchEndpoint: string;
   authToken: string;
-  hpKey: string;
-  hpVal: string;
+  // Older HLTB builds also required an anti-bot key/value pair. Kept optional
+  // so we keep working if they bring it back.
+  hpKey?: string;
+  hpVal?: string;
 }
 
 // Cache both the endpoint and token together — they come from the same JS bundle
@@ -17,19 +24,15 @@ let cachedConfig: HLTBConfig | null = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 
-// Forces the next call to re-run the full bundle-scraping + init flow.
-// Used by the health check so it actually exercises the fragile path on every run.
-export function resetHltbCache(): void {
-  cachedConfig = null;
-  cacheTimestamp = 0;
-}
+// Concurrent callers share one in-flight config fetch instead of each scraping
+// the HLTB bundle (sync runs several lookups in parallel).
+let pendingConfig: Promise<HLTBConfig | null> | null = null;
 
-// Scans a minified JS chunk for `fetch("/api/...", { ...method:"POST"... })`.
-// The old regex required `method:"POST"` to appear before the first `}` after
-// the options brace, which silently fails when the minifier emits `headers`
-// (itself an object literal) before `method`. We now walk each fetch call's
-// options by balanced braces and look for `method:"POST"` anywhere inside.
-function findSearchEndpoint(scriptContent: string): string | null {
+// Scans a minified JS chunk for `fetch("/api/...", { ...method:"POST"... })`
+// calls. Each fetch call's options are walked by balanced braces so the match
+// doesn't depend on property order. Returns every POST endpoint found.
+function findPostEndpoints(scriptContent: string): string[] {
+  const endpoints: string[] = [];
   const fetchStart = /fetch\s*\(\s*["'](\/api\/[a-zA-Z0-9_/]+)["']\s*,\s*\{/g;
   for (const match of scriptContent.matchAll(fetchStart)) {
     const url = match[1];
@@ -49,63 +52,48 @@ function findSearchEndpoint(scriptContent: string): string | null {
     }
     if (end === -1) continue;
     const opts = scriptContent.substring(braceIdx, end + 1);
-    if (/method\s*:\s*["']POST["']/i.test(opts)) return url;
+    if (/method\s*:\s*["']POST["']/i.test(opts)) endpoints.push(url);
   }
-  return null;
+  return endpoints;
 }
 
-async function getHLTBConfig(): Promise<HLTBConfig | null> {
-  if (cachedConfig && Date.now() - cacheTimestamp < CACHE_DURATION) {
-    return cachedConfig;
+async function discoverSearchEndpoint(): Promise<string> {
+  const homeRes = await fetchWithTimeout(BASE_URL, { headers: BASE_HEADERS }, TIMEOUTS.HLTB);
+  if (!homeRes.ok) {
+    console.error(`[HLTB] Home page returned HTTP ${homeRes.status}`);
+    return FALLBACK_SEARCH_ENDPOINT;
   }
+  const html = await homeRes.text();
+  const scriptPaths = [...html.matchAll(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g)].map(
+    (m) => m[1],
+  );
 
-  try {
-    const homeRes = await fetchWithTimeout(
-      BASE_URL,
-      { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
+  for (const path of scriptPaths) {
+    const scriptRes = await fetchWithTimeout(
+      BASE_URL + path,
+      { headers: BASE_HEADERS },
       TIMEOUTS.HLTB,
     );
-    if (!homeRes.ok) {
-      console.error(`[HLTB] Home page returned HTTP ${homeRes.status}`);
-      return null;
-    }
-    const html = await homeRes.text();
+    if (!scriptRes.ok) continue;
+    // The bundle has other POST endpoints (e.g. /api/error), so only accept
+    // one that looks like search.
+    const search = findPostEndpoints(await scriptRes.text()).find((url) => url.includes('search'));
+    if (search) return search;
+  }
 
-    const scriptMatches = [...html.matchAll(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g)];
-    if (scriptMatches.length === 0) {
-      console.error('[HLTB] No _next chunks found in home HTML — bundle layout may have changed');
-      return null;
-    }
+  console.error('[HLTB] Could not find search endpoint in any JS chunk, using fallback');
+  return FALLBACK_SEARCH_ENDPOINT;
+}
 
-    let searchEndpoint: string | null = null;
+async function fetchHLTBConfig(): Promise<HLTBConfig | null> {
+  try {
+    const searchEndpoint = await discoverSearchEndpoint();
 
-    for (const match of scriptMatches) {
-      const scriptUrl = BASE_URL + match[1];
-      const scriptRes = await fetchWithTimeout(
-        scriptUrl,
-        { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
-        TIMEOUTS.HLTB,
-      );
-      if (!scriptRes.ok) continue;
-      const scriptContent = await scriptRes.text();
-
-      const url = findSearchEndpoint(scriptContent);
-      if (url) {
-        searchEndpoint = url;
-        break;
-      }
-    }
-
-    if (!searchEndpoint) {
-      console.error('[HLTB] Could not find search endpoint in any JS chunk');
-      return null;
-    }
-
-    // Derive the token endpoint from the search endpoint — same pattern the Python API uses
-    // e.g. /api/find → GET /api/find/init?t=timestamp
+    // The token endpoint is the search endpoint + /init, e.g.
+    // POST /api/search/site → GET /api/search/site/init?t=timestamp
     const initRes = await fetchWithTimeout(
       `${BASE_URL}${searchEndpoint}/init?t=${Date.now()}`,
-      { headers: { 'User-Agent': USER_AGENT, Referer: BASE_URL } },
+      { headers: BASE_HEADERS },
       TIMEOUTS.HLTB,
     );
     if (!initRes.ok) {
@@ -113,28 +101,42 @@ async function getHLTBConfig(): Promise<HLTBConfig | null> {
       return null;
     }
     const initData = await initRes.json();
-    const authToken = initData?.token;
-    const hpKey = initData?.hpKey;
-    const hpVal = initData?.hpVal;
-
-    if (!authToken || !hpKey || !hpVal) {
-      console.error('[HLTB] Init response missing required fields:', {
-        hasToken: !!authToken,
-        hasHpKey: !!hpKey,
-        hasHpVal: !!hpVal,
-      });
+    if (!initData?.token) {
+      console.error('[HLTB] Init response missing token');
       return null;
     }
 
-    console.log('[HLTB] Config refreshed:', { searchEndpoint, hpKey });
-
-    cachedConfig = { searchEndpoint, authToken, hpKey, hpVal };
-    cacheTimestamp = Date.now();
-    return cachedConfig;
+    return {
+      searchEndpoint,
+      authToken: initData.token,
+      hpKey: initData.hpKey,
+      hpVal: initData.hpVal,
+    };
   } catch (err) {
-    console.error('[HLTB] getHLTBConfig threw:', err);
+    console.error('[HLTB] Config fetch threw:', err);
     return null;
   }
+}
+
+async function getHLTBConfig(): Promise<HLTBConfig | null> {
+  if (cachedConfig && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    return cachedConfig;
+  }
+
+  pendingConfig ??= fetchHLTBConfig().then((config) => {
+    if (config) {
+      cachedConfig = config;
+      cacheTimestamp = Date.now();
+    }
+    pendingConfig = null;
+    return config;
+  });
+  return pendingConfig;
+}
+
+function invalidateConfig(stale: HLTBConfig): void {
+  // Only clear if nobody has refreshed it in the meantime.
+  if (cachedConfig === stale) cachedConfig = null;
 }
 
 // Strip special characters that confuse HLTB search, then split into terms.
@@ -149,6 +151,8 @@ function toSearchTerms(name: string): string[] {
     .split(' ');
 }
 
+class HLTBAuthError extends Error {}
+
 async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number | null> {
   const payload: Record<string, unknown> = {
     searchType: 'games',
@@ -162,8 +166,7 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
         sortCategory: 'popular',
         rangeCategory: 'main',
         rangeTime: { min: 0, max: 0 },
-        gameplay: { perspective: '', flow: '', genre: '', difficulty: '' },
-        rangeYear: { max: '', min: '' },
+        gameplay: { perspective: '', flow: '', genre: { mode: 'include', values: [] } },
         modifier: '',
       },
       users: { sortCategory: 'postcount' },
@@ -175,35 +178,26 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
     useCache: true,
   };
 
-  // HLTB requires an anti-bot key injected into both body and headers
-  payload[config.hpKey] = config.hpVal;
+  const headers: Record<string, string> = {
+    ...BASE_HEADERS,
+    'Content-Type': 'application/json',
+    'x-auth-token': config.authToken,
+  };
+  if (config.hpKey && config.hpVal) {
+    payload[config.hpKey] = config.hpVal;
+    headers['x-hp-key'] = config.hpKey;
+    headers['x-hp-val'] = config.hpVal;
+  }
 
   const res = await fetchWithTimeout(
     BASE_URL + config.searchEndpoint,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': USER_AGENT,
-        Referer: BASE_URL,
-        'x-auth-token': config.authToken,
-        'x-hp-key': config.hpKey,
-        'x-hp-val': config.hpVal,
-      },
-      body: JSON.stringify(payload),
-    },
+    { method: 'POST', headers, body: JSON.stringify(payload) },
     TIMEOUTS.HLTB,
   );
 
+  if (res.status === 403) throw new HLTBAuthError();
   if (!res.ok) {
-    if (res.status === 403) {
-      console.error(
-        `[HLTB] 403 Forbidden for "${gameName}" — token/hp credentials likely expired, clearing cache`,
-      );
-      cachedConfig = null;
-    } else {
-      console.error(`[HLTB] Search failed for "${gameName}": HTTP ${res.status}`);
-    }
+    console.error(`[HLTB] Search failed for "${gameName}": HTTP ${res.status}`);
     return null;
   }
 
@@ -226,12 +220,31 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
   return best.comp_main ? secondsToHours(best.comp_main) : null;
 }
 
+// Runs a search, refreshing the token once if HLTB rejects it as expired.
+async function searchWithRetry(gameName: string): Promise<number | null> {
+  const config = await getHLTBConfig();
+  if (!config) return null;
+  try {
+    return await searchHLTB(config, gameName);
+  } catch (err) {
+    if (!(err instanceof HLTBAuthError)) throw err;
+    invalidateConfig(config);
+    const fresh = await getHLTBConfig();
+    if (!fresh) return null;
+    try {
+      return await searchHLTB(fresh, gameName);
+    } catch (retryErr) {
+      if (!(retryErr instanceof HLTBAuthError)) throw retryErr;
+      console.error(`[HLTB] 403 Forbidden for "${gameName}" even with a fresh token`);
+      invalidateConfig(fresh);
+      return null;
+    }
+  }
+}
+
 export async function getMainStoryHours(gameName: string): Promise<number | null> {
   try {
-    const config = await getHLTBConfig();
-    if (!config) return null;
-
-    const result = await searchHLTB(config, gameName);
+    const result = await searchWithRetry(gameName);
     if (result !== null) return result;
 
     // Fallback: strip common edition/variant words and parenthesised years, then retry
@@ -244,7 +257,7 @@ export async function getMainStoryHours(gameName: string): Promise<number | null
         .replace(/\(\d{4}\)/g, '')
         .replace(/\s+/g, ' ')
         .trim();
-      return searchHLTB(config, stripped);
+      return searchWithRetry(stripped);
     }
 
     return null;

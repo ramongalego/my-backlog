@@ -29,7 +29,6 @@ export interface GameMetadata {
 
 // Fetches a full metadata snapshot for a single app_id from Steam + HLTB.
 // Returns null if Steam store details aren't available (unknown/removed app).
-// Used by both the per-user sync flow and the scheduled refresh cron.
 export async function fetchGameMetadata(
   appId: number,
   nameHint?: string,

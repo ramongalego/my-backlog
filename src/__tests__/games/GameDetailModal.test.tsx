@@ -26,6 +26,9 @@ const defaultProps = {
   initialStatus: 'backlog' as const,
 };
 
+// Rating and notes are only editable for finished/dropped games.
+const reviewProps = { ...defaultProps, initialStatus: 'finished' as const };
+
 describe('GameDetailModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,19 +36,19 @@ describe('GameDetailModal', () => {
 
   describe('pre-filling initial values', () => {
     it('should pre-fill notes', () => {
-      render(<GameDetailModal {...defaultProps} initialNotes="Great game" />);
+      render(<GameDetailModal {...reviewProps} initialNotes="Great game" />);
 
       expect(screen.getByLabelText(/notes/i)).toHaveValue('Great game');
     });
 
     it('should pre-fill rating', () => {
-      render(<GameDetailModal {...defaultProps} initialRating={8} />);
+      render(<GameDetailModal {...reviewProps} initialRating={8} />);
 
       expect(screen.getByLabelText(/your rating/i)).toHaveValue(8);
     });
 
     it('should leave rating empty when not provided', () => {
-      render(<GameDetailModal {...defaultProps} />);
+      render(<GameDetailModal {...reviewProps} />);
 
       expect(screen.getByLabelText(/your rating/i)).toHaveValue(null);
     });
@@ -292,7 +295,7 @@ describe('GameDetailModal', () => {
     });
 
     it('should call onConfirm with updated notes', async () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: 'Amazing!' } });
       await act(async () => {
@@ -300,7 +303,7 @@ describe('GameDetailModal', () => {
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith(
-        'backlog',
+        'finished',
         expect.any(String),
         'Amazing!',
         null,
@@ -310,7 +313,7 @@ describe('GameDetailModal', () => {
 
   describe('rating validation', () => {
     it('should block save and show error when rating is above 10', async () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
       await act(async () => {
@@ -322,7 +325,7 @@ describe('GameDetailModal', () => {
     });
 
     it('should block save and show error when rating is below 0', async () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '-1' } });
       await act(async () => {
@@ -334,7 +337,7 @@ describe('GameDetailModal', () => {
     });
 
     it('should clear the error when the rating is corrected', async () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
       await act(async () => {
@@ -349,25 +352,25 @@ describe('GameDetailModal', () => {
     });
 
     it('should allow save with rating of 0', async () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '0' } });
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
       });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', 0);
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', 0);
     });
 
     it('should allow save with rating of 10', async () => {
-      render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '10' } });
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
       });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', 10);
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', 10);
     });
   });
 
@@ -491,5 +494,24 @@ describe('GameDetailModal', () => {
 
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('GameDetailModal review fields', () => {
+  it('should hide rating and notes for statuses the API does not store them for', () => {
+    render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
+
+    expect(screen.queryByLabelText(/your rating/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/notes/i)).not.toBeInTheDocument();
+  });
+
+  it('should warn before hiding a reviewed game clears its review', async () => {
+    render(<GameDetailModal {...reviewProps} initialNotes="Loved it" initialRating={9} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /hidden/i }));
+    });
+
+    expect(screen.getByText(/will clear the rating and notes/i)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { extractSteamId } from '@/lib/steam/auth';
+import { extractSteamId, isSteamAssertion } from '@/lib/steam/auth';
 import { extractGameMetadata, SteamGameDetails } from '@/lib/steam/store-api';
 
 describe('extractSteamId', () => {
@@ -7,9 +7,17 @@ describe('extractSteamId', () => {
     expect(extractSteamId(url)).toBe('76561198012345678');
   });
 
-  it('should handle different Steam ID lengths', () => {
-    const url = 'https://steamcommunity.com/openid/id/123456789';
-    expect(extractSteamId(url)).toBe('123456789');
+  it('should reject IDs that are not 64-bit SteamIDs', () => {
+    expect(extractSteamId('https://steamcommunity.com/openid/id/123456789')).toBeNull();
+  });
+
+  it('should reject a Steam URL embedded in another identity', () => {
+    expect(
+      extractSteamId('https://evil.example/https://steamcommunity.com/openid/id/76561198012345678'),
+    ).toBeNull();
+    expect(
+      extractSteamId('https://steamcommunity.com/openid/id/76561198012345678/extra'),
+    ).toBeNull();
   });
 
   it('should return null for invalid URL format', () => {
@@ -25,6 +33,38 @@ describe('extractSteamId', () => {
   it('should return null for partial matches', () => {
     expect(extractSteamId('https://steamcommunity.com/openid/')).toBeNull();
     expect(extractSteamId('https://steamcommunity.com/openid/id/')).toBeNull();
+  });
+});
+
+describe('isSteamAssertion', () => {
+  const steamId = 'https://steamcommunity.com/openid/id/76561198012345678';
+  const params = (overrides: Record<string, string> = {}) =>
+    new URLSearchParams({
+      'openid.op_endpoint': 'https://steamcommunity.com/openid/login',
+      'openid.claimed_id': steamId,
+      'openid.identity': steamId,
+      ...overrides,
+    });
+
+  it('should accept an assertion issued by Steam', () => {
+    expect(isSteamAssertion(params())).toBe(true);
+  });
+
+  it('should reject an assertion from another provider', () => {
+    expect(isSteamAssertion(params({ 'openid.op_endpoint': 'https://evil.example/login' }))).toBe(
+      false,
+    );
+  });
+
+  it('should reject a spoofed claimed_id', () => {
+    const spoofed = `https://evil.example/${steamId}`;
+    expect(
+      isSteamAssertion(params({ 'openid.claimed_id': spoofed, 'openid.identity': spoofed })),
+    ).toBe(false);
+  });
+
+  it('should reject a mismatched identity', () => {
+    expect(isSteamAssertion(params({ 'openid.identity': 'https://evil.example/' }))).toBe(false);
   });
 });
 

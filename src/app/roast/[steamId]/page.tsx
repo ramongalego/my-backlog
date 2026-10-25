@@ -21,7 +21,7 @@ async function fetchRoast(steamId: string): Promise<RoastResponse> {
     });
   }
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? 'Could not load this roast');
   return data as RoastResponse;
 }

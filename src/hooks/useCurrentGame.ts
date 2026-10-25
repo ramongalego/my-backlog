@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/supabase/paginate';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { promoteNextFromQueue } from '@/lib/promoteNextFromQueue';
 import { addToQueue } from '@/lib/games/queue';
@@ -61,12 +62,8 @@ export function useCurrentGame({
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setIsStatusLoading(true);
     try {
+      // The status route also takes the game off the queue if it was queued.
       await updateGameStatus(game.app_id, 'playing');
-      // Idempotent — the DELETE route is a no-op if the game isn't queued,
-      // so we can safely call it on every pick to handle the case where the
-      // user directly picks a game that happens to be in their queue.
-      const res = await fetch(`/api/queue?appId=${game.app_id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`Failed to remove from queue (${res.status})`);
       setCurrentlyPlaying(game);
       removeFromPools(game.app_id);
     } catch (err) {
@@ -93,6 +90,8 @@ export function useCurrentGame({
       addQueuedAppId(game.app_id);
       invalidateQueue();
       toast.success(`${game.name} added to the queue!`);
+    } else {
+      toast.error(`Could not add ${game.name} to the queue. Please try again.`);
     }
   };
 
@@ -149,38 +148,43 @@ export function useCurrentGame({
         notes,
         rating,
       });
-
-      const supabase = createClient();
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-
-      let promoted: GameWithImage | null = null;
-      let counts = { gamesFinished: 0, totalGames: 0 };
-
-      if (currentUser) {
-        const [completionCounts, promotedGame] = await Promise.all([
-          fetchCompletionCounts(supabase, currentUser.id),
-          promoteNextFromQueue(currentUser.id, supabase),
-        ]);
-        promoted = promotedGame;
-        counts = completionCounts;
-      }
-
-      setCurrentlyPlaying(promoted);
-      if (promoted && userId) {
-        queryClient.setQueryData(queryKeys.queue.list(userId), (old: QueueItem[] | undefined) =>
-          (old ?? []).filter((q) => q.app_id !== promoted.app_id),
-        );
-      }
-
-      if (status === 'finished') {
-        setGameSummary(buildCompletionSummary({ finishedGame, promoted, counts, rating }));
-        celebrateGameFinished();
-      }
     } catch (err) {
-      console.error(`Failed to ${status} game:`, err);
-      toast.error(`Failed to ${status} game`);
+      console.error(`Failed to set game to ${status}:`, err);
+      toast.error('Could not update the game. Please try again.');
+      invalidateGamesAndQueue();
+      setIsStatusLoading(false);
+      return;
+    }
+
+    // The status change is saved at this point; the follow-ups below are
+    // best-effort and must not report the finish/drop itself as failed.
+    let promoted: GameWithImage | null = null;
+    let counts = { gamesFinished: 0, totalGames: 0 };
+    if (userId) {
+      const supabase = createClient();
+      const [countsResult, promotedResult] = await Promise.allSettled([
+        fetchCompletionCounts(supabase, userId),
+        promoteNextFromQueue(userId, supabase),
+      ]);
+      if (countsResult.status === 'fulfilled') counts = countsResult.value;
+      if (promotedResult.status === 'fulfilled') {
+        promoted = promotedResult.value;
+      } else {
+        console.error('Failed to start next queued game:', promotedResult.reason);
+        toast.error("Couldn't start the next game from your queue.");
+      }
+    }
+
+    setCurrentlyPlaying(promoted);
+    if (promoted && userId) {
+      queryClient.setQueryData(queryKeys.queue.list(userId), (old: QueueItem[] | undefined) =>
+        (old ?? []).filter((q) => q.app_id !== promoted.app_id),
+      );
+    }
+
+    if (status === 'finished') {
+      setGameSummary(buildCompletionSummary({ finishedGame, promoted, counts, rating }));
+      celebrateGameFinished();
     }
     invalidateGamesAndQueue();
     setIsStatusLoading(false);
@@ -214,32 +218,44 @@ export function useCurrentGame({
       if (!ok) throw new Error('Failed to add to queue');
       setCurrentlyPlaying(null);
       addQueuedAppId(game.app_id);
-      invalidateGamesAndQueue();
     } catch (err) {
       console.error('Failed to move game to queue:', err);
       toast.error('Failed to move game to queue');
     }
+    // Refetch either way: the first step may have succeeded before the second failed.
+    invalidateGamesAndQueue();
     setIsStatusLoading(false);
   };
 
   const handleRandomPick = async () => {
+    if (!userId || isStatusLoading) return;
+
     const supabase = createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-    if (!currentUser) return;
+    let eligibleGames: GameWithImage[];
+    try {
+      eligibleGames = await fetchAllRows<GameWithImage>((from, to) =>
+        supabase
+          .from('games')
+          .select('app_id, name, header_image, main_story_hours, playtime_forever')
+          .eq('user_id', userId)
+          .eq('type', 'game')
+          .not('main_story_hours', 'is', null)
+          .lte('playtime_forever', RANDOM_PICK_MAX_PLAYTIME_MINUTES)
+          .contains('categories', ['Single-player'])
+          .or('status.is.null,status.eq.backlog')
+          .order('app_id')
+          .range(from, to),
+      );
+    } catch (err) {
+      console.error('Failed to load games for random pick:', err);
+      toast.error('Could not pick a random game. Please try again.');
+      return;
+    }
 
-    const { data: eligibleGames } = await supabase
-      .from('games')
-      .select('app_id, name, header_image, main_story_hours, playtime_forever')
-      .eq('user_id', currentUser.id)
-      .eq('type', 'game')
-      .not('main_story_hours', 'is', null)
-      .lte('playtime_forever', RANDOM_PICK_MAX_PLAYTIME_MINUTES)
-      .contains('categories', ['Single-player'])
-      .or('status.is.null,status.eq.backlog');
-
-    if (!eligibleGames || eligibleGames.length === 0) return;
+    if (eligibleGames.length === 0) {
+      toast.info('No eligible backlog games to pick from.');
+      return;
+    }
 
     const randomIndex = Math.floor(Math.random() * eligibleGames.length);
     await handlePickGame(eligibleGames[randomIndex]);

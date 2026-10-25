@@ -1,6 +1,8 @@
 export class FetchTimeoutError extends Error {
   constructor(url: string, timeoutMs: number) {
-    super(`Request to ${url} timed out after ${timeoutMs}ms`);
+    // Query strings are dropped: Steam API URLs carry the API key there, and
+    // this message ends up in logs.
+    super(`Request to ${url.split('?')[0]} timed out after ${timeoutMs}ms`);
     this.name = 'FetchTimeoutError';
   }
 }

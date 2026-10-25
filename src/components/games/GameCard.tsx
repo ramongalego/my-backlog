@@ -60,7 +60,7 @@ export function GameCard({ game, onOpenDetail, queued }: GameCardProps) {
       {/* Clickable image area */}
       <button
         onClick={() => onOpenDetail(game.app_id)}
-        className="cursor-pointer relative h-40 sm:h-36 w-full block focus:outline-none select-none"
+        className="cursor-pointer relative h-40 sm:h-36 w-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500 select-none"
         aria-label={`Open details for ${game.name}`}
       >
         {game.header_image ? (

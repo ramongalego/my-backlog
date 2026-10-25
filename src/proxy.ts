@@ -26,6 +26,12 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // API routes authenticate themselves (and can refresh the session cookie),
+  // so skip the auth round trip here for them.
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -47,10 +53,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Refreshes the auth token if needed
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Refreshes the auth token if needed. getClaims verifies the JWT locally when
+  // the project uses asymmetric signing keys, avoiding a call to Supabase Auth
+  // on every navigation.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims ?? null;
 
   const { pathname } = request.nextUrl;
 
@@ -63,7 +70,10 @@ export async function proxy(request: NextRequest) {
   // Redirect authenticated users away from public-only routes (landing page)
   const isPublicOnlyRoute = publicOnlyRoutes.some((route) => pathname === route);
   if (isPublicOnlyRoute && user) {
-    return NextResponse.redirect(new URL('/home', request.url));
+    // Keep the query string: OAuth and Steam-link failures land on / with ?error=…
+    const url = request.nextUrl.clone();
+    url.pathname = '/home';
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

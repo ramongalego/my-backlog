@@ -27,6 +27,7 @@ import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
+import { todayIso } from '@/lib/diary/date-utils';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
 function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
@@ -414,7 +415,7 @@ export default function PlayingQueuePage() {
           gameName={currentlyPlaying.name}
           headerImage={currentlyPlaying.header_image}
           initialStatus={statusModal.action}
-          initialDate={new Date().toISOString().slice(0, 10)}
+          initialDate={todayIso()}
         />
       )}
 

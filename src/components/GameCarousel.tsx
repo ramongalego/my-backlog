@@ -128,7 +128,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
             >
               <button
                 onClick={() => onOpenDetail?.(game)}
-                className="relative h-32 w-full block cursor-pointer focus:outline-none select-none"
+                className="relative h-32 w-full block cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500 select-none"
                 aria-label={`Open details for ${game.name}`}
               >
                 {game.header_image ? (

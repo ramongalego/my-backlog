@@ -48,6 +48,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ blacklisted: true, message: blacklistMessage });
   }
 
+  const ip = getClientIp(request);
+  const lookupLimit = checkRateLimit(`roast-lookup:${ip}`, RATE_LIMITS.roastLookup);
+  if (!lookupLimit.success) {
+    return jsonError('Too many requests. Try again later.', 429, {
+      'Retry-After': Math.ceil((lookupLimit.resetAt - Date.now()) / 1000).toString(),
+    });
+  }
+
   // Resolve to Steam ID
   const steamId = await parseSteamInput(steamInput, steamApiKey);
   if (!steamId) {
@@ -62,21 +70,12 @@ export async function POST(request: NextRequest) {
   if (cached) return NextResponse.json(cached);
 
   // Rate limit only when we need to generate a new roast
-  const ip = getClientIp(request);
   const rateLimitResult = checkRateLimit(`roast:${ip}`, RATE_LIMITS.roast);
 
   if (!rateLimitResult.success) {
     return jsonError('Too many roasts. Try again later.', 429, {
       'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
     });
-  }
-
-  // Global circuit breaker on fresh generations — bounds worst-case OpenAI spend
-  // even if per-IP limits are bypassed by a distributed attacker. Cache hits above
-  // already skipped this check.
-  const globalLimit = checkRateLimit('roast:global', RATE_LIMITS.roastGlobal);
-  if (!globalLimit.success) {
-    return jsonError('Roasts are temporarily unavailable. Try again tomorrow.', 429);
   }
 
   // Fetch Steam data — all in parallel
@@ -122,6 +121,14 @@ export async function POST(request: NextRequest) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
     .map(([tag, count]) => ({ tag, count }));
+
+  // Global circuit breaker on fresh generations — bounds worst-case OpenAI spend
+  // even if per-IP limits are bypassed by a distributed attacker. Checked last so
+  // only requests that actually reach OpenAI count against it.
+  const globalLimit = checkRateLimit('roast:global', RATE_LIMITS.roastGlobal);
+  if (!globalLimit.success) {
+    return jsonError('Roasts are temporarily unavailable. Try again tomorrow.', 429);
+  }
 
   // Build prompt and call OpenAI
   const prompt = buildRoastPrompt(profile, games, topTags, {

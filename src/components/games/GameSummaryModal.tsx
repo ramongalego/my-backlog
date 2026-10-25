@@ -168,9 +168,9 @@ export function GameSummaryModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel={gameName}>
       {/* Hero */}
-      <div className="relative -mx-6 -mt-6 h-44 overflow-hidden rounded-t-2xl">
+      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
         {headerImage ? (
           <Image
             src={headerImage}

@@ -16,6 +16,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { todayIso, toLocalIsoDate } from '@/lib/diary/date-utils';
 
 import 'react-day-picker/style.css';
 const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.DayPicker), {
@@ -100,15 +101,6 @@ function isoToDate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
-// Converts Date → "YYYY-MM-DD"
-function dateToIso(d: Date): string {
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-');
-}
-
 function formatDateLabel(iso: string): string {
   return isoToDate(iso).toLocaleDateString('en-US', {
     month: 'short',
@@ -135,7 +127,7 @@ export function GameDetailModal({
   playtimeMinutes,
   deckCompat,
 }: GameDetailModalProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   const [status, setStatus] = useState<InternalStatus>(initialStatus);
   const [hasDate, setHasDate] = useState(!!initialDate);
@@ -146,7 +138,10 @@ export function GameDetailModal({
   const [ratingError, setRatingError] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
+  // The API only stores date, rating and notes for finished/dropped games.
   const showDateField = status === 'finished' || status === 'dropped';
+  const hadReview = !!initialNotes || initialRating != null;
+  const clearsReview = hadReview && (status === 'wont_play' || status === 'hidden');
   const dateLabel = status === 'finished' ? 'Finished on' : 'Dropped on';
 
   function handleStatusChange(next: InternalStatus) {
@@ -162,8 +157,21 @@ export function GameDetailModal({
         setCalendarOpen(false);
       }
     }
-    if (calendarOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Capture phase so this runs before the modal's own Escape handler, which
+    // skips events that were already handled.
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      setCalendarOpen(false);
+    }
+    if (calendarOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape, true);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape, true);
+    };
   }, [calendarOpen]);
 
   const [saving, setSaving] = useState(false);
@@ -190,7 +198,7 @@ export function GameDetailModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} size="xl" ariaLabel={gameName}>
       {/* Hero image */}
       <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
         {headerImage ? (
@@ -240,6 +248,7 @@ export function GameDetailModal({
                   <button
                     key="queue"
                     onClick={() => handleStatusChange('queue')}
+                    aria-pressed={isActive}
                     className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors whitespace-nowrap ${
                       isActive
                         ? 'bg-sky-600 text-white border-sky-600'
@@ -255,6 +264,7 @@ export function GameDetailModal({
                 <button
                   key={opt.value}
                   onClick={() => handleStatusChange(opt.value)}
+                  aria-pressed={status === opt.value}
                   className={`cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-xs font-medium transition-colors whitespace-nowrap ${
                     status === opt.value
                       ? opt.activeClass
@@ -314,7 +324,7 @@ export function GameDetailModal({
                       defaultMonth={isoToDate(date)}
                       onSelect={(day) => {
                         if (day) {
-                          setDate(dateToIso(day));
+                          setDate(toLocalIsoDate(day));
                           setCalendarOpen(false);
                         }
                       }}
@@ -326,65 +336,73 @@ export function GameDetailModal({
           </div>
         )}
 
-        {/* Rating */}
-        <div>
-          <label
-            className="block text-xs text-zinc-500 uppercase tracking-wider mb-1.5"
-            htmlFor="detail-rating"
-          >
-            Your rating (0–10)
-          </label>
-          <input
-            id="detail-rating"
-            type="number"
-            min={0}
-            max={10}
-            value={rating}
-            onChange={(e) => {
-              setRating(e.target.value);
-              setRatingError(null);
-            }}
-            placeholder="Unrated"
-            aria-invalid={ratingError ? true : undefined}
-            aria-describedby={ratingError ? 'detail-rating-error' : undefined}
-            className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none placeholder:text-zinc-600 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-zinc-700 focus:border-zinc-500'}`}
-          />
-          {ratingError && (
-            <p id="detail-rating-error" className="text-rose-400 text-xs mt-1" role="alert">
-              {ratingError}
-            </p>
-          )}
-        </div>
+        {clearsReview && (
+          <p className="text-xs text-amber-400">Saving will clear the rating and notes for this game.</p>
+        )}
 
-        {/* Notes */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label
-              className="text-xs text-zinc-500 uppercase tracking-wider"
-              htmlFor="detail-notes"
-            >
-              Notes
-            </label>
-            {notes.length > 0 && (
-              <span
-                id="detail-notes-count"
-                className={`text-xs ${notes.length >= 1000 ? 'text-rose-400' : 'text-zinc-500'}`}
+        {showDateField && (
+          <>
+            {/* Rating */}
+            <div>
+              <label
+                className="block text-xs text-zinc-500 uppercase tracking-wider mb-1.5"
+                htmlFor="detail-rating"
               >
-                {notes.length}/1000
-              </span>
-            )}
-          </div>
-          <textarea
-            id="detail-notes"
-            aria-describedby={notes.length > 0 ? 'detail-notes-count' : undefined}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Any thoughts?"
-            rows={4}
-            maxLength={1000}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600 resize-none"
-          />
-        </div>
+                Your rating (0–10)
+              </label>
+              <input
+                id="detail-rating"
+                type="number"
+                min={0}
+                max={10}
+                value={rating}
+                onChange={(e) => {
+                  setRating(e.target.value);
+                  setRatingError(null);
+                }}
+                placeholder="Unrated"
+                aria-invalid={ratingError ? true : undefined}
+                aria-describedby={ratingError ? 'detail-rating-error' : undefined}
+                className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none placeholder:text-zinc-600 ${ratingError ? 'border-rose-500 focus:border-rose-500' : 'border-zinc-700 focus:border-zinc-500'}`}
+              />
+              {ratingError && (
+                <p id="detail-rating-error" className="text-rose-400 text-xs mt-1" role="alert">
+                  {ratingError}
+                </p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  className="text-xs text-zinc-500 uppercase tracking-wider"
+                  htmlFor="detail-notes"
+                >
+                  Notes
+                </label>
+                {notes.length > 0 && (
+                  <span
+                    id="detail-notes-count"
+                    className={`text-xs ${notes.length >= 1000 ? 'text-rose-400' : 'text-zinc-500'}`}
+                  >
+                    {notes.length}/1000
+                  </span>
+                )}
+              </div>
+              <textarea
+                id="detail-notes"
+                aria-describedby={notes.length > 0 ? 'detail-notes-count' : undefined}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any thoughts?"
+                rows={4}
+                maxLength={1000}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600 resize-none"
+              />
+            </div>
+          </>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-1">

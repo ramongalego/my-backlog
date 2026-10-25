@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, getSessionUserId } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/supabase/paginate';
 import { queryKeys } from '@/lib/query-keys';
 
 interface GameForStats {
@@ -77,22 +78,22 @@ function parseYear(releaseDate: string | null): string | null {
 }
 
 async function fetchStatsGames(): Promise<GameForStats[]> {
+  const userId = await getSessionUserId();
+  if (!userId) return [];
+
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data } = await supabase
-    .from('games')
-    .select(
-      'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
-    )
-    .eq('user_id', user.id)
-    .eq('type', 'game')
-    .not('status', 'in', '(hidden,wont_play)');
-
-  return (data || []) as GameForStats[];
+  return fetchAllRows<GameForStats>((from, to) =>
+    supabase
+      .from('games')
+      .select(
+        'app_id, name, status, playtime_forever, main_story_hours, tags, rating, finished_at, header_image, release_date, deck_compat',
+      )
+      .eq('user_id', userId)
+      .eq('type', 'game')
+      .not('status', 'in', '(hidden,wont_play)')
+      .order('app_id')
+      .range(from, to),
+  );
 }
 
 export function useStats() {

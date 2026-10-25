@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { isMetadataFresh } from '@/lib/games/scoring';
+import {
+  METADATA_COLUMNS,
+  isCacheUsable,
+  toGameRowUpdate,
+  type CachedMetadata,
+} from '@/lib/games/metadata-cache';
+import { chunk } from '@/lib/supabase/paginate';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { syncBulkRequestSchema, MAX_BULK_APP_IDS } from '@/lib/validations/common';
 
+// Keeps each `.in()` URL short and each response under PostgREST's row cap.
+const LOOKUP_CHUNK_SIZE = 200;
 const DB_BATCH_SIZE = 50;
 
 export async function POST(request: NextRequest) {
@@ -39,48 +47,31 @@ export async function POST(request: NextRequest) {
   }
   const validAppIds = parsed.data.appIds;
 
-  // Fetch all matching metadata from shared cache in one query
-  const { data: cachedRows } = await supabase
-    .from('game_metadata')
-    .select(
-      'app_id, platform, type, genres, categories, description, release_date, header_image, steam_review_score, steam_review_count, steam_review_weighted, main_story_hours, deck_compat, tags, synced_at',
-    )
-    .in('app_id', validAppIds);
+  const lookups = await Promise.all(
+    chunk(validAppIds, LOOKUP_CHUNK_SIZE).map((ids) =>
+      supabase.from('game_metadata').select(METADATA_COLUMNS).in('app_id', ids),
+    ),
+  );
+  const lookupError = lookups.find((r) => r.error)?.error;
+  if (lookupError) {
+    console.error(lookupError);
+    return jsonError('Failed to read metadata cache', 500);
+  }
 
-  // Filter to only fresh, complete entries
-  const freshRows =
-    cachedRows?.filter(
-      (row) =>
-        isMetadataFresh(row.synced_at) && (row.type !== 'game' || row.main_story_hours !== null),
-    ) ?? [];
+  const now = Date.now();
+  const usableRows = lookups
+    .flatMap((r) => (r.data ?? []) as CachedMetadata[])
+    .filter((row) => isCacheUsable(row, now));
 
-  // Bulk update user's games table for all cache hits.
-  // Writes run in concurrent batches; a failed write previously returned
-  // { synced } as if it succeeded — capture errors so silent data loss
-  // is logged and the client sees a 500.
+  // Copy cache hits onto the user's rows. Each row needs its own values, so
+  // these are individual UPDATEs, run in concurrent batches.
   const userId = user.id;
-  for (let i = 0; i < freshRows.length; i += DB_BATCH_SIZE) {
-    const batch = freshRows.slice(i, i + DB_BATCH_SIZE);
+  for (const batch of chunk(usableRows, DB_BATCH_SIZE)) {
     const results = await Promise.all(
       batch.map((row) =>
         supabase
           .from('games')
-          .update({
-            platform: row.platform,
-            type: row.type,
-            genres: row.genres,
-            categories: row.categories,
-            description: row.description,
-            release_date: row.release_date,
-            header_image: row.header_image,
-            steam_review_score: row.steam_review_score,
-            steam_review_count: row.steam_review_count,
-            steam_review_weighted: row.steam_review_weighted,
-            main_story_hours: row.main_story_hours,
-            deck_compat: row.deck_compat,
-            tags: row.tags,
-            metadata_synced: true,
-          })
+          .update(toGameRowUpdate(row))
           .eq('user_id', userId)
           .eq('app_id', row.app_id),
       ),
@@ -94,11 +85,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Return the app_ids that weren't resolved from cache
-  const resolvedIds = new Set(freshRows.map((r) => r.app_id));
-  const remaining = validAppIds.filter((id: number) => !resolvedIds.has(id));
+  const resolvedIds = new Set(usableRows.map((r) => r.app_id));
+  const remaining = validAppIds.filter((id) => !resolvedIds.has(id));
 
   return NextResponse.json({
-    synced: freshRows.length,
+    synced: usableRows.length,
     remaining,
   });
 }

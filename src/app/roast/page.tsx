@@ -21,7 +21,8 @@ export default function RoastPage() {
         body: JSON.stringify({ steamInput }),
       });
 
-      const data = await res.json();
+      // A gateway timeout returns HTML, not JSON.
+      const data = await res.json().catch(() => ({}));
 
       if (data.blacklisted) {
         throw { blacklisted: true, message: data.message };

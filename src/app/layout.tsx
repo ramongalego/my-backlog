@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
@@ -5,6 +6,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
+import { UrlErrorToast } from '@/components/UrlErrorToast';
 import { getBaseUrl } from '@/lib/url';
 import Providers from './providers';
 import './globals.css';
@@ -53,6 +55,9 @@ export default function RootLayout({
           {children}
           <Footer />
           <Toaster richColors position="bottom-right" />
+          <Suspense>
+            <UrlErrorToast />
+          </Suspense>
           <Analytics />
         </Providers>
       </body>

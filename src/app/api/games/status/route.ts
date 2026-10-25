@@ -35,13 +35,36 @@ export async function POST(request: NextRequest) {
 
   const { appId, status, finishedAt, droppedAt, notes, rating } = parsed.data;
 
-  // If setting to "playing", first clear any other "playing" games
+  // Confirm the game is in the user's library before touching anything else,
+  // so a bad appId can't demote the current game and then update nothing.
+  const { data: target, error: targetError } = await supabase
+    .from('games')
+    .select('app_id')
+    .eq('user_id', user.id)
+    .eq('app_id', appId)
+    .maybeSingle();
+
+  if (targetError) {
+    console.error(targetError);
+    return jsonError('Failed to update game status', 500);
+  }
+  if (!target) {
+    return jsonError('Game not found', 404);
+  }
+
+  // Only one game can be playing: move any other one back to the backlog.
   if (status === 'playing') {
-    await supabase
+    const { error: demoteError } = await supabase
       .from('games')
-      .update({ status: 'backlog' })
+      .update({ status: 'backlog', started_at: null })
       .eq('user_id', user.id)
-      .eq('status', 'playing');
+      .eq('status', 'playing')
+      .neq('app_id', appId);
+
+    if (demoteError) {
+      console.error(demoteError);
+      return jsonError('Failed to update game status', 500);
+    }
   }
 
   // Build update payload based on status
@@ -88,6 +111,16 @@ export async function POST(request: NextRequest) {
     return jsonError('Failed to update game status', 500);
   }
 
+  // The queue only holds backlog games; any other status takes the game off it.
+  if (status !== 'backlog') {
+    const { error: dequeueError } = await supabase
+      .from('playing_queue')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('app_id', appId);
+    if (dequeueError) console.error(dequeueError);
+  }
+
   return NextResponse.json({ success: true });
 }
 
@@ -102,12 +135,18 @@ export async function GET() {
   }
 
   // Get now playing game
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('games')
     .select('app_id, name, header_image, main_story_hours')
     .eq('user_id', user.id)
     .eq('status', 'playing')
+    .limit(1)
     .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return jsonError('Failed to load current game', 500);
+  }
 
   return NextResponse.json({ game: data });
 }

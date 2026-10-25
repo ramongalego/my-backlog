@@ -18,3 +18,17 @@ export function formatDay(isoDate: string): string {
   // Slice the day digits directly — already zero-padded in ISO format
   return isoDate.slice(8, 10);
 }
+
+/** Formats a Date as "YYYY-MM-DD" in the user's local timezone. */
+export function toLocalIsoDate(d: Date): string {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+/** Today's date as "YYYY-MM-DD" in local time (toISOString() would give the UTC date). */
+export function todayIso(): string {
+  return toLocalIsoDate(new Date());
+}

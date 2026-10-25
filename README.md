@@ -33,7 +33,6 @@ A full-stack web app that helps Steam players stop doomscrolling their library a
 **Observability & Ops**
 
 - Vercel Analytics
-- Vercel Cron for scheduled metadata refresh
 
 ## Architecture & System Design
 
@@ -57,7 +56,7 @@ Drag-and-drop reordering can't be done with naive `UPDATE` statements because po
 
 ### Metadata Enrichment
 
-Sync is two-staged: a bulk cache probe against `game_metadata` in one round trip, then a batched fallback fetch for misses that resolves HLTB + review data and upserts on `app_id` conflict. Missing HLTB records are tracked with an attempt counter driving an exponential backoff, and a TTL keeps review scores fresh via a weekly refresh cron.
+Sync is two-staged: a bulk cache probe against `game_metadata` in one round trip, then a batched fallback fetch for misses that resolves HLTB + review data and upserts on `app_id` conflict. Missing HLTB records are tracked with an attempt counter driving an exponential backoff, and a TTL re-fetches cached metadata once it goes stale.
 
 ### AI Suggestion Engine
 

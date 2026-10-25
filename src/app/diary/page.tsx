@@ -151,6 +151,7 @@ export default function DiaryPage() {
   const {
     entries,
     loading,
+    hasPlayingGame,
     detailModal,
     handleOpenDetail,
     handleCloseDetail,
@@ -291,6 +292,7 @@ export default function DiaryPage() {
           initialDate={detailModal.initialDate}
           initialNotes={detailModal.initialNotes}
           initialRating={detailModal.initialRating}
+          disablePlaying={hasPlayingGame}
         />
       )}
     </div>

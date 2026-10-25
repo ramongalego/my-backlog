@@ -96,3 +96,20 @@ describe('gameStatusSchema', () => {
     });
   });
 });
+
+describe('gameStatusSchema dates', () => {
+  const base = { appId: 730, status: 'finished' as const };
+
+  it.each([
+    '2025-08-20',
+    '2025-08-20T00:00:00+00:00',
+    '2025-08-20T13:45:10.123Z',
+    '2025-08-20T00:00:00',
+  ])('accepts %s', (finishedAt) => {
+    expect(gameStatusSchema.safeParse({ ...base, finishedAt }).success).toBe(true);
+  });
+
+  it.each(['2024-13-99xyz', '2024-02-30', 'nope'])('rejects %s', (finishedAt) => {
+    expect(gameStatusSchema.safeParse({ ...base, finishedAt }).success).toBe(false);
+  });
+});

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { isMetadataFresh } from '@/lib/games/scoring';
 import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
+import {
+  METADATA_COLUMNS,
+  isCacheUsable,
+  mergeForCache,
+  toGameRowUpdate,
+  type CachedMetadata,
+} from '@/lib/games/metadata-cache';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { syncSingleRequestSchema } from '@/lib/validations/common';
@@ -36,28 +42,22 @@ export async function POST(request: NextRequest) {
   const { appId, name: libraryName } = parsed.data;
 
   // Check for existing fresh metadata in shared table
-  const { data: existingMetadata } = await supabase
+  const { data: existing } = await supabase
     .from('game_metadata')
-    .select(
-      'app_id, platform, type, name, genres, categories, description, release_date, header_image, steam_review_score, steam_review_count, steam_review_weighted, main_story_hours, deck_compat, tags, synced_at',
-    )
+    .select(METADATA_COLUMNS)
     .eq('app_id', appId)
-    .maybeSingle();
+    .maybeSingle<CachedMetadata>();
 
   let metadata: GameMetadata | null = null;
   let fromCache = false;
 
-  const cacheIsUsable =
-    existingMetadata &&
-    isMetadataFresh(existingMetadata.synced_at) &&
-    (existingMetadata.type !== 'game' || existingMetadata.main_story_hours !== null);
-
-  if (cacheIsUsable) {
-    metadata = existingMetadata as GameMetadata;
+  if (isCacheUsable(existing)) {
+    metadata = existing;
     fromCache = true;
   } else {
-    metadata = await fetchGameMetadata(appId, libraryName);
-    if (metadata) {
+    const fresh = await fetchGameMetadata(appId, libraryName);
+    if (fresh) {
+      metadata = mergeForCache(fresh, existing);
       const { error: cacheError } = await supabase
         .from('game_metadata')
         .upsert(metadata, { onConflict: 'app_id' });
@@ -73,22 +73,7 @@ export async function POST(request: NextRequest) {
     // Update user's game with metadata from shared table
     const { error: updateError } = await supabase
       .from('games')
-      .update({
-        platform: metadata.platform,
-        type: metadata.type,
-        genres: metadata.genres,
-        categories: metadata.categories,
-        description: metadata.description,
-        release_date: metadata.release_date,
-        steam_review_score: metadata.steam_review_score,
-        steam_review_count: metadata.steam_review_count,
-        steam_review_weighted: metadata.steam_review_weighted,
-        header_image: metadata.header_image,
-        main_story_hours: metadata.main_story_hours,
-        deck_compat: metadata.deck_compat,
-        tags: metadata.tags,
-        metadata_synced: true,
-      })
+      .update(toGameRowUpdate(metadata))
       .eq('user_id', user.id)
       .eq('app_id', appId);
 

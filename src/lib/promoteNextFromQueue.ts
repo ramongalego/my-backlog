@@ -18,7 +18,8 @@ export async function promoteNextFromQueue(
 
   const appId = topItem.app_id;
 
-  // Promote to playing
+  // Promote to playing. The status route also removes it from the queue in the
+  // same request, so the game can't end up both playing and queued.
   const promoteRes = await fetch('/api/games/status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,12 +27,6 @@ export async function promoteNextFromQueue(
   });
   if (!promoteRes.ok) {
     throw new Error(`Failed to promote queued game (${promoteRes.status})`);
-  }
-
-  // Remove from queue
-  const removeRes = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
-  if (!removeRes.ok) {
-    throw new Error(`Failed to remove promoted game from queue (${removeRes.status})`);
   }
 
   // Fetch game details to return

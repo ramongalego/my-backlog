@@ -1,9 +1,44 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useInvalidateQueries } from '@/lib/mutations';
+import { chunk } from '@/lib/supabase/paginate';
+import { MAX_BULK_APP_IDS } from '@/lib/validations/common';
 import type { Game, SyncProgress } from '@/types/games';
 
+const BATCH_SIZE = 6;
+
+// Resolves cache hits in bulk and returns the app_ids that still need an
+// individual upstream fetch. A failed chunk counts all of its ids as remaining.
+async function resolveFromCache(
+  games: Game[],
+): Promise<{ synced: number; remaining: Set<number> }> {
+  let synced = 0;
+  const remaining = new Set<number>();
+  for (const ids of chunk(
+    games.map((g) => g.app_id),
+    MAX_BULK_APP_IDS,
+  )) {
+    try {
+      const res = await fetch('/api/games/sync/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appIds: ids }),
+      });
+      if (!res.ok) throw new Error(`Bulk sync failed (${res.status})`);
+      const data = await res.json();
+      synced += data.synced;
+      for (const id of data.remaining as number[]) remaining.add(id);
+    } catch (err) {
+      console.error(err);
+      for (const id of ids) remaining.add(id);
+    }
+  }
+  return { synced, remaining };
+}
+
 export function useGameSync() {
+  const { gamesAndQueue: invalidateGameData } = useInvalidateQueries();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress>({ current: 0, total: 0 });
   const [syncingGames, setSyncingGames] = useState<Game[]>([]);
@@ -12,72 +47,61 @@ export function useGameSync() {
   const startSync = async (games: Game[]) => {
     if (syncingRef.current) return;
     syncingRef.current = true;
-    setIsSyncing(true);
-    setSyncingGames(games);
-    setSyncProgress({ current: 0, total: games.length });
 
-    const BATCH_SIZE = 6;
-    let completed = 0;
-
-    // Step 1: Bulk-resolve cache hits in a single request
-    let remainingAppIds: Set<number>;
     try {
-      const bulkResponse = await fetch('/api/games/sync/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appIds: games.map((g) => g.app_id) }),
-      });
-
-      if (bulkResponse.ok) {
-        const bulkData = await bulkResponse.json();
-        completed = bulkData.synced;
-        setSyncProgress({ current: completed, total: games.length });
-        remainingAppIds = new Set(bulkData.remaining as number[]);
-      } else {
-        remainingAppIds = new Set(games.map((g) => g.app_id));
+      // Step 1: cache hits, silently. The progress UI (which replaces the
+      // dashboard) only appears when there's real upstream fetching to do.
+      const { synced, remaining } = await resolveFromCache(games);
+      const remainingGames = games.filter((g) => remaining.has(g.app_id));
+      if (remainingGames.length === 0) {
+        if (synced > 0) invalidateGameData();
+        return;
       }
-    } catch {
-      remainingAppIds = new Set(games.map((g) => g.app_id));
-    }
 
-    // Step 2: Individually sync only cache misses
-    const remainingGames = games.filter((g) => remainingAppIds.has(g.app_id));
-
-    const syncOne = async (game: Game): Promise<void> => {
-      let attempts = 0;
-      while (attempts < 5) {
-        try {
-          const response = await fetch('/api/games/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appId: game.app_id, name: game.name }),
-          });
-          if (response.status === 429) {
-            const retryAfter = Math.min(
-              parseInt(response.headers.get('Retry-After') ?? '10', 10),
-              15,
-            );
-            await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
-            attempts++;
-            continue;
-          }
-        } catch (err) {
-          console.error(`Failed to sync ${game.name}:`, err);
-        }
-        break;
-      }
-      completed++;
+      let completed = synced;
+      setIsSyncing(true);
+      setSyncingGames(games);
       setSyncProgress({ current: completed, total: games.length });
-    };
 
-    for (let i = 0; i < remainingGames.length; i += BATCH_SIZE) {
-      const batch = remainingGames.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(syncOne));
+      // Step 2: individually sync only cache misses
+      const syncOne = async (game: Game): Promise<void> => {
+        let attempts = 0;
+        while (attempts < 5) {
+          try {
+            const response = await fetch('/api/games/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ appId: game.app_id, name: game.name }),
+            });
+            if (response.status === 429) {
+              const retryAfter = Math.min(
+                parseInt(response.headers.get('Retry-After') ?? '10', 10),
+                15,
+              );
+              await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+              attempts++;
+              continue;
+            }
+          } catch (err) {
+            console.error(`Failed to sync ${game.name}:`, err);
+          }
+          break;
+        }
+        completed++;
+        setSyncProgress({ current: completed, total: games.length });
+      };
+
+      for (const batch of chunk(remainingGames, BATCH_SIZE)) {
+        await Promise.all(batch.map(syncOne));
+      }
+
+      // Carousels, counts and lists were loaded before the metadata existed.
+      invalidateGameData();
+    } finally {
+      setIsSyncing(false);
+      setSyncingGames([]);
+      syncingRef.current = false;
     }
-
-    setIsSyncing(false);
-    setSyncingGames([]);
-    syncingRef.current = false;
   };
 
   return { isSyncing, syncProgress, syncingGames, startSync };

@@ -17,6 +17,7 @@ import { useMutation } from '@tanstack/react-query';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
 import { addToQueue } from '@/lib/games/queue';
+import { updateGameStatus } from '@/lib/games/status';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
@@ -382,22 +383,12 @@ export default function StatsPage() {
       notes: string;
       rating: number | null;
     }) => {
-      const res = await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: vars.appId,
-          status: vars.status,
-          ...(vars.status === 'finished' ? { finishedAt: vars.date } : {}),
-          ...(vars.status === 'dropped' ? { droppedAt: vars.date } : {}),
-          notes: vars.notes,
-          rating: vars.rating,
-        }),
+      await updateGameStatus(vars.appId, vars.status, {
+        finishedAt: vars.status === 'finished' ? vars.date : undefined,
+        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
+        notes: vars.notes,
+        rating: vars.rating,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ?? `Failed to update game (${res.status})`);
-      }
     },
     onError: () => toast.error('Failed to update game. Please try again.'),
     onSettled: () => invalidateGames(),

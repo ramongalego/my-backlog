@@ -42,17 +42,21 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
     setError(null);
 
     startTransition(async () => {
-      const res = await fetch('/api/support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, message }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? 'Failed to submit');
-      } else {
-        toast.success('Report sent. Thanks!');
-        handleClose();
+      try {
+        const res = await fetch('/api/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, message }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(data.error ?? 'Failed to submit');
+        } else {
+          toast.success('Report sent. Thanks!');
+          handleClose();
+        }
+      } catch {
+        toast.error('Failed to submit. Please check your connection and try again.');
       }
     });
   };

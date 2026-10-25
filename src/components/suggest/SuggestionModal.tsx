@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
 import { useSuggestion } from '@/hooks/useSuggestion';
 import { SuggestionWizard } from './SuggestionWizard';
 import { SuggestionResult } from './SuggestionResult';
@@ -42,43 +41,6 @@ export function SuggestionModal({
     isLoading,
   } = useSuggestion();
 
-  // Reset state when modal closes
-  const resetRef = useRef(reset);
-  useEffect(() => {
-    resetRef.current = reset;
-  });
-  useEffect(() => {
-    if (!isOpen) {
-      resetRef.current();
-    }
-  }, [isOpen]);
-
-  // Handle escape key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
   const handlePick = () => {
     if (suggestion) {
       onPick(
@@ -91,63 +53,37 @@ export function SuggestionModal({
     }
   };
 
-  if (!isOpen) return null;
-
   const isWizardStep = step === 'mood' || step === 'energy' || step === 'time';
 
+  // Rendered only while open (see the home page), so each opening starts from
+  // a fresh wizard and a late response can't land in a closed modal.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel="Pick your next game">
+      {isWizardStep && (
+        <SuggestionWizard
+          step={step}
+          onSelectMood={selectMood}
+          onSelectEnergy={selectEnergy}
+          onSelectTime={selectTime}
+          onBack={goBack}
+          showHistoryWarning={showHistoryWarning}
+        />
+      )}
 
-      {/* Modal */}
-      <div
-        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto mx-4 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer z-10"
-          aria-label="Close"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      {step === 'loading' && <SuggestionLoading />}
 
-        {/* Content */}
-        <div className="p-6">
-          {isWizardStep && (
-            <SuggestionWizard
-              step={step}
-              onSelectMood={selectMood}
-              onSelectEnergy={selectEnergy}
-              onSelectTime={selectTime}
-              onBack={goBack}
-              showHistoryWarning={showHistoryWarning}
-            />
-          )}
+      {step === 'result' && error && <SuggestionError error={error} onRetry={reset} />}
 
-          {step === 'loading' && <SuggestionLoading />}
-
-          {step === 'result' && error && <SuggestionError error={error} onRetry={reset} />}
-
-          {step === 'result' && suggestion && !error && (
-            <SuggestionResult
-              suggestion={suggestion}
-              onPick={handlePick}
-              onReroll={reroll}
-              cooldownRemaining={cooldownRemaining}
-              isLoading={isLoading}
-              mode={mode}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+      {step === 'result' && suggestion && !error && (
+        <SuggestionResult
+          suggestion={suggestion}
+          onPick={handlePick}
+          onReroll={reroll}
+          cooldownRemaining={cooldownRemaining}
+          isLoading={isLoading}
+          mode={mode}
+        />
+      )}
+    </Modal>
   );
 }

@@ -36,13 +36,7 @@ const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 async function fetchCarouselPools(userId: string): Promise<CarouselPools> {
   const supabase = createClient();
 
-  const [
-    { data: shortData },
-    { data: weekendData },
-    { data: highlyRatedData },
-    { data: hiddenGemsData },
-    { data: recentlyAddedData },
-  ] = await Promise.all([
+  const results = await Promise.all([
     supabase
       .from('games')
       .select(CAROUSEL_SELECT)
@@ -104,6 +98,12 @@ async function fetchCarouselPools(userId: string): Promise<CarouselPools> {
       .order('app_id', { ascending: false })
       .limit(20),
   ]);
+
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+  const [shortData, weekendData, highlyRatedData, hiddenGemsData, recentlyAddedData] = results.map(
+    (r) => r.data,
+  );
 
   return {
     shortGamesPool: shortData ?? [],

@@ -18,5 +18,5 @@ export const queueAddRequestSchema = z.object({
 });
 
 export const queueReorderRequestSchema = z.object({
-  order: z.array(z.number().int().positive()).min(1),
+  order: z.array(z.number().int().positive()).min(1).max(MAX_BULK_APP_IDS),
 });

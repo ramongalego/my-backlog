@@ -1,28 +1,36 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/Button';
 import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { SyncProgress } from '@/components/SyncProgress';
-import { LandingPage } from '@/components/LandingPage';
-import { SuggestionModal } from '@/components/suggest';
-import { GameDetailModal } from '@/components/games/GameStatusModal';
-import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import {
   LoadingState,
   CarouselsLoadingState,
   StatusLoadingState,
 } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
+import { todayIso } from '@/lib/diary/date-utils';
 import { Dices, Sparkles } from 'lucide-react';
 
-function HomeContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+// Only shown before Steam is connected, or on demand, so kept out of the
+// dashboard's initial bundle.
+const LandingPage = dynamic(() => import('@/components/LandingPage').then((m) => m.LandingPage));
+const SuggestionModal = dynamic(() =>
+  import('@/components/suggest').then((m) => m.SuggestionModal),
+);
+const GameDetailModal = dynamic(() =>
+  import('@/components/games/GameStatusModal').then((m) => m.GameDetailModal),
+);
+const GameSummaryModal = dynamic(() =>
+  import('@/components/games/GameSummaryModal').then((m) => m.GameSummaryModal),
+);
+
+export default function HomePage() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
   const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();
@@ -51,12 +59,6 @@ function HomeContent() {
     handleCloseStatusModal,
     handleCloseSummary,
   } = currentGame;
-
-  useEffect(() => {
-    if (searchParams.has('error')) {
-      router.replace('/home', { scroll: false });
-    }
-  }, [searchParams, router]);
 
   const handleSuggestionAction = async (
     appId: number,
@@ -205,13 +207,15 @@ function HomeContent() {
           )}
       </main>
 
-      <SuggestionModal
-        isOpen={isSuggestionModalOpen}
-        onClose={() => setIsSuggestionModalOpen(false)}
-        onPick={handleSuggestionAction}
-        mode={currentlyPlaying ? 'queue' : 'play'}
-        showHistoryWarning={historyCount <= 5}
-      />
+      {isSuggestionModalOpen && (
+        <SuggestionModal
+          isOpen={isSuggestionModalOpen}
+          onClose={() => setIsSuggestionModalOpen(false)}
+          onPick={handleSuggestionAction}
+          mode={currentlyPlaying ? 'queue' : 'play'}
+          showHistoryWarning={historyCount <= 5}
+        />
+      )}
 
       {gameSummary && (
         <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
@@ -247,17 +251,9 @@ function HomeContent() {
           gameName={currentlyPlaying.name}
           headerImage={currentlyPlaying.header_image}
           initialStatus={statusModal.action}
-          initialDate={new Date().toISOString().slice(0, 10)}
+          initialDate={todayIso()}
         />
       )}
     </div>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-zinc-950" />}>
-      <HomeContent />
-    </Suspense>
   );
 }

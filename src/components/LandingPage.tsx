@@ -355,11 +355,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               them.
             </p>
 
-            <p
-              className="text-sm mb-12 h-5 leading-5 text-center"
-              aria-live="polite"
-              aria-atomic="true"
-            >
+            <p className="text-sm mb-12 h-5 leading-5 text-center">
               <span
                 key={teaseIndex}
                 className="inline-block text-violet-300/90 animate-[resultPop_0.4s_ease-out]"

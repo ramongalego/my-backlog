@@ -1,19 +1,26 @@
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Gamepad2, Trophy, Star, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
 import type { Metadata } from 'next';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getCompletion(id: string) {
+// cache() dedupes the lookup between generateMetadata and the page render.
+const getCompletion = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data } = await supabase.from('shared_completions').select('*').eq('id', id).single();
+  const { data } = await supabase
+    .from('shared_completions')
+    .select(SHARED_COMPLETION_COLUMNS)
+    .eq('id', id)
+    .maybeSingle();
   return data;
-}
+});
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;

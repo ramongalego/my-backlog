@@ -2,8 +2,10 @@
 
 import { useState, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, getSessionUserId } from '@/lib/supabase/client';
+import { fetchAllRows } from '@/lib/supabase/paginate';
 import { fetchQueuedAppIds, addToQueue } from '@/lib/games/queue';
+import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
@@ -88,26 +90,27 @@ interface GamesData {
 }
 
 async function fetchGamesData(): Promise<GamesData> {
+  const userId = await getSessionUserId();
+  if (!userId) return { games: [], queuedAppIds: new Set<number>() };
+
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { games: [], queuedAppIds: new Set<number>() };
-
-  const [{ data }, queuedIds] = await Promise.all([
-    supabase
-      .from('games')
-      .select(
-        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
-      )
-      .eq('user_id', user.id)
-      .eq('type', 'game')
-      .order('playtime_forever', { ascending: false }),
+  const [games, queuedAppIds] = await Promise.all([
+    fetchAllRows<GameItem>((from, to) =>
+      supabase
+        .from('games')
+        .select(
+          'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat',
+        )
+        .eq('user_id', userId)
+        .eq('type', 'game')
+        .order('playtime_forever', { ascending: false })
+        .order('app_id')
+        .range(from, to),
+    ),
     fetchQueuedAppIds(),
   ]);
 
-  return { games: (data || []) as GameItem[], queuedAppIds: queuedIds };
+  return { games, queuedAppIds };
 }
 
 export function useGamesPage(): UseGamesPageReturn {
@@ -140,18 +143,11 @@ export function useGamesPage(): UseGamesPageReturn {
       notes: string;
       rating: number | null;
     }) => {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: vars.appId,
-          status: vars.status,
-          ...(vars.status === 'finished' ? { finishedAt: vars.date } : {}),
-          ...(vars.status === 'dropped' ? { droppedAt: vars.date } : {}),
-          ...(vars.status === 'playing' ? { started_at: new Date().toISOString() } : {}),
-          notes: vars.notes,
-          rating: vars.rating,
-        }),
+      await updateGameStatus(vars.appId, vars.status, {
+        finishedAt: vars.status === 'finished' ? vars.date : undefined,
+        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
+        notes: vars.notes,
+        rating: vars.rating,
       });
     },
     onMutate: async (vars) => {
@@ -177,10 +173,12 @@ export function useGamesPage(): UseGamesPageReturn {
       });
       return { previous };
     },
-    onError: (_err, _vars, context) => {
+    onError: (err, _vars, context) => {
+      console.error(err);
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.games.list(), context.previous);
       }
+      toast.error('Could not save your changes. Please try again.');
     },
     onSettled: () => invalidateGames(),
   });
@@ -209,12 +207,7 @@ export function useGamesPage(): UseGamesPageReturn {
     if (!game) return;
 
     const status = (game.status ?? 'backlog') as
-      | 'backlog'
-      | 'playing'
-      | 'finished'
-      | 'dropped'
-      | 'wont_play'
-      | 'hidden';
+      'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
     const initialDate =
       status === 'finished'
         ? (game.finished_at?.slice(0, 10) ?? null)

@@ -41,20 +41,18 @@ describe('fetchQueuedAppIds', () => {
     expect(result).toEqual(new Set());
   });
 
-  it('should return an empty Set when response is not ok', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false });
+  // Errors propagate so React Query treats them as failures instead of caching
+  // an empty queue.
+  it('should throw when response is not ok', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
-    const result = await fetchQueuedAppIds();
-
-    expect(result).toEqual(new Set());
+    await expect(fetchQueuedAppIds()).rejects.toThrow('Failed to load queue (500)');
   });
 
-  it('should return an empty Set when fetch throws', async () => {
+  it('should throw when fetch throws', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await fetchQueuedAppIds();
-
-    expect(result).toEqual(new Set());
+    await expect(fetchQueuedAppIds()).rejects.toThrow('Network error');
   });
 });
 

@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
+import { createClient, getSessionUserId } from '@/lib/supabase/client';
+import { updateGameStatus } from '@/lib/games/status';
+import { fetchCurrentlyPlaying } from '@/lib/games/currentGame';
+import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 
@@ -28,6 +32,7 @@ interface DiaryModal {
 interface UseDiaryReturn {
   entries: DiaryEntry[];
   loading: boolean;
+  hasPlayingGame: boolean;
   detailModal: DiaryModal | null;
   handleOpenDetail: (appId: number) => void;
   handleCloseDetail: () => void;
@@ -40,21 +45,18 @@ interface UseDiaryReturn {
 }
 
 async function fetchDiaryEntries(): Promise<DiaryEntry[]> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getSessionUserId();
+  if (!userId) return [];
 
-  if (!user) return [];
-
-  const { data } = await supabase
+  const { data, error } = await createClient()
     .from('games')
     .select('app_id, name, header_image, rating, notes, finished_at')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('status', 'finished')
     .order('finished_at', { ascending: false, nullsFirst: false });
 
-  return (data || []) as DiaryEntry[];
+  if (error) throw error;
+  return (data ?? []) as DiaryEntry[];
 }
 
 export function useDiary(): UseDiaryReturn {
@@ -68,6 +70,17 @@ export function useDiary(): UseDiaryReturn {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Shares the home page's cache entry. Used to stop the edit modal from
+  // silently replacing the current game.
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const { data: playingGame = null } = useQuery({
+    queryKey: queryKeys.games.playing(userId ?? ''),
+    queryFn: () => fetchCurrentlyPlaying(userId!),
+    enabled: !!userId,
+    staleTime: 30 * 1000,
+  });
+
   const diaryMutation = useMutation({
     mutationFn: async (vars: {
       appId: number;
@@ -76,18 +89,11 @@ export function useDiary(): UseDiaryReturn {
       notes: string;
       rating: number | null;
     }) => {
-      await fetch('/api/games/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: vars.appId,
-          status: vars.status,
-          ...(vars.status === 'finished' ? { finishedAt: vars.date } : {}),
-          ...(vars.status === 'dropped' ? { droppedAt: vars.date } : {}),
-          ...(vars.status === 'playing' ? { started_at: new Date().toISOString() } : {}),
-          notes: vars.notes,
-          rating: vars.rating,
-        }),
+      await updateGameStatus(vars.appId, vars.status, {
+        finishedAt: vars.status === 'finished' ? vars.date : undefined,
+        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
+        notes: vars.notes,
+        rating: vars.rating,
       });
       return vars;
     },
@@ -119,10 +125,12 @@ export function useDiary(): UseDiaryReturn {
 
       return { previous };
     },
-    onError: (_err, _vars, context) => {
+    onError: (err, _vars, context) => {
+      console.error(err);
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.games.diary(), context.previous);
       }
+      toast.error('Could not save your changes. Please try again.');
     },
     onSettled: () => invalidateGames(),
   });
@@ -157,6 +165,7 @@ export function useDiary(): UseDiaryReturn {
   return {
     entries,
     loading: isPending,
+    hasPlayingGame: playingGame !== null,
     detailModal,
     handleOpenDetail,
     handleCloseDetail,

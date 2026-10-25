@@ -108,12 +108,13 @@ describe('HomeContent — Pick My Game button', () => {
     expect(screen.queryByText(/added to your/)).not.toBeInTheDocument();
   });
 
-  it('opens the suggestion modal in play mode when "Pick My Game" is clicked', () => {
+  it('opens the suggestion modal in play mode when "Pick My Game" is clicked', async () => {
     render(<HomePage />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Pick My Game' }));
 
-    expect(screen.getByTestId('suggestion-modal')).toHaveAttribute('data-mode', 'play');
+    // The modal is loaded with next/dynamic, so it appears asynchronously.
+    expect(await screen.findByTestId('suggestion-modal')).toHaveAttribute('data-mode', 'play');
   });
 });
 
@@ -147,11 +148,11 @@ describe('HomeContent — Pick My Next Game button', () => {
     expect(link).toHaveAttribute('href', '/playing-queue');
   });
 
-  it('opens the suggestion modal in queue mode when "Pick My Next Game" is clicked', () => {
+  it('opens the suggestion modal in queue mode when "Pick My Next Game" is clicked', async () => {
     render(<HomePage />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Pick My Next Game' }));
 
-    expect(screen.getByTestId('suggestion-modal')).toHaveAttribute('data-mode', 'queue');
+    expect(await screen.findByTestId('suggestion-modal')).toHaveAttribute('data-mode', 'queue');
   });
 });

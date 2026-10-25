@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useEffectEvent, useId, useRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -8,6 +8,8 @@ interface ModalProps {
   onClose?: () => void;
   children: ReactNode;
   title?: string;
+  /** Accessible name for dialogs that render their own heading instead of `title`. */
+  ariaLabel?: string;
   size?: 'md' | 'lg' | 'xl';
 }
 
@@ -19,57 +21,58 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   xl: 'max-w-[34rem]',
 };
 
-export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalProps) {
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+export function Modal({ isOpen, onClose, children, title, ariaLabel, size = 'md' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+
+  // Read through an effect event so a new onClose identity on each parent
+  // render doesn't re-run the open/close effect (which would steal focus).
+  const handleKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    // Nested popovers (e.g. the date picker) handle their own Escape first.
+    if (e.key === 'Escape' && !e.defaultPrevented) {
+      onClose?.();
+      return;
+    }
+
+    if (e.key !== 'Tab' || !dialogRef.current) return;
+
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
 
   useEffect(() => {
     if (!isOpen) return;
 
-    previousFocusRef.current = document.activeElement as HTMLElement;
+    const previousFocus = document.activeElement as HTMLElement | null;
     document.body.style.overflow = 'hidden';
 
     // Focus the first focusable element in the dialog
-    requestAnimationFrame(() => {
-      const first = dialogRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      first?.focus();
+    const frame = requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     });
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        onClose?.();
-        return;
-      }
-
-      if (e.key !== 'Tab' || !dialogRef.current) return;
-
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
 
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-      previousFocusRef.current?.focus();
+      document.body.style.overflow = '';
+      previousFocus?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -86,7 +89,8 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
           className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-800`}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={title ? 'modal-title' : undefined}
+          aria-labelledby={title ? titleId : undefined}
+          aria-label={title ? undefined : ariaLabel}
         >
           {onClose && (
             <button
@@ -99,7 +103,7 @@ export function Modal({ isOpen, onClose, children, title, size = 'md' }: ModalPr
           )}
           {title && (
             <div className="p-4 sm:p-6 pb-0 sm:pb-0">
-              <h2 id="modal-title" className="text-xl font-semibold text-zinc-100">
+              <h2 id={titleId} className="text-xl font-semibold text-zinc-100">
                 {title}
               </h2>
             </div>

@@ -20,6 +20,11 @@ interface RefreshResult {
 
 const failedResult: RefreshResult = { success: false, newGames: 0, updatedPlaytime: 0 };
 
+// Module-level so several mounted callers (home, queue page) can't fire
+// overlapping background refreshes — a duplicate that finds new games would
+// reload the page mid-sync.
+let staleRefreshInFlight: Promise<RefreshResult> | null = null;
+
 export function useLibraryRefresh() {
   const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
 
@@ -69,10 +74,13 @@ export function useLibraryRefresh() {
   );
 
   const refreshIfStale = useCallback(async () => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || staleRefreshInFlight) return;
     const last = localStorage.getItem(PLAYTIME_REFRESH_KEY);
     if (last && Date.now() - Number(last) <= LIBRARY_REFRESH_STALE_MS) return;
-    await refresh();
+    staleRefreshInFlight = refresh().finally(() => {
+      staleRefreshInFlight = null;
+    });
+    await staleRefreshInFlight;
   }, [refresh]);
 
   return { refresh, refreshIfStale };

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
+import { syncOwnedGames } from '@/lib/steam/library';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { jsonError, rateLimited } from '@/lib/api/response';
 import { getSteamApiKey } from '@/lib/env.server';
 
 export async function POST() {
@@ -11,24 +13,13 @@ export async function POST() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
   // Rate limiting per user (not IP) — this is an authenticated endpoint
   const rateLimitResult = checkRateLimit(`steam-refresh:${user.id}`, RATE_LIMITS.steamRefresh);
-
   if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-          'X-RateLimit-Remaining': '0',
-        },
-      },
-    );
+    return rateLimited(rateLimitResult);
   }
 
   // Get user's Steam ID from profile
@@ -39,64 +30,29 @@ export async function POST() {
     .single();
 
   if (!profile?.steam_id) {
-    return NextResponse.json({ error: 'Steam not connected' }, { status: 400 });
+    return jsonError('Steam not connected', 400);
   }
 
   let apiKey: string;
   try {
     apiKey = getSteamApiKey();
   } catch {
-    return NextResponse.json({ error: 'Server config error' }, { status: 500 });
+    return jsonError('Server config error', 500);
+  }
+
+  let steamGames;
+  try {
+    steamGames = await getOwnedGames(profile.steam_id, apiKey);
+  } catch (error) {
+    console.error('Steam API error:', error);
+    return jsonError('Steam API failed', 502);
   }
 
   try {
-    // Fetch current Steam library
-    const steamGames = await getOwnedGames(profile.steam_id, apiKey);
-
-    // Get existing games from DB
-    const { data: existingGames } = await supabase
-      .from('games')
-      .select('app_id, playtime_forever')
-      .eq('user_id', user.id);
-
-    const existingMap = new Map(existingGames?.map((g) => [g.app_id, g.playtime_forever]) || []);
-
-    const newGames = steamGames.filter((game) => !existingMap.has(game.appid));
-    const updatedGames = steamGames.filter(
-      (game) =>
-        existingMap.has(game.appid) && existingMap.get(game.appid) !== game.playtime_forever,
-    );
-
-    // Insert new games
-    if (newGames.length > 0) {
-      const gamesToInsert = newGames.map((game) => ({
-        user_id: user.id,
-        app_id: game.appid,
-        name: game.name,
-        playtime_forever: game.playtime_forever,
-        img_icon_url: game.img_icon_url,
-      }));
-      await supabase.from('games').insert(gamesToInsert);
-    }
-
-    // Update playtime for existing games that changed
-    await Promise.all(
-      updatedGames.map((game) =>
-        supabase
-          .from('games')
-          .update({ playtime_forever: game.playtime_forever })
-          .eq('user_id', user.id)
-          .eq('app_id', game.appid),
-      ),
-    );
-
-    return NextResponse.json({
-      success: true,
-      newGames: newGames.length,
-      updatedPlaytime: updatedGames.length,
-    });
+    const result = await syncOwnedGames(supabase, user.id, steamGames);
+    return NextResponse.json({ success: true, ...result });
   } catch (error) {
-    console.error('Steam API error:', error);
-    return NextResponse.json({ error: 'Steam API failed' }, { status: 500 });
+    console.error('Library refresh failed:', error);
+    return jsonError('Failed to update library', 500);
   }
 }
