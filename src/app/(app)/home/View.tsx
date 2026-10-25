@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/Button';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
+import { GameDetailModal } from '@/components/games/GameStatusModal';
+import { GameSummaryModal } from '@/components/games/GameSummaryModal';
+import { SuggestionModal } from '@/components/suggest';
 import { SyncProgress } from '@/components/SyncProgress';
 import {
   LoadingState,
@@ -18,38 +21,13 @@ import { useGameLibrary } from '@/hooks/useGameLibrary';
 import { todayIso } from '@/lib/diary/date-utils';
 import { Dices, Sparkles } from 'lucide-react';
 
-// Only shown before Steam is connected, or on demand, so kept out of the
-// dashboard's initial bundle.
+// Only shown before Steam is connected, so kept out of the dashboard's bundle.
+// The modals are imported directly, like on the other pages: loading them on
+// demand made the first open wait for their code.
 const LandingPage = dynamic(() => import('@/components/LandingPage').then((m) => m.LandingPage));
-const SuggestionModal = dynamic(() =>
-  import('@/components/suggest').then((m) => m.SuggestionModal),
-);
-const GameDetailModal = dynamic(() =>
-  import('@/components/games/GameStatusModal').then((m) => m.GameDetailModal),
-);
-const GameSummaryModal = dynamic(() =>
-  import('@/components/games/GameSummaryModal').then((m) => m.GameSummaryModal),
-);
-
-// Fetch the modals' code once the dashboard is idle, so the first open doesn't
-// wait on the network.
-function preloadModals() {
-  void import('@/components/suggest');
-  void import('@/components/games/GameStatusModal');
-  void import('@/components/games/GameSummaryModal');
-}
 
 export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(preloadModals);
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = window.setTimeout(preloadModals, 1500);
-    return () => window.clearTimeout(id);
-  }, []);
 
   const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();
   const { user, profile, isLoading } = auth;
@@ -231,57 +209,53 @@ export default function HomeView() {
           )}
       </main>
 
-      {/* Without their own boundary, a modal whose code is still loading
-          suspends the whole page and shows the route's loading skeleton. */}
-      <Suspense fallback={null}>
-        {isSuggestionModalOpen && (
-          <SuggestionModal
-            isOpen={isSuggestionModalOpen}
-            onClose={() => setIsSuggestionModalOpen(false)}
-            onPick={handleSuggestionAction}
-            mode={currentlyPlaying ? 'queue' : 'play'}
-            showHistoryWarning={historyCount <= 5}
-          />
-        )}
+      {isSuggestionModalOpen && (
+        <SuggestionModal
+          isOpen={isSuggestionModalOpen}
+          onClose={() => setIsSuggestionModalOpen(false)}
+          onPick={handleSuggestionAction}
+          mode={currentlyPlaying ? 'queue' : 'play'}
+          showHistoryWarning={historyCount <= 5}
+        />
+      )}
 
-        {gameSummary && (
-          <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
-        )}
+      {gameSummary && (
+        <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
+      )}
 
-        {carouselModal && (
-          <GameDetailModal
-            isOpen={true}
-            onClose={handleCloseCarouselModal}
-            onConfirm={handleConfirmCarouselDetail}
-            gameName={carouselModal.game.name}
-            headerImage={carouselModal.game.header_image}
-            mainStoryHours={carouselModal.game.main_story_hours}
-            steamReviewScore={carouselModal.game.steam_review_score}
-            steamReviewCount={carouselModal.game.steam_review_count}
-            playtimeMinutes={carouselModal.game.playtime_forever}
-            deckCompat={carouselModal.game.deck_compat}
-            initialStatus="backlog"
-            disablePlaying={!!currentlyPlaying}
-            onAddToQueue={
-              currentlyPlaying && !queuedAppIds.has(carouselModal.game.app_id)
-                ? () => handleQueueGame(carouselModal.game)
-                : undefined
-            }
-          />
-        )}
+      {carouselModal && (
+        <GameDetailModal
+          isOpen={true}
+          onClose={handleCloseCarouselModal}
+          onConfirm={handleConfirmCarouselDetail}
+          gameName={carouselModal.game.name}
+          headerImage={carouselModal.game.header_image}
+          mainStoryHours={carouselModal.game.main_story_hours}
+          steamReviewScore={carouselModal.game.steam_review_score}
+          steamReviewCount={carouselModal.game.steam_review_count}
+          playtimeMinutes={carouselModal.game.playtime_forever}
+          deckCompat={carouselModal.game.deck_compat}
+          initialStatus="backlog"
+          disablePlaying={!!currentlyPlaying}
+          onAddToQueue={
+            currentlyPlaying && !queuedAppIds.has(carouselModal.game.app_id)
+              ? () => handleQueueGame(carouselModal.game)
+              : undefined
+          }
+        />
+      )}
 
-        {statusModal && currentlyPlaying && (
-          <GameDetailModal
-            isOpen={true}
-            onClose={handleCloseStatusModal}
-            onConfirm={handleConfirmStatusChange}
-            gameName={currentlyPlaying.name}
-            headerImage={currentlyPlaying.header_image}
-            initialStatus={statusModal.action}
-            initialDate={todayIso()}
-          />
-        )}
-      </Suspense>
+      {statusModal && currentlyPlaying && (
+        <GameDetailModal
+          isOpen={true}
+          onClose={handleCloseStatusModal}
+          onConfirm={handleConfirmStatusChange}
+          gameName={currentlyPlaying.name}
+          headerImage={currentlyPlaying.header_image}
+          initialStatus={statusModal.action}
+          initialDate={todayIso()}
+        />
+      )}
     </div>
   );
 }
