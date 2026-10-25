@@ -1,5 +1,6 @@
 import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
-import type { SuggestionContext, GameForSuggestion, FinishedGame } from '@/lib/suggest/types';
+import type { ScoredCandidate } from '@/lib/suggest/shortlist';
+import type { SuggestionContext, GameForSuggestion } from '@/lib/suggest/types';
 
 describe('buildSuggestionPrompt', () => {
   const createGame = (overrides: Partial<GameForSuggestion> = {}): GameForSuggestion => ({
@@ -14,7 +15,22 @@ describe('buildSuggestionPrompt', () => {
     steam_review_count: 12439,
     steam_review_weighted: 85,
     reroll_count: 0,
+    last_rerolled_at: null,
     ...overrides,
+  });
+
+  const candidate = (
+    game: Partial<GameForSuggestion> = {},
+    extra: Partial<ScoredCandidate<GameForSuggestion>> = {},
+  ): ScoredCandidate<GameForSuggestion> => ({
+    game: createGame(game),
+    score: 1,
+    series: null,
+    similarTo: [],
+    similarToDropped: null,
+    recentlySkipped: false,
+    outsideTimeRange: false,
+    ...extra,
   });
 
   const baseContext: SuggestionContext = {
@@ -23,35 +39,35 @@ describe('buildSuggestionPrompt', () => {
       energy: 'high',
       time: 'medium',
     },
-    backlogGames: [
-      createGame({ app_id: 1, name: 'Game One' }),
-      createGame({ app_id: 2, name: 'Game Two' }),
+    candidates: [
+      candidate({ app_id: 1, name: 'Game One' }),
+      candidate({ app_id: 2, name: 'Game Two' }),
     ],
-    finishedGames: [{ name: 'Completed Game', rating: 9 }] as FinishedGame[],
+    finishedGames: [{ name: 'Completed Game', rating: 9 }],
     droppedGames: ['Dropped Game'],
-    excludeAppIds: new Set<number>(),
     previousReasonings: [],
-    tagAffinities: [],
   };
 
-  it('should include user preferences in prompt', () => {
+  const withCandidates = (...candidates: ScoredCandidate<GameForSuggestion>[]) =>
+    buildSuggestionPrompt({ ...baseContext, candidates });
+
+  it('includes the chosen mood, energy and time', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
     expect(prompt).toContain('fast, demanding, focus-heavy');
     expect(prompt).toContain('complex systems to learn');
-    expect(prompt).toContain('5-12 hours total');
+    expect(prompt).toContain('5-15 hours total');
   });
 
-  it('should include game list in prompt', () => {
+  it('lists every shortlisted game with its ID', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
-    expect(prompt).toContain('Game One');
-    expect(prompt).toContain('Game Two');
-    expect(prompt).toContain('ID: 1');
-    expect(prompt).toContain('ID: 2');
+    expect(prompt).toContain('"Game One" (ID: 1)');
+    expect(prompt).toContain('"Game Two" (ID: 2)');
+    expect(prompt).toContain('SHORTLIST (2 games');
   });
 
-  it('should include game details', () => {
+  it('includes game details', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
     expect(prompt).toContain('Genres: Action, Adventure');
@@ -59,186 +75,108 @@ describe('buildSuggestionPrompt', () => {
     expect(prompt).toContain('Steam reviews: 92% positive of 12,439');
   });
 
-  it('should indicate already played time', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      backlogGames: [createGame({ playtime_forever: 120 })],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).toContain('Already played: 2h');
+  it('says when the length is unknown', () => {
+    expect(withCandidates(candidate({ main_story_hours: null }))).toContain('Length: unknown');
   });
 
-  it('should indicate never played games', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      backlogGames: [createGame({ playtime_forever: 0 })],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).toContain('Never played');
+  it('shows playtime, or that the game is untouched', () => {
+    expect(withCandidates(candidate({ playtime_forever: 120 }))).toContain('Already played: 2h');
+    expect(withCandidates(candidate({ playtime_forever: 0 }))).toContain('Never played');
   });
 
-  it('should include reroll count when present', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      backlogGames: [createGame({ reroll_count: 3 })],
-    };
+  it('caps tags at 6 per game and omits the field when there are none', () => {
+    const prompt = withCandidates(
+      candidate({
+        tags: ['Story Rich', 'RPG', 'Atmospheric', 'Action', 'Adventure', 'Open World', 'Dark'],
+      }),
+    );
+    expect(prompt).toContain('Tags: Story Rich, RPG, Atmospheric, Action, Adventure, Open World');
+    expect(prompt).not.toContain('Open World, Dark');
 
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).toContain('Skipped 3 times before');
+    expect(withCandidates(candidate({ tags: null }))).not.toContain('Tags:');
   });
 
-  it('should include finished games context', () => {
+  it('spells out series and taste signals', () => {
+    const prompt = withCandidates(
+      candidate(
+        { name: 'Saga IV' },
+        {
+          series: { name: 'Saga III', status: 'finished', rating: 9, tags: null },
+          similarTo: [
+            { name: 'Other RPG', status: 'finished', rating: 8, tags: null },
+            { name: 'Unrated RPG', status: 'finished', rating: null, tags: null },
+          ],
+          similarToDropped: { name: 'Boring RPG', status: 'dropped', rating: null, tags: null },
+        },
+      ),
+    );
+
+    expect(prompt).toContain('Series: you finished "Saga III" (9/10)');
+    expect(prompt).toContain('Plays like: "Other RPG" (8/10), "Unrated RPG"');
+    expect(prompt).toContain('Plays like a game you dropped: "Boring RPG"');
+  });
+
+  it('marks the top-scoring games', () => {
+    const prompt = withCandidates(
+      candidate({ app_id: 1, name: 'Best' }, { score: 8 }),
+      candidate({ app_id: 2, name: 'Close' }, { score: 7 }),
+      candidate({ app_id: 3, name: 'Far' }, { score: 3 }),
+    );
+    expect(prompt).toContain('"Best" (ID: 1) | TOP MATCH');
+    expect(prompt).toContain('"Close" (ID: 2) | TOP MATCH');
+    expect(prompt).not.toContain('"Far" (ID: 3) | TOP MATCH');
+  });
+
+  it('flags recent skips and games outside the time range', () => {
+    const prompt = withCandidates(candidate({}, { recentlySkipped: true, outsideTimeRange: true }));
+
+    expect(prompt).toContain('Skipped recently');
+    expect(prompt).toContain('Outside the time they asked for');
+  });
+
+  it('includes finished and dropped games', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
-    expect(prompt).toContain('Completed Game');
-    expect(prompt).toContain('FINISHED');
+    expect(prompt).toContain('Loved (8-10/10): Completed Game (9/10)');
+    expect(prompt).toContain('**Dropped** (lost interest): Dropped Game');
   });
 
-  it('should include dropped games context', () => {
+  it('puts series continuations first', () => {
+    expect(buildSuggestionPrompt(baseContext)).toContain('Continuing a series they rated highly');
+  });
+
+  it('throws when the shortlist is empty', () => {
+    expect(() => withCandidates()).toThrow('No eligible games to suggest');
+  });
+
+  it('handles every mood', () => {
+    for (const mood of ['adrenaline', 'relaxed', 'engaged', 'emotional'] as const) {
+      expect(() =>
+        buildSuggestionPrompt({
+          ...baseContext,
+          preferences: { ...baseContext.preferences, mood },
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  it('asks for JSON with app_id and reasoning', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
-    expect(prompt).toContain('Dropped Game');
-    expect(prompt).toContain('DROPPED');
-  });
-
-  it('should include sequel/series priority instruction', () => {
-    const prompt = buildSuggestionPrompt(baseContext);
-
-    expect(prompt).toContain('Sequels and series come first');
-  });
-
-  it('should include single-player preference instruction', () => {
-    const prompt = buildSuggestionPrompt(baseContext);
-
-    expect(prompt).toContain('Prefer single-player games');
-  });
-
-  it('should exclude games in excludeAppIds', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      excludeAppIds: new Set([1]),
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).not.toContain('Game One');
-    expect(prompt).toContain('Game Two');
-  });
-
-  it('should throw if no eligible games after exclusions', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      excludeAppIds: new Set([1, 2]),
-    };
-
-    expect(() => buildSuggestionPrompt(context)).toThrow('No eligible games to suggest');
-  });
-
-  it('should handle all mood types', () => {
-    const moods = ['adrenaline', 'relaxed', 'engaged', 'emotional'] as const;
-
-    moods.forEach((mood) => {
-      const context: SuggestionContext = {
-        ...baseContext,
-        preferences: { ...baseContext.preferences, mood },
-      };
-
-      expect(() => buildSuggestionPrompt(context)).not.toThrow();
-    });
-  });
-
-  it('should request JSON response format', () => {
-    const prompt = buildSuggestionPrompt(baseContext);
-
-    expect(prompt).toContain('app_id');
-    expect(prompt).toContain('reasoning');
+    expect(prompt).toContain('"app_id"');
+    expect(prompt).toContain('"reasoning"');
     expect(prompt).toContain('JSON');
   });
 
-  it('should include previous reasonings when provided', () => {
-    const context: SuggestionContext = {
+  it('includes previous reasonings only after a reroll', () => {
+    expect(buildSuggestionPrompt(baseContext)).not.toContain('AVOID REPETITION');
+
+    const prompt = buildSuggestionPrompt({
       ...baseContext,
       previousReasonings: ['Since you loved Dark Souls, this game fits perfectly.'],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
+    });
     expect(prompt).toContain('AVOID REPETITION');
     expect(prompt).toContain('Since you loved Dark Souls');
-  });
-
-  it('should not include repetition warning when no previous reasonings', () => {
-    const prompt = buildSuggestionPrompt(baseContext);
-
-    expect(prompt).not.toContain('AVOID REPETITION');
-  });
-
-  it('should include tags in game entry when present', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      backlogGames: [
-        createGame({ tags: ['Story Rich', 'RPG', 'Atmospheric', 'Action', 'Adventure'] }),
-      ],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).toContain('Tags: Story Rich, RPG, Atmospheric, Action, Adventure');
-  });
-
-  it('should cap tags at 5 per game', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      backlogGames: [
-        createGame({
-          tags: ['Story Rich', 'RPG', 'Atmospheric', 'Action', 'Adventure', 'Open World', 'Dark'],
-        }),
-      ],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).toContain('Tags: Story Rich, RPG, Atmospheric, Action, Adventure');
-    expect(prompt).not.toContain('Open World');
-    expect(prompt).not.toContain('Dark');
-  });
-
-  it('should omit tags field when game has no tags', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      backlogGames: [createGame({ tags: null })],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).not.toContain('Tags:');
-  });
-
-  it('should include tag affinities section when affinities are present', () => {
-    const context: SuggestionContext = {
-      ...baseContext,
-      tagAffinities: [
-        { tag: 'Story Rich', completionRate: 0.8, finished: 8, total: 10 },
-        { tag: 'RPG', completionRate: 0.67, finished: 4, total: 6 },
-      ],
-    };
-
-    const prompt = buildSuggestionPrompt(context);
-
-    expect(prompt).toContain('TAG AFFINITIES');
-    expect(prompt).toContain('Story Rich: finished 8/10 games (80%)');
-    expect(prompt).toContain('RPG: finished 4/6 games (67%)');
-  });
-
-  it('should omit tag affinities section when no affinities', () => {
-    const prompt = buildSuggestionPrompt(baseContext);
-
-    expect(prompt).not.toContain('TAG AFFINITIES');
   });
 });
 

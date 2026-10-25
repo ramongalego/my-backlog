@@ -1,4 +1,5 @@
-import type { SuggestionContext, GameForSuggestion, FinishedGame } from './types';
+import type { HistoryGame, ScoredCandidate } from './shortlist';
+import type { FinishedGame, GameForSuggestion, SuggestionContext } from './types';
 
 const MOOD_DESCRIPTIONS = {
   adrenaline: 'fast, demanding, focus-heavy, skill or reaction based gameplay',
@@ -14,26 +15,49 @@ const ENERGY_DESCRIPTIONS = {
 };
 
 const TIME_DESCRIPTIONS = {
-  short: '1-5 hours to complete OR games playable in short sessions (roguelikes count!)',
-  medium: '5-12 hours total, perfect for a few evenings',
-  long: '20+ hours, deep commitment, epic adventures',
+  short: 'under 5 hours to complete, or a game played in short runs (roguelikes count)',
+  medium: '5-15 hours total, a few evenings',
+  long: '15+ hours, a deep commitment',
 };
 
-function formatGameForPrompt(game: GameForSuggestion): string {
+function describeHistory(game: HistoryGame) {
+  if (game.status === 'dropped') return `you dropped "${game.name}"`;
+  return `you finished "${game.name}"${game.rating != null ? ` (${game.rating}/10)` : ''}`;
+}
+
+// Games scoring within this much of the best are flagged as top matches.
+const TOP_MATCH_MARGIN = 1.5;
+
+function formatCandidate(
+  {
+    game,
+    score,
+    series,
+    similarTo,
+    similarToDropped,
+    recentlySkipped,
+    outsideTimeRange,
+  }: ScoredCandidate<GameForSuggestion>,
+  bestScore: number,
+): string {
+  const hoursPlayed = Math.round((game.playtime_forever ?? 0) / 60);
   const parts = [
     `"${game.name}" (ID: ${game.app_id})`,
+    score >= bestScore - TOP_MATCH_MARGIN ? 'TOP MATCH' : null,
     game.genres?.length ? `Genres: ${game.genres.join(', ')}` : null,
-    game.tags?.length ? `Tags: ${game.tags.slice(0, 5).join(', ')}` : null,
-    game.main_story_hours ? `Length: ${game.main_story_hours}h` : null,
-    game.playtime_forever > 0
-      ? `Already played: ${Math.round(game.playtime_forever / 60)}h`
-      : 'Never played',
+    game.tags?.length ? `Tags: ${game.tags.slice(0, 6).join(', ')}` : null,
+    game.main_story_hours ? `Length: ${game.main_story_hours}h` : 'Length: unknown',
+    hoursPlayed > 0 ? `Already played: ${hoursPlayed}h` : 'Never played',
     game.steam_review_score != null && game.steam_review_count
       ? `Steam reviews: ${game.steam_review_score}% positive of ${game.steam_review_count.toLocaleString('en-US')}`
       : null,
-    game.reroll_count > 0
-      ? `(Skipped ${game.reroll_count} time${game.reroll_count > 1 ? 's' : ''} before)`
+    series ? `Series: ${describeHistory(series)}` : null,
+    similarTo.length
+      ? `Plays like: ${similarTo.map((g) => describeHistory(g).replace('you finished ', '')).join(', ')}`
       : null,
+    similarToDropped ? `Plays like a game you dropped: "${similarToDropped.name}"` : null,
+    recentlySkipped ? 'Skipped recently' : null,
+    outsideTimeRange ? 'Outside the time they asked for' : null,
   ].filter(Boolean);
 
   return parts.join(' | ');
@@ -62,88 +86,59 @@ function formatFinishedGames(games: FinishedGame[]): string {
 }
 
 export function buildSuggestionPrompt(context: SuggestionContext): string {
-  const {
-    preferences,
-    backlogGames,
-    finishedGames,
-    droppedGames,
-    excludeAppIds,
-    previousReasonings,
-    tagAffinities,
-  } = context;
+  const { preferences, candidates, finishedGames, droppedGames, previousReasonings } = context;
 
-  // Filter out excluded games
-  const eligibleGames = backlogGames.filter((g) => !excludeAppIds.has(g.app_id));
-
-  if (eligibleGames.length === 0) {
+  if (candidates.length === 0) {
     throw new Error('No eligible games to suggest');
   }
+  const bestScore = Math.max(...candidates.map((c) => c.score));
 
-  const gamesListFormatted = eligibleGames.map(formatGameForPrompt).join('\n');
+  return `You are a game recommendation assistant helping a user pick their next game from their Steam backlog.
 
-  const prompt = `You are a game recommendation assistant helping a user pick their next game from their Steam backlog.
-
-## USER'S CURRENT MOOD & PREFERENCES
+## WHAT THEY WANT RIGHT NOW
 
 **Desired feeling:** ${MOOD_DESCRIPTIONS[preferences.mood]}
 **Mental energy level:** ${ENERGY_DESCRIPTIONS[preferences.energy]}
 **Time commitment:** ${TIME_DESCRIPTIONS[preferences.time]}
 
-## THEIR BACKLOG (${eligibleGames.length} eligible games)
+## SHORTLIST (${candidates.length} games from their backlog, in random order)
 
-${gamesListFormatted}
+These have already been filtered to single-player games that fit the time they have, and scored against their mood and play history. Each line may say:
+- "TOP MATCH": the strongest fits for their mood, energy and history.
+- "Series": an earlier or related entry they played, with their rating.
+- "Plays like": finished games it shares the most with, with their rating.
+- "Plays like a game you dropped": a warning sign.
 
-## USER'S GAMING HISTORY (Important - use this to personalize your recommendation!)
+${candidates.map((c) => formatCandidate(c, bestScore)).join('\n')}
 
-**Games they FINISHED** (user ratings are the strongest taste signal — prioritise accordingly):
+## THEIR HISTORY
+
+**Finished** (their ratings are the strongest taste signal):
 ${formatFinishedGames(finishedGames)}
 
-${droppedGames.length > 0 ? `**Games they DROPPED** (lost interest - be cautious with similar styles/genres): ${droppedGames.slice(0, 10).join(', ')}${droppedGames.length > 10 ? ` and ${droppedGames.length - 10} more` : ''}` : 'No dropped games.'}
-
-**Playtime patterns in backlog:** Look at the "Already played" values - games with some playtime mean they've tried it and might want to continue. Games with 0 playtime are completely fresh.
-${
-  tagAffinities.length > 0
-    ? `
-## USER'S TAG AFFINITIES (based on completion history)
-
-These are the game tags this user tends to finish most consistently — a strong signal of genuine enjoyment:
-${tagAffinities.map((t) => `- ${t.tag}: finished ${t.finished}/${t.total} games (${Math.round(t.completionRate * 100)}%)`).join('\n')}
-
-Prioritize backlog games that share these tags when they also match the current mood/energy/time preferences.`
-    : ''
-}
+${droppedGames.length > 0 ? `**Dropped** (lost interest): ${droppedGames.join(', ')}` : 'No dropped games.'}
 
 ## YOUR TASK
 
-Pick ONE game from the backlog that best matches the current mood, energy, and time preferences. Consider:
-- **User ratings are the strongest signal**: Ratings are on a 0–10 scale. Games rated 8–10 reveal exactly what they enjoy — look for backlog games with similar tags, genres, or themes. Games rated 0–4 reveal what they don't enjoy — avoid recommending similar styles even if they technically match the mood filter.
-- **Sequels and series come first**: If the user has finished and rated entries in a series (e.g. "X II", "X III"), and the next entry (e.g. "X IV") is in their backlog, that is almost certainly the best recommendation — prioritise it strongly. Same applies to spin-offs or games by the same developer in the same sub-genre.
-- **Completion without a rating** still signals they liked it enough to finish, but treat it as a weaker signal than an explicit rating.
-- **Dropped games**: be cautious with games that share styles or themes with dropped titles.
-- **Playtime signals interest**: games they've already started might be good to continue — especially if it's a sequel to something they loved.
-- Games that were skipped/rerolled before should generally be deprioritised (but not excluded).
-- Match the time commitment (roguelikes work for "short" sessions even if total playtime is long).
-- Match the mood/genre appropriately.
-- **Prefer single-player games or games with a substantial single-player campaign**. Only suggest a multiplayer-focused game if it clearly has a strong solo experience.
+Pick the ONE game from the shortlist that best fits right now, usually one marked TOP MATCH. In order of importance:
+1. **Continuing a series they rated highly**: a game whose "Series" line shows a finished entry rated 8-10 is almost always the best pick, if it suits the mood at all.
+2. **Mood and energy**: the game should deliver the feeling they asked for at the effort they have.
+3. **Taste**: prefer games that play like ones they rated 8-10. Avoid ones that play like games they rated 0-4 or dropped.
+4. **Started games**: some playtime means they were into it; a good pick if it fits.
+5. Prefer games not marked "Skipped recently", and games inside their time range.
 
-IMPORTANT: Write the reasoning in second person, speaking directly to the user (use "you/your", not "the user/their"). Reference their history when relevant (e.g., "Since you finished X, you might enjoy this similar game...").
+Only call a game a sequel, continuation or part of a series if its line has a "Series" field naming that game. Don't connect games from different series.
+
+Write the reasoning in second person, speaking directly to them ("you", "your"). Mention a game from their history when it genuinely explains the pick (e.g. "Since you gave Trails of Cold Steel III a 9...").
 ${
   previousReasonings.length > 0
     ? `
-AVOID REPETITION: The user has rerolled. Here are your previous suggestions - do NOT repeat the same reasoning patterns or reference the same games from their history:
+AVOID REPETITION: They have rerolled. These were your previous explanations; don't reuse their reasoning or reference the same games from their history:
 ${previousReasonings.map((r, i) => `${i + 1}. ${JSON.stringify(r)}`).join('\n')}
-
-Use DIFFERENT examples from their history and vary your reasoning style.`
+`
     : ''
 }
-
-Respond with ONLY valid JSON in this exact format:
-{
-  "app_id": <number>,
-  "reasoning": "<2-3 sentences explaining why this game fits YOUR current mood, energy level, and time. Speak directly to the user.>"
-}`;
-
-  return prompt;
+Respond with JSON: {"app_id": <the game's ID>, "reasoning": "<2-3 sentences on why this game fits your mood, energy and time right now>"}`;
 }
 
 export function parseAIResponse(response: string): { app_id: number; reasoning: string } {

@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { Gamepad2, RotateCcw, Clock, Sparkles, ExternalLink } from 'lucide-react';
-import { SteamScore } from '@/components/games/GameCardInfo';
+import { Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
+import { SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
 
@@ -58,14 +58,15 @@ export function SuggestionResult({
 
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
-          {game.main_story_hours && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{game.main_story_hours}h</span>
-            </span>
-          )}
+          {game.main_story_hours ? (
+            <TimeToBeat hours={game.main_story_hours} iconClassName="w-3.5 h-3.5" />
+          ) : null}
           {game.steam_review_score ? (
-            <SteamScore score={game.steam_review_score} iconClassName="w-3.5 h-3.5" />
+            <SteamScore
+              score={game.steam_review_score}
+              count={game.steam_review_count}
+              iconClassName="w-3.5 h-3.5"
+            />
           ) : null}
           {game.genres && game.genres.length > 0 && (
             <span>{game.genres.slice(0, 2).join(', ')}</span>

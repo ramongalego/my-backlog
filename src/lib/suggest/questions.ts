@@ -89,19 +89,19 @@ export const TIME_QUESTION: Question<TimeCommitment> = {
     {
       value: 'short',
       icon: Timer,
-      label: 'One session (1–5h)',
+      label: 'One session (under 5h)',
       description: 'Quick wins, roguelikes, short games',
     },
     {
       value: 'medium',
       icon: CalendarDays,
-      label: 'A few nights (5–12h)',
+      label: 'A few nights (5–15h)',
       description: 'Weekend-sized adventures',
     },
     {
       value: 'long',
       icon: Mountain,
-      label: 'Long haul (20h+)',
+      label: 'Long haul (15h+)',
       description: 'Deep dives, RPGs, big campaigns',
     },
   ],

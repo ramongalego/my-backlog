@@ -12,6 +12,7 @@ describe('SuggestionResult', () => {
       genres: ['Action', 'Adventure', 'RPG'],
       tags: ['Singleplayer', 'Story Rich', 'Open World'],
       steam_review_score: 92,
+      steam_review_count: 12439,
     },
     reasoning: 'This game perfectly matches your mood for adventure and has great reviews.',
   };
@@ -219,5 +220,23 @@ describe('SuggestionResult', () => {
     );
 
     expect(screen.getByText('Test Game')).toBeInTheDocument();
+  });
+
+  it('uses the shared time and score tooltips', () => {
+    render(
+      <SuggestionResult
+        suggestion={mockSuggestion}
+        onPick={mockOnPick}
+        onReroll={mockOnReroll}
+        cooldownRemaining={0}
+        isLoading={false}
+      />,
+    );
+
+    const tooltips = screen.getAllByRole('tooltip').map((t) => t.textContent);
+    expect(tooltips.some((t) => t?.includes('Time to beat: Main Story'))).toBe(true);
+    expect(tooltips.some((t) => t?.includes('92% of 12,439 Steam reviews are positive'))).toBe(
+      true,
+    );
   });
 });

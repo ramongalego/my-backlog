@@ -37,6 +37,7 @@ create table games (
   steam_review_count integer,
   steam_review_weighted integer,
   reroll_count integer default 0,
+  last_rerolled_at timestamptz,
   platform text,
   started_at timestamptz,
   finished_at timestamptz,
@@ -245,6 +246,25 @@ begin
     and pq.app_id = new_order.app_id;
 end;
 $$;
+
+-- Counts a reroll; the count starts over 60 days after the last one (RLS still applies).
+create or replace function public.record_reroll(p_app_id integer)
+returns void
+language sql
+set search_path to 'public'
+as $
+  update games
+  set
+    reroll_count = case
+      when last_rerolled_at is null or last_rerolled_at < now() - interval '60 days' then 1
+      else coalesce(reroll_count, 0) + 1
+    end,
+    last_rerolled_at = now()
+  where user_id = (select auth.uid()) and app_id = p_app_id;
+$;
+
+revoke all on function public.record_reroll(integer) from public, anon;
+grant execute on function public.record_reroll(integer) to authenticated;
 
 -- Atomic rate-limit counter used by the server (service_role only).
 create or replace function public.consume_rate_limit(p_key text, p_limit integer, p_window_seconds integer)

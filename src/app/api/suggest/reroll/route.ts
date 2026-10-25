@@ -26,24 +26,11 @@ export async function POST(request: NextRequest) {
   }
   const { appId } = parsed.data;
 
-  // Get current reroll count
-  const { data: game } = await supabase
-    .from('games')
-    .select('reroll_count')
-    .eq('user_id', user.id)
-    .eq('app_id', appId)
-    .maybeSingle();
-
-  // Increment the reroll count
-  const currentCount = game?.reroll_count ?? 0;
-  const { error } = await supabase
-    .from('games')
-    .update({ reroll_count: currentCount + 1 })
-    .eq('user_id', user.id)
-    .eq('app_id', appId);
+  // Counts the reroll and stamps it, so the penalty fades (see record_reroll).
+  const { error } = await supabase.rpc('record_reroll', { p_app_id: appId });
 
   if (error) {
-    console.error('Failed to increment reroll count:', error);
+    console.error('Failed to record reroll:', error);
     // Non-critical error, don't fail the request
   }
 

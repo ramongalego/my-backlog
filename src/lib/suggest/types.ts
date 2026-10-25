@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { suggestRequestSchema } from '@/lib/validations/suggest';
+import type { CandidateGame, ScoredCandidate } from './shortlist';
 
 // Derived from the zod schema so the allowed values live in exactly one place.
 // (Used only in type position, so this import is erased at compile time.)
@@ -17,25 +18,9 @@ export interface SuggestionPreferences {
   time: TimeCommitment;
 }
 
-export interface GameForSuggestion {
-  app_id: number;
-  name: string;
-  genres: string[] | null;
-  categories: string[] | null;
-  tags: string[] | null;
-  main_story_hours: number | null;
-  playtime_forever: number;
+export interface GameForSuggestion extends CandidateGame {
   steam_review_score: number | null;
   steam_review_count: number | null;
-  steam_review_weighted: number | null;
-  reroll_count: number;
-}
-
-export interface TagAffinity {
-  tag: string;
-  completionRate: number;
-  finished: number;
-  total: number;
 }
 
 export interface FinishedGame {
@@ -45,12 +30,11 @@ export interface FinishedGame {
 
 export interface SuggestionContext {
   preferences: SuggestionPreferences;
-  backlogGames: GameForSuggestion[];
+  /** The scored shortlist, already filtered and shuffled. */
+  candidates: ScoredCandidate<GameForSuggestion>[];
   finishedGames: FinishedGame[];
   droppedGames: string[];
-  excludeAppIds: Set<number>;
   previousReasonings: string[];
-  tagAffinities: TagAffinity[];
 }
 
 export interface SuggestionResult {
@@ -62,6 +46,7 @@ export interface SuggestionResult {
     genres: string[] | null;
     tags: string[] | null;
     steam_review_score: number | null;
+    steam_review_count: number | null;
   };
   reasoning: string;
 }

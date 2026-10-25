@@ -30,6 +30,7 @@ interface UseSuggestionReturn {
   selectTime: (time: TimeCommitment) => void;
   goBack: () => void;
   reroll: () => Promise<void>;
+  retry: () => void;
   reset: () => void;
 
   // Loading state
@@ -171,6 +172,12 @@ export function useSuggestion(): UseSuggestionReturn {
     await fetchSuggestion(answers as SuggestionPreferences);
   };
 
+  // Asks again with the same answers, e.g. after a failed request.
+  const retry = () => {
+    if (isLoading || !answers.mood || !answers.energy || !answers.time) return;
+    fetchSuggestion(answers as SuggestionPreferences);
+  };
+
   const reset = () => {
     setStep('mood');
     setAnswers({});
@@ -199,6 +206,7 @@ export function useSuggestion(): UseSuggestionReturn {
     selectTime,
     goBack,
     reroll,
+    retry,
     reset,
     isLoading,
   };

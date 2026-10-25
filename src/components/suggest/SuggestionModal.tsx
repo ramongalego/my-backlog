@@ -37,6 +37,7 @@ export function SuggestionModal({
     selectTime,
     goBack,
     reroll,
+    retry,
     reset,
     isLoading,
   } = useSuggestion();
@@ -72,7 +73,9 @@ export function SuggestionModal({
 
       {step === 'loading' && <SuggestionLoading />}
 
-      {step === 'result' && error && <SuggestionError error={error} onRetry={reset} />}
+      {step === 'result' && error && (
+        <SuggestionError error={error} onRetry={retry} onStartOver={reset} />
+      )}
 
       {step === 'result' && suggestion && !error && (
         <SuggestionResult
