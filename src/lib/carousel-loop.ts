@@ -10,14 +10,19 @@ export function wrap(i: number, n: number): number {
 
 /**
  * How many copies of the list go before and after the real one. A slide
- * starts anywhere in the real copy and moves a full page either way, so
- * there must be at least a page of cards beyond both ends, plus a page more
- * on the right for the cards visible at the far end of the real copy.
+ * starts anywhere in the real copy and moves a page (`step` cards) either
+ * way, and `visible` cards show at once (a page plus any peeking card). So
+ * there must be a page of cards before the start, and a page plus a screenful
+ * beyond the end.
  */
-export function loopCopies(count: number, perPage: number): { before: number; after: number } {
+export function loopCopies(
+  count: number,
+  step: number,
+  visible = step,
+): { before: number; after: number } {
   return {
-    before: Math.ceil(perPage / count),
-    after: Math.ceil((2 * perPage - 1) / count),
+    before: Math.ceil(step / count),
+    after: Math.ceil((step + visible - 1) / count),
   };
 }
 

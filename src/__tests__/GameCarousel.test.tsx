@@ -61,6 +61,9 @@ describe('loop arithmetic', () => {
     // Barely more games than fit: more copies are needed on the right.
     expect(loopCopies(6, 5)).toEqual({ before: 1, after: 2 });
     expect(loopCopies(4, 3)).toEqual({ before: 1, after: 2 });
+    // A page of 5 plus a peeking sixth card, with only 7 games.
+    expect(loopCopies(7, 5, 6)).toEqual({ before: 1, after: 2 });
+    expect(loopCopies(15, 5, 6)).toEqual({ before: 1, after: 1 });
   });
 
   it('knows which positions are on screen', () => {

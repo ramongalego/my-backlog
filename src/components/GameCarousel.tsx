@@ -28,19 +28,25 @@ interface GameCarouselProps {
 // The endless, arrow-driven loop is for a mouse on a wide screen. Touch
 // screens and phones swipe a native scroller instead, as Netflix does.
 const LOOP_MEDIA = '(min-width: 640px) and (pointer: fine)';
-const SLIDE_MS = 650;
-const SLIDE_EASING = 'cubic-bezier(0.5, 0, 0.1, 1)';
+// Short, as product motion should be, but long enough to read as a slide.
+const SLIDE_MS = 450;
+const SLIDE_EASING = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
-// Cards per page, set per breakpoint on the row. Below sm it's fractional so
-// the next card peeks in, hinting that the row swipes.
+// Cards across the row, set per breakpoint. The fraction is the next card
+// peeking in under the fade: it shows there's more without hovering, and as on
+// Netflix it becomes the first card of the next page, so a jump keeps your
+// place. A page is the whole cards (2 to 5).
 const PER_PAGE =
-  '[--per-page:1.4] sm:[--per-page:2] md:[--per-page:3] lg:[--per-page:4] xl:[--per-page:5]';
+  '[--per-page:1.4] sm:[--per-page:2.3] md:[--per-page:3.3] lg:[--per-page:4.3] xl:[--per-page:5.3]';
 // A card's width when exactly --per-page cards and their 1rem gaps fill the
 // row. Inside the track, 100% is the row's width (for flex-basis, and for
 // translateX, which is relative to the track itself).
 const CARD_WIDTH = 'calc((100% - (var(--per-page) - 1) * 1rem) / var(--per-page))';
 // The same width from the row's container width, to size the arrows to the art.
-const COVER_HEIGHT = 'calc((100cqw - (var(--per-page) - 1) * 1rem) / var(--per-page) * 215 / 460)';
+const CARD_WIDTH_CQ = '((100cqw - (var(--per-page) - 1) * 1rem) / var(--per-page))';
+const COVER_HEIGHT = `calc(${CARD_WIDTH_CQ} * 215 / 460)`;
+// What's left of the row after a page of whole cards: the peeking card.
+const peekWidth = (pageSize: number) => `calc(100cqw - ${pageSize} * (${CARD_WIDTH_CQ} + 1rem))`;
 const COVER_SIZES =
   '(max-width: 640px) 70vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 250px';
 
@@ -102,9 +108,14 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
   const [hasMoved, setHasMoved] = useState(false);
 
   const count = games.length;
-  const pageSize = Math.max(1, Math.round(perPage));
-  const loop = loopMode && count > pageSize;
-  const { before, after } = loop ? loopCopies(count, pageSize) : { before: 0, after: 0 };
+  const pageSize = Math.max(1, Math.floor(perPage));
+  // Whole cards plus the peeking one.
+  const visibleSpan = Math.ceil(perPage);
+  const hasMore = count > pageSize;
+  const loop = loopMode && hasMore;
+  const { before, after } = loop
+    ? loopCopies(count, pageSize, visibleSpan)
+    : { before: 0, after: 0 };
   const first = loop ? (sliding ? offset : wrap(offset, count)) : 0;
   const start = before * count + first;
 
@@ -150,6 +161,15 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
         className={`group/row relative @container ${PER_PAGE}`}
       >
         {loop && hasMoved && <ArrowButton direction="previous" onClick={() => slide(-1)} />}
+
+        {/* Always there when the row has more: the arrows only appear on hover. */}
+        {hasMore && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 max-sm:-right-4 z-[5] w-24"
+            style={{ background: 'linear-gradient(to right, transparent, var(--color-ink-950))' }}
+          />
+        )}
 
         {/* The clipping box. The browser scrolls it to show a focused element, which
             would shift the whole row on top of the transform, so it's pinned at 0. */}
@@ -222,7 +242,9 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
           </div>
         </div>
 
-        {loop && <ArrowButton direction="next" onClick={() => slide(1)} />}
+        {loop && (
+          <ArrowButton direction="next" onClick={() => slide(1)} width={peekWidth(pageSize)} />
+        )}
       </div>
     </div>
   );
@@ -232,9 +254,12 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
 function ArrowButton({
   direction,
   onClick,
+  width,
 }: {
   direction: 'previous' | 'next';
   onClick: () => void;
+  /** The next arrow covers the whole peeking card, so clicking it pages on. */
+  width?: string;
 }) {
   const isNext = direction === 'next';
   const Icon = isNext ? ChevronRight : ChevronLeft;
@@ -243,11 +268,12 @@ function ArrowButton({
       type="button"
       onClick={onClick}
       aria-label={isNext ? 'Show more games' : 'Show previous games'}
-      className={`group/arrow absolute top-0 z-10 flex w-12 items-center justify-center cursor-pointer opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 focus-visible:-outline-offset-2 ${
+      className={`group/arrow absolute top-0 z-10 flex min-w-12 items-center justify-center cursor-pointer opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 focus-visible:-outline-offset-2 ${
         isNext ? 'right-0 rounded-r-lg' : 'left-0 rounded-l-lg'
       }`}
       style={{
         height: COVER_HEIGHT,
+        width: width ?? '3rem',
         background: `linear-gradient(to ${isNext ? 'left' : 'right'}, color-mix(in oklch, var(--color-ink-950) 85%, transparent), transparent)`,
       }}
     >
