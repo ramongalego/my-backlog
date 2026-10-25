@@ -8,7 +8,7 @@ import {
   Inbox,
   Trophy,
   Star,
-  TrendingUp,
+  Hourglass,
   Pencil,
   CalendarDays,
 } from 'lucide-react';
@@ -22,6 +22,8 @@ import { updateGameStatus } from '@/lib/games/status';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { toast } from 'sonner';
 import type { Stats } from '@/hooks/useStats';
+import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
+import { StatsContentSkeleton } from './Skeleton';
 
 interface EditModalState {
   appId: number;
@@ -32,33 +34,44 @@ interface EditModalState {
   deckCompat: number | null;
 }
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────────
-
-function StatsLoadingSkeleton() {
-  return (
-    <div className="space-y-8 animate-pulse">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl h-28" />
-        ))}
-      </div>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl h-32" />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl h-64" />
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl h-64" />
-      </div>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl h-48" />
-    </div>
-  );
-}
-
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <SectionLabel className="mb-4">{children}</SectionLabel>;
+}
+
+function formatYears(years: number): string {
+  if (years < 1) return 'under a year';
+  const rounded = years < 10 ? Math.round(years * 10) / 10 : Math.round(years);
+  return `~${rounded} year${rounded === 1 ? '' : 's'}`;
+}
+
+// How long the current backlog would take at the user's recent finishing rate.
+function BacklogPace({ stats }: { stats: Stats }) {
+  const { backlog, finishedLastYear } = stats;
   return (
-    <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
-      {children}
-    </h2>
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col">
+      <SectionTitle>Backlog pace</SectionTitle>
+      <div className="flex-1 flex flex-col justify-center items-center text-center gap-2 py-4">
+        <Hourglass className="w-8 h-8 text-violet-400 mb-2" aria-hidden="true" />
+        {finishedLastYear > 0 ? (
+          <>
+            <p className="text-4xl font-bold text-zinc-100">
+              {formatYears(backlog / finishedLastYear)}
+            </p>
+            <p className="text-sm text-zinc-500 max-w-xs">
+              to clear {backlog} backlog games at your current pace of {finishedLastYear} finished
+              in the last 12 months.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-zinc-500 max-w-xs">
+            You haven&apos;t finished a game in the last 12 months. Finish one to see how long your
+            backlog would take at your pace.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -171,9 +184,7 @@ function YearChart({ stats }: { stats: Stats }) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
-          Games by year
-        </h2>
+        <SectionLabel>Games by year</SectionLabel>
         <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-xs">
           <button
             onClick={() => setView('finished')}
@@ -433,127 +444,118 @@ export default function StatsView() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main id="main-content" className="pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="mb-10">
-            <h1 className="text-2xl font-bold text-zinc-100">Stats</h1>
-            <p className="text-zinc-500 text-sm mt-1">
-              A look at your gaming library{' '}
-              <span className="text-zinc-600">· hidden and won&apos;t play games excluded</span>
-            </p>
+    <Page
+      overlay={
+        editModal && (
+          <GameDetailModal
+            isOpen={true}
+            onClose={() => setEditModal(null)}
+            onConfirm={handleConfirm}
+            gameName={editModal.gameName}
+            headerImage={editModal.headerImage}
+            mainStoryHours={editModal.mainStoryHours}
+            playtimeMinutes={editModal.playtimeMinutes}
+            deckCompat={editModal.deckCompat}
+            initialStatus="backlog"
+            disablePlaying={hasPlayingGame}
+            onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}
+          />
+        )
+      }
+    >
+      <PageHeader
+        title="Stats"
+        description={
+          <>
+            A look at your gaming library{' '}
+            <span className="text-zinc-600">· hidden and won&apos;t play games excluded</span>
+          </>
+        }
+      />
+
+      {loading ? (
+        <StatsContentSkeleton />
+      ) : !stats ? (
+        <div className="text-center py-20">
+          <Gamepad2 className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+          <p className="text-zinc-500">No data yet. Sync your Steam library to see your stats.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard
+              icon={Gamepad2}
+              label="Total games"
+              value={stats.total}
+              sub="non-hidden"
+              accent="text-zinc-400"
+            />
+            <StatCard
+              icon={Trophy}
+              label="Finished"
+              value={stats.finished}
+              sub={`${stats.finishedPct}% of library`}
+              accent="text-emerald-400"
+            />
+            <StatCard
+              icon={Clock}
+              label="Hours played"
+              value={`${stats.totalPlaytimeHours.toLocaleString()}h`}
+              sub="across all games"
+              accent="text-amber-400"
+            />
+            <StatCard
+              icon={CalendarDays}
+              label="Days played"
+              value={`${stats.totalPlaytimeDays}d`}
+              sub="of your life"
+              accent="text-amber-400"
+            />
+            <StatCard
+              icon={Inbox}
+              label="Backlog hours"
+              value={`~${stats.estimatedBacklogHours.toLocaleString()}h`}
+              sub="estimated to beat"
+              accent="text-violet-400"
+            />
+            <StatCard
+              icon={Star}
+              label="Avg rating"
+              value={stats.avgRating !== null ? `${stats.avgRating}/10` : '—'}
+              sub={
+                stats.ratedCount > 0
+                  ? `from ${stats.ratedCount} rated game${stats.ratedCount === 1 ? '' : 's'}`
+                  : 'no ratings yet'
+              }
+              accent="text-amber-400"
+            />
           </div>
 
-          {loading ? (
-            <StatsLoadingSkeleton />
-          ) : !stats ? (
-            <div className="text-center py-20">
-              <Gamepad2 className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-              <p className="text-zinc-500">
-                No data yet. Sync your Steam library to see your stats.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <StatCard
-                  icon={Gamepad2}
-                  label="Total games"
-                  value={stats.total}
-                  sub="non-hidden"
-                  accent="text-zinc-400"
-                />
-                <StatCard
-                  icon={Trophy}
-                  label="Finished"
-                  value={stats.finished}
-                  sub={`${stats.finishedPct}% of library`}
-                  accent="text-emerald-400"
-                />
-                <StatCard
-                  icon={Clock}
-                  label="Hours played"
-                  value={`${stats.totalPlaytimeHours.toLocaleString()}h`}
-                  sub="across all games"
-                  accent="text-amber-400"
-                />
-                <StatCard
-                  icon={CalendarDays}
-                  label="Days played"
-                  value={`${stats.totalPlaytimeDays}d`}
-                  sub="of your life"
-                  accent="text-amber-400"
-                />
-                <StatCard
-                  icon={Inbox}
-                  label="Backlog hours"
-                  value={`~${stats.estimatedBacklogHours.toLocaleString()}h`}
-                  sub="estimated to beat"
-                  accent="text-violet-400"
-                />
-                <StatCard
-                  icon={Star}
-                  label="Avg rating"
-                  value={stats.avgRating !== null ? `${stats.avgRating}/10` : '—'}
-                  sub={
-                    stats.ratedCount > 0
-                      ? `from ${stats.ratedCount} rated game${stats.ratedCount === 1 ? '' : 's'}`
-                      : 'no ratings yet'
-                  }
-                  accent="text-amber-400"
-                />
-              </div>
+          {/* Library breakdown */}
+          <LibraryBreakdown stats={stats} />
 
-              {/* Library breakdown */}
-              <LibraryBreakdown stats={stats} />
+          {/* Tags + Year chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TopTags stats={stats} />
+            <YearChart stats={stats} />
+          </div>
 
-              {/* Tags + Year chart */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <TopTags stats={stats} />
-                <YearChart stats={stats} />
-              </div>
+          {/* Tag completion */}
+          <TagCompletion stats={stats} />
 
-              {/* Tag completion */}
-              <TagCompletion stats={stats} />
+          {/* Rating distribution */}
+          <RatingHistogram stats={stats} />
 
-              {/* Rating distribution */}
-              <RatingHistogram stats={stats} />
-
-              {/* Most played unfinished */}
-              {stats.mostPlayedUnfinished.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <MostPlayedUnfinished stats={stats} onEdit={handleEdit} />
-                  {stats.avgRating !== null && (
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col justify-center items-center text-center gap-2">
-                      <TrendingUp className="w-8 h-8 text-amber-400 mb-2" />
-                      <p className="text-zinc-500 text-sm">You rate finished games</p>
-                      <p className="text-5xl font-bold text-zinc-100">{stats.avgRating}</p>
-                      <p className="text-zinc-600 text-sm">out of 10 on average</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Most played unfinished + backlog pace */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {stats.mostPlayedUnfinished.length > 0 && (
+              <MostPlayedUnfinished stats={stats} onEdit={handleEdit} />
+            )}
+            <BacklogPace stats={stats} />
+          </div>
         </div>
-      </main>
-
-      {editModal && (
-        <GameDetailModal
-          isOpen={true}
-          onClose={() => setEditModal(null)}
-          onConfirm={handleConfirm}
-          gameName={editModal.gameName}
-          headerImage={editModal.headerImage}
-          mainStoryHours={editModal.mainStoryHours}
-          playtimeMinutes={editModal.playtimeMinutes}
-          deckCompat={editModal.deckCompat}
-          initialStatus="backlog"
-          disablePlaying={hasPlayingGame}
-          onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}
-        />
       )}
-    </div>
+    </Page>
   );
 }

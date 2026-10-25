@@ -23,7 +23,7 @@ const FILTERS: GameFilter[] = ['all', 'backlog', 'finished', 'dropped', 'wont_pl
 
 export function GamesFilter({ filter, counts, onFilterChange }: GamesFilterProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 -mb-2">
+    <div className="flex gap-2 overflow-x-auto scrollbar-none">
       {FILTERS.map((f) => {
         const { label, icon } = FILTER_CONFIG[f];
         return (

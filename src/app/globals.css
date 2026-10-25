@@ -186,3 +186,11 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Horizontally scrollable rows (filter pills) without a visible scrollbar. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

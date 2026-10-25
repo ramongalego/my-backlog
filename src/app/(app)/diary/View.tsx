@@ -15,25 +15,12 @@ import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { useDiary } from '@/hooks/useDiary';
 import { useUrlState } from '@/hooks/useUrlState';
+import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
+import { DiaryListSkeleton } from './Skeleton';
 import type { DiaryEntry } from '@/hooks/useDiary';
 import { getMonthKey, formatMonthLabel, formatDay } from '@/lib/diary/date-utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
-
-function DiaryLoadingSkeleton() {
-  return (
-    <div className="space-y-2">
-      {[...Array(8)].map((_, i) => (
-        <div key={i} className="flex items-center gap-3 sm:gap-4 py-3 animate-pulse">
-          <div className="w-6 h-4 bg-zinc-800 rounded shrink-0" />
-          <div className="w-20 h-12 sm:w-36 sm:h-20 bg-zinc-800 rounded shrink-0" />
-          <div className="flex-1 h-4 bg-zinc-800 rounded" />
-          <div className="w-10 h-4 bg-zinc-800 rounded hidden sm:block" />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function EmptyState() {
   return (
@@ -211,90 +198,89 @@ export default function DiaryView() {
   })();
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main id="main-content" className="pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          {/* Page heading */}
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-100">Diary</h1>
-              {!loading && <p className="text-zinc-500 text-sm mt-1">{summaryText}</p>}
-            </div>
-            {!loading && availableYears.length >= 2 && entries.length >= 5 && (
-              <Dropdown
-                value={selectedYear}
-                onChange={setSelectedYear}
-                icon={<CalendarDays className="w-4 h-4" />}
-                options={[
-                  { value: 'all', label: 'All time' },
-                  ...availableYears.map((year) => ({ value: year, label: year })),
-                ]}
-              />
-            )}
-          </div>
+    <Page
+      overlay={
+        detailModal && (
+          <GameDetailModal
+            isOpen={true}
+            onClose={handleCloseDetail}
+            onConfirm={handleConfirmDetail}
+            gameName={detailModal.gameName}
+            headerImage={detailModal.headerImage}
+            initialStatus={detailModal.initialStatus}
+            initialDate={detailModal.initialDate}
+            initialNotes={detailModal.initialNotes}
+            initialRating={detailModal.initialRating}
+            disablePlaying={hasPlayingGame}
+          />
+        )
+      }
+    >
+      <PageHeader
+        title="Diary"
+        description={!loading && summaryText}
+        actions={
+          !loading &&
+          availableYears.length >= 2 &&
+          entries.length >= 5 && (
+            <Dropdown
+              value={selectedYear}
+              onChange={setSelectedYear}
+              icon={<CalendarDays className="w-4 h-4" />}
+              options={[
+                { value: 'all', label: 'All time' },
+                ...availableYears.map((year) => ({ value: year, label: year })),
+              ]}
+            />
+          )
+        }
+      />
 
-          {loading ? (
-            <DiaryLoadingSkeleton />
-          ) : entries.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div>
-              {/* Dated entries grouped by year → month */}
-              {yearGroups.map((yg, yi) => (
-                <div key={yg.year}>
-                  {selectedYear === 'all' && (
-                    <h2
-                      className={`text-lg font-bold text-zinc-100 pb-1 border-b border-zinc-800 ${yi === 0 ? 'mt-2' : 'mt-10'}`}
-                    >
-                      {yg.year}
-                    </h2>
-                  )}
-                  {yg.months.map((mg) => {
-                    const { month } = formatMonthLabel(mg.entries[0].finished_at!);
-                    return (
-                      <div key={mg.key}>
-                        <p
-                          className={`text-sm font-semibold text-zinc-400 tracking-wide pb-2 ${selectedYear !== 'all' && yi === 0 ? 'pt-2' : 'pt-5'}`}
-                        >
-                          {month}
-                        </p>
-                        {mg.entries.map((entry) => (
-                          <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-
-              {/* Undated entries */}
-              {filteredUndated.length > 0 && (
-                <div className="mt-8">
-                  <p className="text-xs text-zinc-600 uppercase tracking-wider mb-3">No date</p>
-                  {filteredUndated.map((entry) => (
-                    <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
-                  ))}
-                </div>
+      {loading ? (
+        <DiaryListSkeleton />
+      ) : entries.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div>
+          {/* Dated entries grouped by year → month */}
+          {yearGroups.map((yg, yi) => (
+            <div key={yg.year}>
+              {selectedYear === 'all' && (
+                <h2
+                  className={`text-lg font-bold text-zinc-100 pb-1 border-b border-zinc-800 ${yi === 0 ? 'mt-2' : 'mt-10'}`}
+                >
+                  {yg.year}
+                </h2>
               )}
+              {yg.months.map((mg) => {
+                const { month } = formatMonthLabel(mg.entries[0].finished_at!);
+                return (
+                  <div key={mg.key}>
+                    <p
+                      className={`text-sm font-semibold text-zinc-400 tracking-wide pb-2 ${selectedYear !== 'all' && yi === 0 ? 'pt-2' : 'pt-5'}`}
+                    >
+                      {month}
+                    </p>
+                    {mg.entries.map((entry) => (
+                      <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {/* Undated entries */}
+          {filteredUndated.length > 0 && (
+            <div className="mt-8">
+              <SectionLabel className="mb-3">No date</SectionLabel>
+              {filteredUndated.map((entry) => (
+                <DiaryRow key={entry.app_id} entry={entry} onEdit={handleOpenDetail} />
+              ))}
             </div>
           )}
         </div>
-      </main>
-
-      {detailModal && (
-        <GameDetailModal
-          isOpen={true}
-          onClose={handleCloseDetail}
-          onConfirm={handleConfirmDetail}
-          gameName={detailModal.gameName}
-          headerImage={detailModal.headerImage}
-          initialStatus={detailModal.initialStatus}
-          initialDate={detailModal.initialDate}
-          initialNotes={detailModal.initialNotes}
-          initialRating={detailModal.initialRating}
-          disablePlaying={hasPlayingGame}
-        />
       )}
-    </div>
+    </Page>
   );
 }

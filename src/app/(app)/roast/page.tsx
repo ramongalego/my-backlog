@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { Flame, Loader2, ShieldOff, X } from 'lucide-react';
+import { RoastHeader, RoastShell } from '@/components/roast/RoastLayout';
 
 import { Button } from '@/components/ui/Button';
 import { RoastResult } from '@/components/roast/RoastResult';
@@ -61,132 +62,102 @@ export default function RoastPage() {
       : null;
 
   return (
-    <div className="relative min-h-screen bg-zinc-950 overflow-hidden">
-      {/* Ambient violet orb — sits behind the header */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 -translate-y-32"
-      >
-        <div className="w-[700px] h-[500px] bg-violet-600/10 rounded-full blur-3xl animate-[orbBreathe_10s_ease-in-out_infinite]" />
-      </div>
-      <main id="main-content" className="relative pt-24 pb-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          {/* Header */}
-          <div className="text-center mb-10">
-            <div className="relative inline-flex items-center justify-center mb-4">
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-violet-500/25 rounded-2xl blur-xl"
-              />
-              <div className="relative inline-flex items-center justify-center w-14 h-14 bg-violet-500/10 border border-violet-500/20 rounded-2xl">
-                <Flame className="w-7 h-7 text-violet-400" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold mb-2 leading-tight">
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-fuchsia-400 to-violet-400 bg-[length:200%_auto] animate-[gradientShimmer_8s_ease-in-out_infinite]">
-                Steam Roast
-              </span>
-            </h1>
-            <p className="text-zinc-400">
-              Enter a Steam Profile and get a savage roast of their gaming habits
-            </p>
-          </div>
+    <RoastShell>
+      <RoastHeader tagline="Enter a Steam Profile and get a savage roast of their gaming habits" />
 
-          {/* Input form */}
-          <form onSubmit={handleSubmit} className="mb-10">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Enter Steam URL, Username, or Profile ID"
-                  aria-label="Steam profile URL or username"
-                  className="w-full h-12 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 transition-colors"
-                />
-                {input && (
-                  <button
-                    type="button"
-                    onClick={() => setInput('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-                    aria-label="Clear input"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              <Button
-                type="submit"
-                size="lg"
-                className="!rounded-xl shrink-0"
-                disabled={roastMutation.isPending || !input.trim()}
-              >
-                {roastMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Roasting...
-                  </>
-                ) : (
-                  <>
-                    <Flame className="w-4 h-4" />
-                    Roast
-                  </>
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-zinc-600 mt-2">
-              Paste the full Steam profile URL for best results. Steam profile must be public.
-            </p>
-          </form>
-
-          {/* Error */}
-          {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-8">
-              {error}
-            </div>
-          )}
-
-          {/* Blacklisted profile */}
-          {blacklistMessage && (
-            <div className="text-center py-16">
-              <ShieldOff className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
-              <p className="text-lg text-zinc-300">{blacklistMessage}</p>
-              <button
-                onClick={() => {
-                  setBlacklistMessage(null);
-                  roastMutation.reset();
-                  setInput('');
-                }}
-                className="mt-6 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-              >
-                Roast someone else
-              </button>
-            </div>
-          )}
-
-          {/* Loading state */}
-          {roastMutation.isPending && (
-            <div className="text-center py-16">
-              <div className="relative inline-block">
-                <div className="w-16 h-16 border-4 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
-                <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-violet-400" />
-              </div>
-              <p className="mt-6 text-zinc-400">Analyzing your shameful library...</p>
-            </div>
-          )}
-
-          {/* Result */}
-          {roastMutation.data && !roastMutation.isPending && (
-            <RoastResult
-              result={roastMutation.data}
-              onRoastAnother={() => {
-                roastMutation.reset();
-                setInput('');
-              }}
+      {/* Input form */}
+      <form onSubmit={handleSubmit} className="mb-10">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Enter Steam URL, Username, or Profile ID"
+              aria-label="Steam profile URL or username"
+              className="w-full h-12 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 transition-colors"
             />
-          )}
+            {input && (
+              <button
+                type="button"
+                onClick={() => setInput('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                aria-label="Clear input"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="!rounded-xl shrink-0"
+            disabled={roastMutation.isPending || !input.trim()}
+          >
+            {roastMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Roasting...
+              </>
+            ) : (
+              <>
+                <Flame className="w-4 h-4" />
+                Roast
+              </>
+            )}
+          </Button>
         </div>
-      </main>
-    </div>
+        <p className="text-xs text-zinc-600 mt-2">
+          Paste the full Steam profile URL for best results. Steam profile must be public.
+        </p>
+      </form>
+
+      {/* Error */}
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-8">
+          {error}
+        </div>
+      )}
+
+      {/* Blacklisted profile */}
+      {blacklistMessage && (
+        <div className="text-center py-16">
+          <ShieldOff className="w-10 h-10 text-zinc-600 mx-auto mb-4" />
+          <p className="text-lg text-zinc-300">{blacklistMessage}</p>
+          <button
+            onClick={() => {
+              setBlacklistMessage(null);
+              roastMutation.reset();
+              setInput('');
+            }}
+            className="mt-6 text-sm text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+          >
+            Roast someone else
+          </button>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {roastMutation.isPending && (
+        <div className="text-center py-16">
+          <div className="relative inline-block">
+            <div className="w-16 h-16 border-4 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
+            <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-violet-400" />
+          </div>
+          <p className="mt-6 text-zinc-400">Analyzing your shameful library...</p>
+        </div>
+      )}
+
+      {/* Result */}
+      {roastMutation.data && !roastMutation.isPending && (
+        <RoastResult
+          result={roastMutation.data}
+          onRoastAnother={() => {
+            roastMutation.reset();
+            setInput('');
+          }}
+        />
+      )}
+    </RoastShell>
   );
 }

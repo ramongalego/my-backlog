@@ -56,6 +56,8 @@ export interface Stats {
   gamesByReleaseYear: YearStat[];
   ratingDistribution: RatingBar[];
   mostPlayedUnfinished: MostPlayedUnfinished[];
+  /** Games finished in the last 365 days, for the backlog pace estimate. */
+  finishedLastYear: number;
 }
 
 function parseYear(releaseDate: string | null): string | null {
@@ -81,6 +83,13 @@ export function useStats() {
     const finished = games.filter((g) => g.status === 'finished').length;
     const dropped = games.filter((g) => g.status === 'dropped').length;
     const backlog = total - finished - dropped;
+
+    const yearAgo = new Date();
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const yearAgoIso = yearAgo.toISOString();
+    const finishedLastYear = games.filter(
+      (g) => g.status === 'finished' && g.finished_at !== null && g.finished_at >= yearAgoIso,
+    ).length;
 
     const rawPlaytimeMins = games.reduce((sum, g) => sum + g.playtime_forever, 0);
     const totalPlaytimeHours = Math.round(rawPlaytimeMins / 60);
@@ -200,6 +209,7 @@ export function useStats() {
     >;
 
     return {
+      finishedLastYear,
       total,
       finished,
       dropped,

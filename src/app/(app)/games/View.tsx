@@ -10,6 +10,7 @@ import { GamesPageSkeleton } from '@/components/games/GamesPageSkeleton';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage } from '@/hooks/useGamesPage';
+import { Page, PageHeader } from '@/components/layout/Page';
 
 function EmptyState({ searching }: { searching: boolean }) {
   return (
@@ -71,92 +72,81 @@ export default function GamesView() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main id="main-content" className="pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col gap-4 mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="shrink-0">
-                <h1 className="text-2xl font-bold text-zinc-100">My Games</h1>
-                <p
-                  className="flex items-center gap-1 text-zinc-500 text-sm mt-1"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <span>{counts[filter]}</span>
-                  {searchQuery && (
-                    <span className="text-violet-400 font-medium">{searchQuery}</span>
-                  )}
-                  <span>
-                    {counts[filter] === 1 ? 'game' : 'games'}{' '}
-                    {filter === 'all'
-                      ? 'in library'
-                      : filter === 'backlog'
-                        ? 'in the backlog'
-                        : filter === 'finished'
-                          ? 'finished'
-                          : filter === 'dropped'
-                            ? 'dropped'
-                            : filter === 'wont_play'
-                              ? "you won't play"
-                              : 'hidden'}
-                  </span>
-                </p>
-              </div>
-
-              <GamesFilter filter={filter} counts={counts} onFilterChange={setFilter} />
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
-              <GamesSort value={sort} onChange={setSort} />
-            </div>
-          </div>
-
-          {visibleGames.length === 0 ? (
-            <EmptyState searching={searchQuery.trim().length > 0} />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {visibleGames.map((game) => (
-                  <GameCard
-                    key={game.app_id}
-                    game={game}
-                    onOpenDetail={handleOpenDetail}
-                    queued={queuedAppIds.has(game.app_id)}
-                  />
-                ))}
-              </div>
-              <div ref={sentinelRef} />
-            </>
-          )}
+    <Page
+      overlay={
+        statusModal && (
+          <GameDetailModal
+            isOpen={true}
+            onClose={handleCloseStatusModal}
+            onConfirm={handleConfirmDetail}
+            gameName={statusModal.gameName}
+            headerImage={statusModal.headerImage}
+            initialStatus={statusModal.initialStatus}
+            initialDate={statusModal.initialDate}
+            initialNotes={statusModal.initialNotes}
+            initialRating={statusModal.initialRating}
+            mainStoryHours={statusModal.mainStoryHours}
+            steamReviewScore={statusModal.steamReviewScore}
+            steamReviewCount={statusModal.steamReviewCount}
+            playtimeMinutes={statusModal.playtimeMinutes}
+            deckCompat={statusModal.deckCompat}
+            disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
+            onAddToQueue={
+              hasPlayingGame && statusModal.initialStatus === 'backlog'
+                ? () => handleAddToQueue(statusModal.appId)
+                : undefined
+            }
+          />
+        )
+      }
+    >
+      <PageHeader
+        title="My Games"
+        description={
+          <span className="flex flex-wrap items-center gap-1" role="status" aria-live="polite">
+            <span>{counts[filter]}</span>
+            {searchQuery && <span className="text-violet-400 font-medium">{searchQuery}</span>}
+            <span>
+              {counts[filter] === 1 ? 'game' : 'games'}{' '}
+              {filter === 'all'
+                ? 'in library'
+                : filter === 'backlog'
+                  ? 'in the backlog'
+                  : filter === 'finished'
+                    ? 'finished'
+                    : filter === 'dropped'
+                      ? 'dropped'
+                      : filter === 'wont_play'
+                        ? "you won't play"
+                        : 'hidden'}
+            </span>
+          </span>
+        }
+        actions={<GamesFilter filter={filter} counts={counts} onFilterChange={setFilter} />}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
+          <GamesSort value={sort} onChange={setSort} />
         </div>
-      </main>
+      </PageHeader>
 
-      {statusModal && (
-        <GameDetailModal
-          isOpen={true}
-          onClose={handleCloseStatusModal}
-          onConfirm={handleConfirmDetail}
-          gameName={statusModal.gameName}
-          headerImage={statusModal.headerImage}
-          initialStatus={statusModal.initialStatus}
-          initialDate={statusModal.initialDate}
-          initialNotes={statusModal.initialNotes}
-          initialRating={statusModal.initialRating}
-          mainStoryHours={statusModal.mainStoryHours}
-          steamReviewScore={statusModal.steamReviewScore}
-          steamReviewCount={statusModal.steamReviewCount}
-          playtimeMinutes={statusModal.playtimeMinutes}
-          deckCompat={statusModal.deckCompat}
-          disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
-          onAddToQueue={
-            hasPlayingGame && statusModal.initialStatus === 'backlog'
-              ? () => handleAddToQueue(statusModal.appId)
-              : undefined
-          }
-        />
+      {visibleGames.length === 0 ? (
+        <EmptyState searching={searchQuery.trim().length > 0} />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {visibleGames.map((game) => (
+              <GameCard
+                key={game.app_id}
+                game={game}
+                onOpenDetail={handleOpenDetail}
+                queued={queuedAppIds.has(game.app_id)}
+              />
+            ))}
+          </div>
+          <div ref={sentinelRef} />
+        </>
       )}
-    </div>
+    </Page>
   );
 }

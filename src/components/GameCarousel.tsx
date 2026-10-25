@@ -151,7 +151,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                   />
                 </div>
               </button>
-              <div className="px-3 py-4">
+              <div className="p-4">
                 <GameCardInfo
                   appId={game.app_id}
                   name={game.name}

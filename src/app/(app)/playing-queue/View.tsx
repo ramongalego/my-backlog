@@ -28,18 +28,27 @@ import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
 import { todayIso } from '@/lib/diary/date-utils';
+import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
+import { QueueListSkeleton } from './Skeleton';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
 function GameThumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
     return (
-      <div className="relative w-24 h-[60px] rounded overflow-hidden shrink-0">
-        <Image src={src} alt={alt} fill className="object-cover" sizes="96px" quality={90} />
+      <div className="relative w-16 h-10 sm:w-24 sm:h-[60px] rounded overflow-hidden shrink-0">
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-cover"
+          sizes="(max-width: 640px) 64px, 96px"
+          quality={90}
+        />
       </div>
     );
   }
   return (
-    <div className="w-24 h-[60px] bg-zinc-800 rounded flex items-center justify-center shrink-0">
+    <div className="w-16 h-10 sm:w-24 sm:h-[60px] bg-zinc-800 rounded flex items-center justify-center shrink-0">
       <Gamepad2 className="w-4 h-4 text-zinc-600" />
     </div>
   );
@@ -74,9 +83,9 @@ function NowPlayingRow({
       : null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-4">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-700 p-3 sm:p-4">
       <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
+        <span className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
           <Play className="w-3.5 h-3.5 fill-sky-400" />
         </span>
 
@@ -202,11 +211,11 @@ function QueueItemRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-4 bg-zinc-900 rounded-xl border border-zinc-800 p-4 transition-opacity ${
+      className={`flex items-center gap-3 sm:gap-4 bg-zinc-900 rounded-xl border border-zinc-800 p-3 sm:p-4 transition-opacity ${
         isDragging ? 'opacity-0' : 'opacity-100'
       } ${isOverlay ? 'shadow-2xl scale-[1.02] border-zinc-600' : ''}`}
     >
-      <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800 text-zinc-400 text-sm font-semibold shrink-0">
+      <span className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-zinc-800 text-zinc-400 text-sm font-semibold shrink-0">
         {index + 1}
       </span>
 
@@ -223,15 +232,16 @@ function QueueItemRow({
         />
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {canPlay && (
           <button
             onClick={() => onPick(item.app_id)}
             disabled={isLoading}
-            className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+            aria-label={`Play ${item.game.name}`}
+            className="cursor-pointer flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
           >
-            <Play className="w-3.5 h-3.5 fill-white" />
-            <span>Play</span>
+            <Play className="w-3.5 h-3.5 fill-white" aria-hidden="true" />
+            <span className="hidden sm:inline">Play</span>
           </button>
         )}
         <button
@@ -251,26 +261,6 @@ function QueueItemRow({
           <X className="w-4 h-4" />
         </button>
       </div>
-    </div>
-  );
-}
-
-function QueueLoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="bg-zinc-900 rounded-xl border border-zinc-800 p-4 animate-pulse">
-          <div className="flex items-center gap-4">
-            <div className="w-4 h-6 bg-zinc-800 rounded" />
-            <div className="w-8 h-8 bg-zinc-800 rounded-lg" />
-            <div className="w-24 h-14 bg-zinc-800 rounded" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 bg-zinc-800 rounded w-1/2" />
-              <div className="h-3 bg-zinc-800 rounded w-1/4" />
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -323,105 +313,101 @@ export default function PlayingQueueView() {
   const isEmpty = !currentlyPlaying && queue.length === 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main id="main-content" className="pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-zinc-100">Playing Queue</h1>
-            <p className="text-zinc-500 text-sm mt-1">Your upcoming games</p>
-          </div>
+    <Page
+      overlay={
+        <>
+          {statusModal && currentlyPlaying && (
+            <GameDetailModal
+              isOpen={true}
+              onClose={handleCloseStatusModal}
+              onConfirm={handleConfirm}
+              gameName={currentlyPlaying.name}
+              headerImage={currentlyPlaying.header_image}
+              initialStatus={statusModal.action}
+              initialDate={todayIso()}
+            />
+          )}
+          {gameSummary && (
+            <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
+          )}
+        </>
+      }
+    >
+      <PageHeader title="Playing Queue" description="Your upcoming games" />
 
-          {isLoading ? (
-            <QueueLoadingSkeleton />
-          ) : isEmpty ? (
-            <div className="text-center py-16">
-              <ListOrdered className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
-              <p className="text-zinc-500">Your queue is empty.</p>
-              <p className="text-zinc-500 text-sm mt-1">
-                Pick a game to play first, then queue up what&apos;s next from your library.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {currentlyPlaying && (
-                <>
-                  <p className="text-xs text-zinc-600 uppercase tracking-wider pb-1">Now Playing</p>
-                  <NowPlayingRow
-                    game={currentlyPlaying}
-                    onFinish={handleFinish}
-                    onDrop={handleDrop}
-                    onMoveToQueue={handleMoveToQueue}
-                    onMoveToBacklog={handleMoveToBacklog}
+      {isLoading ? (
+        <QueueListSkeleton />
+      ) : isEmpty ? (
+        <div className="text-center py-16">
+          <ListOrdered className="w-12 h-12 text-zinc-600 mx-auto mb-4" aria-hidden="true" />
+          <p className="text-zinc-500">Your queue is empty.</p>
+          <p className="text-zinc-500 text-sm mt-1">
+            Pick a game to play first, then queue up what&apos;s next from your library.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {currentlyPlaying && (
+            <>
+              <SectionLabel className="pb-1">Now Playing</SectionLabel>
+              <NowPlayingRow
+                game={currentlyPlaying}
+                onFinish={handleFinish}
+                onDrop={handleDrop}
+                onMoveToQueue={handleMoveToQueue}
+                onMoveToBacklog={handleMoveToBacklog}
+                isLoading={isStatusLoading}
+              />
+            </>
+          )}
+
+          {currentlyPlaying && queue.length > 0 && (
+            <SectionLabel className="pt-4 pb-1">Up Next</SectionLabel>
+          )}
+
+          {queue.length > 0 && (
+            <DndContext
+              id="queue-dnd"
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={queue.map((q) => q.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {queue.map((item, index) => (
+                    <QueueItemRow
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      canPlay={!currentlyPlaying}
+                      isLoading={isStatusLoading}
+                      onPick={handlePickFromQueue}
+                      onRemove={handleRemoveFromQueue}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activeItem && (
+                  <QueueItemRow
+                    item={activeItem}
+                    index={queue.findIndex((q) => q.id === activeId)}
+                    canPlay={!currentlyPlaying}
                     isLoading={isStatusLoading}
+                    onPick={handlePickFromQueue}
+                    onRemove={handleRemoveFromQueue}
+                    isOverlay
                   />
-                </>
-              )}
-
-              {currentlyPlaying && queue.length > 0 && (
-                <p className="text-xs text-zinc-600 uppercase tracking-wider pt-4 pb-1">Up Next</p>
-              )}
-
-              {queue.length > 0 && (
-                <DndContext
-                  id="queue-dnd"
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={queue.map((q) => q.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-3">
-                      {queue.map((item, index) => (
-                        <QueueItemRow
-                          key={item.id}
-                          item={item}
-                          index={index}
-                          canPlay={!currentlyPlaying}
-                          isLoading={isStatusLoading}
-                          onPick={handlePickFromQueue}
-                          onRemove={handleRemoveFromQueue}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                  <DragOverlay dropAnimation={null}>
-                    {activeItem && (
-                      <QueueItemRow
-                        item={activeItem}
-                        index={queue.findIndex((q) => q.id === activeId)}
-                        canPlay={!currentlyPlaying}
-                        isLoading={isStatusLoading}
-                        onPick={handlePickFromQueue}
-                        onRemove={handleRemoveFromQueue}
-                        isOverlay
-                      />
-                    )}
-                  </DragOverlay>
-                </DndContext>
-              )}
-            </div>
+                )}
+              </DragOverlay>
+            </DndContext>
           )}
         </div>
-      </main>
-
-      {statusModal && currentlyPlaying && (
-        <GameDetailModal
-          isOpen={true}
-          onClose={handleCloseStatusModal}
-          onConfirm={handleConfirm}
-          gameName={currentlyPlaying.name}
-          headerImage={currentlyPlaying.header_image}
-          initialStatus={statusModal.action}
-          initialDate={todayIso()}
-        />
       )}
-
-      {gameSummary && (
-        <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
-      )}
-    </div>
+    </Page>
   );
 }

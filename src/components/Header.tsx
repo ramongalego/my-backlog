@@ -56,8 +56,20 @@ export function Header() {
     setIsAuthModalOpen(true);
   };
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const closeMobileMenu = () => setMobileMenuOpen(false);
+  // Remembering which path the menu was opened on closes it automatically after
+  // any navigation, not just taps on its own links.
+  const [menuOpenedOn, setMenuOpenedOn] = useState<string | null>(null);
+  const mobileMenuOpen = menuOpenedOn === pathname;
+  const closeMobileMenu = () => setMenuOpenedOn(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpenedOn(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
 
   const navLinks = user
     ? [
@@ -125,11 +137,13 @@ export function Header() {
                 </Button>
               </>
             )}
-            {!isLoading && (
+            {!isLoading && navLinks.length > 0 && (
               <button
-                onClick={() => setMobileMenuOpen((o) => !o)}
+                onClick={() => setMenuOpenedOn(mobileMenuOpen ? null : pathname)}
                 className="md:hidden p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
                 aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-navigation"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -140,6 +154,7 @@ export function Header() {
         {/* Mobile nav */}
         {mobileMenuOpen && !isLoading && (
           <nav
+            id="mobile-navigation"
             className="md:hidden border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md"
             aria-label="Mobile navigation"
           >
