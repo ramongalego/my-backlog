@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { Gamepad2, CalendarDays, ListOrdered } from 'lucide-react';
@@ -264,20 +264,22 @@ export function GameDetailModal({
 
                 {calendarOpen && (
                   <div className="absolute left-0 top-full mt-2 sm:left-full sm:top-1/2 sm:-translate-y-1/2 sm:mt-0 sm:ml-2 z-50 bg-ink-800 border border-ink-700 rounded-xl shadow-2xl px-4 py-2">
-                    <DayPicker
-                      mode="single"
-                      captionLayout="dropdown"
-                      startMonth={new Date(2000, 0)}
-                      endMonth={new Date()}
-                      selected={isoToDate(date)}
-                      defaultMonth={isoToDate(date)}
-                      onSelect={(day) => {
-                        if (day) {
-                          setDate(toLocalIsoDate(day));
-                          setCalendarOpen(false);
-                        }
-                      }}
-                    />
+                    <Suspense fallback={null}>
+                      <DayPicker
+                        mode="single"
+                        captionLayout="dropdown"
+                        startMonth={new Date(2000, 0)}
+                        endMonth={new Date()}
+                        selected={isoToDate(date)}
+                        defaultMonth={isoToDate(date)}
+                        onSelect={(day) => {
+                          if (day) {
+                            setDate(toLocalIsoDate(day));
+                            setCalendarOpen(false);
+                          }
+                        }}
+                      />
+                    </Suspense>
                   </div>
                 )}
               </div>

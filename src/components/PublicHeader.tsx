@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Gamepad2 } from 'lucide-react';
@@ -35,7 +35,9 @@ export function PublicHeader() {
           </div>
         </div>
       </header>
-      {authMode && <AuthModal isOpen onClose={() => setAuthMode(null)} initialMode={authMode} />}
+      <Suspense fallback={null}>
+        {authMode && <AuthModal isOpen onClose={() => setAuthMode(null)} initialMode={authMode} />}
+      </Suspense>
     </>
   );
 }

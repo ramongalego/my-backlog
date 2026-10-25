@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
 import Image, { getImageProps } from 'next/image';
 import dynamic from 'next/dynamic';
@@ -588,9 +588,11 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         </section>
       </main>
 
-      {isAuthModalOpen && (
-        <AuthModal isOpen onClose={() => setIsAuthModalOpen(false)} initialMode={authMode} />
-      )}
+      <Suspense fallback={null}>
+        {isAuthModalOpen && (
+          <AuthModal isOpen onClose={() => setIsAuthModalOpen(false)} initialMode={authMode} />
+        )}
+      </Suspense>
     </div>
   );
 }
