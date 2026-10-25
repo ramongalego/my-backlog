@@ -170,6 +170,8 @@ export const RATE_LIMITS = {
   gameSync: { limit: 500, windowMs: 60 * 1000 },
   // 10 bulk sync requests per minute (each resolves hundreds of games from cache)
   gameSyncBulk: { limit: 10, windowMs: 60 * 1000 },
+  // Background HowLongToBeat lookups, up to 5 games per request
+  gameSyncHltb: { limit: 60, windowMs: 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // 20 requests per minute for AI suggestions (accounts for rerolls)

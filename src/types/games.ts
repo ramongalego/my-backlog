@@ -9,6 +9,7 @@ export interface Game {
   name: string;
   type?: string | null;
   categories?: string[] | null;
+  header_image?: string | null;
 }
 
 export interface GameWithImage {

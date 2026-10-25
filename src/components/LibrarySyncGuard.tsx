@@ -37,7 +37,9 @@ export function LibrarySyncGuard() {
       const games = await fetchAllRows<SyncCandidate>((from, to) =>
         supabase
           .from('games')
-          .select('app_id, name, type, categories, metadata_synced, main_story_hours, release_date')
+          .select(
+            'app_id, name, type, categories, header_image, metadata_synced, main_story_hours, release_date',
+          )
           .eq('user_id', userId)
           .order('app_id')
           .range(from, to),

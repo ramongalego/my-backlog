@@ -14,23 +14,42 @@ export interface SteamGameDetails {
   };
 }
 
+/**
+ * Steam couldn't answer right now (rate limit, outage, timeout). Unlike a null
+ * from getGameDetails, it says nothing about whether the app exists, so the
+ * game should be retried later rather than marked as synced.
+ */
+export class SteamUnavailableError extends Error {
+  constructor(appId: number, reason: string) {
+    super(`Steam appdetails unavailable for ${appId}: ${reason}`);
+    this.name = 'SteamUnavailableError';
+  }
+}
+
+/**
+ * Store details for one app, or null when Steam says it has none (delisted or
+ * unknown). Throws SteamUnavailableError when Steam is rate limiting or down;
+ * it allows roughly 200 of these calls per 5 minutes.
+ */
 export async function getGameDetails(appId: number): Promise<SteamGameDetails | null> {
+  let data: Record<string, SteamGameDetails> | null;
   try {
+    // Not cached by Next: a throttled answer must never be replayed as the real one.
     const response = await fetchWithTimeout(
       `https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`,
-      { next: { revalidate: 86400 } } as RequestInit, // Cache for 24 hours
+      { cache: 'no-store' },
       TIMEOUTS.STEAM_STORE,
     );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data[appId.toString()] || null;
-  } catch {
-    return null;
+    if (!response.ok) throw new SteamUnavailableError(appId, `HTTP ${response.status}`);
+    data = await response.json();
+  } catch (error) {
+    if (error instanceof SteamUnavailableError) throw error;
+    throw new SteamUnavailableError(appId, String(error));
   }
+
+  // When throttled, Steam can also answer 200 with a bare `null`.
+  if (!data) throw new SteamUnavailableError(appId, 'empty response');
+  return data[appId.toString()] ?? null;
 }
 
 export function extractGameMetadata(details: SteamGameDetails) {
@@ -190,21 +209,36 @@ export async function getSteamTags(appId: number): Promise<string[] | null> {
   return (await getStoreItemInfo(appId))?.tags ?? null;
 }
 
-const REVIEWS_BATCH_SIZE = 50;
+const ITEMS_BATCH_SIZE = 50;
+const ITEMS_CONCURRENCY = 4;
+
+interface StoreItem {
+  appid?: number;
+  assets?: StoreItemAssets;
+  reviews?: StoreItemReviews;
+}
 
 /**
- * Current review summaries for many apps, 50 per GetItems call. Apps Steam
- * returns no reviews for are left out. A failed batch is skipped rather than
- * failing the rest.
+ * Runs GetItems over many apps, 50 per call and a few calls at a time, and
+ * keeps what `pick` returns for each item. A failed batch is skipped rather
+ * than failing the rest.
  */
-export async function getStoreReviews(appIds: number[]): Promise<Map<number, SteamReviewData>> {
-  const result = new Map<number, SteamReviewData>();
-  for (let i = 0; i < appIds.length; i += REVIEWS_BATCH_SIZE) {
-    const batch = appIds.slice(i, i + REVIEWS_BATCH_SIZE);
+async function getItemsInBatches<T>(
+  appIds: number[],
+  dataRequest: Record<string, unknown>,
+  pick: (item: StoreItem) => T | null,
+): Promise<Map<number, T>> {
+  const result = new Map<number, T>();
+  const batches: number[][] = [];
+  for (let i = 0; i < appIds.length; i += ITEMS_BATCH_SIZE) {
+    batches.push(appIds.slice(i, i + ITEMS_BATCH_SIZE));
+  }
+
+  const run = async (batch: number[]) => {
     const params = JSON.stringify({
       ids: batch.map((appid) => ({ appid })),
       context: STORE_CONTEXT,
-      data_request: { include_reviews: true },
+      data_request: dataRequest,
     });
     try {
       const response = await fetchWithTimeout(
@@ -213,19 +247,65 @@ export async function getStoreReviews(appIds: number[]): Promise<Map<number, Ste
         TIMEOUTS.STEAM_STORE,
       );
       if (!response.ok) {
-        console.error(`[Steam Store] GetItems reviews batch failed: HTTP ${response.status}`);
-        continue;
+        console.error(`[Steam Store] GetItems batch failed: HTTP ${response.status}`);
+        return;
       }
       const data = await response.json();
-      const items: { appid?: number; reviews?: StoreItemReviews }[] =
-        data?.response?.store_items ?? [];
+      const items: StoreItem[] = data?.response?.store_items ?? [];
       for (const item of items) {
-        const reviews = reviewData(item.reviews);
-        if (item.appid && reviews) result.set(item.appid, reviews);
+        const value = item.appid ? pick(item) : null;
+        if (item.appid && value != null) result.set(item.appid, value);
       }
     } catch (error) {
-      console.error('[Steam Store] GetItems reviews batch failed:', error);
+      console.error('[Steam Store] GetItems batch failed:', error);
     }
+  };
+
+  for (let i = 0; i < batches.length; i += ITEMS_CONCURRENCY) {
+    await Promise.all(batches.slice(i, i + ITEMS_CONCURRENCY).map(run));
+  }
+  return result;
+}
+
+/** Current review summaries for many apps. Apps Steam returns no reviews for are left out. */
+export function getStoreReviews(appIds: number[]): Promise<Map<number, SteamReviewData>> {
+  return getItemsInBatches(appIds, { include_reviews: true }, (item) => reviewData(item.reviews));
+}
+
+/**
+ * Store header art for many apps, the 920×430 version when there is one.
+ * Apps that aren't on the store any more are left out.
+ */
+export function getStoreHeaderImages(appIds: number[]): Promise<Map<number, string>> {
+  return getItemsInBatches(appIds, { include_assets: true }, (item) => {
+    const { assets } = item;
+    if (!assets?.asset_url_format) return null;
+    const file = headerImage2x(assets) ? assets.header_2x : assets.header;
+    return file ? STORE_ASSET_BASE + assets.asset_url_format.replace('${FILENAME}', file) : null;
+  });
+}
+
+const LEGACY_CHECK_CONCURRENCY = 10;
+
+/**
+ * Header art at Steam's old fixed path, which still exists for many delisted
+ * games that GetItems no longer knows about. Each URL is checked first so a
+ * missing image is never stored.
+ */
+export async function findLegacyHeaderImages(appIds: number[]): Promise<Map<number, string>> {
+  const result = new Map<number, string>();
+  for (let i = 0; i < appIds.length; i += LEGACY_CHECK_CONCURRENCY) {
+    await Promise.all(
+      appIds.slice(i, i + LEGACY_CHECK_CONCURRENCY).map(async (appId) => {
+        const url = `${STORE_ASSET_BASE}steam/apps/${appId}/header.jpg`;
+        try {
+          const response = await fetchWithTimeout(url, { method: 'HEAD' }, TIMEOUTS.STEAM_STORE);
+          if (response.ok) result.set(appId, url);
+        } catch {
+          // Leave it without art.
+        }
+      }),
+    );
   }
   return result;
 }

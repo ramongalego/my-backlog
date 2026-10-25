@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-import { fetchGameMetadata, type GameMetadata } from '@/lib/games/metadata-fetch';
+import {
+  fetchGameMetadata,
+  type FetchedMetadata,
+  type GameMetadata,
+} from '@/lib/games/metadata-fetch';
 import {
   METADATA_COLUMNS,
   isCacheUsable,
@@ -12,6 +16,9 @@ import {
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { syncSingleRequestSchema } from '@/lib/validations/common';
+import { SteamUnavailableError } from '@/lib/steam/store-api';
+
+const STEAM_RETRY_AFTER_SECONDS = 10;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -51,14 +58,28 @@ export async function POST(request: NextRequest) {
 
   let metadata: GameMetadata | null = null;
   let fromCache = false;
+  // HLTB was rate limiting, so the time is looked up later in the background.
+  let hltbPending = false;
 
   if (isCacheUsable(existing)) {
     metadata = existing;
     fromCache = true;
   } else {
-    const fresh = await fetchGameMetadata(appId, libraryName);
+    let fresh: FetchedMetadata | null;
+    try {
+      fresh = await fetchGameMetadata(appId, libraryName);
+    } catch (err) {
+      if (!(err instanceof SteamUnavailableError)) throw err;
+      // Steam is throttling us. Leave the game unsynced so the client retries
+      // it, instead of recording it as a game with no store page.
+      console.error(err.message);
+      return jsonError('Steam is busy, try again shortly', 503, {
+        'Retry-After': STEAM_RETRY_AFTER_SECONDS.toString(),
+      });
+    }
     if (fresh) {
       metadata = mergeForCache(fresh, existing);
+      hltbPending = fresh.hltbUnavailable && metadata.main_story_hours === null;
       // The shared cache is only writable with the secret key, so users can't
       // write arbitrary metadata into it. The data here comes from our own
       // upstream fetch, never from the request.
@@ -90,6 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       fromCache,
+      hltbPending,
       metadata: {
         type: metadata.type,
         genres: metadata.genres,

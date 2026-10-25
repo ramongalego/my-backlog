@@ -13,6 +13,13 @@ export const syncBulkRequestSchema = z.object({
   appIds: z.array(appIdSchema).min(1).max(MAX_BULK_APP_IDS),
 });
 
+// HLTB lookups run one after another on the server, so a request stays small.
+export const MAX_HLTB_APP_IDS = 5;
+
+export const syncHltbRequestSchema = z.object({
+  appIds: z.array(appIdSchema).min(1).max(MAX_HLTB_APP_IDS),
+});
+
 export const queueAddRequestSchema = z.object({
   appId: appIdSchema,
 });

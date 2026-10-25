@@ -40,6 +40,21 @@ export function isCacheUsable(row: CachedMetadata | null, now = Date.now()): boo
   return now - new Date(row.synced_at).getTime() < RECENT_RELEASE_REFRESH_DAYS * DAY_MS;
 }
 
+/**
+ * A row that is fresh apart from a missing HLTB time that is due a retry. Its
+ * Steam data can be used straight away while the time is looked up on its own
+ * (see /api/games/sync/hltb), instead of re-fetching everything.
+ */
+export function needsOnlyHltb(row: CachedMetadata | null, now = Date.now()): boolean {
+  return (
+    !!row &&
+    isMetadataFresh(row.synced_at) &&
+    row.type === 'game' &&
+    row.main_story_hours === null &&
+    hltbRetryDue(row, now)
+  );
+}
+
 const ENRICHMENT_FIELDS = [
   'main_story_hours',
   'steam_review_score',
@@ -53,13 +68,16 @@ const ENRICHMENT_FIELDS = [
  * Prepares a freshly fetched snapshot for the shared cache. Enrichment lookups
  * return null on any upstream failure (HLTB down, Steam 429), so previously
  * known values are kept rather than overwritten with null, and the HLTB miss
- * counter is advanced or reset.
+ * counter is advanced or reset. A lookup HLTB refused (rate limited) isn't a
+ * miss: the counter stays put, so the game is retried on the next sync instead
+ * of days later.
  */
 export function mergeForCache(
-  fresh: GameMetadata,
+  fresh: GameMetadata & { hltbUnavailable?: boolean },
   existing: CachedMetadata | null,
 ): CachedMetadata {
-  const merged: CachedMetadata = { ...fresh, hltb_attempts: existing?.hltb_attempts ?? 0 };
+  const { hltbUnavailable, ...snapshot } = fresh;
+  const merged: CachedMetadata = { ...snapshot, hltb_attempts: existing?.hltb_attempts ?? 0 };
   if (existing) {
     for (const field of ENRICHMENT_FIELDS) {
       if (merged[field] === null && existing[field] !== null) {
@@ -67,7 +85,7 @@ export function mergeForCache(
       }
     }
   }
-  if (merged.type === 'game') {
+  if (merged.type === 'game' && !hltbUnavailable) {
     merged.hltb_attempts = fresh.main_story_hours !== null ? 0 : (existing?.hltb_attempts ?? 0) + 1;
   }
   return merged;

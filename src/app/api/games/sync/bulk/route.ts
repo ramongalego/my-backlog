@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   METADATA_COLUMNS,
   isCacheUsable,
+  needsOnlyHltb,
   toGameRowUpdate,
   type CachedMetadata,
 } from '@/lib/games/metadata-cache';
@@ -72,9 +73,11 @@ export async function POST(request: NextRequest) {
   }
 
   const now = Date.now();
-  const usableRows = lookups
-    .flatMap((r) => (r.data ?? []) as CachedMetadata[])
-    .filter((row) => isCacheUsable(row, now));
+  // Rows missing only their HLTB time are used too: their Steam data is
+  // copied now and the time is looked up in the background (hltbPending).
+  const cachedRows = lookups.flatMap((r) => (r.data ?? []) as CachedMetadata[]);
+  const usableRows = cachedRows.filter((row) => isCacheUsable(row, now) || needsOnlyHltb(row, now));
+  const hltbPending = cachedRows.filter((row) => needsOnlyHltb(row, now)).map((row) => row.app_id);
 
   // Only rows that would actually change are written (and reported as
   // synced): never-synced rows, or ones the cache now has HLTB hours for.
@@ -115,5 +118,6 @@ export async function POST(request: NextRequest) {
     resolved: usableRows.length,
     synced: changedRows.length,
     remaining,
+    hltbPending,
   });
 }

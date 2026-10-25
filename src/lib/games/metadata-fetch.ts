@@ -4,8 +4,9 @@ import {
   getStoreItemInfo,
   getSteamDeckCompat,
 } from '@/lib/steam/store-api';
-import { getMainStoryHours } from '@/lib/hltb/api';
+import { getMainStoryHours, HLTBUnavailableError } from '@/lib/hltb/api';
 import { calculateBayesianScore } from './scoring';
+import { classifyAppType } from './software';
 
 export interface GameMetadata {
   app_id: number;
@@ -26,28 +27,50 @@ export interface GameMetadata {
   synced_at: string;
 }
 
+/** A fresh snapshot, plus whether HLTB was too busy to be asked (not stored). */
+export type FetchedMetadata = GameMetadata & { hltbUnavailable: boolean };
+
+/** HLTB's answer, with "rate limited" kept apart from "has no time". */
+async function lookUpHours(name: string): Promise<{ hours: number | null; unavailable: boolean }> {
+  try {
+    return { hours: await getMainStoryHours(name), unavailable: false };
+  } catch (err) {
+    if (err instanceof HLTBUnavailableError) return { hours: null, unavailable: true };
+    throw err;
+  }
+}
+
 // Fetches a full metadata snapshot for a single app_id from Steam + HLTB.
-// Returns null if Steam store details aren't available (unknown/removed app).
+// Returns null if Steam store details aren't available (unknown/removed app),
+// and throws SteamUnavailableError if Steam is too busy to say.
 export async function fetchGameMetadata(
   appId: number,
   nameHint?: string,
-): Promise<GameMetadata | null> {
-  const details = await getGameDetails(appId);
+): Promise<FetchedMetadata | null> {
+  const detailsRequest = getGameDetails(appId);
+  // HLTB searches by name; without the library's name, wait for Steam's.
+  const name = nameHint || (await detailsRequest)?.data?.name || '';
+
+  // The enrichment lookups start alongside the details instead of after them
+  // (they never throw). Their results are dropped for DLC, software and
+  // anything else that turns out not to be a game.
+  const enrichment = Promise.all([
+    lookUpHours(name),
+    getStoreItemInfo(appId),
+    getSteamDeckCompat(appId),
+  ]);
+
+  const details = await detailsRequest;
   const extracted = details ? extractGameMetadata(details) : null;
 
   if (!extracted) return null;
 
   const isGame = extracted.type === 'game';
-
-  // Only fetch enriched data for actual games — skip DLC, software, etc.
-  const [mainStoryHours, storeItem, deckCompat] = isGame
-    ? await Promise.all([
-        getMainStoryHours(nameHint || details?.data?.name || ''),
-        getStoreItemInfo(appId),
-        getSteamDeckCompat(appId),
-      ])
-    : [null, null, null];
+  const [hltb, storeItem, deckCompat] = isGame
+    ? await enrichment
+    : [{ hours: null, unavailable: false }, null, null];
   const steamReviewData = storeItem?.reviews ?? null;
+  const tags = storeItem?.tags ?? null;
 
   const weightedScore = steamReviewData
     ? calculateBayesianScore(steamReviewData.score, steamReviewData.count)
@@ -56,7 +79,7 @@ export async function fetchGameMetadata(
   return {
     app_id: appId,
     platform: 'PC',
-    type: extracted.type,
+    type: classifyAppType(extracted.type, { genres: extracted.genres, tags }),
     name: details?.data?.name ?? null,
     genres: extracted.genres,
     categories: extracted.categories,
@@ -67,9 +90,10 @@ export async function fetchGameMetadata(
     steam_review_score: steamReviewData?.score ?? null,
     steam_review_count: steamReviewData?.count ?? null,
     steam_review_weighted: weightedScore,
-    main_story_hours: mainStoryHours,
+    main_story_hours: hltb.hours,
     deck_compat: deckCompat,
-    tags: storeItem?.tags ?? null,
+    tags,
     synced_at: new Date().toISOString(),
+    hltbUnavailable: hltb.unavailable,
   };
 }

@@ -7,12 +7,15 @@ jest.mock('next/image', () => ({
   default: function MockImage({
     alt,
     fill,
+    unoptimized,
     ...props
   }: {
     alt: string;
     fill?: boolean;
+    unoptimized?: boolean;
     [key: string]: unknown;
   }) {
+    void unoptimized;
     // eslint-disable-next-line @next/next/no-img-element
     return <img alt={alt} data-fill={fill ? 'true' : undefined} {...props} />;
   },
@@ -71,14 +74,31 @@ describe('SyncProgress', () => {
       expect(screen.getByText('Game Two')).toBeInTheDocument();
     });
 
-    it('should show game image with correct src', () => {
-      render(<SyncProgress progress={{ current: 1, total: 3 }} games={mockGames} />);
+    it('shows the stored cover once it has loaded', () => {
+      // jsdom never loads images, so finish every load straight away.
+      const RealImage = window.Image;
+      window.Image = class {
+        onload: (() => void) | null = null;
+        set src(_: string) {
+          this.onload?.();
+        }
+      } as unknown as typeof Image;
+      try {
+        const games = mockGames.map((g) => ({
+          ...g,
+          header_image: `https://cdn.test/${g.app_id}.jpg`,
+        }));
+        render(<SyncProgress progress={{ current: 1, total: 3 }} games={games} />);
+        expect(screen.getByAltText('Game One')).toHaveAttribute('src', 'https://cdn.test/1.jpg');
+      } finally {
+        window.Image = RealImage;
+      }
+    });
 
-      const img = screen.getByAltText('Game One');
-      expect(img).toHaveAttribute(
-        'src',
-        'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1/header.jpg',
-      );
+    it('shows just the name until a cover has loaded', () => {
+      render(<SyncProgress progress={{ current: 1, total: 3 }} games={mockGames} />);
+      expect(screen.getByText('Game One')).toBeInTheDocument();
+      expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
 
     it('should not show game card when progress.current is 0', () => {

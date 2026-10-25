@@ -1,3 +1,4 @@
+import { isSoftware } from '@/lib/games/software';
 import type { EnergyLevel, MoodType, SuggestionPreferences, TimeCommitment } from './types';
 
 /**
@@ -62,19 +63,6 @@ const SESSION_TAGS = new Set([
   'Time Attack',
   "Shoot 'Em Up",
   'Card Battler',
-]);
-
-const SOFTWARE = new Set([
-  'Utilities',
-  'Software',
-  'Animation & Modeling',
-  'Design & Illustration',
-  'Video Production',
-  'Audio Production',
-  'Photo Editing',
-  'Web Publishing',
-  'Software Training',
-  'Game Development',
 ]);
 
 // Tags that say nothing about how a game plays.
@@ -398,15 +386,10 @@ function topTags(tags: string[] | null, limit = 12): Map<string, number> {
   return out;
 }
 
+export { isSoftware };
+
 export function isMultiplayerOnly(game: Pick<CandidateGame, 'categories'>) {
   return !!game.categories?.length && !game.categories.includes('Single-player');
-}
-
-export function isSoftware(game: Pick<CandidateGame, 'genres' | 'tags'>) {
-  return (
-    (game.genres ?? []).some((g) => SOFTWARE.has(g)) ||
-    (game.tags ?? []).slice(0, 5).some((t) => SOFTWARE.has(t))
-  );
 }
 
 /** 0 to 1: how much the top tags are about playing with other people. */

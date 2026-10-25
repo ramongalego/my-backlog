@@ -153,7 +153,35 @@ function toSearchTerms(name: string): string[] {
 
 class HLTBAuthError extends Error {}
 
+/**
+ * HowLongToBeat is refusing requests. It allows a burst of roughly 60–80
+ * searches, then answers 429 for everything for up to a minute. Unlike a null
+ * result this says nothing about whether it has a time for the game, so it
+ * must not count as a miss.
+ */
+export class HLTBUnavailableError extends Error {
+  constructor() {
+    super('HowLongToBeat is rate limiting requests');
+    this.name = 'HLTBUnavailableError';
+  }
+}
+
+// After a 429, searches are skipped for a while rather than sent only to be
+// refused, which also keeps the block from being extended.
+const BLOCK_COOLDOWN_MS = 30_000;
+let blockedUntil = 0;
+
+/** How much longer searches are paused after a 429, in ms (0 when they are not). */
+export function hltbBlockedForMs(): number {
+  return Math.max(0, blockedUntil - Date.now());
+}
+
+function assertNotBlocked() {
+  if (Date.now() < blockedUntil) throw new HLTBUnavailableError();
+}
+
 async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number | null> {
+  assertNotBlocked();
   const payload: Record<string, unknown> = {
     searchType: 'games',
     searchTerms: toSearchTerms(gameName),
@@ -196,6 +224,10 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
   );
 
   if (res.status === 403) throw new HLTBAuthError();
+  if (res.status === 429) {
+    blockedUntil = Date.now() + BLOCK_COOLDOWN_MS;
+    throw new HLTBUnavailableError();
+  }
   if (!res.ok) {
     console.error(`[HLTB] Search failed for "${gameName}": HTTP ${res.status}`);
     return null;
@@ -242,6 +274,11 @@ async function searchWithRetry(gameName: string): Promise<number | null> {
   }
 }
 
+/**
+ * HLTB's main-story time in hours, or null when it has none or the lookup
+ * failed. Throws HLTBUnavailableError while HLTB is rate limiting, so callers
+ * can retry later instead of recording a miss.
+ */
 export async function getMainStoryHours(gameName: string): Promise<number | null> {
   try {
     const result = await searchWithRetry(gameName);
@@ -262,6 +299,7 @@ export async function getMainStoryHours(gameName: string): Promise<number | null
 
     return null;
   } catch (error) {
+    if (error instanceof HLTBUnavailableError) throw error;
     console.error(`[HLTB] Exception for "${gameName}":`, error);
     return null;
   }

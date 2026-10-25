@@ -1,4 +1,10 @@
-import { isCacheUsable, isRecentRelease, type CachedMetadata } from '@/lib/games/metadata-cache';
+import {
+  isCacheUsable,
+  isRecentRelease,
+  mergeForCache,
+  needsOnlyHltb,
+  type CachedMetadata,
+} from '@/lib/games/metadata-cache';
 import { parseReleaseDate } from '@/lib/games/release-date';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -92,3 +98,62 @@ function daysAgoText(days: number): string {
     year: 'numeric',
   });
 }
+
+describe('mergeForCache', () => {
+  const fresh = (hours: number | null, hltbUnavailable = false) => {
+    const { hltb_attempts, ...snapshot } = row({ main_story_hours: hours, synced_at: daysAgo(0) });
+    void hltb_attempts;
+    return { ...snapshot, hltbUnavailable };
+  };
+
+  it('counts a miss when HLTB has no time', () => {
+    expect(
+      mergeForCache(fresh(null), row({ main_story_hours: null, hltb_attempts: 1 })).hltb_attempts,
+    ).toBe(2);
+  });
+
+  it('resets the count once HLTB has a time', () => {
+    expect(
+      mergeForCache(fresh(9), row({ main_story_hours: null, hltb_attempts: 3 })).hltb_attempts,
+    ).toBe(0);
+  });
+
+  it('does not count a rate-limited lookup as a miss', () => {
+    const merged = mergeForCache(fresh(null, true), null);
+    expect(merged.hltb_attempts).toBe(0);
+    // So the very next sync tries again.
+    expect(isCacheUsable(merged, NOW)).toBe(false);
+  });
+
+  it('keeps the known time when HLTB was too busy to ask', () => {
+    const merged = mergeForCache(
+      fresh(null, true),
+      row({ main_story_hours: 12, hltb_attempts: 0 }),
+    );
+    expect(merged.main_story_hours).toBe(12);
+  });
+
+  it('never writes the busy flag into the cache', () => {
+    expect(mergeForCache(fresh(null, true), null)).not.toHaveProperty('hltbUnavailable');
+  });
+});
+
+describe('needsOnlyHltb', () => {
+  it('picks fresh games whose missing time is due a retry', () => {
+    expect(needsOnlyHltb(row({ main_story_hours: null, hltb_attempts: 0 }), NOW)).toBe(true);
+  });
+
+  it('leaves games still waiting out their backoff', () => {
+    expect(
+      needsOnlyHltb(row({ main_story_hours: null, hltb_attempts: 2, synced_at: daysAgo(1) }), NOW),
+    ).toBe(false);
+  });
+
+  it('leaves stale rows, games with a time, and non-games to the full sync', () => {
+    expect(needsOnlyHltb(row({ main_story_hours: null, synced_at: daysAgo(120) }), NOW)).toBe(
+      false,
+    );
+    expect(needsOnlyHltb(row({ main_story_hours: 12 }), NOW)).toBe(false);
+    expect(needsOnlyHltb(row({ main_story_hours: null, type: 'dlc' }), NOW)).toBe(false);
+  });
+});
