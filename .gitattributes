@@ -1,0 +1,4 @@
+# Keep LF line endings in the working copy on every OS, so Prettier (which
+# expects LF) passes locally on Windows too. Binary files are detected and
+# left alone.
+* text=auto eol=lf
