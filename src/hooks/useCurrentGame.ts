@@ -37,7 +37,7 @@ export function useCurrentGame(userId: string | null) {
     }
 
     try {
-      await updateGameStatus(game.app_id, status, {
+      await updateGameStatus(game.id, status, {
         finishedAt: status === 'finished' ? date : undefined,
         droppedAt: status === 'dropped' ? date : undefined,
         notes,
@@ -70,15 +70,15 @@ export function useCurrentGame(userId: string | null) {
     let picked: GameWithImage | undefined;
     let count: number | null = null;
     try {
-      const counted = await eligible('app_id', { count: 'exact', head: true });
+      const counted = await eligible('id', { count: 'exact', head: true });
       if (counted.error) throw counted.error;
       count = counted.count;
       if (count) {
         const index = Math.floor(Math.random() * count);
         const { data, error } = await eligible(
-          'app_id, name, header_image, main_story_hours, playtime_forever',
+          'id, app_id, name, header_image, main_story_hours, playtime_forever',
         )
-          .order('app_id')
+          .order('id')
           .range(index, index);
         if (error) throw error;
         picked = (data as unknown as GameWithImage[] | null)?.[0];
@@ -103,7 +103,7 @@ export function useCurrentGame(userId: string | null) {
 
   return {
     currentlyPlaying: nowPlaying.currentlyPlaying,
-    queuedAppIds: nowPlaying.queuedAppIds,
+    queuedGameIds: nowPlaying.queuedGameIds,
     isStatusLoading: nowPlaying.isStatusLoading,
     statusModal: nowPlaying.statusModal,
     gameSummary: nowPlaying.gameSummary,

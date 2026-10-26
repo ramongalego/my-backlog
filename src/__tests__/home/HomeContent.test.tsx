@@ -88,6 +88,7 @@ const baseLibrary = {
 };
 
 const mockGame: GameWithImage = {
+  id: 1,
   app_id: 1,
   name: 'Hollow Knight',
   header_image: null,

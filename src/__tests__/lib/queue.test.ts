@@ -16,7 +16,7 @@ describe('addToQueue', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appId: 42 }),
+      body: JSON.stringify({ gameId: 42 }),
     });
   });
 
@@ -51,7 +51,7 @@ describe('removeFromQueue / reorderQueue', () => {
 
     await removeFromQueue(7);
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/queue?appId=7', { method: 'DELETE' });
+    expect(mockFetch).toHaveBeenCalledWith('/api/queue?gameId=7', { method: 'DELETE' });
   });
 
   it('should PATCH the new order', async () => {

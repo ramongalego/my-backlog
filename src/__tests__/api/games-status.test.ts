@@ -1,33 +1,33 @@
 import { gameStatusSchema } from '@/lib/validations/games';
 
 describe('gameStatusSchema', () => {
-  const valid = { appId: 730, status: 'playing' as const };
+  const valid = { gameId: 730, status: 'playing' as const };
 
-  describe('appId', () => {
-    it('rejects missing appId', () => {
+  describe('gameId', () => {
+    it('rejects missing gameId', () => {
       expect(gameStatusSchema.safeParse({ status: 'playing' }).success).toBe(false);
     });
 
-    it('rejects negative appId', () => {
-      expect(gameStatusSchema.safeParse({ ...valid, appId: -1 }).success).toBe(false);
+    it('rejects negative gameId', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, gameId: -1 }).success).toBe(false);
     });
 
-    it('rejects zero appId', () => {
-      expect(gameStatusSchema.safeParse({ ...valid, appId: 0 }).success).toBe(false);
+    it('rejects zero gameId', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, gameId: 0 }).success).toBe(false);
     });
 
-    it('rejects float appId', () => {
-      expect(gameStatusSchema.safeParse({ ...valid, appId: 123.45 }).success).toBe(false);
+    it('rejects float gameId', () => {
+      expect(gameStatusSchema.safeParse({ ...valid, gameId: 123.45 }).success).toBe(false);
     });
 
-    it('accepts valid positive integer appId', () => {
+    it('accepts valid positive integer gameId', () => {
       expect(gameStatusSchema.safeParse(valid).success).toBe(true);
     });
   });
 
   describe('status', () => {
     it('rejects missing status', () => {
-      expect(gameStatusSchema.safeParse({ appId: 730 }).success).toBe(false);
+      expect(gameStatusSchema.safeParse({ gameId: 730 }).success).toBe(false);
     });
 
     it('rejects invalid status', () => {
@@ -98,7 +98,7 @@ describe('gameStatusSchema', () => {
 });
 
 describe('gameStatusSchema dates', () => {
-  const base = { appId: 730, status: 'finished' as const };
+  const base = { gameId: 730, status: 'finished' as const };
 
   it.each([
     '2025-08-20',

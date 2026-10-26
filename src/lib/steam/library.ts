@@ -66,6 +66,7 @@ export async function syncOwnedGames(
       .from('games')
       .select('app_id, playtime_forever, last_played_at')
       .eq('user_id', userId)
+      .eq('source', 'steam')
       .order('app_id')
       .range(from, to),
   );
@@ -93,6 +94,7 @@ export async function syncOwnedGames(
     const { error } = await supabase.from('games').insert(
       batch.map((game) => ({
         user_id: userId,
+        source: 'steam',
         app_id: game.appid,
         name: game.name,
         playtime_forever: game.playtime_forever,
@@ -134,10 +136,16 @@ function lastPlayedAt(game: SteamGame): string | null {
   return game.rtime_last_played ? new Date(game.rtime_last_played * 1000).toISOString() : null;
 }
 
-/** Removes a user's library and queue, used when they link a different Steam account. */
+/**
+ * Removes a user's Steam games, used when they link a different Steam account.
+ * Their queue entries go with them (the queue references its games); games
+ * that didn't come from Steam stay.
+ */
 export async function clearLibrary(supabase: SupabaseClient, userId: string): Promise<void> {
-  const { error: queueError } = await supabase.from('playing_queue').delete().eq('user_id', userId);
-  if (queueError) throw queueError;
-  const { error: gamesError } = await supabase.from('games').delete().eq('user_id', userId);
-  if (gamesError) throw gamesError;
+  const { error } = await supabase
+    .from('games')
+    .delete()
+    .eq('user_id', userId)
+    .eq('source', 'steam');
+  if (error) throw error;
 }

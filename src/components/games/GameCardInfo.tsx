@@ -2,6 +2,7 @@ import { Clock, ExternalLink, History, ThumbsUp } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { steamReviewLabel } from '@/lib/steam/review-label';
 import { formatLastPlayed } from '@/lib/games/last-played';
+import { steamStoreUrl } from '@/lib/games/store-link';
 import { SteamDeckBadge } from './SteamDeckBadge';
 
 /**
@@ -142,7 +143,8 @@ export function GameMetaRow({
 }
 
 interface GameCardInfoProps {
-  appId: number;
+  /** Steam's app id; the title links to the store page when there is one. */
+  appId?: number | null;
   name: string;
   mainStoryHours?: number | null;
   steamReviewScore?: number | null;
@@ -162,21 +164,28 @@ export function GameCardInfo({
   lastPlayedAt,
   deckCompat,
 }: GameCardInfoProps) {
+  const storeUrl = steamStoreUrl(appId);
   return (
     <>
-      <a
-        href={`https://store.steampowered.com/app/${appId}/`}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={name}
-        className="group/title flex items-center gap-1 text-ink-100 font-medium hover:text-ink-50 transition-colors cursor-pointer"
-      >
-        <span className="truncate min-w-0">{name}</span>
-        <ExternalLink
-          className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
-          aria-hidden="true"
-        />
-      </a>
+      {storeUrl ? (
+        <a
+          href={storeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={name}
+          className="group/title flex items-center gap-1 text-ink-100 font-medium hover:text-ink-50 transition-colors cursor-pointer"
+        >
+          <span className="truncate min-w-0">{name}</span>
+          <ExternalLink
+            className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
+            aria-hidden="true"
+          />
+        </a>
+      ) : (
+        <p title={name} className="truncate text-ink-100 font-medium">
+          {name}
+        </p>
+      )}
       <div className="mt-1">
         <GameMetaRow
           mainStoryHours={mainStoryHours}

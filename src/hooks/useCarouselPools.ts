@@ -16,8 +16,8 @@ export type { CarouselPools };
 const CAROUSEL_SIZE = 15;
 
 /** Drops a game from every carousel, e.g. optimistically when it starts playing. */
-export function removeAppFromPools(pools: CarouselPools, appId: number): CarouselPools {
-  const without = (list: CarouselGame[]) => list.filter((g) => g.app_id !== appId);
+export function removeGameFromPools(pools: CarouselPools, gameId: number): CarouselPools {
+  const without = (list: CarouselGame[]) => list.filter((g) => g.id !== gameId);
   return {
     pickUpPool: without(pools.pickUpPool),
     moreLike: pools.moreLike && { ...pools.moreLike, games: without(pools.moreLike.games) },
@@ -52,11 +52,11 @@ export function useCarouselPools(userId: string | null) {
   // Queued games are already decided, so they aren't suggested again (Recently
   // Added still lists them). Filtering here, from the queue the page already
   // has, means adding or removing one updates the carousels instantly.
-  const { queuedAppIds } = useQueue(userId);
-  const shown = new Set<number>(queuedAppIds);
+  const { queuedGameIds } = useQueue(userId);
+  const shown = new Set<number>(queuedGameIds);
   const take = (pool: CarouselGame[]) => {
-    const games = pool.filter((g) => !shown.has(g.app_id)).slice(0, CAROUSEL_SIZE);
-    games.forEach((g) => shown.add(g.app_id));
+    const games = pool.filter((g) => !shown.has(g.id)).slice(0, CAROUSEL_SIZE);
+    games.forEach((g) => shown.add(g.id));
     return games;
   };
 

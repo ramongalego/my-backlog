@@ -6,9 +6,10 @@ import { EMPTY_CAROUSEL_POOLS, type CarouselGame } from '@/lib/games/carousels';
 import { queryKeys } from '@/lib/query-keys';
 import type { QueueItem } from '@/types/games';
 
-const game = (app_id: number): CarouselGame => ({
-  app_id,
-  name: `Game ${app_id}`,
+const game = (id: number): CarouselGame => ({
+  id,
+  app_id: id,
+  name: `Game ${id}`,
   header_image: null,
   main_story_hours: 10,
   playtime_forever: 0,
@@ -22,12 +23,13 @@ const game = (app_id: number): CarouselGame => ({
   last_played_at: null,
 });
 
-const queued = (app_id: number): QueueItem => ({
-  id: app_id,
-  app_id,
+const queued = (id: number): QueueItem => ({
+  id,
+  game_id: id,
   position: 0,
   game: {
-    name: `Game ${app_id}`,
+    app_id: id,
+    name: `Game ${id}`,
     header_image: null,
     playtime_forever: 0,
     main_story_hours: 10,

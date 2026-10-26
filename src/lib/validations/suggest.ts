@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const MAX_EXCLUDE_APP_IDS = 200;
+export const MAX_EXCLUDE_GAME_IDS = 200;
 export const MAX_PREVIOUS_REASONINGS = 5;
 export const MAX_REASONING_LENGTH = 500;
 
@@ -8,9 +8,9 @@ export const suggestRequestSchema = z.object({
   mood: z.enum(['adrenaline', 'relaxed', 'engaged', 'emotional']),
   energy: z.enum(['high', 'medium', 'low']),
   time: z.enum(['short', 'medium', 'long']),
-  excludeAppIds: z
+  excludeGameIds: z
     .array(z.number().int().positive())
-    .max(MAX_EXCLUDE_APP_IDS)
+    .max(MAX_EXCLUDE_GAME_IDS)
     .optional()
     .default([]),
   previousReasonings: z

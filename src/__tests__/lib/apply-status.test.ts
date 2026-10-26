@@ -66,10 +66,11 @@ function fakeSupabase(tables: { games: Row[]; playing_queue: Row[] }) {
   return { client: client as unknown as SupabaseClient, tables, log };
 }
 
-const game = (app_id: number, status: string): Row => ({
+const game = (id: number, status: string): Row => ({
   user_id: 'u',
-  app_id,
-  name: `Game ${app_id}`,
+  id,
+  app_id: id + 1000,
+  name: `Game ${id}`,
   status,
 });
 
@@ -77,11 +78,11 @@ describe('applyStatusChange', () => {
   it('finishes a game with its date, notes and rating, and takes it off the queue', async () => {
     const { client, tables } = fakeSupabase({
       games: [game(1, 'playing')],
-      playing_queue: [{ user_id: 'u', app_id: 1, position: 0 }],
+      playing_queue: [{ user_id: 'u', game_id: 1, position: 0 }],
     });
 
     const result = await applyStatusChange(client, 'u', {
-      appId: 1,
+      gameId: 1,
       status: 'finished',
       finishedAt: '2026-10-25',
       notes: 'Loved it',
@@ -104,7 +105,7 @@ describe('applyStatusChange', () => {
       playing_queue: [],
     });
 
-    await applyStatusChange(client, 'u', { appId: 2, status: 'playing' });
+    await applyStatusChange(client, 'u', { gameId: 2, status: 'playing' });
 
     expect(tables.games.map((g) => g.status)).toEqual(['backlog', 'playing']);
   });
@@ -112,7 +113,7 @@ describe('applyStatusChange', () => {
   it('refuses a game that is not in the library, without touching anything', async () => {
     const { client, log } = fakeSupabase({ games: [game(1, 'playing')], playing_queue: [] });
 
-    const result = await applyStatusChange(client, 'u', { appId: 99, status: 'playing' });
+    const result = await applyStatusChange(client, 'u', { gameId: 99, status: 'playing' });
 
     expect(result).toEqual({ ok: false, status: 404, error: 'Game not found' });
     expect(log).toEqual([]);
@@ -124,15 +125,15 @@ describe('promoteNextFromQueue', () => {
     const { client, tables } = fakeSupabase({
       games: [game(1, 'finished'), game(2, 'backlog'), game(3, 'backlog')],
       playing_queue: [
-        { user_id: 'u', app_id: 3, position: 1 },
-        { user_id: 'u', app_id: 2, position: 0 },
+        { user_id: 'u', game_id: 3, position: 1 },
+        { user_id: 'u', game_id: 2, position: 0 },
       ],
     });
 
     const promoted = await promoteNextFromQueue(client, 'u');
 
-    expect(promoted).toMatchObject({ app_id: 2, status: 'playing' });
-    expect(tables.playing_queue.map((q) => q.app_id)).toEqual([3]);
+    expect(promoted).toMatchObject({ id: 2, app_id: 1002, status: 'playing' });
+    expect(tables.playing_queue.map((q) => q.game_id)).toEqual([3]);
   });
 
   it('returns null when the queue is empty', async () => {
@@ -143,7 +144,7 @@ describe('promoteNextFromQueue', () => {
   it('throws when a queued game no longer exists', async () => {
     const { client } = fakeSupabase({
       games: [],
-      playing_queue: [{ user_id: 'u', app_id: 5, position: 0 }],
+      playing_queue: [{ user_id: 'u', game_id: 5, position: 0 }],
     });
     await expect(promoteNextFromQueue(client, 'u')).rejects.toThrow(/next queued game/);
   });

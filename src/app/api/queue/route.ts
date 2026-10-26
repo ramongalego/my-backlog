@@ -5,7 +5,7 @@ import { loadQueue } from '@/lib/data/loaders';
 import {
   queueAddRequestSchema,
   queueReorderRequestSchema,
-  appIdSchema,
+  gameIdSchema,
 } from '@/lib/validations/common';
 
 export async function GET() {
@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
 
   const parsed = queueAddRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError('Invalid appId', 400);
+    return jsonError('Invalid gameId', 400);
   }
-  const { appId } = parsed.data;
+  const { gameId } = parsed.data;
 
   // Get max position for the user's queue
   const { data: maxRow } = await supabase
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   const { error } = await supabase.from('playing_queue').insert({
     user_id: user.id,
-    app_id: appId,
+    game_id: gameId,
     position: nextPosition,
   });
 
@@ -71,6 +71,10 @@ export async function POST(request: NextRequest) {
     if (error.code === '23505') {
       // Unique constraint violation — game already in queue
       return jsonError('Game already in queue', 409);
+    }
+    if (error.code === '23503') {
+      // Foreign key violation: not one of the user's games.
+      return jsonError('Game not found', 404);
     }
     console.error(error);
     return jsonError('Failed to add to queue', 500);
@@ -102,7 +106,7 @@ export async function PATCH(request: NextRequest) {
   }
   const { order } = parsed.data;
 
-  const { error } = await supabase.rpc('reorder_playing_queue', { p_order: order });
+  const { error } = await supabase.rpc('reorder_queue', { p_game_ids: order });
 
   if (error) {
     // Postgres raise_exception (P0001) for our validation errors → 400.
@@ -128,23 +132,23 @@ export async function DELETE(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const appIdParam = searchParams.get('appId');
+  const gameIdParam = searchParams.get('gameId');
 
-  if (!appIdParam) {
-    return jsonError('Missing appId', 400);
+  if (!gameIdParam) {
+    return jsonError('Missing gameId', 400);
   }
 
-  const parsedAppId = appIdSchema.safeParse(Number(appIdParam));
-  if (!parsedAppId.success) {
-    return jsonError('Invalid appId', 400);
+  const parsedGameId = gameIdSchema.safeParse(Number(gameIdParam));
+  if (!parsedGameId.success) {
+    return jsonError('Invalid gameId', 400);
   }
-  const appId = parsedAppId.data;
+  const gameId = parsedGameId.data;
 
   const { error } = await supabase
     .from('playing_queue')
     .delete()
     .eq('user_id', user.id)
-    .eq('app_id', appId);
+    .eq('game_id', gameId);
 
   if (error) {
     console.error(error);

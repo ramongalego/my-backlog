@@ -38,6 +38,7 @@ afterEach(() => jest.restoreAllMocks());
 
 it('saves the finish, then returns the summary counts and the next game together', async () => {
   const next = {
+    id: 2,
     app_id: 2,
     name: 'Next',
     header_image: null,
@@ -47,7 +48,7 @@ it('saves the finish, then returns the summary counts and the next game together
   jest.mocked(promoteNextFromQueue).mockResolvedValue(next);
 
   const { status, body } = await post({
-    appId: 1,
+    gameId: 1,
     status: 'finished',
     finishedAt: '2026-10-25',
     rating: 9,
@@ -57,7 +58,7 @@ it('saves the finish, then returns the summary counts and the next game together
   expect(applyStatusChange).toHaveBeenCalledWith(
     expect.anything(),
     expect.any(String),
-    expect.objectContaining({ appId: 1, status: 'finished', finishedAt: '2026-10-25', rating: 9 }),
+    expect.objectContaining({ gameId: 1, status: 'finished', finishedAt: '2026-10-25', rating: 9 }),
   );
   expect(body).toEqual({
     counts: { gamesFinished: 7, totalGames: 120 },
@@ -69,7 +70,7 @@ it('saves the finish, then returns the summary counts and the next game together
 it('still succeeds when the next game could not be started', async () => {
   jest.mocked(promoteNextFromQueue).mockRejectedValue(new Error('boom'));
 
-  const { status, body } = await post({ appId: 1, status: 'dropped' });
+  const { status, body } = await post({ gameId: 1, status: 'dropped' });
 
   expect(status).toBe(200);
   expect(body).toMatchObject({ promoted: null, promoteFailed: true });
@@ -80,12 +81,12 @@ it('does not promote anything if the finish itself failed', async () => {
     .mocked(applyStatusChange)
     .mockResolvedValue({ ok: false, status: 404, error: 'Game not found' });
 
-  const { status } = await post({ appId: 1, status: 'finished' });
+  const { status } = await post({ gameId: 1, status: 'finished' });
 
   expect(status).toBe(404);
   expect(promoteNextFromQueue).not.toHaveBeenCalled();
 });
 
 it('only finishes or drops', async () => {
-  expect((await post({ appId: 1, status: 'playing' })).status).toBe(400);
+  expect((await post({ gameId: 1, status: 'playing' })).status).toBe(400);
 });

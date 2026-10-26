@@ -4,7 +4,7 @@ import type { SuggestionContext, GameForSuggestion } from '@/lib/suggest/types';
 
 describe('buildSuggestionPrompt', () => {
   const createGame = (overrides: Partial<GameForSuggestion> = {}): GameForSuggestion => ({
-    app_id: 1,
+    id: 1,
     name: 'Test Game',
     genres: ['Action', 'Adventure'],
     categories: ['Single-player'],
@@ -39,10 +39,7 @@ describe('buildSuggestionPrompt', () => {
       energy: 'high',
       time: 'medium',
     },
-    candidates: [
-      candidate({ app_id: 1, name: 'Game One' }),
-      candidate({ app_id: 2, name: 'Game Two' }),
-    ],
+    candidates: [candidate({ id: 1, name: 'Game One' }), candidate({ id: 2, name: 'Game Two' })],
     finishedGames: [{ name: 'Completed Game', rating: 9 }],
     droppedGames: ['Dropped Game'],
     previousReasonings: [],
@@ -118,9 +115,9 @@ describe('buildSuggestionPrompt', () => {
 
   it('marks the top-scoring games', () => {
     const prompt = withCandidates(
-      candidate({ app_id: 1, name: 'Best' }, { score: 8 }),
-      candidate({ app_id: 2, name: 'Close' }, { score: 7 }),
-      candidate({ app_id: 3, name: 'Far' }, { score: 3 }),
+      candidate({ id: 1, name: 'Best' }, { score: 8 }),
+      candidate({ id: 2, name: 'Close' }, { score: 7 }),
+      candidate({ id: 3, name: 'Far' }, { score: 3 }),
     );
     expect(prompt).toContain('"Best" (ID: 1) | TOP MATCH');
     expect(prompt).toContain('"Close" (ID: 2) | TOP MATCH');
@@ -160,10 +157,10 @@ describe('buildSuggestionPrompt', () => {
     }
   });
 
-  it('asks for JSON with app_id and reasoning', () => {
+  it('asks for JSON with game_id and reasoning', () => {
     const prompt = buildSuggestionPrompt(baseContext);
 
-    expect(prompt).toContain('"app_id"');
+    expect(prompt).toContain('"game_id"');
     expect(prompt).toContain('"reasoning"');
     expect(prompt).toContain('JSON');
   });
@@ -182,34 +179,34 @@ describe('buildSuggestionPrompt', () => {
 
 describe('parseAIResponse', () => {
   it('should parse valid JSON response', () => {
-    const response = '{"app_id": 123, "reasoning": "This game matches your mood."}';
+    const response = '{"game_id": 123, "reasoning": "This game matches your mood."}';
 
     const result = parseAIResponse(response);
 
-    expect(result.app_id).toBe(123);
+    expect(result.game_id).toBe(123);
     expect(result.reasoning).toBe('This game matches your mood.');
   });
 
   it('should extract JSON from markdown code block', () => {
     const response = `Here's my recommendation:
 \`\`\`json
-{"app_id": 456, "reasoning": "Great choice for chill vibes."}
+{"game_id": 456, "reasoning": "Great choice for chill vibes."}
 \`\`\``;
 
     const result = parseAIResponse(response);
 
-    expect(result.app_id).toBe(456);
+    expect(result.game_id).toBe(456);
     expect(result.reasoning).toBe('Great choice for chill vibes.');
   });
 
   it('should extract JSON with surrounding text', () => {
     const response = `Based on your preferences, I recommend:
-{"app_id": 789, "reasoning": "Perfect for your energy level."}
+{"game_id": 789, "reasoning": "Perfect for your energy level."}
 Enjoy gaming!`;
 
     const result = parseAIResponse(response);
 
-    expect(result.app_id).toBe(789);
+    expect(result.game_id).toBe(789);
   });
 
   it('should throw on missing JSON', () => {
@@ -218,26 +215,26 @@ Enjoy gaming!`;
     expect(() => parseAIResponse(response)).toThrow('No valid JSON found');
   });
 
-  it('should throw on invalid app_id type', () => {
-    const response = '{"app_id": "not-a-number", "reasoning": "Test"}';
+  it('should throw on invalid game_id type', () => {
+    const response = '{"game_id": "not-a-number", "reasoning": "Test"}';
 
-    expect(() => parseAIResponse(response)).toThrow('Invalid app_id');
+    expect(() => parseAIResponse(response)).toThrow('Invalid game_id');
   });
 
-  it('should throw on non-integer app_id', () => {
-    const response = '{"app_id": 123.45, "reasoning": "Test"}';
+  it('should throw on non-integer game_id', () => {
+    const response = '{"game_id": 123.45, "reasoning": "Test"}';
 
-    expect(() => parseAIResponse(response)).toThrow('Invalid app_id');
+    expect(() => parseAIResponse(response)).toThrow('Invalid game_id');
   });
 
   it('should throw on missing reasoning', () => {
-    const response = '{"app_id": 123}';
+    const response = '{"game_id": 123}';
 
     expect(() => parseAIResponse(response)).toThrow('Invalid reasoning');
   });
 
   it('should throw on empty reasoning', () => {
-    const response = '{"app_id": 123, "reasoning": ""}';
+    const response = '{"game_id": 123, "reasoning": ""}';
 
     expect(() => parseAIResponse(response)).toThrow('Invalid reasoning');
   });

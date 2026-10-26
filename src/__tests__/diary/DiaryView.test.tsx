@@ -21,6 +21,7 @@ jest.mock('@/components/games/GameStatusModal', () => ({
 }));
 
 const entry: DiaryEntry = {
+  id: 1,
   app_id: 1,
   name: 'Celeste',
   header_image: null,

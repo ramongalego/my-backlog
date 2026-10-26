@@ -299,10 +299,10 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
       </p>
       <ul className="space-y-3">
         {stats.playedALot.map((game) => {
-          const { app_id, name, playtime_forever, main_story_hours, header_image } = game;
+          const { id, name, playtime_forever, main_story_hours, header_image } = game;
           const edit = () => onEdit(game);
           return (
-            <li key={app_id} className="flex items-center gap-3">
+            <li key={id} className="flex items-center gap-3">
               <button
                 onClick={edit}
                 aria-label={`Update ${name}`}
@@ -347,13 +347,13 @@ export default function StatsView() {
 
   const statusMutation = useMutation({
     mutationFn: async (vars: {
-      appId: number;
+      gameId: number;
       status: string;
       date: string;
       notes: string;
       rating: number | null;
     }) => {
-      await updateGameStatus(vars.appId, vars.status, {
+      await updateGameStatus(vars.gameId, vars.status, {
         finishedAt: vars.status === 'finished' ? vars.date : undefined,
         droppedAt: vars.status === 'dropped' ? vars.date : undefined,
         notes: vars.notes,
@@ -379,7 +379,7 @@ export default function StatsView() {
     rating: number | null,
   ) => {
     if (!editModal) return;
-    statusMutation.mutate({ appId: editModal.app_id, status, date, notes, rating });
+    statusMutation.mutate({ gameId: editModal.id, status, date, notes, rating });
     setEditModal(null);
   };
 

@@ -42,7 +42,7 @@ export default function GamesView() {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
-    queuedAppIds,
+    queuedGameIds,
   } = useGamesPage();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -89,7 +89,7 @@ export default function GamesView() {
             disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
             onAddToQueue={
               hasPlayingGame && statusModal.initialStatus === 'backlog'
-                ? () => handleAddToQueue(statusModal.appId)
+                ? () => handleAddToQueue(statusModal.gameId)
                 : undefined
             }
           />
@@ -141,10 +141,10 @@ export default function GamesView() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
             {visibleGames.map((game) => (
               <GameCard
-                key={game.app_id}
+                key={game.id}
                 game={game}
                 onOpenDetail={handleOpenDetail}
-                queued={queuedAppIds.has(game.app_id)}
+                queued={queuedGameIds.has(game.id)}
                 // In All and Backlog the badge tells statuses apart (e.g. Playing);
                 // in a single-status filter it would repeat the filter on every card.
                 showStatus={filter === 'all' || filter === 'backlog'}

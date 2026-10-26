@@ -15,6 +15,7 @@ function deduplicateHighlyRatedGames(
 
 describe('carousel deduplication', () => {
   const createGame = (id: number, name: string): GameWithImage => ({
+    id: id,
     app_id: id,
     name,
     header_image: `https://example.com/${id}.jpg`,

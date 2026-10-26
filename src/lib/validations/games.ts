@@ -12,7 +12,7 @@ const isoDate = z.union([z.iso.date(), z.iso.datetime({ offset: true, local: tru
 const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
 
 export const gameStatusSchema = z.object({
-  appId: z.number().int().positive(),
+  gameId: z.number().int().positive(),
   status: z.enum(validStatuses),
   finishedAt: isoDate.optional(),
   droppedAt: isoDate.optional(),

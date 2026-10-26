@@ -19,6 +19,7 @@ import {
 } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
 import { todayIso } from '@/lib/diary/date-utils';
+import type { SuggestionResult } from '@/lib/suggest/types';
 import { Dices, Sparkles } from 'lucide-react';
 
 // Only shown before Steam is connected, so kept out of the dashboard's bundle.
@@ -31,7 +32,7 @@ export default function HomeView() {
 
   const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();
   const { user, profile, isLoading } = auth;
-  const { historyCount, queuedAppIds } = meta;
+  const { historyCount, queuedGameIds } = meta;
   const { isSyncing, progress: syncProgress, games: syncingGames } = sync;
   const {
     pickUp,
@@ -79,18 +80,14 @@ export default function HomeView() {
     handleCloseSummary,
   } = currentGame;
 
-  const handleSuggestionAction = async (
-    appId: number,
-    name: string,
-    headerImage: string | null,
-    mainStoryHours: number | null,
-  ) => {
+  const handleSuggestionAction = async (suggested: SuggestionResult['game']) => {
     const game = {
-      app_id: appId,
-      name,
-      header_image: headerImage,
-      main_story_hours: mainStoryHours ?? 0,
-      playtime_forever: 0,
+      id: suggested.id,
+      app_id: suggested.app_id,
+      name: suggested.name,
+      header_image: suggested.header_image,
+      main_story_hours: suggested.main_story_hours ?? 0,
+      playtime_forever: suggested.playtime_forever,
     };
     await (currentlyPlaying ? handleQueueGame(game) : handlePickGame(game));
   };
@@ -229,7 +226,7 @@ export default function HomeView() {
           initialStatus="backlog"
           disablePlaying={!!currentlyPlaying}
           onAddToQueue={
-            currentlyPlaying && !queuedAppIds.has(carouselModal.game.app_id)
+            currentlyPlaying && !queuedGameIds.has(carouselModal.game.id)
               ? () => handleQueueGame(carouselModal.game)
               : undefined
           }

@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 export const appIdSchema = z.number().int().positive();
 
+/** A game's row id (games.id). */
+export const gameIdSchema = z.number().int().positive();
+
 export const syncSingleRequestSchema = z.object({
   appId: appIdSchema,
   name: z.string().trim().min(1).max(500).optional(),
@@ -21,9 +24,13 @@ export const syncHltbRequestSchema = z.object({
 });
 
 export const queueAddRequestSchema = z.object({
-  appId: appIdSchema,
+  gameId: gameIdSchema,
+});
+
+export const rerollRequestSchema = z.object({
+  gameId: gameIdSchema,
 });
 
 export const queueReorderRequestSchema = z.object({
-  order: z.array(z.number().int().positive()).min(1).max(MAX_BULK_APP_IDS),
+  order: z.array(gameIdSchema).min(1).max(MAX_BULK_APP_IDS),
 });

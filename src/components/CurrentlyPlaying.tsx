@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
 import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
+import { steamStoreUrl } from '@/lib/games/store-link';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
-  app_id: number;
+  id: number;
+  app_id: number | null;
   name: string;
   header_image: string | null;
   main_story_hours: number | null;
@@ -117,6 +119,7 @@ export function CurrentlyPlaying({
   isLoading,
   footer,
 }: CurrentlyPlayingProps) {
+  const storeUrl = steamStoreUrl(game.app_id);
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
       <CoverArt
@@ -129,18 +132,22 @@ export function CurrentlyPlaying({
 
       <div className="min-w-0">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
-          <a
-            href={`https://store.steampowered.com/app/${game.app_id}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group/title inline hover:underline decoration-ink-600 decoration-2 underline-offset-4"
-          >
-            {game.name}
-            <ExternalLink
-              className="inline w-4 h-4 ml-2 align-baseline text-ink-500 opacity-0 group-hover/title:opacity-100 transition-opacity"
-              aria-hidden="true"
-            />
-          </a>
+          {storeUrl ? (
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/title inline hover:underline decoration-ink-600 decoration-2 underline-offset-4"
+            >
+              {game.name}
+              <ExternalLink
+                className="inline w-4 h-4 ml-2 align-baseline text-ink-500 opacity-0 group-hover/title:opacity-100 transition-opacity"
+                aria-hidden="true"
+              />
+            </a>
+          ) : (
+            game.name
+          )}
         </h1>
         <p className="mt-2 flex items-center gap-2 text-sm font-medium text-accent-400">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400" aria-hidden="true" />

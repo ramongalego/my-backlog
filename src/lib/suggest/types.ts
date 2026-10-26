@@ -39,7 +39,8 @@ export interface SuggestionContext {
 
 export interface SuggestionResult {
   game: {
-    app_id: number;
+    id: number;
+    app_id: number | null;
     name: string;
     header_image: string | null;
     main_story_hours: number | null;

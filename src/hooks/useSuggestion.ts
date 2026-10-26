@@ -48,7 +48,7 @@ export function useSuggestion(): UseSuggestionReturn {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
   // Track excluded games and previous reasonings (for rerolls within the same session)
-  const excludedAppIdsRef = useRef<number[]>([]);
+  const excludedGameIdsRef = useRef<number[]>([]);
   const previousReasoningsRef = useRef<string[]>([]);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -93,7 +93,7 @@ export function useSuggestion(): UseSuggestionReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...preferences,
-          excludeAppIds: excludedAppIdsRef.current,
+          excludeGameIds: excludedGameIdsRef.current,
           previousReasonings: previousReasoningsRef.current,
         }),
       });
@@ -154,13 +154,13 @@ export function useSuggestion(): UseSuggestionReturn {
     }
 
     // Add current suggestion to exclusion list
-    excludedAppIdsRef.current = [...excludedAppIdsRef.current, suggestion.game.app_id];
+    excludedGameIdsRef.current = [...excludedGameIdsRef.current, suggestion.game.id];
 
     // Increment reroll count in background (fire and forget)
     fetch('/api/suggest/reroll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appId: suggestion.game.app_id }),
+      body: JSON.stringify({ gameId: suggestion.game.id }),
     }).catch(() => {
       // Ignore errors - this is non-critical
     });
@@ -185,7 +185,7 @@ export function useSuggestion(): UseSuggestionReturn {
     setError(null);
     setIsLoading(false);
     setCooldownRemaining(0);
-    excludedAppIdsRef.current = [];
+    excludedGameIdsRef.current = [];
     previousReasoningsRef.current = [];
 
     if (cooldownIntervalRef.current) {

@@ -13,7 +13,7 @@ import { useInvalidateQueries } from '@/lib/mutations';
 export type { DiaryEntry };
 
 interface DiaryModal {
-  appId: number;
+  gameId: number;
   gameName: string;
   headerImage: string | null;
   /** The entry, for the modal's meta row. */
@@ -29,7 +29,7 @@ interface UseDiaryReturn {
   loading: boolean;
   hasPlayingGame: boolean;
   detailModal: DiaryModal | null;
-  handleOpenDetail: (appId: number) => void;
+  handleOpenDetail: (gameId: number) => void;
   handleCloseDetail: () => void;
   handleConfirmDetail: (
     status: string,
@@ -38,7 +38,7 @@ interface UseDiaryReturn {
     rating: number | null,
   ) => Promise<void>;
   /** Saves just the note, keeping the entry's date and rating. */
-  handleSaveNotes: (appId: number, notes: string) => void;
+  handleSaveNotes: (gameId: number, notes: string) => void;
 }
 
 export function useDiary(): UseDiaryReturn {
@@ -67,7 +67,7 @@ export function useDiary(): UseDiaryReturn {
 
   const diaryMutation = useMutation({
     mutationFn: async (vars: {
-      appId: number;
+      gameId: number;
       status: string;
       date: string;
       notes: string;
@@ -75,7 +75,7 @@ export function useDiary(): UseDiaryReturn {
       /** Only the note changed: nothing outside the diary and the games list shows it. */
       notesOnly?: boolean;
     }) => {
-      await updateGameStatus(vars.appId, vars.status, {
+      await updateGameStatus(vars.gameId, vars.status, {
         finishedAt: vars.status === 'finished' ? vars.date : undefined,
         droppedAt: vars.status === 'dropped' ? vars.date : undefined,
         notes: vars.notes,
@@ -91,7 +91,7 @@ export function useDiary(): UseDiaryReturn {
         queryClient.setQueryData(diaryKey, (old: DiaryEntry[] | undefined) => {
           if (!old) return old;
           const updated = old.map((e) =>
-            e.app_id === vars.appId
+            e.id === vars.gameId
               ? { ...e, finished_at: vars.date || null, notes: vars.notes, rating: vars.rating }
               : e,
           );
@@ -105,7 +105,7 @@ export function useDiary(): UseDiaryReturn {
       } else {
         queryClient.setQueryData(diaryKey, (old: DiaryEntry[] | undefined) => {
           if (!old) return old;
-          return old.filter((e) => e.app_id !== vars.appId);
+          return old.filter((e) => e.id !== vars.gameId);
         });
       }
 
@@ -126,12 +126,12 @@ export function useDiary(): UseDiaryReturn {
     },
   });
 
-  const handleOpenDetail = (appId: number) => {
-    const entry = entries.find((e) => e.app_id === appId);
+  const handleOpenDetail = (gameId: number) => {
+    const entry = entries.find((e) => e.id === gameId);
     if (!entry) return;
 
     setDetailModal({
-      appId,
+      gameId,
       gameName: entry.name,
       headerImage: entry.header_image,
       game: entry,
@@ -151,14 +151,14 @@ export function useDiary(): UseDiaryReturn {
     rating: number | null,
   ) => {
     if (!detailModal) return;
-    diaryMutation.mutate({ appId: detailModal.appId, status, date, notes, rating });
+    diaryMutation.mutate({ gameId: detailModal.gameId, status, date, notes, rating });
   };
 
-  const handleSaveNotes = (appId: number, notes: string) => {
-    const entry = entries.find((e) => e.app_id === appId);
+  const handleSaveNotes = (gameId: number, notes: string) => {
+    const entry = entries.find((e) => e.id === gameId);
     if (!entry) return;
     diaryMutation.mutate({
-      appId,
+      gameId,
       status: 'finished',
       date: entry.finished_at?.slice(0, 10) ?? '',
       notes,

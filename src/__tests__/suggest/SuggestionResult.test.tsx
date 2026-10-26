@@ -5,6 +5,7 @@ import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/typ
 describe('SuggestionResult', () => {
   const mockSuggestion: SuggestionResultType = {
     game: {
+      id: 123,
       app_id: 123,
       name: 'Test Game',
       header_image: 'https://example.com/image.jpg',

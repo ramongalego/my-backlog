@@ -23,6 +23,7 @@ jest.mock('next/image', () => ({
 
 const makeGames = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
+    id: i + 1,
     app_id: i + 1,
     name: `Game ${i + 1}`,
     header_image: null,

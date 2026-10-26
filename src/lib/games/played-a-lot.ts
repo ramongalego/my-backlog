@@ -1,7 +1,7 @@
 import { isMultiplayerFirst, isPlayedOut } from './carousels';
 
 export interface PlayedGame {
-  app_id: number;
+  id: number;
   status: string | null;
   playtime_forever: number;
   main_story_hours: number | null;
@@ -23,17 +23,17 @@ const LIST_SIZE = 5;
  */
 export function playedALot<T extends PlayedGame>(
   games: T[],
-  queuedAppIds: ReadonlySet<number> = new Set(),
+  queuedGameIds: ReadonlySet<number> = new Set(),
 ): T[] {
   return games
     .filter(
       (g) =>
         (!g.status || g.status === 'backlog') &&
-        !queuedAppIds.has(g.app_id) &&
+        !queuedGameIds.has(g.id) &&
         (isPlayedOut(g) ||
           ((isMultiplayerFirst(g) || !g.main_story_hours) &&
             g.playtime_forever >= OPEN_ENDED_MIN_MINUTES)),
     )
-    .sort((a, b) => b.playtime_forever - a.playtime_forever || a.app_id - b.app_id)
+    .sort((a, b) => b.playtime_forever - a.playtime_forever || a.id - b.id)
     .slice(0, LIST_SIZE);
 }

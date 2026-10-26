@@ -18,6 +18,7 @@ jest.mock('next/image', () => ({
 }));
 
 const createGame = (playtime_forever: number, main_story_hours = 20) => ({
+  id: 570,
   app_id: 570,
   name: 'Dota 2',
   header_image: 'https://example.com/dota2.jpg',

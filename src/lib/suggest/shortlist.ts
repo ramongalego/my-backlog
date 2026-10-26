@@ -19,7 +19,7 @@ import type { EnergyLevel, MoodType, SuggestionPreferences, TimeCommitment } fro
  */
 
 export interface CandidateGame {
-  app_id: number;
+  id: number;
   name: string;
   genres: string[] | null;
   categories: string[] | null;

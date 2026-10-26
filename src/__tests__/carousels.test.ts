@@ -8,6 +8,7 @@ import { editionKey } from '@/lib/games/similarity';
 
 let nextId = 1;
 const game = (overrides: Partial<CarouselGame> = {}): CarouselGame => ({
+  id: nextId,
   app_id: nextId++,
   name: `Game ${nextId}`,
   header_image: null,

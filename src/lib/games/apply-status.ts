@@ -3,7 +3,7 @@ import type { GameStatusBody } from '@/lib/validations/games';
 import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
 import type { GameWithImage } from '@/types/games';
 
-export type StatusChange = Omit<GameStatusBody, 'appId'> & { appId: number };
+export type StatusChange = GameStatusBody;
 
 export type StatusChangeResult = { ok: true } | { ok: false; status: 404 | 500; error: string };
 
@@ -15,7 +15,7 @@ export type StatusChangeResult = { ok: true } | { ok: false; status: 404 | 500; 
 export async function applyStatusChange(
   supabase: SupabaseClient,
   userId: string,
-  { appId, status, finishedAt, droppedAt, notes, rating }: StatusChange,
+  { gameId, status, finishedAt, droppedAt, notes, rating }: StatusChange,
 ): Promise<StatusChangeResult> {
   const failed = (err: unknown): StatusChangeResult => {
     console.error(err);
@@ -23,12 +23,12 @@ export async function applyStatusChange(
   };
 
   // Confirm the game is in the user's library before touching anything else,
-  // so a bad appId can't demote the current game and then update nothing.
+  // so a bad gameId can't demote the current game and then update nothing.
   const { data: target, error: targetError } = await supabase
     .from('games')
-    .select('app_id')
+    .select('id')
     .eq('user_id', userId)
-    .eq('app_id', appId)
+    .eq('id', gameId)
     .maybeSingle();
   if (targetError) return failed(targetError);
   if (!target) return { ok: false, status: 404, error: 'Game not found' };
@@ -40,7 +40,7 @@ export async function applyStatusChange(
       .update({ status: 'backlog', started_at: null })
       .eq('user_id', userId)
       .eq('status', 'playing')
-      .neq('app_id', appId);
+      .neq('id', gameId);
     if (demoteError) return failed(demoteError);
   }
 
@@ -78,7 +78,7 @@ export async function applyStatusChange(
     .from('games')
     .update(updatePayload)
     .eq('user_id', userId)
-    .eq('app_id', appId);
+    .eq('id', gameId);
   if (error) return failed(error);
 
   // The queue only holds backlog games; any other status takes the game off it.
@@ -87,7 +87,7 @@ export async function applyStatusChange(
       .from('playing_queue')
       .delete()
       .eq('user_id', userId)
-      .eq('app_id', appId);
+      .eq('game_id', gameId);
     if (dequeueError) console.error(dequeueError);
   }
 
@@ -105,7 +105,7 @@ export async function promoteNextFromQueue(
 ): Promise<GameWithImage | null> {
   const { data: topItem, error: queueError } = await supabase
     .from('playing_queue')
-    .select('app_id')
+    .select('game_id')
     .eq('user_id', userId)
     .order('position', { ascending: true })
     .limit(1)
@@ -114,7 +114,7 @@ export async function promoteNextFromQueue(
   if (!topItem) return null;
 
   const started = await applyStatusChange(supabase, userId, {
-    appId: topItem.app_id,
+    gameId: topItem.game_id,
     status: 'playing',
   });
   if (!started.ok) throw new Error(`Failed to start the next queued game: ${started.error}`);
@@ -123,7 +123,7 @@ export async function promoteNextFromQueue(
     .from('games')
     .select(PLAYING_GAME_SELECT)
     .eq('user_id', userId)
-    .eq('app_id', topItem.app_id)
+    .eq('id', topItem.game_id)
     .maybeSingle<GameWithImage>();
   if (error) throw error;
   return game ?? null;

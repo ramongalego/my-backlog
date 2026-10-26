@@ -53,7 +53,7 @@ export async function GET() {
   // Get now playing game
   const { data, error } = await supabase
     .from('games')
-    .select('app_id, name, header_image, main_story_hours')
+    .select('id, app_id, name, header_image, main_story_hours')
     .eq('user_id', user.id)
     .eq('status', 'playing')
     .limit(1)

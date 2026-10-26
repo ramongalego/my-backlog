@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { jsonError } from '@/lib/api/response';
-import { queueAddRequestSchema } from '@/lib/validations/common';
+import { rerollRequestSchema } from '@/lib/validations/common';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     return jsonError('Invalid JSON', 400);
   }
 
-  const parsed = queueAddRequestSchema.safeParse(body);
+  const parsed = rerollRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError('Invalid appId', 400);
+    return jsonError('Invalid gameId', 400);
   }
-  const { appId } = parsed.data;
+  const { gameId } = parsed.data;
 
-  // Counts the reroll and stamps it, so the penalty fades (see record_reroll).
-  const { error } = await supabase.rpc('record_reroll', { p_app_id: appId });
+  // Counts the reroll and stamps it, so the penalty fades (see record_game_reroll).
+  const { error } = await supabase.rpc('record_game_reroll', { p_game_id: gameId });
 
   if (error) {
     console.error('Failed to record reroll:', error);

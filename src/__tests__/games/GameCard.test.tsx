@@ -23,6 +23,7 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   release_date: null,
   last_played_at: null,
   categories: null,
+  id: 123,
   app_id: 123,
   name: 'Test Game',
   playtime_forever: 120,
@@ -91,11 +92,23 @@ describe('GameCard', () => {
     });
   });
 
-  it('should call onOpenDetail with app_id when clicked', () => {
-    render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
+  it('should call onOpenDetail with the game id when clicked', () => {
+    render(<GameCard game={createGame({ id: 7, app_id: 123 })} onOpenDetail={mockOnOpenDetail} />);
 
     fireEvent.click(screen.getByRole('button', { name: /open details/i }));
 
-    expect(mockOnOpenDetail).toHaveBeenCalledWith(123);
+    expect(mockOnOpenDetail).toHaveBeenCalledWith(7);
+  });
+
+  it('links the title to the Steam store for Steam games only', () => {
+    const { rerender } = render(<GameCard game={createGame()} onOpenDetail={mockOnOpenDetail} />);
+    expect(screen.getByRole('link', { name: /test game/i })).toHaveAttribute(
+      'href',
+      'https://store.steampowered.com/app/123/',
+    );
+
+    rerender(<GameCard game={createGame({ app_id: null })} onOpenDetail={mockOnOpenDetail} />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('Test Game')).toBeInTheDocument();
   });
 });

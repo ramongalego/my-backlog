@@ -161,8 +161,8 @@ interface QueueItemRowProps {
   index: number;
   canPlay: boolean;
   isLoading: boolean;
-  onPick: (appId: number) => void;
-  onRemove: (appId: number) => void;
+  onPick: (gameId: number) => void;
+  onRemove: (gameId: number) => void;
   isOverlay?: boolean;
 }
 
@@ -231,7 +231,7 @@ function QueueItemRow({
           {canPlay && (
             <Button
               size="sm"
-              onClick={() => onPick(item.app_id)}
+              onClick={() => onPick(item.game_id)}
               disabled={isLoading}
               aria-label={`Play ${item.game.name}`}
               className="cursor-pointer px-2.5 sm:px-3"
@@ -249,7 +249,7 @@ function QueueItemRow({
             <GripVertical className="w-4 h-4" aria-hidden="true" />
           </button>
           <button
-            onClick={() => onRemove(item.app_id)}
+            onClick={() => onRemove(item.game_id)}
             disabled={isLoading}
             aria-label={`Remove ${item.game.name} from queue`}
             className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 disabled:opacity-50 transition-colors rounded"
@@ -303,7 +303,7 @@ export default function PlayingQueueView() {
     if (oldIndex === -1 || newIndex === -1) return;
 
     const reordered = arrayMove(queue, oldIndex, newIndex);
-    handleReorder(reordered.map((q) => q.app_id));
+    handleReorder(reordered.map((q) => q.game_id));
   }
 
   const activeItem = activeId !== null ? queue.find((q) => q.id === activeId) : null;

@@ -8,25 +8,25 @@ async function assertOk(res: Response, action: string): Promise<void> {
   throw new Error(`${action} failed (${res.status})${detail}`);
 }
 
-export async function addToQueue(appId: number): Promise<void> {
+export async function addToQueue(gameId: number): Promise<void> {
   const res = await fetch('/api/queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ appId }),
+    body: JSON.stringify({ gameId }),
   });
   await assertOk(res, 'Add to queue');
 }
 
-export async function removeFromQueue(appId: number): Promise<void> {
-  const res = await fetch(`/api/queue?appId=${appId}`, { method: 'DELETE' });
+export async function removeFromQueue(gameId: number): Promise<void> {
+  const res = await fetch(`/api/queue?gameId=${gameId}`, { method: 'DELETE' });
   await assertOk(res, 'Remove from queue');
 }
 
-export async function reorderQueue(appIds: number[]): Promise<void> {
+export async function reorderQueue(gameIds: number[]): Promise<void> {
   const res = await fetch('/api/queue', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ order: appIds }),
+    body: JSON.stringify({ order: gameIds }),
   });
   await assertOk(res, 'Reorder queue');
 }

@@ -6,7 +6,7 @@ const game = (
   hoursPlayed: number,
   overrides: Partial<PlayedGame> = {},
 ): PlayedGame & { name: string } => ({
-  app_id: nextId++,
+  id: nextId++,
   name,
   status: 'backlog',
   playtime_forever: hoursPlayed * 60,
@@ -32,7 +32,7 @@ it('lists games played past most of their story, and open-ended games with many 
 it('leaves out queued games and games that already have another status', () => {
   const queued = game('Queued', 30);
   const games = [queued, game('Finished', 30, { status: 'finished' }), game('Still backlog', 30)];
-  expect(names(playedALot(games, new Set([queued.app_id])))).toEqual(['Still backlog']);
+  expect(names(playedALot(games, new Set([queued.id])))).toEqual(['Still backlog']);
 });
 
 it('shows at most 5, most played first', () => {

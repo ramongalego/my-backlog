@@ -2,7 +2,7 @@ import type { GameWithImage } from '@/types/games';
 import type { CompletionCounts } from './completion';
 
 export async function updateGameStatus(
-  appId: number,
+  gameId: number,
   status: string,
   opts?: {
     finishedAt?: string;
@@ -15,7 +15,7 @@ export async function updateGameStatus(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      appId,
+      gameId,
       status,
       ...(opts?.finishedAt ? { finishedAt: opts.finishedAt } : {}),
       ...(opts?.droppedAt ? { droppedAt: opts.droppedAt } : {}),
@@ -47,7 +47,7 @@ export interface CompleteGameResult {
  * next queued game, all in one request (see /api/games/complete).
  */
 export async function completeGame(
-  appId: number,
+  gameId: number,
   status: 'finished' | 'dropped',
   opts: { date?: string; notes?: string; rating?: number | null },
 ): Promise<CompleteGameResult> {
@@ -55,7 +55,7 @@ export async function completeGame(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      appId,
+      gameId,
       status,
       ...(opts.date ? { [status === 'finished' ? 'finishedAt' : 'droppedAt']: opts.date } : {}),
       notes: opts.notes,

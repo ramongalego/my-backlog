@@ -68,7 +68,7 @@ const GEM_MAX_REVIEWS = 5000;
 const byGemRank = (a: CarouselGame, b: CarouselGame) =>
   (b.steam_review_score ?? 0) - (a.steam_review_score ?? 0) ||
   (a.steam_review_count ?? 0) - (b.steam_review_count ?? 0) ||
-  a.app_id - b.app_id;
+  a.id - b.id;
 
 // More Like ...: how close a backlog game must be to the loved game, and how
 // many it needs before the carousel is worth showing.
@@ -117,13 +117,13 @@ function isStarted(g: CarouselGame) {
 }
 
 const byWeighted = (a: CarouselGame, b: CarouselGame) =>
-  (b.steam_review_weighted ?? -1) - (a.steam_review_weighted ?? -1) || a.app_id - b.app_id;
+  (b.steam_review_weighted ?? -1) - (a.steam_review_weighted ?? -1) || a.id - b.id;
 
 /** One game per edition: the better-reviewed of "Ori" and "Ori: Definitive Edition". */
 function oneEditionEach(games: CarouselGame[]) {
   const best = new Map<string, CarouselGame>();
   for (const g of games) {
-    const key = editionKey(g.name) || String(g.app_id);
+    const key = editionKey(g.name) || String(g.id);
     const kept = best.get(key);
     if (!kept || byWeighted(g, kept) < 0) best.set(key, g);
   }
@@ -169,7 +169,7 @@ function addedSinceFirstSync(games: CarouselGame[], firstImportedAt: string | un
   const cutoff = Date.parse(firstImportedAt) + FIRST_SYNC_WINDOW_MS;
   return games
     .filter((g) => Date.parse(g.created_at) > cutoff)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.app_id - a.app_id)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
     .slice(0, POOL_SIZE);
 }
 

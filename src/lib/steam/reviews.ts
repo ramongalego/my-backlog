@@ -38,6 +38,7 @@ export async function refreshReviewScores(
       .from('games')
       .select('app_id, steam_review_score, steam_review_count')
       .eq('user_id', userId)
+      .eq('source', 'steam')
       .eq('type', 'game')
       .order('app_id')
       .range(from, to),

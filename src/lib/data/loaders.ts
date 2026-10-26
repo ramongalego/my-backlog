@@ -15,7 +15,9 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 // ─── Games page ─────────────────────────────────────────────────────────────
 
 export interface GameItem {
-  app_id: number;
+  id: number;
+  /** Steam's app id, for Steam games only. */
+  app_id: number | null;
   name: string;
   playtime_forever: number;
   steam_review_score: number | null;
@@ -48,12 +50,12 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
     supabase
       .from('games')
       .select(
-        'app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at, categories',
+        'id, app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at, categories',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
       .order('playtime_forever', { ascending: false })
-      .order('app_id')
+      .order('id')
       .range(from, to),
   );
 }
@@ -61,7 +63,8 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
 // ─── Diary ──────────────────────────────────────────────────────────────────
 
 export interface DiaryEntry {
-  app_id: number;
+  id: number;
+  app_id: number | null;
   name: string;
   header_image: string | null;
   rating: number | null;
@@ -83,7 +86,7 @@ export async function loadDiaryEntries(
   const { data, error } = await supabase
     .from('games')
     .select(
-      'app_id, name, header_image, rating, notes, finished_at, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at',
+      'id, app_id, name, header_image, rating, notes, finished_at, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at',
     )
     .eq('user_id', userId)
     .eq('status', 'finished')
@@ -96,7 +99,7 @@ export async function loadDiaryEntries(
 // ─── Now playing + queue ────────────────────────────────────────────────────
 
 export const PLAYING_GAME_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, deck_compat, last_played_at';
+  'id, app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, deck_compat, last_played_at';
 
 export async function loadCurrentlyPlaying(
   supabase: SupabaseClient,
@@ -113,47 +116,18 @@ export async function loadCurrentlyPlaying(
   return data ?? null;
 }
 
+const QUEUE_GAME_COLUMNS =
+  'app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at';
+
 export async function loadQueue(supabase: SupabaseClient, userId: string): Promise<QueueItem[]> {
-  // playing_queue has no FK to games, so the join is done in two queries.
-  const { data: rows, error } = await supabase
+  // The queue references its games, so one query returns each row with its game.
+  const { data, error } = await supabase
     .from('playing_queue')
-    .select('id, app_id, position')
+    .select(`id, game_id, position, game:games(${QUEUE_GAME_COLUMNS})`)
     .eq('user_id', userId)
     .order('position', { ascending: true });
   if (error) throw error;
-  if (!rows?.length) return [];
-
-  const { data: games, error: gamesError } = await supabase
-    .from('games')
-    .select(
-      'app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at',
-    )
-    .eq('user_id', userId)
-    .in(
-      'app_id',
-      rows.map((r) => r.app_id),
-    );
-  if (gamesError) throw gamesError;
-
-  const gamesById = new Map((games ?? []).map((g) => [g.app_id, g]));
-  return rows.map((row) => {
-    const g = gamesById.get(row.app_id);
-    return {
-      id: row.id,
-      app_id: row.app_id,
-      position: row.position,
-      game: {
-        name: g?.name ?? '',
-        header_image: g?.header_image ?? null,
-        playtime_forever: g?.playtime_forever ?? 0,
-        main_story_hours: g?.main_story_hours ?? null,
-        steam_review_score: g?.steam_review_score ?? null,
-        steam_review_count: g?.steam_review_count ?? null,
-        deck_compat: g?.deck_compat ?? null,
-        last_played_at: g?.last_played_at ?? null,
-      },
-    };
-  });
+  return (data ?? []) as unknown as QueueItem[];
 }
 
 // ─── Home ───────────────────────────────────────────────────────────────────
@@ -193,7 +167,7 @@ export async function loadLibraryMeta(
 export type { CarouselPools };
 
 const CAROUSEL_SELECT =
-  'app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
+  'id, app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
 /**
@@ -216,7 +190,7 @@ export async function loadCarouselPools(
         .eq('user_id', userId)
         .eq('type', 'game')
         .or(BACKLOG_FILTER)
-        .order('app_id')
+        .order('id')
         .range(from, to),
     ),
     supabase

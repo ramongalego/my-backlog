@@ -9,7 +9,7 @@ import { StatusBadge } from './StatusBadge';
 
 interface GameCardProps {
   game: GameItem;
-  onOpenDetail: (appId: number) => void;
+  onOpenDetail: (gameId: number) => void;
   queued?: boolean;
   /** Off when the page is already filtered to one status, so every card would say the same thing. */
   showStatus?: boolean;
@@ -36,7 +36,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
     // stays stable before a card is first rendered.
     <div className="group min-w-0 [content-visibility:auto] [contain-intrinsic-size:auto_14rem]">
       <button
-        onClick={() => onOpenDetail(game.app_id)}
+        onClick={() => onOpenDetail(game.id)}
         className="cursor-pointer block w-full rounded-lg select-none focus-visible:-outline-offset-2"
         aria-label={label}
       >

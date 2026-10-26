@@ -11,7 +11,7 @@ import { completeGame, updateGameStatus } from '@/lib/games/status';
 import { buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
-import { removeAppFromPools, type CarouselPools } from './useCarouselPools';
+import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
@@ -23,7 +23,7 @@ const QUEUE_SCOPE = { id: 'queue' };
 /** Minimal game data needed to show a game in the queue before the server responds. */
 export type QueueableGame = Pick<
   GameWithImage,
-  'app_id' | 'name' | 'header_image' | 'main_story_hours' | 'playtime_forever'
+  'id' | 'app_id' | 'name' | 'header_image' | 'main_story_hours' | 'playtime_forever'
 > &
   Partial<
     Pick<
@@ -34,10 +34,11 @@ export type QueueableGame = Pick<
 
 function toQueueItem(game: QueueableGame, position: number): QueueItem {
   return {
-    id: -game.app_id,
-    app_id: game.app_id,
+    id: -game.id,
+    game_id: game.id,
     position,
     game: {
+      app_id: game.app_id,
       name: game.name,
       header_image: game.header_image,
       playtime_forever: game.playtime_forever,
@@ -52,14 +53,17 @@ function toQueueItem(game: QueueableGame, position: number): QueueItem {
 
 function toPlayingGame(item: QueueItem): GameWithImage {
   return {
-    app_id: item.app_id,
+    id: item.game_id,
+    app_id: item.game.app_id,
     name: item.game.name,
     header_image: item.game.header_image,
     main_story_hours: item.game.main_story_hours,
     playtime_forever: item.game.playtime_forever,
     started_at: null,
     steam_review_score: item.game.steam_review_score,
+    steam_review_count: item.game.steam_review_count ?? null,
     deck_compat: item.game.deck_compat ?? null,
+    last_played_at: item.game.last_played_at ?? null,
   };
 }
 
@@ -75,7 +79,7 @@ export function useQueue(userId: string | null) {
   });
   return {
     queue,
-    queuedAppIds: new Set(queue.map((q) => q.app_id)),
+    queuedGameIds: new Set(queue.map((q) => q.game_id)),
     isLoading: !!userId && isPending,
   };
 }
@@ -88,12 +92,12 @@ export function useAddToQueue(userId: string | null) {
 
   const mutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: (game: QueueableGame) => addToQueue(game.app_id),
+    mutationFn: (game: QueueableGame) => addToQueue(game.id),
     onMutate: async (game) => {
       await queryClient.cancelQueries({ queryKey: queueKey });
       const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
       queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) =>
-        old.some((q) => q.app_id === game.app_id) ? old : [...old, toQueueItem(game, old.length)],
+        old.some((q) => q.game_id === game.id) ? old : [...old, toQueueItem(game, old.length)],
       );
       return { previous };
     },
@@ -138,7 +142,7 @@ export function useNowPlaying(userId: string | null) {
     enabled: !!userId,
     staleTime: 30 * 1000,
   });
-  const { queue, queuedAppIds, isLoading: queueLoading } = useQueue(userId);
+  const { queue, queuedGameIds, isLoading: queueLoading } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
 
   // Snapshot + optimistic write helpers shared by the mutations below.
@@ -161,23 +165,23 @@ export function useNowPlaying(userId: string | null) {
       queryClient.setQueryData(queueKey, context.previousQueue);
     }
   };
-  const dropFromQueue = (appId: number) =>
+  const dropFromQueue = (gameId: number) =>
     queryClient.setQueryData<QueueItem[]>(queueKey, (old) =>
-      old?.filter((q) => q.app_id !== appId),
+      old?.filter((q) => q.game_id !== gameId),
     );
 
   const pickMutation = useMutation({
     scope: QUEUE_SCOPE,
     // The status route also takes the game off the queue if it was queued.
-    mutationFn: (game: GameWithImage) => updateGameStatus(game.app_id, 'playing'),
+    mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'playing'),
     onMutate: async (game) => {
       const context = await snapshot();
       queryClient.setQueryData(playingKey, game);
-      dropFromQueue(game.app_id);
+      dropFromQueue(game.id);
       // Carousels are refetched on settle, so they don't need a rollback.
       queryClient.setQueriesData<CarouselPools>(
         { queryKey: queryKeys.carousels.all },
-        (pools) => pools && removeAppFromPools(pools, game.app_id),
+        (pools) => pools && removeGameFromPools(pools, game.id),
       );
       return context;
     },
@@ -194,11 +198,11 @@ export function useNowPlaying(userId: string | null) {
     // One request saves the finish/drop, counts the library and starts the
     // next queued game (the promote is best-effort and reported separately).
     mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
-      completeGame(game.app_id, status as 'finished' | 'dropped', { date, notes, rating }),
+      completeGame(game.id, status as 'finished' | 'dropped', { date, notes, rating }),
     onSuccess: ({ counts, promoted, promoteFailed }, { game, status, rating }) => {
       if (promoteFailed) toast.error("Couldn't start the next game from your queue.");
       queryClient.setQueryData(playingKey, promoted);
-      if (promoted) dropFromQueue(promoted.app_id);
+      if (promoted) dropFromQueue(promoted.id);
       if (status === 'finished') {
         setGameSummary(buildCompletionSummary({ finishedGame: game, promoted, counts, rating }));
         celebrateGameFinished();
@@ -214,8 +218,8 @@ export function useNowPlaying(userId: string | null) {
   const moveToQueueMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: async (game: GameWithImage) => {
-      await updateGameStatus(game.app_id, 'backlog');
-      await addToQueue(game.app_id);
+      await updateGameStatus(game.id, 'backlog');
+      await addToQueue(game.id);
     },
     onMutate: async (game) => {
       const context = await snapshot();
@@ -237,7 +241,7 @@ export function useNowPlaying(userId: string | null) {
 
   const moveToBacklogMutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: (game: GameWithImage) => updateGameStatus(game.app_id, 'backlog'),
+    mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'backlog'),
     onMutate: async () => {
       const context = await snapshot();
       queryClient.setQueryData(playingKey, null);
@@ -254,12 +258,12 @@ export function useNowPlaying(userId: string | null) {
   const removeMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: removeFromQueue,
-    onMutate: async (appId: number) => {
+    onMutate: async (gameId: number) => {
       const context = await snapshot();
-      dropFromQueue(appId);
+      dropFromQueue(gameId);
       return context;
     },
-    onError: (err, _appId, context) => {
+    onError: (err, _gameId, context) => {
       console.error(err);
       rollback(context);
       toast.error('Failed to remove game from queue');
@@ -270,19 +274,19 @@ export function useNowPlaying(userId: string | null) {
   const reorderMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: reorderQueue,
-    onMutate: async (appIds: number[]) => {
+    onMutate: async (gameIds: number[]) => {
       const context = await snapshot();
       queryClient.setQueryData<QueueItem[]>(queueKey, (old) => {
         if (!old) return old;
-        const byId = new Map(old.map((q) => [q.app_id, q]));
+        const byId = new Map(old.map((q) => [q.game_id, q]));
         // Unknown id means the cache and the drag state diverged; skip the
         // optimistic pass and let the refetch catch up.
-        if (!appIds.every((id) => byId.has(id))) return old;
-        return appIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
+        if (!gameIds.every((id) => byId.has(id))) return old;
+        return gameIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
       });
       return context;
     },
-    onError: (err, _appIds, context) => {
+    onError: (err, _gameIds, context) => {
       console.error(err);
       rollback(context);
       toast.error('Failed to reorder queue');
@@ -299,7 +303,7 @@ export function useNowPlaying(userId: string | null) {
   return {
     currentlyPlaying,
     queue,
-    queuedAppIds,
+    queuedGameIds,
     isLoading: !!userId && (playingPending || queueLoading),
     isStatusLoading,
 
@@ -316,14 +320,14 @@ export function useNowPlaying(userId: string | null) {
     },
 
     pick: (game: GameWithImage) => pickMutation.mutateAsync(game).catch(() => undefined),
-    pickFromQueue: (appId: number) => {
-      const item = queue.find((q) => q.app_id === appId);
+    pickFromQueue: (gameId: number) => {
+      const item = queue.find((q) => q.game_id === gameId);
       if (item) pickMutation.mutate(toPlayingGame(item));
     },
     moveToQueue: () => currentlyPlaying && moveToQueueMutation.mutate(currentlyPlaying),
     moveToBacklog: () => currentlyPlaying && moveToBacklogMutation.mutate(currentlyPlaying),
     addToQueue: addGameToQueue,
-    removeFromQueue: (appId: number) => removeMutation.mutate(appId),
-    reorder: (appIds: number[]) => reorderMutation.mutate(appIds),
+    removeFromQueue: (gameId: number) => removeMutation.mutate(gameId),
+    reorder: (gameIds: number[]) => reorderMutation.mutate(gameIds),
   };
 }

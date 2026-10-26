@@ -42,7 +42,7 @@ function formatCandidate(
 ): string {
   const hoursPlayed = Math.round((game.playtime_forever ?? 0) / 60);
   const parts = [
-    `"${game.name}" (ID: ${game.app_id})`,
+    `"${game.name}" (ID: ${game.id})`,
     score >= bestScore - TOP_MATCH_MARGIN ? 'TOP MATCH' : null,
     game.genres?.length ? `Genres: ${game.genres.join(', ')}` : null,
     game.tags?.length ? `Tags: ${game.tags.slice(0, 6).join(', ')}` : null,
@@ -138,10 +138,10 @@ ${previousReasonings.map((r, i) => `${i + 1}. ${JSON.stringify(r)}`).join('\n')}
 `
     : ''
 }
-Respond with JSON: {"app_id": <the game's ID>, "reasoning": "<2-3 sentences on why this game fits your mood, energy and time right now>"}`;
+Respond with JSON: {"game_id": <the game's ID>, "reasoning": "<2-3 sentences on why this game fits your mood, energy and time right now>"}`;
 }
 
-export function parseAIResponse(response: string): { app_id: number; reasoning: string } {
+export function parseAIResponse(response: string): { game_id: number; reasoning: string } {
   // Try to extract JSON from the response (handles markdown code blocks)
   const jsonMatch = response.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
@@ -150,8 +150,8 @@ export function parseAIResponse(response: string): { app_id: number; reasoning: 
 
   const parsed = JSON.parse(jsonMatch[0]);
 
-  if (typeof parsed.app_id !== 'number' || !Number.isInteger(parsed.app_id)) {
-    throw new Error('Invalid app_id in AI response');
+  if (typeof parsed.game_id !== 'number' || !Number.isInteger(parsed.game_id)) {
+    throw new Error('Invalid game_id in AI response');
   }
 
   if (typeof parsed.reasoning !== 'string' || parsed.reasoning.length === 0) {
@@ -159,7 +159,7 @@ export function parseAIResponse(response: string): { app_id: number; reasoning: 
   }
 
   return {
-    app_id: parsed.app_id,
+    game_id: parsed.game_id,
     reasoning: parsed.reasoning,
   };
 }

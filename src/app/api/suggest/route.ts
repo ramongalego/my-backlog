@@ -17,6 +17,7 @@ const MAX_FINISHED_IN_PROMPT = 25;
 const MAX_DROPPED_IN_PROMPT = 10;
 
 interface BacklogGame extends GameForSuggestion {
+  app_id: number | null;
   header_image: string | null;
   last_played_at: string | null;
 }
@@ -29,7 +30,7 @@ interface HistoryRow extends HistoryGame {
 const byNewest = (a: string | null, b: string | null) => (b ?? '').localeCompare(a ?? '');
 
 /** Structured output limited to the shortlist, so the model can't name another game. */
-function responseFormat(appIds: number[]) {
+function responseFormat(gameIds: number[]) {
   return {
     type: 'json_schema' as const,
     json_schema: {
@@ -38,10 +39,10 @@ function responseFormat(appIds: number[]) {
       schema: {
         type: 'object',
         properties: {
-          app_id: { type: 'integer', enum: appIds },
+          game_id: { type: 'integer', enum: gameIds },
           reasoning: { type: 'string' },
         },
-        required: ['app_id', 'reasoning'],
+        required: ['game_id', 'reasoning'],
         additionalProperties: false,
       },
     },
@@ -90,28 +91,28 @@ export async function POST(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid preferences', 400);
   }
 
-  const { mood, energy, time, excludeAppIds, previousReasonings } = parsed.data;
+  const { mood, energy, time, excludeGameIds, previousReasonings } = parsed.data;
   const preferences = { mood, energy, time };
   const userId = user.id;
 
-  let queuedGames: { app_id: number }[];
+  let queuedGames: { game_id: number }[];
   let backlogGames: BacklogGame[];
   let history: HistoryRow[];
   try {
     [queuedGames, backlogGames, history] = await Promise.all([
-      fetchAllRows<{ app_id: number }>((from, to) =>
-        supabase.from('playing_queue').select('app_id').eq('user_id', userId).range(from, to),
+      fetchAllRows<{ game_id: number }>((from, to) =>
+        supabase.from('playing_queue').select('game_id').eq('user_id', userId).range(from, to),
       ),
       fetchAllRows<BacklogGame>((from, to) =>
         supabase
           .from('games')
           .select(
-            'app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at',
+            'id, app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at',
           )
           .eq('user_id', userId)
           .eq('type', 'game')
           .or('status.is.null,status.eq.backlog')
-          .order('app_id')
+          .order('id')
           .range(from, to),
       ),
       fetchAllRows<HistoryRow>((from, to) =>
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
           .eq('user_id', userId)
           .eq('type', 'game')
           .in('status', ['finished', 'dropped'])
-          .order('app_id')
+          .order('id')
           .range(from, to),
       ),
     ]);
@@ -134,9 +135,9 @@ export async function POST(request: NextRequest) {
     return jsonError('No games in backlog', 400);
   }
 
-  const excluded = new Set([...excludeAppIds, ...queuedGames.map((q) => q.app_id)]);
+  const excluded = new Set([...excludeGameIds, ...queuedGames.map((q) => q.game_id)]);
   const ranked = scoreCandidates(
-    backlogGames.filter((g) => !excluded.has(g.app_id)),
+    backlogGames.filter((g) => !excluded.has(g.id)),
     history,
     preferences,
   );
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
   }
 
   const openai = new OpenAI({ apiKey: openaiApiKey });
-  const shortlistIds = shortlist.map((c) => c.game.app_id);
+  const shortlistIds = shortlist.map((c) => c.game.id);
 
   // One retry covers a flaky API call or an answer that doesn't parse.
   let suggestedGame: BacklogGame | undefined;
@@ -207,10 +208,10 @@ export async function POST(request: NextRequest) {
 
     try {
       const parsed = parseAIResponse(aiResponse);
-      suggestedGame = shortlist.find((c) => c.game.app_id === parsed.app_id)?.game;
+      suggestedGame = shortlist.find((c) => c.game.id === parsed.game_id)?.game;
       reasoning = parsed.reasoning;
       if (!suggestedGame)
-        console.error('AI suggested a game outside the shortlist:', parsed.app_id);
+        console.error('AI suggested a game outside the shortlist:', parsed.game_id);
     } catch (err) {
       console.error(`Failed to parse AI response (attempt ${attempt}):`, err, aiResponse);
     }
@@ -226,6 +227,7 @@ export async function POST(request: NextRequest) {
     success: true,
     data: {
       game: {
+        id: suggestedGame.id,
         app_id: suggestedGame.app_id,
         name: suggestedGame.name,
         header_image: suggestedGame.header_image,

@@ -49,9 +49,11 @@ export function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
     case 'recent':
       // When the game joined the library. The first sync imports everything
       // at once, so ties fall back to the newest on Steam.
-      return b.created_at.localeCompare(a.created_at) || b.app_id - a.app_id;
+      return (
+        b.created_at.localeCompare(a.created_at) || (b.app_id ?? 0) - (a.app_id ?? 0) || b.id - a.id
+      );
     case 'released':
-      return releaseTime(b) - releaseTime(a) || b.app_id - a.app_id;
+      return releaseTime(b) - releaseTime(a) || b.id - a.id;
     case 'length': {
       const aHours = a.main_story_hours ?? Infinity;
       const bHours = b.main_story_hours ?? Infinity;
@@ -73,7 +75,7 @@ export interface FilterCounts {
 }
 
 interface GamesPageStatusModal {
-  appId: number;
+  gameId: number;
   gameName: string;
   headerImage: string | null;
   initialStatus: 'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
@@ -110,9 +112,9 @@ interface UseGamesPageReturn {
     rating: number | null,
   ) => Promise<void>;
   handleCloseStatusModal: () => void;
-  handleOpenDetail: (appId: number) => void;
-  handleAddToQueue: (appId: number) => Promise<void>;
-  queuedAppIds: Set<number>;
+  handleOpenDetail: (gameId: number) => void;
+  handleAddToQueue: (gameId: number) => Promise<void>;
+  queuedGameIds: Set<number>;
 }
 
 const BATCH_SIZE = 60;
@@ -131,7 +133,7 @@ export function useGamesPage(): UseGamesPageReturn {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { queuedAppIds } = useQueue(userId);
+  const { queuedGameIds } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
 
   // Filter, sort and search live in the URL so they survive navigating away
@@ -148,13 +150,13 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const statusMutation = useMutation({
     mutationFn: async (vars: {
-      appId: number;
+      gameId: number;
       status: string;
       date: string;
       notes: string;
       rating: number | null;
     }) => {
-      await updateGameStatus(vars.appId, vars.status, {
+      await updateGameStatus(vars.gameId, vars.status, {
         finishedAt: vars.status === 'finished' ? vars.date : undefined,
         droppedAt: vars.status === 'dropped' ? vars.date : undefined,
         notes: vars.notes,
@@ -166,7 +168,7 @@ export function useGamesPage(): UseGamesPageReturn {
       const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
       queryClient.setQueryData<GameItem[]>(gamesKey, (old) =>
         old?.map((g) =>
-          g.app_id === vars.appId
+          g.id === vars.gameId
             ? {
                 ...g,
                 status: vars.status,
@@ -190,8 +192,8 @@ export function useGamesPage(): UseGamesPageReturn {
     onSettled: () => invalidateGames(),
   });
 
-  const handleOpenDetail = (appId: number) => {
-    const game = games.find((g) => g.app_id === appId);
+  const handleOpenDetail = (gameId: number) => {
+    const game = games.find((g) => g.id === gameId);
     if (!game) return;
 
     const status = (game.status ?? 'backlog') as
@@ -204,7 +206,7 @@ export function useGamesPage(): UseGamesPageReturn {
           : null;
 
     setStatusModal({
-      appId,
+      gameId,
       gameName: game.name,
       headerImage: game.header_image,
       initialStatus: status,
@@ -227,13 +229,13 @@ export function useGamesPage(): UseGamesPageReturn {
     rating: number | null,
   ) => {
     if (!statusModal) return;
-    statusMutation.mutate({ appId: statusModal.appId, status, date, notes, rating });
+    statusMutation.mutate({ gameId: statusModal.gameId, status, date, notes, rating });
   };
 
   const handleCloseStatusModal = () => setStatusModal(null);
 
-  const handleAddToQueue = async (appId: number) => {
-    const game = games.find((g) => g.app_id === appId);
+  const handleAddToQueue = async (gameId: number) => {
+    const game = games.find((g) => g.id === gameId);
     if (game) addGameToQueue(game);
   };
 
@@ -343,6 +345,6 @@ export function useGamesPage(): UseGamesPageReturn {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
-    queuedAppIds,
+    queuedGameIds,
   };
 }

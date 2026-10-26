@@ -13,7 +13,8 @@ import {
 } from '@/components/games/carousel-layout';
 
 interface Game {
-  app_id: number;
+  id: number;
+  app_id: number | null;
   name: string;
   header_image: string | null;
   main_story_hours: number | null;
@@ -197,7 +198,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
               const indexInList = position - before * count;
               return (
                 <div
-                  key={`${Math.floor(position / count)}-${game.app_id}`}
+                  key={`${Math.floor(position / count)}-${game.id}`}
                   className={`relative min-w-0 ${loop ? '' : 'snap-start'}`}
                   style={{ flex: `0 0 ${CARD_WIDTH}` }}
                   aria-hidden={hidden || undefined}

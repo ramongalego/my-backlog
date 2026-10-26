@@ -13,7 +13,10 @@ export interface Game {
 }
 
 export interface GameWithImage {
-  app_id: number;
+  /** The game's row id: how the app identifies a game. */
+  id: number;
+  /** Steam's app id, for Steam games only (store links). */
+  app_id: number | null;
   name: string;
   header_image: string | null;
   main_story_hours: number | null;
@@ -31,10 +34,12 @@ export interface SyncProgress {
 }
 
 export interface QueueItem {
+  /** The queue row's id. */
   id: number;
-  app_id: number;
+  game_id: number;
   position: number;
   game: {
+    app_id: number | null;
     name: string;
     header_image: string | null;
     playtime_forever: number;

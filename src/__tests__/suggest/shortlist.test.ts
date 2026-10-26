@@ -17,7 +17,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 let nextId = 1;
 const game = (overrides: Partial<CandidateGame> = {}): CandidateGame => ({
-  app_id: nextId++,
+  id: nextId++,
   name: `Game ${nextId}`,
   genres: ['Action'],
   categories: ['Single-player'],

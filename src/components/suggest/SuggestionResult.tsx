@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
 import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
+import { steamStoreUrl } from '@/lib/games/store-link';
 import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
 
 interface SuggestionResultProps {
@@ -25,6 +26,7 @@ export function SuggestionResult({
 }: SuggestionResultProps) {
   const { game, reasoning } = suggestion;
   const isOnCooldown = cooldownRemaining > 0;
+  const storeUrl = steamStoreUrl(game.app_id);
 
   return (
     <>
@@ -79,14 +81,16 @@ export function SuggestionResult({
           {game.genres && game.genres.length > 0 && (
             <span>{game.genres.slice(0, 2).join(', ')}</span>
           )}
-          <a
-            href={`https://store.steampowered.com/app/${game.app_id}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 ml-auto hover:text-ink-300 transition-colors"
-          >
-            <span>Steam</span> <ExternalLink className="w-3 h-3" />
-          </a>
+          {storeUrl && (
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 ml-auto hover:text-ink-300 transition-colors"
+            >
+              <span>Steam</span> <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
 
         {/* Tags */}

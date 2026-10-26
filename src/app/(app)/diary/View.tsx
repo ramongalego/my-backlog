@@ -14,6 +14,7 @@ import { useUrlState } from '@/hooks/useUrlState';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { DiaryListSkeleton } from './Skeleton';
 import type { DiaryEntry } from '@/hooks/useDiary';
+import { steamStoreUrl } from '@/lib/games/store-link';
 import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -35,8 +36,8 @@ function monthName(isoDate: string): string {
 
 interface DiaryRowProps {
   entry: DiaryEntry;
-  onEdit: (appId: number) => void;
-  onSaveNotes: (appId: number, notes: string) => void;
+  onEdit: (gameId: number) => void;
+  onSaveNotes: (gameId: number, notes: string) => void;
 }
 
 // On desktop the day, rating and buttons line up with the cover, whose height
@@ -97,7 +98,8 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const day = entry.finished_at ? formatDay(entry.finished_at) : null;
   const canAddNote = !entry.notes && !editingNote;
   const startNote = () => setEditingNote(true);
-  const edit = () => onEdit(entry.app_id);
+  const edit = () => onEdit(entry.id);
+  const storeUrl = steamStoreUrl(entry.app_id);
 
   return (
     <div className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70">
@@ -129,19 +131,25 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
       {/* Title, the note, and on phones the rating and buttons */}
       <div className={`min-w-0 flex-1 ${COVER_HEIGHT} flex flex-col sm:justify-center`}>
         <div className="flex items-start gap-2">
-          <a
-            href={`https://store.steampowered.com/app/${entry.app_id}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={entry.name}
-            className="group/title flex-1 min-w-0 inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors"
-          >
-            <span className="sm:truncate min-w-0">{entry.name}</span>
-            <ExternalLink
-              className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
-              aria-hidden="true"
-            />
-          </a>
+          {storeUrl ? (
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={entry.name}
+              className="group/title flex-1 min-w-0 inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors"
+            >
+              <span className="sm:truncate min-w-0">{entry.name}</span>
+              <ExternalLink
+                className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
+                aria-hidden="true"
+              />
+            </a>
+          ) : (
+            <p title={entry.name} className="flex-1 min-w-0 font-medium text-ink-100 sm:truncate">
+              {entry.name}
+            </p>
+          )}
           <div className="sm:hidden flex items-center gap-1 shrink-0 -my-1 -mr-1.5">
             {entry.playtime_forever >= 60 && (
               <span className="mr-2.5">
@@ -163,7 +171,7 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
             onCancel={() => setEditingNote(false)}
             onSave={(notes) => {
               setEditingNote(false);
-              if (notes !== (entry.notes ?? '')) onSaveNotes(entry.app_id, notes);
+              if (notes !== (entry.notes ?? '')) onSaveNotes(entry.id, notes);
             }}
           />
         ) : (
@@ -339,7 +347,7 @@ export default function DiaryView() {
                     </h3>
                     {mg.entries.map((entry) => (
                       <DiaryRow
-                        key={entry.app_id}
+                        key={entry.id}
                         entry={entry}
                         onEdit={handleOpenDetail}
                         onSaveNotes={handleSaveNotes}
@@ -357,7 +365,7 @@ export default function DiaryView() {
               <SectionLabel className="pb-2 border-b border-ink-800">No date</SectionLabel>
               {filteredUndated.map((entry) => (
                 <DiaryRow
-                  key={entry.app_id}
+                  key={entry.id}
                   entry={entry}
                   onEdit={handleOpenDetail}
                   onSaveNotes={handleSaveNotes}

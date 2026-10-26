@@ -6,16 +6,12 @@ import { SuggestionWizard } from './SuggestionWizard';
 import { SuggestionResult } from './SuggestionResult';
 import { SuggestionLoading } from './SuggestionLoading';
 import { SuggestionError } from './SuggestionError';
+import type { SuggestionResult as Suggestion } from '@/lib/suggest/types';
 
 interface SuggestionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPick: (
-    appId: number,
-    name: string,
-    headerImage: string | null,
-    mainStoryHours: number | null,
-  ) => void;
+  onPick: (game: Suggestion['game']) => void;
   mode?: 'play' | 'queue';
   showHistoryWarning?: boolean;
 }
@@ -44,12 +40,7 @@ export function SuggestionModal({
 
   const handlePick = () => {
     if (suggestion) {
-      onPick(
-        suggestion.game.app_id,
-        suggestion.game.name,
-        suggestion.game.header_image,
-        suggestion.game.main_story_hours,
-      );
+      onPick(suggestion.game);
       onClose();
     }
   };

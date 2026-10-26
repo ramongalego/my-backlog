@@ -31,7 +31,8 @@ export interface RatingBar {
 }
 
 export interface PlayedALotGame {
-  app_id: number;
+  id: number;
+  app_id: number | null;
   name: string;
   playtime_forever: number;
   main_story_hours: number | null;
@@ -85,7 +86,7 @@ export function useStats() {
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
-  const { queuedAppIds } = useQueue(userId);
+  const { queuedGameIds } = useQueue(userId);
 
   const stats: Stats | null = (() => {
     if (games.length === 0) return null;
@@ -186,7 +187,8 @@ export function useStats() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
 
-    const playedALotGames: PlayedALotGame[] = playedALot(games, queuedAppIds).map((g) => ({
+    const playedALotGames: PlayedALotGame[] = playedALot(games, queuedGameIds).map((g) => ({
+      id: g.id,
       app_id: g.app_id,
       name: g.name,
       playtime_forever: g.playtime_forever,

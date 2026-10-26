@@ -41,6 +41,7 @@ export function LibrarySyncGuard() {
             'app_id, name, type, categories, header_image, metadata_synced, main_story_hours, release_date',
           )
           .eq('user_id', userId)
+          .eq('source', 'steam')
           .order('app_id')
           .range(from, to),
       );

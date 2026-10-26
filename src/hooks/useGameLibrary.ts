@@ -33,7 +33,7 @@ export function useGameLibrary() {
     meta: {
       gameCount: meta.gameCount,
       historyCount: meta.historyCount,
-      queuedAppIds: currentGame.queuedAppIds,
+      queuedGameIds: currentGame.queuedGameIds,
     },
     sync: {
       isSyncing: sync.isSyncing,

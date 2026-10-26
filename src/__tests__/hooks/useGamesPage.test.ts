@@ -38,6 +38,7 @@ function filterGames(games: GameItem[], filter: GameFilter, searchQuery: string)
 }
 
 const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
+  id: 1,
   app_id: 1,
   name: 'Test Game',
   playtime_forever: 100,
@@ -61,12 +62,12 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
 
 describe('useGamesPage filtering logic', () => {
   const sampleGames: GameItem[] = [
-    createGame({ app_id: 1, name: 'The Legend of Zelda', status: 'backlog' }),
-    createGame({ app_id: 2, name: 'Final Fantasy VII', status: 'finished' }),
-    createGame({ app_id: 3, name: 'Mario Kart', status: 'backlog' }),
-    createGame({ app_id: 4, name: 'Dark Souls', status: 'dropped' }),
-    createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
-    createGame({ app_id: 6, name: 'Elden Ring', status: 'playing' }),
+    createGame({ id: 1, app_id: 1, name: 'The Legend of Zelda', status: 'backlog' }),
+    createGame({ id: 2, app_id: 2, name: 'Final Fantasy VII', status: 'finished' }),
+    createGame({ id: 3, app_id: 3, name: 'Mario Kart', status: 'backlog' }),
+    createGame({ id: 4, app_id: 4, name: 'Dark Souls', status: 'dropped' }),
+    createGame({ id: 5, app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
+    createGame({ id: 6, app_id: 6, name: 'Elden Ring', status: 'playing' }),
   ];
 
   describe('search filtering', () => {
@@ -122,24 +123,27 @@ describe('useGamesPage filtering logic', () => {
   describe('tag search', () => {
     const gamesWithTags: GameItem[] = [
       createGame({
+        id: 1,
         app_id: 1,
         name: 'Dark Souls',
         status: 'backlog',
         tags: ['Action', 'Souls-like', 'Difficult'],
       }),
       createGame({
+        id: 2,
         app_id: 2,
         name: 'Persona 5',
         status: 'backlog',
         tags: ['JRPG', 'Turn-Based', 'Anime'],
       }),
       createGame({
+        id: 3,
         app_id: 3,
         name: 'Hades',
         status: 'backlog',
         tags: ['Roguelike', 'Action', 'Indie'],
       }),
-      createGame({ app_id: 4, name: 'No Tags Game', status: 'backlog', tags: null }),
+      createGame({ id: 4, app_id: 4, name: 'No Tags Game', status: 'backlog', tags: null }),
     ];
 
     it('should filter by tag (case-insensitive)', () => {
@@ -223,7 +227,7 @@ describe('useGamesPage filtering logic', () => {
     it('should filter by backlog status including null status', () => {
       const gamesWithNull = [
         ...sampleGames,
-        createGame({ app_id: 6, name: 'New Game', status: null }),
+        createGame({ id: 6, app_id: 6, name: 'New Game', status: null }),
       ];
       const result = filterGames(gamesWithNull, 'backlog', '');
 
@@ -254,7 +258,7 @@ describe('useGamesPage filtering logic', () => {
     it('should filter by wont_play status', () => {
       const gamesWithWontPlay = [
         ...sampleGames,
-        createGame({ app_id: 99, name: 'Boring Game', status: 'wont_play' }),
+        createGame({ id: 99, app_id: 99, name: 'Boring Game', status: 'wont_play' }),
       ];
       const result = filterGames(gamesWithWontPlay, 'wont_play', '');
 
@@ -265,7 +269,7 @@ describe('useGamesPage filtering logic', () => {
     it('should show non-hidden / non-playing games (including wont_play) with "all" filter', () => {
       const gamesWithWontPlay = [
         ...sampleGames,
-        createGame({ app_id: 99, name: 'Boring Game', status: 'wont_play' }),
+        createGame({ id: 99, app_id: 99, name: 'Boring Game', status: 'wont_play' }),
       ];
       const result = filterGames(gamesWithWontPlay, 'all', '');
 
@@ -280,7 +284,7 @@ describe('useGamesPage filtering logic', () => {
   describe('performance considerations', () => {
     it('should handle large lists efficiently', () => {
       const largeList = Array.from({ length: 1000 }, (_, i) =>
-        createGame({ app_id: i, name: `Game ${i}`, status: 'backlog' }),
+        createGame({ id: i, app_id: i, name: `Game ${i}`, status: 'backlog' }),
       );
 
       const start = performance.now();
@@ -293,7 +297,7 @@ describe('useGamesPage filtering logic', () => {
 
     it('should handle empty search efficiently', () => {
       const largeList = Array.from({ length: 1000 }, (_, i) =>
-        createGame({ app_id: i, name: `Game ${i}`, status: 'backlog' }),
+        createGame({ id: i, app_id: i, name: `Game ${i}`, status: 'backlog' }),
       );
 
       const start = performance.now();
@@ -308,6 +312,7 @@ describe('useGamesPage filtering logic', () => {
   describe('sorting', () => {
     const gamesForSorting: GameItem[] = [
       createGame({
+        id: 1,
         app_id: 1,
         name: 'Game A',
         playtime_forever: 100,
@@ -315,6 +320,7 @@ describe('useGamesPage filtering logic', () => {
         status: 'backlog',
       }),
       createGame({
+        id: 3,
         app_id: 3,
         name: 'Game B',
         playtime_forever: 300,
@@ -322,6 +328,7 @@ describe('useGamesPage filtering logic', () => {
         status: 'backlog',
       }),
       createGame({
+        id: 2,
         app_id: 2,
         name: 'Game C',
         playtime_forever: 200,
@@ -357,12 +364,18 @@ describe('useGamesPage filtering logic', () => {
     it('should sort recently added by when the game joined the library', () => {
       const games = [
         createGame({
+          id: 900,
           app_id: 900,
           name: 'First sync, new on Steam',
           created_at: '2026-01-26T20:33:00Z',
         }),
-        createGame({ app_id: 10, name: 'Bought last', created_at: '2026-10-25T13:53:00Z' }),
-        createGame({ app_id: 20, name: 'Bought in April', created_at: '2026-04-04T17:10:00Z' }),
+        createGame({ id: 10, app_id: 10, name: 'Bought last', created_at: '2026-10-25T13:53:00Z' }),
+        createGame({
+          id: 20,
+          app_id: 20,
+          name: 'Bought in April',
+          created_at: '2026-04-04T17:10:00Z',
+        }),
       ];
 
       const result = filterAndSortGames(games, 'all', '', 'recent');
@@ -378,16 +391,29 @@ describe('useGamesPage filtering logic', () => {
       const finished = (o: Partial<GameItem>) => createGame({ status: 'finished', ...o });
       const games = [
         createGame({
+          id: 1,
           app_id: 1,
           name: 'Unrated, great on Steam',
           rating: null,
           steam_review_weighted: 99,
         }),
-        finished({ app_id: 2, name: '8, finished 2024', rating: 8, finished_at: '2024-05-01' }),
-        finished({ app_id: 3, name: '10', rating: 10, finished_at: '2021-01-01' }),
-        finished({ app_id: 4, name: '8, finished 2025', rating: 8, finished_at: '2025-08-20' }),
-        createGame({ app_id: 6, name: 'Dropped at 4', status: 'dropped', rating: 4 }),
-        finished({ app_id: 5, name: 'Rated 0', rating: 0, finished_at: '2023-01-01' }),
+        finished({
+          id: 2,
+          app_id: 2,
+          name: '8, finished 2024',
+          rating: 8,
+          finished_at: '2024-05-01',
+        }),
+        finished({ id: 3, app_id: 3, name: '10', rating: 10, finished_at: '2021-01-01' }),
+        finished({
+          id: 4,
+          app_id: 4,
+          name: '8, finished 2025',
+          rating: 8,
+          finished_at: '2025-08-20',
+        }),
+        createGame({ id: 6, app_id: 6, name: 'Dropped at 4', status: 'dropped', rating: 4 }),
+        finished({ id: 5, app_id: 5, name: 'Rated 0', rating: 0, finished_at: '2023-01-01' }),
       ];
 
       const result = filterAndSortGames(games, 'all', '', 'rating');
@@ -405,14 +431,16 @@ describe('useGamesPage filtering logic', () => {
     it('should ignore a rating left on a game that is back in the backlog', () => {
       const games = [
         createGame({
+          id: 1,
           app_id: 1,
           name: 'Backlog, old 10',
           status: 'backlog',
           rating: 10,
           steam_review_weighted: 50,
         }),
-        createGame({ app_id: 2, name: 'Finished 6', status: 'finished', rating: 6 }),
+        createGame({ id: 2, app_id: 2, name: 'Finished 6', status: 'finished', rating: 6 }),
         createGame({
+          id: 3,
           app_id: 3,
           name: 'Backlog, unrated',
           status: 'backlog',
@@ -432,10 +460,10 @@ describe('useGamesPage filtering logic', () => {
 
     it('should sort by release date, newest first, with unknown dates last', () => {
       const games = [
-        createGame({ app_id: 1, name: 'TBA', release_date: 'To be announced' }),
-        createGame({ app_id: 2, name: '2010', release_date: 'Sep 28, 2010' }),
-        createGame({ app_id: 3, name: 'No date', release_date: null }),
-        createGame({ app_id: 4, name: '2023', release_date: 'Jun 16, 2023' }),
+        createGame({ id: 1, app_id: 1, name: 'TBA', release_date: 'To be announced' }),
+        createGame({ id: 2, app_id: 2, name: '2010', release_date: 'Sep 28, 2010' }),
+        createGame({ id: 3, app_id: 3, name: 'No date', release_date: null }),
+        createGame({ id: 4, app_id: 4, name: '2023', release_date: 'Jun 16, 2023' }),
       ];
 
       const result = filterAndSortGames(games, 'all', '', 'released');
@@ -451,8 +479,20 @@ describe('useGamesPage filtering logic', () => {
 
     it('should handle null scores when sorting by score', () => {
       const gamesWithNullScore = [
-        createGame({ app_id: 1, name: 'No Score', steam_review_weighted: null, status: 'backlog' }),
-        createGame({ app_id: 2, name: 'Has Score', steam_review_weighted: 85, status: 'backlog' }),
+        createGame({
+          id: 1,
+          app_id: 1,
+          name: 'No Score',
+          steam_review_weighted: null,
+          status: 'backlog',
+        }),
+        createGame({
+          id: 2,
+          app_id: 2,
+          name: 'Has Score',
+          steam_review_weighted: 85,
+          status: 'backlog',
+        }),
       ];
 
       const result = filterAndSortGames(gamesWithNullScore, 'all', '', 'score');
@@ -463,9 +503,27 @@ describe('useGamesPage filtering logic', () => {
 
     it('should apply sorting after filtering', () => {
       const mixedGames = [
-        createGame({ app_id: 1, name: 'Backlog Game A', playtime_forever: 100, status: 'backlog' }),
-        createGame({ app_id: 2, name: 'Finished Game', playtime_forever: 500, status: 'finished' }),
-        createGame({ app_id: 3, name: 'Backlog Game B', playtime_forever: 200, status: 'backlog' }),
+        createGame({
+          id: 1,
+          app_id: 1,
+          name: 'Backlog Game A',
+          playtime_forever: 100,
+          status: 'backlog',
+        }),
+        createGame({
+          id: 2,
+          app_id: 2,
+          name: 'Finished Game',
+          playtime_forever: 500,
+          status: 'finished',
+        }),
+        createGame({
+          id: 3,
+          app_id: 3,
+          name: 'Backlog Game B',
+          playtime_forever: 200,
+          status: 'backlog',
+        }),
       ];
 
       const result = filterAndSortGames(mixedGames, 'backlog', '', 'playtime');
@@ -514,14 +572,14 @@ function searchFilter(games: GameItem[], query: string): GameItem[] {
 
 describe('useGamesPage count computation', () => {
   const sampleGames: GameItem[] = [
-    createGame({ app_id: 1, name: 'Zelda', status: 'backlog' }),
-    createGame({ app_id: 2, name: 'Final Fantasy', status: 'finished' }),
-    createGame({ app_id: 3, name: 'Mario', status: 'backlog', tags: ['Platformer'] }),
-    createGame({ app_id: 4, name: 'Dark Souls', status: 'dropped' }),
-    createGame({ app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
-    createGame({ app_id: 6, name: 'New Game', status: null }),
-    createGame({ app_id: 7, name: 'Now Playing', status: 'playing' }),
-    createGame({ app_id: 8, name: 'Wont Bother', status: 'wont_play' }),
+    createGame({ id: 1, app_id: 1, name: 'Zelda', status: 'backlog' }),
+    createGame({ id: 2, app_id: 2, name: 'Final Fantasy', status: 'finished' }),
+    createGame({ id: 3, app_id: 3, name: 'Mario', status: 'backlog', tags: ['Platformer'] }),
+    createGame({ id: 4, app_id: 4, name: 'Dark Souls', status: 'dropped' }),
+    createGame({ id: 5, app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
+    createGame({ id: 6, app_id: 6, name: 'New Game', status: null }),
+    createGame({ id: 7, app_id: 7, name: 'Now Playing', status: 'playing' }),
+    createGame({ id: 8, app_id: 8, name: 'Wont Bother', status: 'wont_play' }),
   ];
 
   it('should exclude hidden and playing games from all count (wont_play is included)', () => {
@@ -597,7 +655,9 @@ function paginateGames(games: GameItem[], visibleCount: number) {
 
 describe('useGamesPage pagination logic', () => {
   const makeGames = (count: number): GameItem[] =>
-    Array.from({ length: count }, (_, i) => createGame({ app_id: i + 1, name: `Game ${i + 1}` }));
+    Array.from({ length: count }, (_, i) =>
+      createGame({ id: i + 1, app_id: i + 1, name: `Game ${i + 1}` }),
+    );
 
   it('should show only the first batch when visibleCount equals BATCH_SIZE', () => {
     const games = makeGames(200);
