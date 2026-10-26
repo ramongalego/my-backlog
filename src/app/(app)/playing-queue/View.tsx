@@ -330,16 +330,13 @@ export default function PlayingQueueView() {
         </>
       }
     >
-      <PageHeader
-        title="Playing Queue"
-        description="What you're playing now and what's up next. Drag to reorder."
-      />
+      <PageHeader title="Playing Queue" description="What you're playing now and what's up next" />
 
       {isLoading ? (
         <QueueListSkeleton />
       ) : isEmpty ? (
-        <EmptyState icon={ListOrdered} title="Your queue is empty.">
-          Pick a game to play first, then queue up what&apos;s next from your library.
+        <EmptyState icon={ListOrdered} title="Your queue is empty">
+          Pick a game to play first, then queue up what&apos;s next from your library
         </EmptyState>
       ) : (
         <div>

@@ -312,11 +312,11 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl font-semibold text-ink-50 leading-[1.05] tracking-tight">
                 Play the games
                 <br />
-                <span className="text-accent-400">you already own.</span>
+                <span className="text-accent-400">you already own</span>
               </h1>
               <p className="mt-6 text-lg md:text-xl text-ink-300 max-w-lg leading-relaxed">
                 MyBacklog imports your Steam library and picks something from it for tonight, based
-                on your mood and how much time you have.
+                on your mood and how much time you have
               </p>
               <p className="mt-3 text-sm text-ink-400 h-5 leading-5" aria-live="off">
                 <span
@@ -583,7 +583,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 Start clearing your backlog tonight
               </h2>
               <p className="mt-3 text-ink-400">
-                It&apos;s free, and connecting Steam imports your whole library.
+                It&apos;s free, and connecting Steam imports your whole library
               </p>
             </div>
             <div className="shrink-0">{primaryCta}</div>

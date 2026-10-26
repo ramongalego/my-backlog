@@ -323,7 +323,7 @@ export default function DiaryView() {
         <DiaryListSkeleton />
       ) : entries.length === 0 ? (
         <EmptyState icon={Trophy} title="No finished games yet">
-          When you finish a game, it lands here with the date, your rating and any notes.
+          When you finish a game, it lands here with the date, your rating and any notes
         </EmptyState>
       ) : (
         <div>

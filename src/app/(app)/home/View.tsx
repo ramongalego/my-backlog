@@ -138,7 +138,6 @@ export default function HomeView() {
                     >
                       queue
                     </Link>
-                    .
                   </p>
                 </div>
               }
@@ -152,7 +151,7 @@ export default function HomeView() {
               </h1>
               <p className="mt-2 text-ink-400">
                 Answer a few quick questions and we&apos;ll pick something from your backlog, or
-                leave it to chance.
+                leave it to chance
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-2">
                 <Button
