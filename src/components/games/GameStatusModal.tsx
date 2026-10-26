@@ -554,7 +554,7 @@ export function GameDetailModal({
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="cursor-pointer text-sm text-ink-400 hover:text-rose-400 transition-colors"
+              className="cursor-pointer mx-auto block text-sm text-ink-400 hover:text-rose-400 transition-colors"
             >
               Remove from library
             </button>
