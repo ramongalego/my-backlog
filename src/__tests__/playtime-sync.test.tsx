@@ -46,7 +46,12 @@ describe('syncOwnedGames and last played', () => {
   const rtime = (iso: string) => Date.parse(iso) / 1000;
 
   function fakeSupabase(
-    rows: { app_id: number; playtime_forever: number; last_played_at: string | null }[],
+    rows: {
+      app_id: number;
+      playtime_forever: number;
+      last_played_at: string | null;
+      platform?: string | null;
+    }[],
   ) {
     const updates: Record<string, unknown>[] = [];
     const inserts: Record<string, unknown>[] = [];
@@ -113,8 +118,22 @@ describe('syncOwnedGames and last played', () => {
       { app_id: 1, playtime_forever: 600, last_played_at: '2021-06-29T13:02:00.000Z' },
       { app_id: 2, playtime_forever: 300, last_played_at: '2026-10-24T20:00:00.000Z' },
     ]);
-    expect(inserts).toEqual([expect.objectContaining({ app_id: 4, last_played_at: null })]);
+    expect(inserts).toEqual([
+      expect.objectContaining({ app_id: 4, last_played_at: null, platform: 'PC' }),
+    ]);
     expect(result).toEqual({ newGames: 1, updatedPlaytime: 1, updatedGames: 2 });
+  });
+
+  it('leaves a game you moved to a console alone: its hours are the ones you entered', async () => {
+    const { client, updates } = fakeSupabase([
+      { app_id: 1, playtime_forever: 180, last_played_at: null, platform: 'Switch' },
+      { app_id: 2, playtime_forever: 60, last_played_at: null, platform: 'PC' },
+    ]);
+    await syncOwnedGames(client, 'user', [
+      steamGame(1, 600, '2026-10-24T20:00:00Z'),
+      steamGame(2, 120, '2026-10-24T20:00:00Z'),
+    ]);
+    expect(updates.map((u) => u.app_id)).toEqual([2]);
   });
 
   it('keeps a known date when Steam stops sharing it', async () => {

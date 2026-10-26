@@ -18,6 +18,11 @@ import {
 } from '@/lib/games/manual';
 import { GameDetailModal, type AddStatus } from './GameStatusModal';
 import { defaultConsole, orderConsoles } from './ConsolePicker';
+import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
+
+// The statuses the add dialog offers; a Steam game in another (won't play,
+// hidden) starts on backlog.
+const ADDABLE = ['backlog', 'playing', 'finished', 'dropped'] as const;
 
 // Wait for a pause in typing before searching.
 const SEARCH_DELAY_MS = 300;
@@ -58,7 +63,8 @@ export function AddGameModal({
   userId: string;
   initialQuery?: string;
   onClose: () => void;
-  onAdded: (name: string, status: AddStatus, warning?: string) => void;
+  /** `movedTo` is set when the game was already on Steam and moved to that console. */
+  onAdded: (name: string, status: AddStatus, warning?: string, movedTo?: string) => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<GameSearchResult[]>([]);
@@ -144,10 +150,20 @@ export function AddGameModal({
   };
 
   if (picked) {
+    const steamGame = picked.steamGame;
     const consoles = orderConsoles(
-      (details?.platforms ?? picked.platforms).map(shortPlatformName),
-      usedConsoles,
+      (details?.platforms ?? picked.platforms)
+        .map(shortPlatformName)
+        // Owned on Steam: PC is where it already is.
+        .filter((name) => !steamGame || name !== STEAM_PLATFORM),
+      // A Steam game moved before starts on the console it was moved to.
+      steamGame && playsOnConsole(steamGame.platform)
+        ? [steamGame.platform!, ...usedConsoles]
+        : usedConsoles,
     );
+    // Moving a Steam game starts from where it is: its status, and its date,
+    // notes and rating if it's finished or dropped.
+    const steamStatus = ADDABLE.find((s) => s === steamGame?.status);
     return (
       <GameDetailModal
         // A new game starts the form over (console, status, hours).
@@ -158,10 +174,19 @@ export function AddGameModal({
         // If the details fail, the box art is all there is.
         headerImage={details ? details.header_image : picked.cover}
         headerLoading={detailsPending}
-        initialStatus="backlog"
+        initialStatus={steamStatus ?? 'backlog'}
+        initialDate={steamGame?.date?.slice(0, 10) ?? null}
+        initialNotes={steamGame?.notes}
+        initialRating={steamGame?.rating}
         adding={{
           consoles,
-          defaultConsole: defaultConsole(consoles, usedConsoles),
+          defaultConsole: defaultConsole(
+            consoles,
+            steamGame && playsOnConsole(steamGame.platform)
+              ? [steamGame.platform!, ...usedConsoles]
+              : usedConsoles,
+          ),
+          fromSteam: !!steamGame,
           year: picked.year,
           playingName: playing?.name ?? null,
           onChangeGame: () => setPicked(null),
@@ -175,7 +200,7 @@ export function AddGameModal({
               notes: notes || undefined,
               rating,
             });
-            onAdded(added.name, status, added.warning);
+            onAdded(added.name, status, added.warning, added.movedFromSteam ? platform : undefined);
           },
         }}
       />
@@ -260,6 +285,7 @@ export function AddGameModal({
           >
             {results.map((game, i) => {
               const owned = ownedOn(game.igdbId);
+              const steam = game.steamGame;
               return (
                 <li
                   key={game.igdbId}
@@ -283,6 +309,14 @@ export function AddGameModal({
                     <p className="text-xs text-ink-400 truncate">
                       {game.platforms.map(shortPlatformName).join(', ')}
                     </p>
+                    {steam && (
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-300">
+                        <Check className="w-3 h-3" aria-hidden="true" />
+                        {playsOnConsole(steam.platform)
+                          ? `In your library on ${steam.platform}, from Steam`
+                          : 'In your Steam library'}
+                      </p>
+                    )}
                     {owned.length > 0 && (
                       <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-300">
                         <Check className="w-3 h-3" aria-hidden="true" />

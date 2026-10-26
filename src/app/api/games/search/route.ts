@@ -34,7 +34,41 @@ export async function GET(request: NextRequest) {
 
     const query = gameSearchSchema.safeParse(params.get('q') ?? '');
     if (!query.success) return jsonError('Search for at least 2 characters', 400);
-    return NextResponse.json({ results: await searchGames(query.data) }, { headers: cache });
+    const results = await searchGames(query.data);
+    // Mark the games you already own on Steam: adding one moves that entry to
+    // the console you pick instead of listing the game twice.
+    const appIds = [...new Set(results.flatMap((r) => r.steamAppIds))];
+    const { data: owned, error } = appIds.length
+      ? await supabase
+          .from('games')
+          .select('id, app_id, status, platform, finished_at, dropped_at, notes, rating')
+          .eq('user_id', user.id)
+          .eq('source', 'steam')
+          .in('app_id', appIds)
+      : { data: [], error: null };
+    if (error) throw error;
+    return NextResponse.json(
+      {
+        results: results.map(({ steamAppIds, ...result }) => {
+          const game = owned?.find((g) => steamAppIds.includes(g.app_id));
+          return {
+            ...result,
+            steamGame: game
+              ? {
+                  id: game.id,
+                  status: game.status,
+                  platform: game.platform,
+                  date: game.finished_at ?? game.dropped_at,
+                  notes: game.notes,
+                  rating: game.rating,
+                }
+              : null,
+          };
+        }),
+      },
+      // Private and short-lived: it depends on your library, which changes as you add games.
+      { headers: { 'Cache-Control': 'private, max-age=60' } },
+    );
   } catch (err) {
     console.error(err);
     return jsonError("Game search isn't working right now. Try again in a minute.", 503);

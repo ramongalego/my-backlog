@@ -7,25 +7,45 @@ import { applyStatusChange } from '@/lib/games/apply-status';
 import { getGameDetails } from '@/lib/igdb/api';
 
 const inserted: Record<string, unknown>[] = [];
+const updated: Record<string, unknown>[] = [];
 const queueInserts: Record<string, unknown>[] = [];
 let insertError: { code: string } | null = null;
+// The user's Steam entry for the game, if any.
+let steamRow: { id: number; name: string; status: string } | null = null;
+let alreadyQueued = false;
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user: { id: `user-${Math.random()}` } } }) },
     from: (table: string) => {
+      let columns = '';
       const builder = {
         insert: (row: Record<string, unknown>) => {
           (table === 'games' ? inserted : queueInserts).push(row);
           return builder;
         },
-        select: () => builder,
+        update: (row: Record<string, unknown>) => {
+          updated.push(row);
+          return builder;
+        },
+        select: (cols = '') => {
+          columns = cols;
+          return builder;
+        },
         eq: () => builder,
+        in: () => builder,
         order: () => builder,
         limit: () => builder,
         single: async () =>
-          insertError ? { data: null, error: insertError } : { data: { id: 42 }, error: null },
-        maybeSingle: async () => ({ data: { position: 2 }, error: null }),
+          insertError
+            ? { data: null, error: insertError }
+            : { data: { id: steamRow?.id ?? 42 }, error: null },
+        maybeSingle: async () => {
+          if (table === 'games') return { data: steamRow, error: null };
+          if (columns === 'game_id')
+            return { data: alreadyQueued ? { game_id: steamRow?.id } : null, error: null };
+          return { data: { position: 2 }, error: null };
+        },
         then: (resolve: (v: unknown) => unknown) => resolve({ error: null }),
       };
       return builder;
@@ -45,6 +65,7 @@ const details = {
   description: null,
   release_date: 'Mar 1, 2026',
   header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
+  steamAppIds: [] as number[],
 };
 
 const post = async (body: unknown) => {
@@ -60,8 +81,11 @@ const post = async (body: unknown) => {
 beforeEach(() => {
   jest.clearAllMocks();
   inserted.length = 0;
+  updated.length = 0;
   queueInserts.length = 0;
   insertError = null;
+  steamRow = null;
+  alreadyQueued = false;
   jest.mocked(getGameDetails).mockResolvedValue(details);
   jest.mocked(applyStatusChange).mockResolvedValue({ ok: true });
 });
@@ -124,4 +148,45 @@ it('rejects a rating outside 0-10', async () => {
     rating: 11,
   });
   expect(status).toBe(400);
+});
+
+describe('a game you own on Steam', () => {
+  beforeEach(() => {
+    jest.mocked(getGameDetails).mockResolvedValue({
+      ...details,
+      name: 'Castlevania Dominus Collection',
+      steamAppIds: [2369900],
+    });
+    steamRow = { id: 7, name: 'Castlevania Dominus Collection', status: 'backlog' };
+  });
+
+  it('moves your Steam entry to the console instead of adding it twice', async () => {
+    const { status, body } = await post({
+      igdbId: 314944,
+      platform: 'Switch',
+      status: 'backlog',
+      hoursPlayed: 3,
+    });
+    expect(status).toBe(200);
+    expect(inserted).toHaveLength(0);
+    expect(updated[0]).toEqual({ platform: 'Switch', igdb_id: 314944, playtime_forever: 180 });
+    expect(body).toMatchObject({ id: 7, movedFromSteam: true });
+    // Already in the backlog: nothing else changes.
+    expect(applyStatusChange).not.toHaveBeenCalled();
+  });
+
+  it('starts it when you pick Playing', async () => {
+    await post({ igdbId: 314944, platform: 'Switch', status: 'playing' });
+    expect(applyStatusChange).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({ gameId: 7, status: 'playing' }),
+    );
+  });
+
+  it("doesn't queue it twice", async () => {
+    alreadyQueued = true;
+    await post({ igdbId: 314944, platform: 'Switch', status: 'queue' });
+    expect(queueInserts).toHaveLength(0);
+  });
 });

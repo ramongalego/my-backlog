@@ -34,6 +34,10 @@ const mkGame = (extra: Record<string, unknown> = {}) => ({
   themes: [{ name: 'Science fiction' }, { name: 'Open world' }],
   game_modes: [{ name: 'Single player' }, { name: 'Multiplayer' }],
   summary: 'Explore Mira.',
+  external_games: [
+    { uid: '9P07H5JQ4R5Q', external_game_source: 11 },
+    { uid: '2369900', external_game_source: 1 },
+  ],
   ...extra,
 });
 
@@ -49,6 +53,8 @@ describe('getGameDetails', () => {
       description: 'Explore Mira.',
       release_date: 'Mar 21, 2025',
       header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
+      // Its Steam listing, to recognise it in your Steam library.
+      steamAppIds: [2369900],
     });
   });
 
@@ -120,6 +126,7 @@ describe('searchGames', () => {
         year: 2025,
         cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1.jpg',
         platforms: ['Nintendo Switch'],
+        steamAppIds: [2369900],
       },
     ]);
   });

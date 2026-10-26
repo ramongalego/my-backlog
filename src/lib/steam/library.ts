@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SteamGame } from './api';
 import { findLegacyHeaderImages, getStoreHeaderImages } from './store-api';
 import { chunk, fetchAllRows } from '@/lib/supabase/paginate';
+import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
 
 const INSERT_BATCH_SIZE = 500;
 const UPDATE_CONCURRENCY = 25;
@@ -61,10 +62,11 @@ export async function syncOwnedGames(
     app_id: number;
     playtime_forever: number | null;
     last_played_at: string | null;
+    platform: string | null;
   }>((from, to) =>
     supabase
       .from('games')
-      .select('app_id, playtime_forever, last_played_at')
+      .select('app_id, playtime_forever, last_played_at, platform')
       .eq('user_id', userId)
       .eq('source', 'steam')
       .order('app_id')
@@ -81,8 +83,14 @@ export async function syncOwnedGames(
     const known = stored.get(game.appid)?.last_played_at;
     return steam !== null && (!known || Date.parse(known) !== Date.parse(steam));
   };
+  // A Steam game you play on a console keeps the hours you entered: Steam's
+  // playtime and last-played are for the PC copy.
+  const onConsole = (game: SteamGame) => playsOnConsole(stored.get(game.appid)?.platform);
   const updatedGames = steamGames.filter(
-    (game) => stored.has(game.appid) && (playtimeChanged(game) || lastPlayedChanged(game)),
+    (game) =>
+      stored.has(game.appid) &&
+      !onConsole(game) &&
+      (playtimeChanged(game) || lastPlayedChanged(game)),
   );
 
   const headerImages = await headerImagesFor(
@@ -96,6 +104,7 @@ export async function syncOwnedGames(
         user_id: userId,
         source: 'steam',
         app_id: game.appid,
+        platform: STEAM_PLATFORM,
         name: game.name,
         playtime_forever: game.playtime_forever,
         img_icon_url: game.img_icon_url,

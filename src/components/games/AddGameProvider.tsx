@@ -18,8 +18,14 @@ export function useAddGame() {
 }
 
 // Where a newly added game shows up, for the toast and its View link.
-function destination(status: AddStatus, name: string): { label: string; href: string } {
+function destination(
+  status: AddStatus,
+  name: string,
+  movedTo?: string,
+): { label: string; href: string } {
   const search = encodeURIComponent(name);
+  if (movedTo && status === 'backlog')
+    return { label: `Moved ${name} to ${movedTo}`, href: `/games?q=${search}` };
   switch (status) {
     case 'playing':
       return { label: `Now playing ${name}`, href: '/home' };
@@ -53,8 +59,8 @@ export function AddGameProvider({ children }: { children: ReactNode }) {
           userId={user.id}
           initialQuery={initialQuery}
           onClose={() => setInitialQuery(null)}
-          onAdded={(name, status, warning) => {
-            const { label, href } = destination(status, name);
+          onAdded={(name, status, warning, movedTo) => {
+            const { label, href } = destination(status, name, movedTo);
             if (warning) toast.warning(warning);
             else
               toast.success(label, {

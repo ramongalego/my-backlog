@@ -91,10 +91,13 @@ export function mergeForCache(
   return merged;
 }
 
-/** Columns copied from the shared cache onto a user's `games` row. */
+/**
+ * Columns copied from the shared cache onto a user's `games` row. Not the
+ * platform: that's the console you play it on, which you can change (a Steam
+ * game you play on Switch), so the sync sets it only once, on insert.
+ */
 export function toGameRowUpdate(m: GameMetadata) {
   return {
-    platform: m.platform,
     type: m.type,
     genres: m.genres,
     categories: m.categories,

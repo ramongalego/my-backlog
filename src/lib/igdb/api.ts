@@ -83,6 +83,21 @@ interface IgdbGame {
   themes?: { name: string }[];
   game_modes?: { name: string }[];
   summary?: string;
+  external_games?: { uid?: string; external_game_source?: number }[];
+}
+
+// IGDB's id for Steam among a game's store listings (external games).
+const STEAM_SOURCE = 1;
+const EXTERNAL_FIELDS = 'external_games.uid, external_games.external_game_source';
+
+/** The game's Steam app ids, to recognise a game you already own on Steam. */
+function steamAppIds(game: Pick<IgdbGame, 'external_games'>): number[] {
+  return (game.external_games ?? []).flatMap((e) => {
+    const appId = Number(e.uid);
+    return e.external_game_source === STEAM_SOURCE && Number.isInteger(appId) && appId > 0
+      ? [appId]
+      : [];
+  });
 }
 
 export interface GameSearchResult {
@@ -91,6 +106,7 @@ export interface GameSearchResult {
   year: number | null;
   cover: string | null;
   platforms: string[];
+  steamAppIds: number[];
 }
 
 export function coverUrl(imageId: string) {
@@ -144,7 +160,7 @@ export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): s
 export async function searchGames(text: string): Promise<GameSearchResult[]> {
   const games = await query<IgdbGame>(
     'games',
-    `search ${quoted(text)}; fields name, game_type, first_release_date, platforms.name, cover.image_id; where game_type = ${GAME_TYPES} & version_parent = null; limit 20;`,
+    `search ${quoted(text)}; fields name, game_type, first_release_date, platforms.name, cover.image_id, ${EXTERNAL_FIELDS}; where game_type = ${GAME_TYPES} & version_parent = null; limit 20;`,
   );
   const ordered = [
     ...games.filter((g) => g.game_type !== BUNDLE),
@@ -156,6 +172,7 @@ export async function searchGames(text: string): Promise<GameSearchResult[]> {
     year: g.first_release_date ? new Date(g.first_release_date * 1000).getUTCFullYear() : null,
     cover: g.cover ? coverUrl(g.cover.image_id) : null,
     platforms: (g.platforms ?? []).map((p) => p.name),
+    steamAppIds: steamAppIds(g),
   }));
 }
 
@@ -201,13 +218,15 @@ export interface ManualGameDetails {
   /** Display text like Steam's ("Jun 5, 2025"), so release-date sorting reads it the same way. */
   release_date: string | null;
   header_image: string | null;
+  /** Not a games column: used to find the game in your Steam library. */
+  steamAppIds: number[];
 }
 
 /** The game's details in the shape of the games table, or null if IGDB doesn't know it. */
 export async function getGameDetails(igdbId: number): Promise<ManualGameDetails | null> {
   const [game] = await query<IgdbGame>(
     'games',
-    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, summary; where id = ${Math.trunc(igdbId)};`,
+    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, summary, ${EXTERNAL_FIELDS}; where id = ${Math.trunc(igdbId)};`,
   );
   if (!game) return null;
 
@@ -234,5 +253,6 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
         })
       : null,
     header_image: wideArt ? artworkUrl(wideArt) : game.cover ? coverUrl(game.cover.image_id) : null,
+    steamAppIds: steamAppIds(game),
   };
 }

@@ -15,6 +15,16 @@ export interface GameSearchResult {
   year: number | null;
   cover: string | null;
   platforms: string[];
+  /** Your Steam entry for this game, if you own it there (moved to a console or not). */
+  steamGame: {
+    id: number;
+    status: string;
+    platform: string | null;
+    /** When it was finished or dropped, and your notes and rating, to start the dialog from. */
+    date: string | null;
+    notes: string | null;
+    rating: number | null;
+  } | null;
 }
 
 async function check(res: Response): Promise<Response> {
@@ -47,7 +57,7 @@ export async function addManualGame(body: {
   date?: string;
   notes?: string;
   rating?: number | null;
-}): Promise<{ id: number; name: string; warning?: string }> {
+}): Promise<{ id: number; name: string; warning?: string; movedFromSteam?: boolean }> {
   const res = await check(
     await fetch('/api/games/manual', {
       method: 'POST',
@@ -64,6 +74,17 @@ export async function updateHoursPlayed(gameId: number, hoursPlayed: number): Pr
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hoursPlayed }),
+    }),
+  );
+}
+
+/** Moves a Steam game you'd moved to a console back to Steam. */
+export async function playOnSteam(gameId: number): Promise<void> {
+  await check(
+    await fetch(`/api/games/manual/${gameId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playOnSteam: true }),
     }),
   );
 }
@@ -99,13 +120,7 @@ const SHORT_PLATFORM_NAMES: Record<string, string> = {
   'Sega Mega Drive/Genesis': 'Mega Drive',
 };
 
-/**
- * The console to show for a game: only games added by hand have one (Steam
- * games are all "PC", which would be noise on every card).
- */
-export function consoleOf(game: { source?: string; platform?: string | null }): string | null {
-  return game.source === 'manual' ? (game.platform ?? null) : null;
-}
+export { consoleOf } from './consoles';
 
 export function shortPlatformName(name: string): string {
   return SHORT_PLATFORM_NAMES[name] ?? name;

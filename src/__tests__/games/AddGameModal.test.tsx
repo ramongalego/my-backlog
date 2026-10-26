@@ -28,6 +28,7 @@ const fortunesWeave = {
   year: 2026,
   cover: null,
   platforms: ['Nintendo Switch 2'],
+  steamGame: null,
 };
 const linkToThePast = {
   igdbId: 2,
@@ -41,6 +42,7 @@ const linkToThePast = {
     'New Nintendo 3DS',
     'Wii',
   ],
+  steamGame: null,
 };
 
 function setup({ playing = null as { name: string } | null, owned = [] as unknown[] } = {}) {
@@ -99,7 +101,7 @@ it('logs a game you already finished, with its date and rating', async () => {
     expect.objectContaining({ igdbId: 1, platform: 'Switch 2', status: 'finished', rating: 9 }),
   );
   expect(jest.mocked(addManualGame).mock.calls[0][0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-  expect(onAdded).toHaveBeenCalledWith(fortunesWeave.name, 'finished', undefined);
+  expect(onAdded).toHaveBeenCalledWith(fortunesWeave.name, 'finished', undefined, undefined);
   expect(onClose).toHaveBeenCalled();
 });
 
@@ -179,6 +181,37 @@ it('fetches the highlighted game early and holds its header until the art is kno
     jest.advanceTimersByTime(10);
   });
   expect(screen.queryByTestId('header-loading')).not.toBeInTheDocument();
+});
+
+it('moves a game you own on Steam to the console you pick, keeping its status', async () => {
+  const dominus = {
+    igdbId: 3,
+    name: 'Castlevania Dominus Collection',
+    year: 2024,
+    cover: null,
+    platforms: ['PC (Microsoft Windows)', 'Nintendo Switch', 'PlayStation 5'],
+    steamGame: { id: 7, status: 'playing', platform: 'PC', date: null, notes: null, rating: null },
+  };
+  jest.mocked(searchGames).mockResolvedValue([dominus]);
+  jest.mocked(addManualGame).mockResolvedValue({ id: 7, name: dominus.name, movedFromSteam: true });
+  const { onAdded } = setup();
+  await search('dominus');
+  expect(screen.getByText('In your Steam library')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('option', { name: /Dominus/ }));
+  expect(screen.getByText(/moves that entry to the console you pick/)).toBeInTheDocument();
+  // It's already on PC; it starts as playing, like the Steam entry.
+  expect(screen.queryByRole('button', { name: 'PC' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Playing' })).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Move to Switch' }));
+  });
+  expect(addManualGame).toHaveBeenCalledWith(
+    expect.objectContaining({ igdbId: 3, platform: 'Switch', status: 'playing' }),
+  );
+  expect(onAdded).toHaveBeenCalledWith(dominus.name, 'playing', undefined, 'Switch');
 });
 
 it("doesn't search for a single character", async () => {
