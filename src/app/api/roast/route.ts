@@ -140,10 +140,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      // Same model as Pick My Game; reasoning off, since a roast is pure writing.
+      model: 'gpt-6-luna',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      max_tokens: 500,
+      reasoning_effort: 'none',
+      max_completion_tokens: 500,
     });
 
     const roast = completion.choices[0]?.message?.content ?? '';

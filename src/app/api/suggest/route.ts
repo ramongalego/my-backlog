@@ -10,7 +10,10 @@ import { pickShortlist, scoreCandidates, type HistoryGame } from '@/lib/suggest/
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
 
-const MODEL = 'gpt-4o-mini';
+// Compared against gpt-4o-mini and five others on the same prompts: it follows
+// the writing rules far more closely and costs about a third less. Its
+// reasoning is off: the shortlist is already scored, so it only has to write.
+const MODEL = 'gpt-6-luna';
 const MAX_ATTEMPTS = 2;
 // How much of your history the prompt lists by name.
 const MAX_FINISHED_IN_PROMPT = 25;
@@ -197,8 +200,8 @@ export async function POST(request: NextRequest) {
           { role: 'system', content: REASONING_STYLE },
           { role: 'user', content: prompt },
         ],
-        temperature: 0.5,
-        max_tokens: 300,
+        reasoning_effort: 'none',
+        max_completion_tokens: 300,
         response_format: responseFormat(shortlistIds),
       });
       aiResponse = completion.choices[0]?.message?.content ?? '';
