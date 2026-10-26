@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { getGameDetails, searchGames } from '@/lib/igdb/api';
+import { getGameDetails, pickWideArt, searchGames } from '@/lib/igdb/api';
 import { isBoxArt } from '@/lib/igdb/images';
 
 process.env.IGDB_CLIENT_ID = 'client';
@@ -29,7 +29,7 @@ const mkGame = (extra: Record<string, unknown> = {}) => ({
   first_release_date: 1742515200, // 21 Mar 2025
   platforms: [{ name: 'Nintendo Switch' }],
   cover: { image_id: 'co1' },
-  artworks: [{ image_id: 'ar1' }],
+  artworks: [{ image_id: 'ar1', width: 1920, height: 1080, artwork_type: 2 }],
   genres: [{ name: 'Role-playing (RPG)' }, { name: 'Adventure' }],
   themes: [{ name: 'Science fiction' }, { name: 'Open world' }],
   game_modes: [{ name: 'Single player' }, { name: 'Multiplayer' }],
@@ -64,6 +64,52 @@ describe('getGameDetails', () => {
   it('returns null for an unknown game', async () => {
     games = [];
     expect(await getGameDetails(999)).toBeNull();
+  });
+});
+
+describe('pickWideArt', () => {
+  const art = (image_id: string, width: number, height: number, artwork_type = 1) => ({
+    image_id,
+    width,
+    height,
+    artwork_type,
+  });
+
+  it('prefers key art, then properly wide artwork', () => {
+    expect(
+      pickWideArt({
+        artworks: [
+          art('plain', 1600, 800, 1),
+          art('logo', 2788, 661, 7),
+          art('key', 1920, 1080, 3),
+        ],
+      }),
+    ).toBe('key');
+    expect(pickWideArt({ artworks: [art('plain', 1600, 800, 1)] })).toBe('plain');
+  });
+
+  it('skips character renders, small art and logos for a sharp screenshot', () => {
+    expect(
+      pickWideArt({
+        artworks: [
+          art('tall', 700, 1400),
+          art('torso', 1340, 930),
+          art('small', 400, 200, 2),
+          art('logo', 2788, 661, 7),
+        ],
+        screenshots: [{ image_id: 'shot', width: 1280 }],
+      }),
+    ).toBe('shot');
+  });
+
+  it('has none when the only screenshots are small, so the box art is used', () => {
+    expect(
+      pickWideArt({
+        artworks: [art('torso', 1260, 840)],
+        screenshots: [{ image_id: '3ds', width: 640 }],
+      }),
+    ).toBeNull();
+    expect(pickWideArt({})).toBeNull();
   });
 });
 

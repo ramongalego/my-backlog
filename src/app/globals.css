@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Imported here, not by the date picker, so the overrides below always come
+   after it and win. */
+@import 'react-day-picker/style.css';
 
 /* Palette: warm graphite neutrals ("ink") and one ember-orange accent.
    The accent is reserved for primary actions, the current selection and the
@@ -111,6 +114,8 @@
 .rdp-root {
   --rdp-accent-color: var(--color-accent-500);
   --rdp-accent-background-color: var(--color-accent-500);
+  /* The selected day is filled orange; a ring around it adds nothing. */
+  --rdp-selected-border: none;
   color: var(--color-ink-200);
 }
 .rdp-day_button {

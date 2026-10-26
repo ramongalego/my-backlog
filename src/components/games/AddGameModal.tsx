@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import Image from 'next/image';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Gamepad2, Loader2, Search, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { fieldClass } from '@/components/ui/Input';
@@ -14,7 +14,6 @@ import {
   getGameDetails,
   searchGames,
   shortPlatformName,
-  type GameDetails,
   type GameSearchResult,
 } from '@/lib/games/manual';
 import { GameDetailModal, type AddStatus } from './GameStatusModal';
@@ -22,6 +21,16 @@ import { defaultConsole, orderConsoles } from './ConsolePicker';
 
 // Wait for a pause in typing before searching.
 const SEARCH_DELAY_MS = 300;
+// How long a result stays highlighted before its details are fetched, so
+// arrowing or moving the mouse past a result doesn't fetch it.
+const PREFETCH_DELAY_MS = 200;
+
+const detailsQuery = (igdbId: number) => ({
+  queryKey: queryKeys.igdb.game(igdbId),
+  queryFn: () => getGameDetails(igdbId),
+  staleTime: 10 * 60 * 1000,
+  retry: 1,
+});
 
 function BoxArt({ src }: { src: string | null }) {
   return (
@@ -58,7 +67,7 @@ export function AddGameModal({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const [picked, setPicked] = useState<GameSearchResult | null>(null);
-  const [details, setDetails] = useState<GameDetails | null>(null);
+  const queryClient = useQueryClient();
 
   // Games you've already added by hand (to mark them in results) and the
   // consoles you use (to suggest them first), plus the game being played.
@@ -100,17 +109,27 @@ export function AddGameModal({
     };
   }, [text]);
 
-  const choose = (game: GameSearchResult) => {
-    setPicked(game);
-    setDetails(null);
-    // The wide art and full platform list arrive a moment later; the box art
-    // and the search result's platforms stand in until then.
-    getGameDetails(game.igdbId)
-      .then(setDetails)
-      .catch(() => {});
-  };
+  // The picked game's wide art and full platform list. Until they arrive the
+  // header is a placeholder (not the box art, which would be swapped out a
+  // moment later) and the search result's platforms stand in.
+  const { data: details, isPending: detailsPending } = useQuery({
+    ...detailsQuery(picked?.igdbId ?? 0),
+    enabled: !!picked,
+  });
 
   const showResults = text.length >= 2 && searchedFor === text;
+
+  // Fetch the highlighted result's details while you look, so they're
+  // usually there by the time you pick it.
+  const activeId = showResults ? results[active]?.igdbId : undefined;
+  useEffect(() => {
+    if (activeId === undefined || picked) return;
+    const timer = setTimeout(
+      () => void queryClient.prefetchQuery(detailsQuery(activeId)),
+      PREFETCH_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [activeId, picked, queryClient]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!showResults || results.length === 0) return;
@@ -120,7 +139,7 @@ export function AddGameModal({
       setActive((i) => (i + step + results.length) % results.length);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      choose(results[active]);
+      setPicked(results[active]);
     }
   };
 
@@ -136,7 +155,9 @@ export function AddGameModal({
         isOpen
         onClose={onClose}
         gameName={picked.name}
-        headerImage={details?.header_image ?? picked.cover}
+        // If the details fail, the box art is all there is.
+        headerImage={details ? details.header_image : picked.cover}
+        headerLoading={detailsPending}
         initialStatus="backlog"
         adding={{
           consoles,
@@ -245,7 +266,7 @@ export function AddGameModal({
                   id={`${listId}-${i}`}
                   role="option"
                   aria-selected={i === active}
-                  onClick={() => choose(game)}
+                  onClick={() => setPicked(game)}
                   onMouseMove={() => setActive(i)}
                   className={`flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors ${
                     i === active ? 'bg-ink-800' : ''

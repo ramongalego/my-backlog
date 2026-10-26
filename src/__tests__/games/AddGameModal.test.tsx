@@ -156,6 +156,31 @@ it('goes back to the same search from "Not this game?"', async () => {
   expect(screen.getAllByRole('option')).toHaveLength(2);
 });
 
+it('fetches the highlighted game early and holds its header until the art is known', async () => {
+  let resolve: (details: unknown) => void = () => {};
+  jest.mocked(getGameDetails).mockReturnValue(new Promise((r) => (resolve = r)) as never);
+  setup();
+  await search('fire emblem');
+  await act(async () => {
+    jest.advanceTimersByTime(250);
+  });
+  expect(getGameDetails).toHaveBeenCalledWith(1);
+
+  fireEvent.click(screen.getByRole('option', { name: /Fortune's Weave/ }));
+  // A placeholder, not the box art that the wide art would replace.
+  expect(screen.getByTestId('header-loading')).toBeInTheDocument();
+  expect(getGameDetails).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    resolve({ platforms: ['Nintendo Switch 2'], header_image: 'https://example.com/wide.jpg' });
+  });
+  // React Query hands results over on a timer.
+  await act(async () => {
+    jest.advanceTimersByTime(10);
+  });
+  expect(screen.queryByTestId('header-loading')).not.toBeInTheDocument();
+});
+
 it("doesn't search for a single character", async () => {
   setup();
   await search('m');

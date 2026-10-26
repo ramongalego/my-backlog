@@ -20,6 +20,9 @@ export const queryKeys = {
     all: ['library'] as const,
     meta: (userId: string) => [...queryKeys.library.all, 'meta', userId] as const,
   },
+  igdb: {
+    game: (igdbId: number) => ['igdb', 'game', igdbId] as const,
+  },
   roast: {
     byId: (steamId: string) => ['roast', steamId] as const,
   },

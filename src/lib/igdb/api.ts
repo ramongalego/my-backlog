@@ -57,13 +57,21 @@ async function query<T>(endpoint: string, body: string): Promise<T[]> {
 /** Quotes text for an Apicalypse query. */
 const quoted = (text: string) => `"${text.replace(/["\\]/g, ' ')}"`;
 
+interface IgdbImage {
+  image_id: string;
+  width?: number;
+  height?: number;
+  artwork_type?: number;
+}
+
 interface IgdbGame {
   id: number;
   name: string;
   first_release_date?: number;
   platforms?: { name: string }[];
   cover?: { image_id: string };
-  artworks?: { image_id: string }[];
+  artworks?: IgdbImage[];
+  screenshots?: IgdbImage[];
   genres?: { name: string }[];
   themes?: { name: string }[];
   game_modes?: { name: string }[];
@@ -82,8 +90,48 @@ export function coverUrl(imageId: string) {
   return `${IMAGE_URL}/t_cover_big/${imageId}.jpg`;
 }
 
+/** Wide art (artwork or screenshot) at full HD; next/image resizes it for each use. */
 export function artworkUrl(imageId: string) {
   return `${IMAGE_URL}/t_1080p/${imageId}.jpg`;
+}
+
+// IGDB's artwork types that work as a game's header, best first, with how wide
+// each has to be. Key art (with its logo, the closest thing to a Steam header,
+// then without) is made to be cropped, so a little wider than square will do.
+// Plain artwork on older games is mostly character renders, which crop to a
+// torso unless they're properly wide. Logos, covers, icons, concept art and
+// infographics never work.
+const HEADER_ARTWORK: { type: number; minRatio: number }[] = [
+  { type: 3, minRatio: 1.3 },
+  { type: 2, minRatio: 1.3 },
+  { type: 1, minRatio: 1.7 },
+  { type: 15, minRatio: 1.7 },
+];
+const MIN_HEADER_WIDTH = 800;
+// Handheld screenshots (3DS at 400x240, DS at 256x192) are too small to fill
+// the header sharply; the box art looks better.
+const MIN_SCREENSHOT_WIDTH = 1280;
+
+/**
+ * The game's wide art, as an IGDB image id: its best key art or wide artwork,
+ * else its first sharp screenshot, else none, and the box art is used instead
+ * (on a blurred copy of itself).
+ */
+export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): string | null {
+  const rank = (a: IgdbImage) => HEADER_ARTWORK.findIndex((h) => h.type === (a.artwork_type ?? 1));
+  const best = (game.artworks ?? [])
+    .filter(
+      (a) =>
+        rank(a) !== -1 &&
+        !!a.width &&
+        !!a.height &&
+        a.width >= MIN_HEADER_WIDTH &&
+        a.width / a.height >= HEADER_ARTWORK[rank(a)].minRatio,
+    )
+    .sort((a, b) => rank(a) - rank(b))[0];
+  if (best) return best.image_id;
+  const shot = game.screenshots?.[0];
+  return shot && (shot.width ?? 0) >= MIN_SCREENSHOT_WIDTH ? shot.image_id : null;
 }
 
 export async function searchGames(text: string): Promise<GameSearchResult[]> {
@@ -148,7 +196,7 @@ export interface ManualGameDetails {
 export async function getGameDetails(igdbId: number): Promise<ManualGameDetails | null> {
   const [game] = await query<IgdbGame>(
     'games',
-    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, genres.name, themes.name, game_modes.name, summary; where id = ${Math.trunc(igdbId)};`,
+    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, summary; where id = ${Math.trunc(igdbId)};`,
   );
   if (!game) return null;
 
@@ -156,9 +204,7 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
   const tags = [...genres, ...(game.themes ?? []).map((t) => t.name)].flatMap(
     (name) => TAG_NAMES[name] ?? [name],
   );
-  // Wide artwork fits the app's cards; the tall box art is the fallback
-  // (CoverArt sets it on a blurred copy of itself).
-  const artwork = game.artworks?.[0];
+  const wideArt = pickWideArt(game);
   return {
     name: game.name,
     platforms: (game.platforms ?? []).map((p) => p.name),
@@ -176,10 +222,6 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
           timeZone: 'UTC',
         })
       : null,
-    header_image: artwork
-      ? artworkUrl(artwork.image_id)
-      : game.cover
-        ? coverUrl(game.cover.image_id)
-        : null,
+    header_image: wideArt ? artworkUrl(wideArt) : game.cover ? coverUrl(game.cover.image_id) : null,
   };
 }

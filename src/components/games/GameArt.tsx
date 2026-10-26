@@ -41,7 +41,11 @@ export function GameArt({
         alt=""
         aria-hidden="true"
         fill
-        sizes="64px"
+        // The same size as the art on top, so one download serves both and
+        // the blur doesn't arrive after the art.
+        sizes={sizes}
+        priority={priority}
+        quality={quality}
         className="object-cover scale-125 blur-xl brightness-75 saturate-150"
         draggable={false}
       />

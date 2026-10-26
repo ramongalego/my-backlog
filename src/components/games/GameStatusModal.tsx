@@ -9,7 +9,6 @@ import { Modal } from '@/components/ui/Modal';
 import { GAME_STATUSES, STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import { todayIso, toLocalIsoDate } from '@/lib/diary/date-utils';
 
-import 'react-day-picker/style.css';
 const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.DayPicker), {
   ssr: false,
 });
@@ -46,6 +45,8 @@ interface GameDetailModalProps {
   ) => void | Promise<void>;
   gameName: string;
   headerImage: string | null;
+  /** The header art isn't known yet: a placeholder holds its place. */
+  headerLoading?: boolean;
   initialStatus: GameStatus;
   initialDate?: string | null;
   initialNotes?: string | null;
@@ -105,6 +106,7 @@ export function GameDetailModal({
   onConfirm,
   gameName,
   headerImage,
+  headerLoading = false,
   initialStatus,
   initialDate,
   initialNotes,
@@ -237,8 +239,10 @@ export function GameDetailModal({
     >
       {/* Hero image */}
       <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
-        {headerImage ? (
-          <GameArt src={headerImage} alt="" sizes="(max-width: 640px) 100vw, 544px" />
+        {headerLoading ? (
+          <div className="w-full h-full bg-ink-800 animate-pulse" data-testid="header-loading" />
+        ) : headerImage ? (
+          <GameArt src={headerImage} alt="" sizes="(max-width: 640px) 100vw, 544px" priority />
         ) : (
           <div className="w-full h-full bg-ink-800 flex items-center justify-center">
             <Gamepad2 className="w-10 h-10 text-ink-500" />
