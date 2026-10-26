@@ -30,3 +30,28 @@ export function loopCopies(
 export function isOnScreen(position: number, start: number, perPage: number): boolean {
   return position >= start && position < start + perPage;
 }
+
+/**
+ * Turns horizontal wheel events into whole-page swipes. A trackpad sends a
+ * stream of small deltas for one swipe, then keeps sending shrinking ones
+ * while it coasts; one swipe should move one page. So deltas add up until they
+ * pass `threshold` (one page), the rest of that stream is ignored, and a pause
+ * longer than `quietMs` starts a new swipe.
+ */
+export function createSwipeTracker({ threshold = 40, quietMs = 200 } = {}) {
+  let total = 0;
+  let used = false;
+  let lastTime = -Infinity;
+  return (deltaX: number, time: number): 1 | -1 | 0 => {
+    if (time - lastTime > quietMs) {
+      total = 0;
+      used = false;
+    }
+    lastTime = time;
+    if (used) return 0;
+    total += deltaX;
+    if (Math.abs(total) < threshold) return 0;
+    used = true;
+    return total > 0 ? 1 : -1;
+  };
+}

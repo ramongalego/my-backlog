@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
-import { isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
+import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
 import {
   CAROUSEL_CARD_WIDTH as CARD_WIDTH,
   CAROUSEL_FADE_CLASS,
@@ -141,6 +141,33 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
     setOffset(next);
     setSliding(true);
   };
+
+  // A horizontal trackpad swipe pages the row like the arrows: one page per
+  // swipe, whatever its length or momentum (see createSwipeTracker).
+  const onSwipe = useEffectEvent((direction: 1 | -1) => slide(direction));
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row || !loop) return;
+    const track = createSwipeTracker();
+    const onWheel = (e: WheelEvent) => {
+      // Vertical scrolling, and a mostly vertical one that drifts, still scrolls the page.
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      // Claim the whole horizontal stream, coasting included, so the browser
+      // doesn't take the swipe as back/forward navigation.
+      e.preventDefault();
+      const pixels =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? e.deltaX * 16
+          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? e.deltaX * row.clientWidth
+            : e.deltaX;
+      const direction = track(pixels, e.timeStamp);
+      if (direction) onSwipe(direction);
+    };
+    // Not passive: preventDefault has to work.
+    row.addEventListener('wheel', onWheel, { passive: false });
+    return () => row.removeEventListener('wheel', onWheel);
+  }, [loop]);
 
   if (count < 3) return null;
 

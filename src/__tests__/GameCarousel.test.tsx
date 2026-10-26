@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { GameCarousel } from '@/components/GameCarousel';
-import { isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
+import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -65,6 +65,16 @@ describe('loop arithmetic', () => {
     // A page of 5 plus a peeking sixth card, with only 7 games.
     expect(loopCopies(7, 5, 6)).toEqual({ before: 1, after: 2 });
     expect(loopCopies(15, 5, 6)).toEqual({ before: 1, after: 1 });
+  });
+
+  it('counts one page per swipe, ignoring the coasting tail', () => {
+    const track = createSwipeTracker({ threshold: 40, quietMs: 200 });
+    // Builds up past the threshold: one page, then nothing for the rest.
+    expect([10, 15, 20, 25, 10, 5].map((dx, i) => track(dx, i * 16))).toEqual([0, 0, 1, 0, 0, 0]);
+    // After a pause, a new swipe the other way.
+    expect([-30, -30].map((dx, i) => track(dx, 1000 + i * 16))).toEqual([0, -1]);
+    // A tiny nudge that never reaches the threshold does nothing.
+    expect([5, 5, 5].map((dx, i) => track(dx, 2000 + i * 16))).toEqual([0, 0, 0]);
   });
 
   it('knows which positions are on screen', () => {
@@ -188,6 +198,27 @@ describe('GameCarousel', () => {
 
       fireEvent.transitionEnd(track('Loop'));
       expect(screen.getAllByRole('button', { name: /open details/i })).toHaveLength(4);
+    });
+
+    it('pages once per trackpad swipe and keeps the swipe from the browser', () => {
+      render(<GameCarousel title="Loop" games={makeGames(9)} />);
+      const row = screen.getByRole('region', { name: 'Loop' });
+      const wheel = (deltaX: number, deltaY = 0) => {
+        const event = new WheelEvent('wheel', { deltaX, deltaY, bubbles: true, cancelable: true });
+        act(() => {
+          row.dispatchEvent(event);
+        });
+        return event;
+      };
+
+      // One swipe, then its coasting tail: a single page.
+      const events = [30, 30, 25, 12, 6, 2].map((dx) => wheel(dx));
+      expect(events.every((e) => e.defaultPrevented)).toBe(true);
+      fireEvent.transitionEnd(track('Loop'));
+      expect(visibleNames()).toEqual(['Game 5', 'Game 6', 'Game 7', 'Game 8']);
+
+      // Scrolling the page down over the row still scrolls the page.
+      expect(wheel(3, 40).defaultPrevented).toBe(false);
     });
 
     it('puts the row back if the browser scrolls it to show a focused card', () => {
