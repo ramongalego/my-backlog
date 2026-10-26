@@ -151,7 +151,7 @@ export function useGamesPage(): UseGamesPageReturn {
 
   // Filter, sort and search live in the URL so they survive navigating away
   // and back. Search keeps local state too so typing stays instant.
-  const [filter, setFilter] = useUrlState<GameFilter>('filter', 'backlog', GAME_FILTERS);
+  const [filter, setFilter] = useUrlState<GameFilter>('filter', 'all', GAME_FILTERS);
   const [sort, setSort] = useUrlState<GameSort>('sort', 'score', GAME_SORTS);
   const [urlSearch, setUrlSearch] = useUrlState<string>('q', '');
   const [searchQuery, setSearchQueryState] = useState(urlSearch);
