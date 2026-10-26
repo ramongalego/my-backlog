@@ -52,6 +52,7 @@ export function useGameLibrary() {
     },
     currentGame: {
       currentlyPlaying: currentGame.currentlyPlaying,
+      queue: currentGame.queue,
       isStatusLoading: currentGame.isStatusLoading,
       statusModal: currentGame.statusModal,
       gameSummary: currentGame.gameSummary,

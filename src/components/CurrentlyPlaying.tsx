@@ -36,9 +36,12 @@ interface CurrentlyPlayingProps {
   /** For a game on a console: saves the hours you enter (Steam tracks its own). */
   onSaveHours?: (hours: number) => void | Promise<void>;
   isLoading?: boolean;
-  /** Rendered under the game's actions (the "pick my next game" prompt). */
-  footer?: ReactNode;
 }
+
+// The quiet actions under Finish and Drop. The padding, cancelled by the
+// negative margin, makes each a 44px tap target on phones without moving it.
+const TEXT_ACTION =
+  'flex items-center gap-1.5 py-3 -my-3 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer';
 
 function Progress({
   game,
@@ -144,22 +147,21 @@ export function CurrentlyPlaying({
   onMoveToQueue,
   onSaveHours,
   isLoading,
-  footer,
 }: CurrentlyPlayingProps) {
   const storeUrl = steamStoreUrl(game.app_id);
   return (
-    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
+    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
       <CoverArt
         src={game.header_image}
         alt=""
         rounded="xl"
         priority
-        sizes="(max-width: 768px) 100vw, 480px"
+        sizes="(max-width: 768px) 100vw, 512px"
         platform={consoleOf(game)}
       />
 
       <div className="min-w-0">
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-ink-50">
           {storeUrl ? (
             <a
               href={storeUrl}
@@ -193,7 +195,7 @@ export function CurrentlyPlaying({
             <LastPlayed lastPlayedAt={game.last_played_at} className="mt-2 text-sm" />
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-4">
             <div className="flex gap-2">
               <Button onClick={onFinish} disabled={isLoading} className="cursor-pointer">
                 <Check className="w-4 h-4" aria-hidden="true" />
@@ -210,27 +212,17 @@ export function CurrentlyPlaying({
               </Button>
             </div>
             <div className="flex items-center gap-5">
-              <button
-                onClick={onMoveToQueue}
-                disabled={isLoading}
-                className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
-              >
+              <button onClick={onMoveToQueue} disabled={isLoading} className={TEXT_ACTION}>
                 <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Move to Queue</span>
               </button>
-              <button
-                onClick={onCancel}
-                disabled={isLoading}
-                className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
-              >
+              <button onClick={onCancel} disabled={isLoading} className={TEXT_ACTION}>
                 <Archive className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Move to Backlog</span>
               </button>
             </div>
           </div>
         </div>
-
-        {footer && <div className="mt-6 pt-6 border-t border-ink-800">{footer}</div>}
       </div>
     </div>
   );

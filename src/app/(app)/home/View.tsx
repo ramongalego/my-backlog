@@ -10,6 +10,7 @@ import { GameCarousel } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
+import { CoverThumb } from '@/components/games/CoverArt';
 import { SuggestionModal } from '@/components/suggest';
 import { SyncProgress } from '@/components/SyncProgress';
 import {
@@ -45,13 +46,14 @@ export default function HomeView() {
     hiddenGems,
     recentlyAdded,
   } = carousels;
-  // Started games lead; empty carousels are left out. More Like sits lower
-  // but still claims its games first (see useCarouselPools).
+  // Related rows sit together: games you've started, short games, highly
+  // rated ones, then what's new. Empty carousels are left out. More Like sits
+  // lower but still claims its games first (see useCarouselPools).
   const carouselRows = [
     { key: 'pick-up', title: 'Pick Up Where You Left Off', games: pickUp },
     { key: 'short', title: 'Top-Rated Games Under 5 Hours', games: shortGames },
-    { key: 'rated', title: 'Highly Rated, Never Played', games: highlyRatedGames },
     { key: 'weekend', title: 'Finish It in a Weekend', games: weekendGames },
+    { key: 'rated', title: 'Highly Rated, Never Played', games: highlyRatedGames },
     {
       key: 'more-like',
       title: moreLike ? `More Like ${moreLike.basedOn}` : '',
@@ -63,6 +65,7 @@ export default function HomeView() {
   const carouselsLoading = carousels.loading;
   const {
     currentlyPlaying,
+    queue,
     isStatusLoading,
     statusModal,
     gameSummary,
@@ -107,84 +110,119 @@ export default function HomeView() {
 
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col">
-      <main id="main-content" className="pt-20 sm:pt-24 pb-16 flex-1">
-        <section className={`${PAGE_CONTAINER} pb-14`}>
-          {isSyncing ? (
-            <>
-              <h1 className="sr-only">Home</h1>
-              <SyncProgress progress={syncProgress} games={syncingGames} />
-            </>
-          ) : currentlyPlaying ? (
-            <CurrentlyPlaying
-              game={currentlyPlaying}
-              onFinish={handleFinishGame}
-              onDrop={handleDropGame}
-              onCancel={handleCancelGame}
-              onMoveToQueue={handleMoveCurrentToQueue}
-              onSaveHours={manualGames.dialogProps(currentlyPlaying)?.onSaveHours}
-              isLoading={isStatusLoading}
-              footer={
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      {/* Under the fixed header (h-14 / sm:h-16): the top section sits right below it. */}
+      <main id="main-content" className="pt-14 sm:pt-16 pb-16 flex-1">
+        {/* The lit band: what you're playing (or picking) now, a tone above the
+            shelf of games below, so it reads as the page's subject rather than
+            the first row of the feed. */}
+        <section className="bg-ink-900">
+          <div className={`${PAGE_CONTAINER} py-8 sm:py-12`}>
+            {isSyncing ? (
+              <>
+                <h1 className="sr-only">Home</h1>
+                <SyncProgress progress={syncProgress} games={syncingGames} />
+              </>
+            ) : currentlyPlaying ? (
+              <CurrentlyPlaying
+                game={currentlyPlaying}
+                onFinish={handleFinishGame}
+                onDrop={handleDropGame}
+                onCancel={handleCancelGame}
+                onMoveToQueue={handleMoveCurrentToQueue}
+                onSaveHours={manualGames.dialogProps(currentlyPlaying)?.onSaveHours}
+                isLoading={isStatusLoading}
+              />
+            ) : isStatusLoading ? (
+              <StatusLoadingState />
+            ) : (
+              <div className="max-w-xl">
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
+                  What are you playing next?
+                </h1>
+                <p className="mt-2 text-ink-400">
+                  Answer a few quick questions and we&apos;ll pick something from your backlog, or
+                  leave it to chance
+                </p>
+                <div className="mt-6 flex flex-wrap items-center gap-2">
                   <Button
-                    variant="secondary"
+                    size="lg"
                     className="cursor-pointer"
                     onClick={() => setIsSuggestionModalOpen(true)}
                   >
-                    <Sparkles className="w-4 h-4" aria-hidden="true" />
-                    <span>Pick My Next Game</span>
+                    <Sparkles className="w-5 h-5" aria-hidden="true" />
+                    <span>Pick My Game</span>
                   </Button>
-                  <p className="text-sm text-ink-400">
-                    The picked game will be added to your{' '}
-                    <Link
-                      href="/playing-queue"
-                      className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors"
-                    >
-                      queue
-                    </Link>
-                  </p>
+                  <Button
+                    onClick={handleRandomPick}
+                    variant="secondary"
+                    size="lg"
+                    className="cursor-pointer"
+                    title="Pick a random game"
+                  >
+                    <Dices className="w-5 h-5" aria-hidden="true" />
+                    <span>Random</span>
+                  </Button>
                 </div>
-              }
-            />
-          ) : isStatusLoading ? (
-            <StatusLoadingState />
-          ) : (
-            <div className="max-w-xl">
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
-                What are you playing next?
-              </h1>
-              <p className="mt-2 text-ink-400">
-                Answer a few quick questions and we&apos;ll pick something from your backlog, or
-                leave it to chance
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                <Button
-                  size="lg"
-                  className="cursor-pointer"
-                  onClick={() => setIsSuggestionModalOpen(true)}
-                >
-                  <Sparkles className="w-5 h-5" aria-hidden="true" />
-                  <span>Pick My Game</span>
-                </Button>
-                <Button
-                  onClick={handleRandomPick}
-                  variant="secondary"
-                  size="lg"
-                  className="cursor-pointer"
-                  title="Pick a random game"
-                >
-                  <Dices className="w-5 h-5" aria-hidden="true" />
-                  <span>Random</span>
-                </Button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </section>
+
+        {/* Up next: the game that takes over when you finish this one, and
+            picking another for the queue. The hinge between the band (now)
+            and the shelf (later). */}
+        {!isSyncing && currentlyPlaying && (
+          <div
+            className={`${PAGE_CONTAINER} mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4`}
+          >
+            {queue.length > 0 ? (
+              <Link
+                href="/playing-queue"
+                className="group flex min-w-0 items-center gap-3 sm:gap-4 rounded-lg"
+              >
+                <CoverThumb
+                  src={queue[0].game.header_image}
+                  alt=""
+                  className="w-20 sm:w-28 group-hover:brightness-110 transition-[filter]"
+                />
+                <span className="min-w-0">
+                  <span className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
+                    {queue[0].game.name}
+                  </span>
+                  <span className="block text-sm text-ink-400">
+                    Next in your queue
+                    {queue.length > 1 && ` · ${queue.length - 1} more after it`}
+                  </span>
+                </span>
+              </Link>
+            ) : (
+              <p className="text-sm text-ink-400">
+                Your{' '}
+                <Link
+                  href="/playing-queue"
+                  className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors"
+                >
+                  queue
+                </Link>{' '}
+                is empty. The game you pick goes there, to play after this one.
+              </p>
+            )}
+            <Button
+              variant="secondary"
+              className="cursor-pointer"
+              onClick={() => setIsSuggestionModalOpen(true)}
+            >
+              <Sparkles className="w-4 h-4" aria-hidden="true" />
+              <span>Pick My Next Game</span>
+            </Button>
+          </div>
+        )}
 
         {/* Game carousels */}
         {!isSyncing && carouselsLoading && <CarouselsLoadingState />}
 
         {!isSyncing && !carouselsLoading && carouselRows.length > 0 && (
-          <section className={`${PAGE_CONTAINER} space-y-12`}>
+          <section className={`${PAGE_CONTAINER} mt-12 sm:mt-14 space-y-16`}>
             {carouselRows.map((row, i) => (
               <GameCarousel
                 key={row.key}

@@ -78,7 +78,7 @@ function NowPlayingRow({
   const toBeat = <span className="whitespace-nowrap">~{estimateHours}h to beat</span>;
 
   const secondaryAction =
-    'cursor-pointer flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
+    'cursor-pointer flex items-center gap-1.5 py-3 -my-3 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
 
   return (
     <Panel

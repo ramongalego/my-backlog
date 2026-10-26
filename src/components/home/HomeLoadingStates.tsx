@@ -11,23 +11,22 @@ import {
 // Skeletons for the home dashboard. They use the same sections, padding and
 // tile sizes as HomeView and GameCarousel so the page doesn't shift on load.
 
-/** Full home skeleton: the "What are you playing next?" area plus carousels. */
+/**
+ * Full home skeleton: the band with a game being played (the usual case for a
+ * returning player, so it's the one that doesn't jump), the Up next strip and
+ * the carousels.
+ */
 export function LoadingState() {
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col" role="status" aria-busy="true">
       <span className="sr-only">Loading…</span>
-      <div className="pt-20 sm:pt-24 pb-16 flex-1">
-        <section className={`${PAGE_CONTAINER} pb-14`}>
-          <div className="max-w-xl">
-            <Skeleton className="h-8 sm:h-9 w-72 sm:w-96 max-w-full" />
-            <Skeleton className="h-4 w-full mt-3" />
-            <Skeleton className="h-4 w-2/3 mt-2" />
-            <div className="mt-6 flex items-center gap-2">
-              <Skeleton className="h-12 w-40 rounded-lg" />
-              <Skeleton className="h-12 w-32 rounded-lg" />
-            </div>
+      <div className="pt-14 sm:pt-16 pb-16 flex-1">
+        <section className="bg-ink-900">
+          <div className={`${PAGE_CONTAINER} py-8 sm:py-12`}>
+            <StatusLoadingState />
           </div>
         </section>
+        <UpNextLoadingState />
         <CarouselsLoadingState />
       </div>
     </div>
@@ -41,7 +40,7 @@ export function LoadingState() {
  */
 export function CarouselsLoadingState() {
   return (
-    <section className={`${PAGE_CONTAINER} space-y-12`}>
+    <section className={`${PAGE_CONTAINER} mt-12 sm:mt-14 space-y-16`}>
       {[1, 2].map((i) => (
         <div key={i}>
           <Skeleton className="mb-4 h-7 w-56 sm:w-72" />
@@ -66,13 +65,31 @@ export function CarouselsLoadingState() {
   );
 }
 
+/** Mirrors the Up next strip under the band: the next queued game and the Pick button. */
+function UpNextLoadingState() {
+  return (
+    <div
+      className={`${PAGE_CONTAINER} mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4`}
+    >
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Skeleton className={`${COVER_ASPECT} w-20 sm:w-28 rounded-md`} />
+        <div>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-32 mt-1.5" />
+        </div>
+      </div>
+      <Skeleton className="h-10 w-44 rounded-lg" />
+    </div>
+  );
+}
+
 /** Mirrors CurrentlyPlaying while the now-playing game is being resolved. */
 export function StatusLoadingState() {
   return (
-    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
+    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
       <Skeleton className={`${COVER_ASPECT} rounded-xl`} />
       <div>
-        <Skeleton className="h-8 sm:h-9 w-3/4" />
+        <Skeleton className="h-8 sm:h-9 lg:h-10 w-3/4" />
         <Skeleton className="h-4 w-24 mt-3" />
         <Skeleton className="h-4 w-full max-w-sm mt-6" />
         <Skeleton className="h-1.5 w-full max-w-sm mt-3 rounded-full" />

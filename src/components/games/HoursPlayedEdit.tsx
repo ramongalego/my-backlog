@@ -56,7 +56,8 @@ export function HoursPlayedEdit({
           type="button"
           onClick={open}
           aria-label={`Edit hours played on ${platform}, ${hours}h now`}
-          className={`group/hours cursor-pointer inline-flex items-center gap-1.5 rounded-md hover:text-ink-50 transition-colors ${className}`}
+          // A 44px tap target on phones, without taking more room.
+          className={`group/hours cursor-pointer inline-flex items-center gap-1.5 py-3 -my-3 rounded-md hover:text-ink-50 transition-colors ${className}`}
         >
           <span>{hours}h played</span>
           <Pencil

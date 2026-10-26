@@ -216,7 +216,7 @@ export function AddGameModal({
     <Modal isOpen onClose={onClose} title="Add a game" size="xl" align="top">
       <div className="space-y-3">
         <p className="text-sm text-ink-400">
-          For games outside your Steam library, on any console or store.
+          For games outside your Steam library, on any console or store
         </p>
         <div className="relative">
           <Search

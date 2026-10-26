@@ -243,6 +243,14 @@ export function useNowPlaying(userId: string | null) {
     onSettled: () => statusChanged(),
   });
 
+  // Moving the playing game away takes it off Home in one click on a quiet
+  // link, so say where it went and offer to bring it back (starting it again
+  // also takes it off the queue).
+  const offerUndo = (game: GameWithImage, where: 'queue' | 'backlog') =>
+    toast(`Moved ${game.name} to your ${where}`, {
+      action: { label: 'Undo', onClick: () => pickMutation.mutate(game) },
+    });
+
   const moveToQueueMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: async (game: GameWithImage) => {
@@ -263,6 +271,7 @@ export function useNowPlaying(userId: string | null) {
       rollback(context);
       toast.error('Failed to move game to queue');
     },
+    onSuccess: (_data, game) => offerUndo(game, 'queue'),
     // Refetch either way: the first step may have succeeded before the second failed.
     onSettled: () => statusChanged(),
   });
@@ -280,6 +289,7 @@ export function useNowPlaying(userId: string | null) {
       rollback(context);
       toast.error('Failed to move game to backlog');
     },
+    onSuccess: (_data, game) => offerUndo(game, 'backlog'),
     onSettled: () => statusChanged(),
   });
 
@@ -319,6 +329,49 @@ export function useNowPlaying(userId: string | null) {
       console.error(err);
       rollback(context);
       toast.error('Failed to remove game from queue');
+    },
+    // Like moving the playing game away, one quiet click: say where it went
+    // and offer to put it back where it was.
+    onSuccess: (_data, gameId, context) => {
+      const index = context?.previousQueue?.findIndex((q) => q.game_id === gameId) ?? -1;
+      if (index === -1) return;
+      const item = context!.previousQueue![index];
+      toast(`Moved ${item.game.name} to your backlog`, {
+        action: { label: 'Undo', onClick: () => restoreMutation.mutate({ item, index }) },
+      });
+    },
+    onSettled: () => invalidateQueue(),
+  });
+
+  // Undo for taking a game off the queue: back on it, in its old place (or
+  // last, if the queue has shrunk since). Only that game: anything else that
+  // changed meanwhile stays as it is.
+  const restoreMutation = useMutation({
+    scope: QUEUE_SCOPE,
+    mutationFn: async ({ item, index }: { item: QueueItem; index: number }) => {
+      // The server adds it last; move it up unless last is where it was.
+      await addToQueue(item.game_id);
+      const rest = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? [])
+        .map((q) => q.game_id)
+        .filter((id) => id !== item.game_id);
+      if (index < rest.length) {
+        rest.splice(index, 0, item.game_id);
+        await reorderQueue(rest);
+      }
+    },
+    onMutate: async ({ item, index }) => {
+      const context = await snapshot();
+      queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) => {
+        const rest = old.filter((q) => q.game_id !== item.game_id);
+        rest.splice(Math.min(index, rest.length), 0, item);
+        return rest.map((q, i) => ({ ...q, position: i }));
+      });
+      return context;
+    },
+    onError: (err, _vars, context) => {
+      console.error(err);
+      rollback(context);
+      toast.error("Couldn't put the game back in your queue");
     },
     onSettled: () => invalidateQueue(),
   });

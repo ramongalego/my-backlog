@@ -109,6 +109,7 @@ export function useCurrentGame(userId: string | null) {
 
   return {
     currentlyPlaying: nowPlaying.currentlyPlaying,
+    queue: nowPlaying.queue,
     queuedGameIds: nowPlaying.queuedGameIds,
     isStatusLoading: nowPlaying.isStatusLoading,
     statusModal: nowPlaying.statusModal,

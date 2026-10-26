@@ -52,7 +52,7 @@ describe('SuggestionResult', () => {
       />,
     );
 
-    expect(screen.getByText('Action, Adventure')).toBeInTheDocument();
+    expect(screen.getByText('Action · Adventure')).toBeInTheDocument();
   });
 
   it('should call onPick when Start Playing button clicked', () => {

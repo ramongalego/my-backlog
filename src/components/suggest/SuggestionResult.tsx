@@ -40,9 +40,15 @@ export function SuggestionResult({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-        <h2 className="absolute bottom-3 left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
-          {game.name}
-        </h2>
+        <div className="absolute bottom-3 left-6 right-12">
+          <h2 className="text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
+            {game.name}
+          </h2>
+          {/* What kind of game it is, under its name; the tags below describe it. */}
+          {game.genres && game.genres.length > 0 && (
+            <p className="mt-1 text-sm text-ink-300">{game.genres.slice(0, 2).join(' · ')}</p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4 mt-5">
@@ -72,9 +78,6 @@ export function SuggestionResult({
               iconClassName="w-3.5 h-3.5"
             />
           ) : null}
-          {game.genres && game.genres.length > 0 && (
-            <span>{game.genres.slice(0, 2).join(', ')}</span>
-          )}
           {storeUrl && (
             <a
               href={storeUrl}

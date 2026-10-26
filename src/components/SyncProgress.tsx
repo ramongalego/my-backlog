@@ -43,9 +43,10 @@ export function SyncProgress({ progress, games }: SyncProgressProps) {
     img.src = nextSrc;
   }, [nextSrc, nextName, order]);
 
+  // The same columns as the playing card, in the same band.
   return (
-    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] md:gap-10 md:items-center">
-      <div className={`relative ${COVER_ASPECT} overflow-hidden rounded-xl bg-ink-900`}>
+    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
+      <div className={`relative ${COVER_ASPECT} overflow-hidden rounded-xl bg-ink-800`}>
         {currentGame && (
           <>
             <div className="absolute inset-0 flex items-center justify-center p-4">

@@ -18,6 +18,11 @@ jest.mock('@/hooks/useManualGame', () => ({
   }),
 }));
 jest.mock('@/components/Header', () => ({ Header: () => <header /> }));
+jest.mock('next/image', () => ({
+  __esModule: true,
+  // eslint-disable-next-line @next/next/no-img-element
+  default: ({ alt }: { alt: string }) => <img alt={alt} />,
+}));
 jest.mock('@/components/GameCarousel', () => ({ GameCarousel: () => null }));
 jest.mock('@/components/SyncProgress', () => ({ SyncProgress: () => null }));
 jest.mock('@/components/LandingPage', () => ({ LandingPage: () => null }));
@@ -33,11 +38,8 @@ jest.mock('@/components/suggest', () => ({
     isOpen ? <div data-testid="suggestion-modal" data-mode={mode} /> : null,
 }));
 jest.mock('@/components/CurrentlyPlaying', () => ({
-  CurrentlyPlaying: ({ game, footer }: { game: GameWithImage; footer?: React.ReactNode }) => (
-    <div data-testid="currently-playing">
-      {game.name}
-      {footer}
-    </div>
+  CurrentlyPlaying: ({ game }: { game: GameWithImage }) => (
+    <div data-testid="currently-playing">{game.name}</div>
   ),
 }));
 
@@ -74,6 +76,7 @@ const baseLibrary = {
   },
   currentGame: {
     currentlyPlaying: null,
+    queue: [],
     isStatusLoading: false,
     statusModal: null,
     gameSummary: null,
@@ -119,7 +122,7 @@ describe('HomeContent — Pick My Game button', () => {
   it('does not show the queue hint when no game is currently playing', () => {
     render(<HomePage />);
 
-    expect(screen.queryByText(/added to your/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Next in your queue|is empty/)).not.toBeInTheDocument();
   });
 
   it('opens the suggestion modal in play mode when "Pick My Game" is clicked', async () => {
@@ -154,12 +157,34 @@ describe('HomeContent — Pick My Next Game button', () => {
     expect(screen.getByRole('button', { name: 'Pick My Next Game' })).toBeInTheDocument();
   });
 
-  it('shows the queue hint text with a link to /playing-queue', () => {
+  it('says the queue is empty, with a link to it, when nothing is queued', () => {
     render(<HomePage />);
 
-    expect(screen.getByText(/added to your/)).toBeInTheDocument();
+    expect(screen.getByText(/is empty. The game you pick goes there/)).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'queue' });
     expect(link).toHaveAttribute('href', '/playing-queue');
+  });
+
+  it('shows the next queued game and how many follow it', () => {
+    const queued = (id: number, name: string) => ({
+      id,
+      game_id: id,
+      position: id,
+      game: { ...mockGame, id, name },
+    });
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      currentGame: {
+        ...baseLibrary.currentGame,
+        currentlyPlaying: mockGame,
+        queue: [queued(2, 'Celeste'), queued(3, 'Hades'), queued(4, 'Inside')],
+      },
+    });
+    render(<HomePage />);
+
+    const link = screen.getByRole('link', { name: /Celeste/ });
+    expect(link).toHaveAttribute('href', '/playing-queue');
+    expect(link).toHaveTextContent('Next in your queue · 2 more after it');
   });
 
   it('opens the suggestion modal in queue mode when "Pick My Next Game" is clicked', async () => {
