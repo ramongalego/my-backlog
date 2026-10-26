@@ -11,7 +11,7 @@ export interface PlayedGame {
 
 // Hours in a game you play rather than finish (multiplayer, or no story time)
 // before it counts as "played a lot".
-const OPEN_ENDED_MIN_MINUTES = 10 * 60;
+export const OPEN_ENDED_MIN_MINUTES = 10 * 60;
 const LIST_SIZE = 5;
 
 /**

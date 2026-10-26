@@ -8,6 +8,8 @@ export const queryKeys = {
     list: (userId: string) => [...queryKeys.games.all, 'list', userId] as const,
     diary: (userId: string) => [...queryKeys.games.all, 'diary', userId] as const,
     playing: (userId: string) => [...queryKeys.games.all, 'playing', userId] as const,
+    openEndedCategories: (userId: string) =>
+      [...queryKeys.games.all, 'open-ended-categories', userId] as const,
   },
   queue: {
     all: ['queue'] as const,

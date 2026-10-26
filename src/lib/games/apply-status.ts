@@ -1,9 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { GameStatusBody } from '@/lib/validations/games';
+import { DEMOTED, statusUpdate, type StatusChange } from './status-rules';
 import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
 import type { GameWithImage } from '@/types/games';
 
-export type StatusChange = GameStatusBody;
+export type { StatusChange };
 
 export type StatusChangeResult = { ok: true } | { ok: false; status: 404 | 500; error: string };
 
@@ -15,8 +15,9 @@ export type StatusChangeResult = { ok: true } | { ok: false; status: 404 | 500; 
 export async function applyStatusChange(
   supabase: SupabaseClient,
   userId: string,
-  { gameId, status, finishedAt, droppedAt, notes, rating }: StatusChange,
+  change: StatusChange,
 ): Promise<StatusChangeResult> {
+  const { gameId, status } = change;
   const failed = (err: unknown): StatusChangeResult => {
     console.error(err);
     return { ok: false, status: 500, error: 'Failed to update game status' };
@@ -37,46 +38,16 @@ export async function applyStatusChange(
   if (status === 'playing') {
     const { error: demoteError } = await supabase
       .from('games')
-      .update({ status: 'backlog', started_at: null })
+      .update(DEMOTED)
       .eq('user_id', userId)
       .eq('status', 'playing')
       .neq('id', gameId);
     if (demoteError) return failed(demoteError);
   }
 
-  type GameUpdate = {
-    status: string;
-    started_at?: string | null;
-    finished_at?: string | null;
-    dropped_at?: string | null;
-    notes?: string | null;
-    rating?: number | null;
-  };
-  const updatePayload: GameUpdate = { status };
-
-  if (status === 'playing') {
-    updatePayload.started_at = new Date().toISOString();
-  } else if (status === 'backlog') {
-    updatePayload.started_at = null;
-  } else if (status === 'finished') {
-    updatePayload.finished_at = finishedAt || null;
-    updatePayload.notes = notes ?? null;
-    updatePayload.rating = rating ?? null;
-  } else if (status === 'dropped') {
-    updatePayload.dropped_at = droppedAt || null;
-    updatePayload.notes = notes ?? null;
-    updatePayload.rating = rating ?? null;
-  } else if (status === 'wont_play' || status === 'hidden') {
-    updatePayload.started_at = null;
-    updatePayload.finished_at = null;
-    updatePayload.dropped_at = null;
-    updatePayload.notes = null;
-    updatePayload.rating = null;
-  }
-
   const { error } = await supabase
     .from('games')
-    .update(updatePayload)
+    .update(statusUpdate(change))
     .eq('user_id', userId)
     .eq('id', gameId);
   if (error) return failed(error);

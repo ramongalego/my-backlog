@@ -7,7 +7,8 @@ import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import { statusChangeFrom } from '@/lib/games/status-rules';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
@@ -21,9 +22,17 @@ export type GameFilter = (typeof GAME_FILTERS)[number];
 export type GameSort = (typeof GAME_SORTS)[number];
 
 // Steam gives display dates like "Sep 28, 2010"; "To be announced" and missing
-// dates parse to NaN and sort last.
+// dates parse to NaN and sort last. Parsed once per row: a sort compares each
+// game many times, and parsing dominated sorting a big library. Refetched or
+// patched rows are new objects, so they're parsed afresh.
+const releaseTimes = new WeakMap<GameItem, number>();
 function releaseTime(game: GameItem): number {
-  return parseReleaseDate(game.release_date) ?? -Infinity;
+  let time = releaseTimes.get(game);
+  if (time === undefined) {
+    time = parseReleaseDate(game.release_date) ?? -Infinity;
+    releaseTimes.set(game, time);
+  }
+  return time;
 }
 
 // Ratings only mean something on finished or dropped games. Some older rows
@@ -121,9 +130,10 @@ const BATCH_SIZE = 60;
 
 export function useGamesPage(): UseGamesPageReturn {
   const queryClient = useQueryClient();
-  const { games: invalidateGames } = useInvalidateQueries();
+  const { statusChanged } = useInvalidateQueries();
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const gamesList = usePatchGamesList(userId);
 
   const gamesKey = queryKeys.games.list(userId ?? '');
   const { data: games = [], isPending } = useQuery({
@@ -165,31 +175,14 @@ export function useGamesPage(): UseGamesPageReturn {
     },
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: gamesKey });
-      const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
-      queryClient.setQueryData<GameItem[]>(gamesKey, (old) =>
-        old?.map((g) =>
-          g.id === vars.gameId
-            ? {
-                ...g,
-                status: vars.status,
-                notes: vars.notes,
-                rating: vars.rating,
-                ...(vars.status === 'finished' ? { finished_at: vars.date || null } : {}),
-                ...(vars.status === 'dropped' ? { dropped_at: vars.date || null } : {}),
-              }
-            : g,
-        ),
-      );
-      return { previous };
+      return { previous: gamesList.patch(statusChangeFrom(vars)) };
     },
     onError: (err, _vars, context) => {
       console.error(err);
-      if (context?.previous) {
-        queryClient.setQueryData(gamesKey, context.previous);
-      }
+      gamesList.restore(context?.previous);
       toast.error('Could not save your changes. Please try again.');
     },
-    onSettled: () => invalidateGames(),
+    onSettled: () => statusChanged(),
   });
 
   const handleOpenDetail = (gameId: number) => {

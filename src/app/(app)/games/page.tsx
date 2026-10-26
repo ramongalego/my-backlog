@@ -6,7 +6,12 @@ import GamesView from './View';
 
 export default async function GamesPage() {
   const state = await prefetchForUser((supabase, userId) => [
-    { queryKey: queryKeys.games.list(userId), queryFn: () => loadGamesList(supabase, userId) },
+    {
+      queryKey: queryKeys.games.list(userId),
+      queryFn: () => loadGamesList(supabase, userId),
+      // Grows with the library: stream it rather than hold the page for it.
+      stream: true,
+    },
     { queryKey: queryKeys.queue.list(userId), queryFn: () => loadQueue(supabase, userId) },
   ]);
 

@@ -10,7 +10,8 @@ import { loadCurrentlyPlaying, loadQueue } from '@/lib/data/loaders';
 import { completeGame, updateGameStatus } from '@/lib/games/status';
 import { buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import { statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
 import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
@@ -129,7 +130,8 @@ interface CompleteInput {
  */
 export function useNowPlaying(userId: string | null) {
   const queryClient = useQueryClient();
-  const { gamesAndQueue: invalidateAll, queue: invalidateQueue } = useInvalidateQueries();
+  const { statusChanged, queue: invalidateQueue } = useInvalidateQueries();
+  const gamesList = usePatchGamesList(userId);
   const playingKey = queryKeys.games.playing(userId ?? '');
   const queueKey = queryKeys.queue.list(userId ?? '');
 
@@ -145,8 +147,10 @@ export function useNowPlaying(userId: string | null) {
   const { queue, queuedGameIds, isLoading: queueLoading } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
 
-  // Snapshot + optimistic write helpers shared by the mutations below.
-  const snapshot = async () => {
+  // Snapshot + optimistic write helpers shared by the mutations below. The
+  // status changes are applied to the cached games list (Games page, Stats)
+  // the way the server applies them, instead of refetching the whole list.
+  const snapshot = async (...changes: StatusChange[]) => {
     await Promise.all([
       queryClient.cancelQueries({ queryKey: playingKey }),
       queryClient.cancelQueries({ queryKey: queueKey }),
@@ -154,6 +158,7 @@ export function useNowPlaying(userId: string | null) {
     return {
       previousPlaying: queryClient.getQueryData<GameWithImage | null>(playingKey),
       previousQueue: queryClient.getQueryData<QueueItem[]>(queueKey),
+      previousList: changes.length ? gamesList.patch(...changes) : undefined,
     };
   };
   const rollback = (context?: Awaited<ReturnType<typeof snapshot>>) => {
@@ -164,6 +169,7 @@ export function useNowPlaying(userId: string | null) {
     if (context.previousQueue !== undefined) {
       queryClient.setQueryData(queueKey, context.previousQueue);
     }
+    gamesList.restore(context.previousList);
   };
   const dropFromQueue = (gameId: number) =>
     queryClient.setQueryData<QueueItem[]>(queueKey, (old) =>
@@ -175,7 +181,7 @@ export function useNowPlaying(userId: string | null) {
     // The status route also takes the game off the queue if it was queued.
     mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'playing'),
     onMutate: async (game) => {
-      const context = await snapshot();
+      const context = await snapshot({ gameId: game.id, status: 'playing' });
       queryClient.setQueryData(playingKey, game);
       dropFromQueue(game.id);
       // Carousels are refetched on settle, so they don't need a rollback.
@@ -190,7 +196,7 @@ export function useNowPlaying(userId: string | null) {
       rollback(context);
       toast.error('Failed to start playing');
     },
-    onSettled: () => invalidateAll(),
+    onSettled: () => statusChanged(),
   });
 
   const completeMutation = useMutation({
@@ -199,8 +205,12 @@ export function useNowPlaying(userId: string | null) {
     // next queued game (the promote is best-effort and reported separately).
     mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
       completeGame(game.id, status as 'finished' | 'dropped', { date, notes, rating }),
-    onSuccess: ({ counts, promoted, promoteFailed }, { game, status, rating }) => {
+    onSuccess: ({ counts, promoted, promoteFailed }, { game, status, date, notes, rating }) => {
       if (promoteFailed) toast.error("Couldn't start the next game from your queue.");
+      gamesList.patch(
+        statusChangeFrom({ gameId: game.id, status, date, notes, rating }),
+        ...(promoted ? [{ gameId: promoted.id, status: 'playing' as const }] : []),
+      );
       queryClient.setQueryData(playingKey, promoted);
       if (promoted) dropFromQueue(promoted.id);
       if (status === 'finished') {
@@ -212,7 +222,7 @@ export function useNowPlaying(userId: string | null) {
       console.error(`Failed to set game to ${status}:`, err);
       toast.error('Could not update the game. Please try again.');
     },
-    onSettled: () => invalidateAll(),
+    onSettled: () => statusChanged(),
   });
 
   const moveToQueueMutation = useMutation({
@@ -222,7 +232,7 @@ export function useNowPlaying(userId: string | null) {
       await addToQueue(game.id);
     },
     onMutate: async (game) => {
-      const context = await snapshot();
+      const context = await snapshot({ gameId: game.id, status: 'backlog' });
       queryClient.setQueryData(playingKey, null);
       queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) => [
         ...old,
@@ -236,14 +246,14 @@ export function useNowPlaying(userId: string | null) {
       toast.error('Failed to move game to queue');
     },
     // Refetch either way: the first step may have succeeded before the second failed.
-    onSettled: () => invalidateAll(),
+    onSettled: () => statusChanged(),
   });
 
   const moveToBacklogMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'backlog'),
-    onMutate: async () => {
-      const context = await snapshot();
+    onMutate: async (game) => {
+      const context = await snapshot({ gameId: game.id, status: 'backlog' });
       queryClient.setQueryData(playingKey, null);
       return context;
     },
@@ -252,7 +262,7 @@ export function useNowPlaying(userId: string | null) {
       rollback(context);
       toast.error('Failed to move game to backlog');
     },
-    onSettled: () => invalidateAll(),
+    onSettled: () => statusChanged(),
   });
 
   const removeMutation = useMutation({

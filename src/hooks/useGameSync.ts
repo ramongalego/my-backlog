@@ -63,6 +63,32 @@ async function resolveFromCache(games: Game[]): Promise<{
   return { resolved, synced, remaining, hltbPending };
 }
 
+type SyncableGame = Game & {
+  metadata_synced?: boolean | null;
+  main_story_hours?: number | null;
+  release_date?: string | null;
+};
+
+/** Whether a single-game sync changed anything the library shows. */
+function detailsChanged(
+  game: SyncableGame,
+  metadata: {
+    type?: string | null;
+    header_image?: string | null;
+    main_story_hours?: number | null;
+    release_date?: string | null;
+  } | null,
+) {
+  if (!game.metadata_synced) return true;
+  if (!metadata) return false;
+  return (
+    metadata.main_story_hours !== (game.main_story_hours ?? null) ||
+    metadata.header_image !== (game.header_image ?? null) ||
+    metadata.release_date !== (game.release_date ?? null) ||
+    metadata.type !== (game.type ?? null)
+  );
+}
+
 export function useGameSync() {
   const { gamesAndQueue: invalidateGameData } = useInvalidateQueries();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -136,7 +162,7 @@ export function useGameSync() {
     }
   };
 
-  const startSync = async (games: (Game & { metadata_synced?: boolean | null })[]) => {
+  const startSync = async (games: SyncableGame[]) => {
     if (syncingRef.current) return;
     syncingRef.current = true;
 
@@ -165,7 +191,8 @@ export function useGameSync() {
       }
 
       // Step 2: individually sync only cache misses
-      const syncOne = async (game: Game): Promise<void> => {
+      let changed = false;
+      const syncOne = async (game: SyncableGame): Promise<void> => {
         let attempts = 0;
         while (attempts < MAX_ATTEMPTS) {
           try {
@@ -185,8 +212,12 @@ export function useGameSync() {
               attempts++;
               continue;
             }
-            // Synced, but HLTB was refusing: its time is looked up afterwards.
-            if (response.ok && (await response.json()).hltbPending) queueHltb([game.app_id]);
+            if (response.ok) {
+              const body = await response.json();
+              // Synced, but HLTB was refusing: its time is looked up afterwards.
+              if (body.hltbPending) queueHltb([game.app_id]);
+              if (detailsChanged(game, body.metadata)) changed = true;
+            }
           } catch (err) {
             console.error(`Failed to sync ${game.name}:`, err);
           }
@@ -205,7 +236,9 @@ export function useGameSync() {
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
 
       // Carousels, counts and lists were loaded before the metadata existed.
-      invalidateGameData();
+      // Quiet re-checks (HLTB retries, recent releases) usually change
+      // nothing, and refetching then would download the library on every visit.
+      if (changed) invalidateGameData();
     } finally {
       setIsSyncing(false);
       setSyncingGames([]);

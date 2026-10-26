@@ -11,7 +11,8 @@ import { useStats } from '@/hooks/useStats';
 import { useAuth } from '@/hooks/useAuth';
 import { useAddToQueue } from '@/hooks/useNowPlaying';
 import { updateGameStatus } from '@/lib/games/status';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import { statusChangeFrom } from '@/lib/games/status-rules';
 import { toast } from 'sonner';
 import type { PlayedALotGame, Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
@@ -340,8 +341,9 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
 
 export default function StatsView() {
   const { stats, loading, hasPlayingGame } = useStats();
-  const { games: invalidateGames } = useInvalidateQueries();
+  const { statusChanged } = useInvalidateQueries();
   const { user } = useAuth();
+  const gamesList = usePatchGamesList(user?.id ?? null);
   const addGameToQueue = useAddToQueue(user?.id ?? null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
@@ -360,8 +362,13 @@ export default function StatsView() {
         rating: vars.rating,
       });
     },
-    onError: () => toast.error('Failed to update game. Please try again.'),
-    onSettled: () => invalidateGames(),
+    // Stats reads the shared games list, so the change shows straight away.
+    onMutate: (vars) => ({ previous: gamesList.patch(statusChangeFrom(vars)) }),
+    onError: (_err, _vars, context) => {
+      gamesList.restore(context?.previous);
+      toast.error('Failed to update game. Please try again.');
+    },
+    onSettled: () => statusChanged(),
   });
 
   const handleEdit = (game: PlayedALotGame) => setEditModal(game);

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { loadGamesList, type GameItem } from '@/lib/data/loaders';
+import { loadGamesList, loadOpenEndedCategories, type GameItem } from '@/lib/data/loaders';
 import { useAuth } from './useAuth';
 import { useQueue } from './useNowPlaying';
 import { playedALot } from '@/lib/games/played-a-lot';
@@ -87,6 +87,13 @@ export function useStats() {
     staleTime: 5 * 60 * 1000,
   });
   const { queuedGameIds } = useQueue(userId);
+  // Only "Played a lot" needs categories, and only for heavily played games.
+  const { data: categories = {} } = useQuery({
+    queryKey: queryKeys.games.openEndedCategories(userId ?? ''),
+    queryFn: () => loadOpenEndedCategories(createClient(), userId!),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const stats: Stats | null = (() => {
     if (games.length === 0) return null;
@@ -187,7 +194,10 @@ export function useStats() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([year, count]) => ({ year, count }));
 
-    const playedALotGames: PlayedALotGame[] = playedALot(games, queuedGameIds).map((g) => ({
+    const playedALotGames: PlayedALotGame[] = playedALot(
+      games.map((g) => ({ ...g, categories: categories[g.id] ?? null })),
+      queuedGameIds,
+    ).map((g) => ({
       id: g.id,
       app_id: g.app_id,
       name: g.name,

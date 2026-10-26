@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { updateGameStatus } from '@/lib/games/status';
 import { RANDOM_PICK_MAX_PLAYTIME_MINUTES } from '@/lib/games/filtering';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import { statusChangeFrom } from '@/lib/games/status-rules';
 import { useNowPlaying } from './useNowPlaying';
 import type { GameWithImage } from '@/types/games';
 import { scrollBehavior } from '@/lib/motion';
@@ -13,7 +14,8 @@ import { scrollBehavior } from '@/lib/motion';
 /** Home page: the shared now-playing actions plus carousel detail and random pick. */
 export function useCurrentGame(userId: string | null) {
   const nowPlaying = useNowPlaying(userId);
-  const { games: invalidateGames } = useInvalidateQueries();
+  const { statusChanged } = useInvalidateQueries();
+  const gamesList = usePatchGamesList(userId);
   const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
 
   const handlePickGame = async (game: GameWithImage) => {
@@ -36,6 +38,9 @@ export function useCurrentGame(userId: string | null) {
       return;
     }
 
+    const previous = gamesList.patch(
+      statusChangeFrom({ gameId: game.id, status, date, notes, rating }),
+    );
     try {
       await updateGameStatus(game.id, status, {
         finishedAt: status === 'finished' ? date : undefined,
@@ -45,9 +50,10 @@ export function useCurrentGame(userId: string | null) {
       });
     } catch (err) {
       console.error('Failed to update game status:', err);
+      gamesList.restore(previous);
       toast.error('Failed to update game status');
     }
-    invalidateGames();
+    statusChanged();
   };
 
   const handleRandomPick = async () => {

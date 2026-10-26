@@ -8,7 +8,8 @@ import { updateGameStatus } from '@/lib/games/status';
 import { loadCurrentlyPlaying, loadDiaryEntries, type DiaryEntry } from '@/lib/data/loaders';
 import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import { statusChangeFrom } from '@/lib/games/status-rules';
 
 export type { DiaryEntry };
 
@@ -43,10 +44,11 @@ interface UseDiaryReturn {
 
 export function useDiary(): UseDiaryReturn {
   const queryClient = useQueryClient();
-  const { games: invalidateGames } = useInvalidateQueries();
+  const { statusChanged } = useInvalidateQueries();
   const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const gamesList = usePatchGamesList(userId);
   const diaryKey = queryKeys.games.diary(userId ?? '');
 
   const { data: entries = [], isPending } = useQuery({
@@ -72,7 +74,7 @@ export function useDiary(): UseDiaryReturn {
       date: string;
       notes: string;
       rating: number | null;
-      /** Only the note changed: nothing outside the diary and the games list shows it. */
+      /** Only the note changed: nothing outside the diary shows it. */
       notesOnly?: boolean;
     }) => {
       await updateGameStatus(vars.gameId, vars.status, {
@@ -109,20 +111,23 @@ export function useDiary(): UseDiaryReturn {
         });
       }
 
-      return { previous };
+      // The Games page and Stats read the same change from the shared list.
+      const previousList = gamesList.patch(statusChangeFrom(vars));
+
+      return { previous, previousList };
     },
     onError: (err, _vars, context) => {
       console.error(err);
       if (context?.previous) {
         queryClient.setQueryData(diaryKey, context.previous);
       }
+      gamesList.restore(context?.previousList);
       toast.error('Could not save your changes. Please try again.');
     },
     onSettled: (_data, _error, vars) => {
-      if (!vars.notesOnly) return invalidateGames();
+      if (!vars.notesOnly) return statusChanged();
       // A note doesn't affect carousels, the queue, counts or the playing game.
       queryClient.invalidateQueries({ queryKey: diaryKey });
-      queryClient.invalidateQueries({ queryKey: queryKeys.games.list(userId ?? '') });
     },
   });
 

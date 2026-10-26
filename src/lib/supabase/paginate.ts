@@ -3,21 +3,36 @@
 // libraries. The builder must apply a stable `.order()` for paging to be
 // consistent.
 const PAGE_SIZE = 1000;
+// Pages requested at once after the first. Most libraries fit in the first
+// page; a 5,000-game one takes two rounds instead of five in a row.
+const PARALLEL_PAGES = 4;
 
 type PageResult<T> = PromiseLike<{ data: T[] | null; error: unknown }>;
 
 export async function fetchAllRows<T>(
   page: (from: number, to: number) => PageResult<T>,
 ): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
+  const fetchPage = async (index: number) => {
+    const from = index * PAGE_SIZE;
     const { data, error } = await page(from, from + PAGE_SIZE - 1);
     if (error) throw error;
-    if (!data?.length) break;
-    rows.push(...data);
-    if (data.length < PAGE_SIZE) break;
+    return data ?? [];
+  };
+
+  const rows = await fetchPage(0);
+  if (rows.length < PAGE_SIZE) return rows;
+
+  // The total isn't known up front, so ask for the next few pages together
+  // and stop at the first one that comes back short.
+  for (let next = 1; ; next += PARALLEL_PAGES) {
+    const pages = await Promise.all(
+      Array.from({ length: PARALLEL_PAGES }, (_, i) => fetchPage(next + i)),
+    );
+    for (const data of pages) {
+      rows.push(...data);
+      if (data.length < PAGE_SIZE) return rows;
+    }
   }
-  return rows;
 }
 
 // Splits ids for `.in()` filters so the request URL stays well under limits.

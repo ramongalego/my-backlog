@@ -3,6 +3,7 @@
 // guarantees the prefetched data has exactly the shape the hooks expect.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/paginate';
+import { OPEN_ENDED_MIN_MINUTES } from '@/lib/games/played-a-lot';
 import {
   buildCarouselPools,
   slimPools,
@@ -37,7 +38,6 @@ export interface GameItem {
   /** Steam's display date, e.g. "Sep 28, 2010" or "To be announced". */
   release_date: string | null;
   last_played_at: string | null;
-  categories: string[] | null;
 }
 
 /**
@@ -50,7 +50,7 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
     supabase
       .from('games')
       .select(
-        'id, app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at, categories',
+        'id, app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
@@ -58,6 +58,30 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
       .order('id')
       .range(from, to),
   );
+}
+
+/**
+ * Steam categories for the backlog games with enough hours that "Played a
+ * lot" on Stats needs to know if they're multiplayer-first. Kept out of the
+ * games list, where categories were nearly a fifth of every row and nothing
+ * else reads them.
+ */
+export async function loadOpenEndedCategories(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Record<number, string[] | null>> {
+  const rows = await fetchAllRows<{ id: number; categories: string[] | null }>((from, to) =>
+    supabase
+      .from('games')
+      .select('id, categories')
+      .eq('user_id', userId)
+      .eq('type', 'game')
+      .or('status.is.null,status.eq.backlog')
+      .gte('playtime_forever', OPEN_ENDED_MIN_MINUTES)
+      .order('id')
+      .range(from, to),
+  );
+  return Object.fromEntries(rows.map((r) => [r.id, r.categories]));
 }
 
 // ─── Diary ──────────────────────────────────────────────────────────────────
