@@ -100,7 +100,7 @@ function Progress({
   }
 
   return (
-    <div className="max-w-sm">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm mb-2">
         {hours(<span className="text-ink-400 whitespace-nowrap">~{mainStoryHours}h to beat</span>)}
       </div>
@@ -186,44 +186,47 @@ export function CurrentlyPlaying({
           )}
         </p>
 
-        <div className="mt-5">
-          <Progress game={game} onSaveHours={onSaveHours} />
-          <LastPlayed lastPlayedAt={game.last_played_at} className="mt-2 text-sm" />
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-          <div className="flex gap-2">
-            <Button onClick={onFinish} disabled={isLoading} className="cursor-pointer">
-              <Check className="w-4 h-4" aria-hidden="true" />
-              <span>Finish</span>
-            </Button>
-            <Button
-              onClick={onDrop}
-              disabled={isLoading}
-              variant="secondary"
-              className="cursor-pointer"
-            >
-              <X className="w-4 h-4" aria-hidden="true" />
-              <span>Drop</span>
-            </Button>
+        {/* As wide as the actions under it, so the progress bar ends where they do. */}
+        <div className="w-fit max-w-full">
+          <div className="mt-5">
+            <Progress game={game} onSaveHours={onSaveHours} />
+            <LastPlayed lastPlayedAt={game.last_played_at} className="mt-2 text-sm" />
           </div>
-          <div className="flex items-center gap-5">
-            <button
-              onClick={onMoveToQueue}
-              disabled={isLoading}
-              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Move to Queue</span>
-            </button>
-            <button
-              onClick={onCancel}
-              disabled={isLoading}
-              className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <Archive className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Move to Backlog</span>
-            </button>
+
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <div className="flex gap-2">
+              <Button onClick={onFinish} disabled={isLoading} className="cursor-pointer">
+                <Check className="w-4 h-4" aria-hidden="true" />
+                <span>Finish</span>
+              </Button>
+              <Button
+                onClick={onDrop}
+                disabled={isLoading}
+                variant="secondary"
+                className="cursor-pointer"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+                <span>Drop</span>
+              </Button>
+            </div>
+            <div className="flex items-center gap-5">
+              <button
+                onClick={onMoveToQueue}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Move to Queue</span>
+              </button>
+              <button
+                onClick={onCancel}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Move to Backlog</span>
+              </button>
+            </div>
           </div>
         </div>
 
