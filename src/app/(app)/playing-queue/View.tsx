@@ -78,6 +78,7 @@ function NowPlayingRow({
         alt=""
         sizes="(max-width: 640px) 100vw, 288px"
         className="w-full"
+        platform={consoleOf(game)}
       />
 
       <div className="min-w-0">
@@ -226,6 +227,7 @@ function QueueItemRow({
         alt=""
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px"
         className="w-full sm:w-48 lg:w-56 shrink-0"
+        platform={consoleOf(item.game)}
       >
         {/* On phones the position rides on the art. */}
         <span

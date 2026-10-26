@@ -1,14 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  ExternalLink,
-  Gamepad2,
-  Trophy,
-  Star,
-  MessageSquarePlus,
-  CalendarDays,
-} from 'lucide-react';
+import { ExternalLink, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
 
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
@@ -127,7 +120,13 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         aria-label={`Edit ${entry.name}`}
         className={`group ${COVER_WIDTH} shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2`}
       >
-        <CoverArt src={entry.header_image} alt="" sizes={COVER_SIZES} interactive>
+        <CoverArt
+          src={entry.header_image}
+          alt=""
+          sizes={COVER_SIZES}
+          interactive
+          platform={consoleOf(entry)}
+        >
           <CoverEditHint />
           {/* On phones the date rides on the art. */}
           {entry.finished_at && (
@@ -174,12 +173,8 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
             {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
           </div>
         </div>
-        {consoleOf(entry) && (
-          <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-400">
-            <Gamepad2 className="w-3 h-3" aria-hidden="true" />
-            {consoleOf(entry)}
-          </p>
-        )}
+        {/* The console shows on the art; this is its name for screen readers. */}
+        {consoleOf(entry) && <p className="sr-only">On {consoleOf(entry)}</p>}
         {editingNote ? (
           <DiaryNoteEditor
             initialText={entry.notes ?? ''}

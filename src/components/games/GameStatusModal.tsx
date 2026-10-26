@@ -15,6 +15,7 @@ const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.Day
 import { GameMetaRow } from './GameCardInfo';
 import { GameArt } from './GameArt';
 import { ConsolePicker } from './ConsolePicker';
+import { ConsoleBadge } from './ConsoleBadge';
 
 type InternalStatus = GameStatus | 'queue';
 
@@ -249,6 +250,12 @@ export function GameDetailModal({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
+        {/* The title runs along the bottom, so the console sits top-left here. */}
+        {manual?.platform && (
+          <div className="absolute top-3 left-4 sm:left-6">
+            <ConsoleBadge platform={manual.platform} />
+          </div>
+        )}
         <h2 className="absolute bottom-2 left-4 sm:left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
           {gameName}
         </h2>

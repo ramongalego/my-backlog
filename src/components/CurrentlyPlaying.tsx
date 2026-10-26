@@ -131,6 +131,7 @@ export function CurrentlyPlaying({
         rounded="xl"
         priority
         sizes="(max-width: 768px) 100vw, 480px"
+        platform={consoleOf(game)}
       />
 
       <div className="min-w-0">
@@ -156,7 +157,8 @@ export function CurrentlyPlaying({
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400" aria-hidden="true" />
           Playing now
           {consoleOf(game) && (
-            <span className="text-ink-400 font-normal">on {consoleOf(game)}</span>
+            // The console shows on the art; this is its name for screen readers.
+            <span className="sr-only">on {consoleOf(game)}</span>
           )}
         </p>
 

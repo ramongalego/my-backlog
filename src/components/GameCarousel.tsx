@@ -245,6 +245,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                       sizes={COVER_SIZES}
                       priority={priority && indexInList >= 0 && indexInList < 4 ? true : undefined}
                       interactive
+                      platform={consoleOf(game)}
                     >
                       <CoverEditHint />
                     </CoverArt>

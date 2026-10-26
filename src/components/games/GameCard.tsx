@@ -46,6 +46,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
           alt=""
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
           interactive
+          platform={consoleOf(game)}
         >
           <CoverEditHint />
           <div className="absolute top-2 right-2">

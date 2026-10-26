@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, Gamepad2, History, ThumbsUp } from 'lucide-react';
+import { Clock, ExternalLink, History, ThumbsUp } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { steamReviewLabel } from '@/lib/steam/review-label';
 import { formatLastPlayed } from '@/lib/games/last-played';
@@ -133,12 +133,8 @@ export function GameMetaRow({
     return null;
   return (
     <div className="@container flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
-      {platform && (
-        <span className="inline-flex items-center gap-1 text-ink-400">
-          <Gamepad2 className="w-3 h-3" aria-hidden="true" />
-          {platform}
-        </span>
-      )}
+      {/* The console shows on the art (ConsoleBadge); this is its name for screen readers. */}
+      {platform && <span className="sr-only">On {platform}</span>}
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (
