@@ -74,6 +74,8 @@ function NowPlayingRow({
 
   const pastEstimate = <span className="text-ink-400">· past the ~{estimateHours}h estimate</span>;
 
+  const toBeat = <span className="whitespace-nowrap">~{estimateHours}h to beat</span>;
+
   const secondaryAction =
     'cursor-pointer flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
 
@@ -120,22 +122,27 @@ function NowPlayingRow({
                 )}
               </div>
             ) : progressPct !== null ? (
-              <div className="max-w-56">
-                {editable ? (
-                  <div className="flex flex-wrap items-center gap-x-1 text-xs text-ink-400">
+              // Full width on phones; on wider screens about as wide as the
+              // playing card's on Home, with the two figures at either end.
+              <div className="sm:max-w-sm">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-ink-400">
+                  {editable ? (
                     <HoursPlayedEdit
                       minutes={game.playtime_forever}
                       platform={platform}
                       onSave={onSaveHours}
-                      after={<span className="whitespace-nowrap">· ~{estimateHours}h to beat</span>}
+                      after={toBeat}
                     />
-                  </div>
-                ) : (
-                  <p className="text-xs text-ink-400">
-                    <Playtime minutes={game.playtime_forever} lastPlayedAt={game.last_played_at} />{' '}
-                    · ~{estimateHours}h to beat
-                  </p>
-                )}
+                  ) : (
+                    <>
+                      <Playtime
+                        minutes={game.playtime_forever}
+                        lastPlayedAt={game.last_played_at}
+                      />
+                      {toBeat}
+                    </>
+                  )}
+                </div>
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
                   <div
                     className="h-full bg-accent-500 rounded-full"
