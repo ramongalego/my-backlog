@@ -113,12 +113,33 @@ describe('pickWideArt', () => {
     artwork_type,
   });
 
-  it('prefers key art without its logo, then with, then wide artwork', () => {
-    const keyArt = [art('with logo', 1920, 1080, 3), art('key', 1920, 620, 2)];
+  it('prefers key art with its logo, then without, then wide artwork', () => {
+    const keyArt = [art('key', 1920, 620, 2), art('with logo', 1920, 1080, 3)];
     const plain = art('plain', 1260, 840, 1);
-    expect(pickWideArt({ artworks: [plain, art('logo', 2788, 661, 7), ...keyArt] })).toBe('key');
-    expect(pickWideArt({ artworks: [plain, keyArt[0]] })).toBe('with logo');
+    expect(pickWideArt({ artworks: [plain, art('logo', 2788, 661, 7), ...keyArt] })).toBe(
+      'with logo',
+    );
+    expect(pickWideArt({ artworks: [plain, keyArt[0]] })).toBe('key');
     expect(pickWideArt({ artworks: [plain] })).toBe('plain');
+  });
+
+  it("skips key art with a logo that's too square to crop without cutting the logo", () => {
+    expect(
+      pickWideArt({ artworks: [art('square logo', 2000, 1302, 3), art('key', 1920, 1080, 2)] }),
+    ).toBe('key');
+  });
+
+  it('picks the one closest to the header shape among several of the same type', () => {
+    // IGDB lists them in no particular order; the least cropped wins.
+    expect(
+      pickWideArt({
+        artworks: [
+          art('16:9', 1920, 1080, 2),
+          art('ultrawide', 3840, 1240, 2),
+          art('2:1', 1920, 960, 2),
+        ],
+      }),
+    ).toBe('2:1');
   });
 
   it('skips character renders, small art and logos for a sharp screenshot', () => {

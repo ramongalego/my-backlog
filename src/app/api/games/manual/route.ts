@@ -3,9 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { addManualGameSchema } from '@/lib/validations/games';
-import { getGameDetails } from '@/lib/igdb/api';
+import { getAddableGameDetails } from '@/lib/games/manual-details';
 import { getMainStoryHours } from '@/lib/hltb/api';
-import { getSteamTags } from '@/lib/steam/store-api';
 import { applyStatusChange } from '@/lib/games/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';
@@ -32,18 +31,9 @@ async function mainStoryHours(name: string): Promise<number | null> {
 }
 
 /**
- * Steam's tags for a game it also sells (most voted first, the same words as
- * the rest of the library: JRPG, Roguelite...), else the ones made from IGDB.
- */
-async function tagsFor(details: { tags: string[]; steamAppIds: number[] }): Promise<string[]> {
-  const appId = details.steamAppIds[0];
-  return (appId && (await getSteamTags(appId))) || details.tags;
-}
-
-/**
  * Adds a game that isn't from Steam (a console game, another store) to the
- * library. Its details come from IGDB on the server, never from the request,
- * and its time to beat from HowLongToBeat.
+ * library. Its details come from IGDB (and Steam, for games it sells too) on
+ * the server, never from the request, and its time to beat from HowLongToBeat.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -67,7 +57,7 @@ export async function POST(request: NextRequest) {
 
   let details;
   try {
-    details = await getGameDetails(igdbId);
+    details = await getAddableGameDetails(igdbId);
   } catch (err) {
     console.error(err);
     return jsonError('Game search is unavailable right now', 503);
@@ -96,10 +86,7 @@ export async function POST(request: NextRequest) {
   if (steamGame && platform === STEAM_PLATFORM)
     return jsonError("It's already in your Steam library. Pick the console you play it on.", 400);
 
-  // A moved Steam game keeps the tags it has.
-  const [tags, mainStory] = steamGame
-    ? [null, null]
-    : await Promise.all([tagsFor(details), mainStoryHours(details.name)]);
+  const mainStory = steamGame ? null : await mainStoryHours(details.name);
 
   const { data: game, error } = steamGame
     ? await supabase
@@ -127,7 +114,7 @@ export async function POST(request: NextRequest) {
           name: details.name,
           genres: details.genres,
           categories: details.categories,
-          tags,
+          tags: details.tags,
           description: details.description,
           release_date: details.release_date,
           header_image: details.header_image,

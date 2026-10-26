@@ -149,7 +149,14 @@ export interface StoreItemInfo {
    * it's shown larger than that.
    */
   headerImage2x: string | null;
+  /** The 460×215 store header, for when there's no larger one. */
+  headerImage: string | null;
   reviews: SteamReviewData | null;
+}
+
+function headerImage(assets: StoreItemAssets | undefined): string | null {
+  if (!assets?.asset_url_format || !assets.header) return null;
+  return STORE_ASSET_BASE + assets.asset_url_format.replace('${FILENAME}', assets.header);
 }
 
 function headerImage2x(assets: StoreItemAssets | undefined): string | null {
@@ -197,6 +204,7 @@ export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | n
     return {
       tags: tagNames.length > 0 ? tagNames : null,
       headerImage2x: headerImage2x(item.assets),
+      headerImage: headerImage(item.assets),
       reviews: reviewData(item.reviews),
     };
   } catch (error) {

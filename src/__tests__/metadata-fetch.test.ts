@@ -29,6 +29,7 @@ beforeEach(() => {
   jest.mocked(store.getStoreItemInfo).mockResolvedValue({
     tags: ['Action'],
     headerImage2x: null,
+    headerImage: null,
     reviews: { score: 90, count: 1000 },
   });
   jest.mocked(store.getSteamDeckCompat).mockResolvedValue(3);

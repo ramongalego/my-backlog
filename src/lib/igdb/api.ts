@@ -121,17 +121,21 @@ export function artworkUrl(imageId: string) {
 }
 
 // IGDB's artwork types that work as a game's header, best first, with how wide
-// each has to be. Key art is made to be cropped, so a little wider than square
-// will do; without its logo first, since cropping cuts through a logo and the
-// app puts the name over the art anyway. Plain artwork on older games is often
+// each has to be. Key art with its logo is the publisher's main promotional
+// image, the one a store page leads with, like the Steam header every Steam
+// game here uses; it has to be wide enough (16:10) that cropping to the header
+// shape keeps the logo. Key art without a logo is often an alternate or a
+// single character, so it comes second. Plain artwork on older games is often
 // a single character render, which crops to a torso unless it's at least 3:2.
 // Logos, covers, icons, concept art and infographics never work.
 const HEADER_ARTWORK: { type: number; minRatio: number }[] = [
+  { type: 3, minRatio: 1.6 },
   { type: 2, minRatio: 1.3 },
-  { type: 3, minRatio: 1.3 },
   { type: 1, minRatio: 1.5 },
   { type: 15, minRatio: 1.5 },
 ];
+// The shape every game image is shown at (Steam's 460×215 header).
+const HEADER_RATIO = 460 / 215;
 const MIN_HEADER_WIDTH = 800;
 // Handheld screenshots (3DS at 400x240, DS at 256x192) are too small to fill
 // the header sharply; the box art looks better.
@@ -140,10 +144,14 @@ const MIN_SCREENSHOT_WIDTH = 1280;
 /**
  * The game's wide art, as an IGDB image id: its best key art or wide artwork,
  * else its first sharp screenshot, else none, and the box art is used instead
- * (on a blurred copy of itself).
+ * (on a blurred copy of itself). Of several of the best type, the one closest
+ * to the header's shape, so the least of it is cropped away (IGDB lists them
+ * in no particular order).
  */
 export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): string | null {
   const rank = (a: IgdbImage) => HEADER_ARTWORK.findIndex((h) => h.type === (a.artwork_type ?? 1));
+  // How far the art is from the header's shape, either way (2:1 and 9:4 are as far).
+  const misfit = (a: IgdbImage) => Math.abs(Math.log(a.width! / a.height! / HEADER_RATIO));
   const best = (game.artworks ?? [])
     .filter(
       (a) =>
@@ -153,7 +161,7 @@ export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): s
         a.width >= MIN_HEADER_WIDTH &&
         a.width / a.height >= HEADER_ARTWORK[rank(a)].minRatio,
     )
-    .sort((a, b) => rank(a) - rank(b))[0];
+    .sort((a, b) => rank(a) - rank(b) || misfit(a) - misfit(b))[0];
   if (best) return best.image_id;
   const shot = game.screenshots?.[0];
   return shot && (shot.width ?? 0) >= MIN_SCREENSHOT_WIDTH ? shot.image_id : null;

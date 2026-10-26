@@ -4,7 +4,8 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { gameSearchSchema } from '@/lib/validations/games';
 import { gameIdSchema } from '@/lib/validations/common';
-import { getGameDetails, searchGames } from '@/lib/igdb/api';
+import { searchGames } from '@/lib/igdb/api';
+import { getAddableGameDetails } from '@/lib/games/manual-details';
 
 /**
  * IGDB for the Add game dialog: `?q=` searches, `?id=` returns one game's
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (params.has('id')) {
       const id = gameIdSchema.safeParse(Number(params.get('id')));
       if (!id.success) return jsonError('Invalid game id', 400);
-      const details = await getGameDetails(id.data);
+      const details = await getAddableGameDetails(id.data);
       if (!details) return jsonError('Game not found', 404);
       return NextResponse.json({ game: details }, { headers: cache });
     }
