@@ -147,17 +147,25 @@
   color: var(--color-ink-500);
   font-size: 0.75rem;
 }
-.rdp-dropdown select {
+/* The month and year menus are the browser's own lists, opened from an
+   invisible select over the caption. Give that list the dark palette (it
+   otherwise opens white with the caption's light text). */
+.rdp-dropdown,
+.rdp-dropdown option {
   background-color: var(--color-ink-800);
-  color: var(--color-ink-200);
-  border: 1px solid var(--color-ink-700);
-  border-radius: 0.375rem;
-  padding: 0 0.25rem;
+  color: var(--color-ink-100);
+}
+.rdp-dropdown_root {
   cursor: pointer;
 }
-.rdp-dropdown select:focus {
-  outline: none;
-  border-color: var(--color-accent-500);
+.rdp-dropdown_root:hover .rdp-caption_label {
+  color: var(--color-ink-50);
+}
+/* The app's focus ring, not the browser's default box. */
+.rdp-dropdown:focus-visible ~ .rdp-caption_label {
+  outline: 2px solid var(--color-accent-400);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
 }
 
 /* Result card swap when the mood picker returns a new game */
@@ -183,4 +191,49 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Toasts (Sonner): the app's dark panels, colour only on the icon, and a
+   quiet button for actions like View and Undo. Selectors are one step more
+   specific than Sonner's own, which it injects at runtime. */
+html [data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--color-ink-900);
+  --normal-border: var(--color-ink-700);
+  --normal-text: var(--color-ink-100);
+  --border-radius: 0.75rem;
+}
+html [data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  font-size: 0.875rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+html [data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: var(--color-ink-300);
+}
+html [data-sonner-toaster] [data-sonner-toast][data-type='success'] [data-icon] {
+  color: var(--color-emerald-400);
+}
+html [data-sonner-toaster] [data-sonner-toast][data-type='error'] [data-icon] {
+  color: var(--color-rose-400);
+}
+html [data-sonner-toaster] [data-sonner-toast][data-type='warning'] [data-icon] {
+  color: var(--color-amber-400);
+}
+html [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--color-ink-800);
+  color: var(--color-ink-100);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 150ms;
+}
+html [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]:hover {
+  background: var(--color-ink-700);
+  color: var(--color-ink-50);
+}
+html [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--color-accent-400);
+  outline-offset: 2px;
 }

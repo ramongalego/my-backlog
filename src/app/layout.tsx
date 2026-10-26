@@ -42,7 +42,7 @@ export default function RootLayout({
             the (app) group layout so the marketing pages don't ship it. */}
         {children}
         <Footer />
-        <Toaster richColors position="bottom-right" />
+        <Toaster theme="dark" position="bottom-right" />
         <Suspense>
           <UrlErrorToast />
         </Suspense>
