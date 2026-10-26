@@ -124,6 +124,16 @@ describe('searchGames', () => {
     ]);
   });
 
+  it('finds collections, listed after the games themselves', async () => {
+    games = [
+      mkGame({ id: 1, name: 'Castlevania Dominus Collection', game_type: 3 }),
+      mkGame({ id: 2, name: 'Castlevania', game_type: 0 }),
+    ];
+    const results = await searchGames('castlevania');
+    expect(requests.at(-1)?.body).toContain('game_type = (0,3,');
+    expect(results.map((r) => r.name)).toEqual(['Castlevania', 'Castlevania Dominus Collection']);
+  });
+
   it('reuses the access token between requests', async () => {
     games = [];
     await searchGames('a game');

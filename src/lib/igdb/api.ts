@@ -8,9 +8,15 @@ const API_URL = 'https://api.igdb.com/v4';
 const IMAGE_URL = 'https://images.igdb.com/igdb/image/upload';
 const TIMEOUT_MS = 8000;
 
-// Main games and their re-releases: no DLC, bundles, mods, episodes or updates.
-// 0 main game, 4 standalone expansion, 8 remake, 9 remaster, 10 expanded game, 11 port.
-const GAME_TYPES = '(0,4,8,9,10,11)';
+// Main games, their re-releases and bundles: no DLC, mods, episodes or updates.
+// 0 main game, 3 bundle, 4 standalone expansion, 8 remake, 9 remaster,
+// 10 expanded game, 11 port.
+const GAME_TYPES = '(0,3,4,8,9,10,11)';
+// Bundles include collections sold as one game (Castlevania Dominus
+// Collection), but also "Game + Expansion Pass" store bundles, so they're
+// listed after the games themselves.
+const BUNDLE = 3;
+const SEARCH_LIMIT = 12;
 
 let token: { value: string; expiresAt: number } | null = null;
 
@@ -67,6 +73,7 @@ interface IgdbImage {
 interface IgdbGame {
   id: number;
   name: string;
+  game_type?: number;
   first_release_date?: number;
   platforms?: { name: string }[];
   cover?: { image_id: string };
@@ -137,9 +144,13 @@ export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): s
 export async function searchGames(text: string): Promise<GameSearchResult[]> {
   const games = await query<IgdbGame>(
     'games',
-    `search ${quoted(text)}; fields name, first_release_date, platforms.name, cover.image_id; where game_type = ${GAME_TYPES} & version_parent = null; limit 12;`,
+    `search ${quoted(text)}; fields name, game_type, first_release_date, platforms.name, cover.image_id; where game_type = ${GAME_TYPES} & version_parent = null; limit 20;`,
   );
-  return games.map((g) => ({
+  const ordered = [
+    ...games.filter((g) => g.game_type !== BUNDLE),
+    ...games.filter((g) => g.game_type === BUNDLE),
+  ].slice(0, SEARCH_LIMIT);
+  return ordered.map((g) => ({
     igdbId: g.id,
     name: g.name,
     year: g.first_release_date ? new Date(g.first_release_date * 1000).getUTCFullYear() : null,
