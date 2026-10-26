@@ -1,6 +1,14 @@
 // Client helpers for games added by hand (/api/games/search, /api/games/manual).
 // They throw with the server's message, which the dialogs show as is.
 
+export interface GameDetails {
+  name: string;
+  platforms: string[];
+  release_date: string | null;
+  header_image: string | null;
+  description: string | null;
+}
+
 export interface GameSearchResult {
   igdbId: number;
   name: string;
@@ -25,12 +33,21 @@ export async function searchGames(
   return (await res.json()).results;
 }
 
+export async function getGameDetails(igdbId: number): Promise<GameDetails> {
+  const res = await check(await fetch(`/api/games/search?id=${igdbId}`));
+  return (await res.json()).game;
+}
+
 export async function addManualGame(body: {
   igdbId: number;
   platform: string;
-  status: 'backlog' | 'queue' | 'playing';
+  status: 'backlog' | 'queue' | 'playing' | 'finished' | 'dropped';
   hoursPlayed?: number;
-}): Promise<{ id: number; name: string }> {
+  /** When it was finished or dropped (YYYY-MM-DD). */
+  date?: string;
+  notes?: string;
+  rating?: number | null;
+}): Promise<{ id: number; name: string; warning?: string }> {
   const res = await check(
     await fetch('/api/games/manual', {
       method: 'POST',
@@ -74,7 +91,21 @@ const SHORT_PLATFORM_NAMES: Record<string, string> = {
   'Nintendo Entertainment System': 'NES',
   'Game Boy Advance': 'GBA',
   'Nintendo GameCube': 'GameCube',
+  'Family Computer': 'Famicom',
+  'Family Computer Disk System': 'Famicom Disk System',
+  'PlayStation 2': 'PS2',
+  PlayStation: 'PS1',
+  'PlayStation Portable': 'PSP',
+  'Sega Mega Drive/Genesis': 'Mega Drive',
 };
+
+/**
+ * The console to show for a game: only games added by hand have one (Steam
+ * games are all "PC", which would be noise on every card).
+ */
+export function consoleOf(game: { source?: string; platform?: string | null }): string | null {
+  return game.source === 'manual' ? (game.platform ?? null) : null;
+}
 
 export function shortPlatformName(name: string): string {
   return SHORT_PLATFORM_NAMES[name] ?? name;

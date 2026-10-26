@@ -35,8 +35,12 @@ export const gameSearchSchema = z.string().trim().min(2).max(100);
 export const addManualGameSchema = z.object({
   igdbId: z.number().int().positive(),
   platform: safeText.pipe(z.string().min(1).max(60)),
-  status: z.enum(['backlog', 'queue', 'playing']),
+  // Finished and dropped log a game you've already played, with when and how it went.
+  status: z.enum(['backlog', 'queue', 'playing', 'finished', 'dropped']),
   hoursPlayed: hoursPlayed.optional(),
+  date: isoDate.optional(),
+  notes: gameStatusSchema.shape.notes,
+  rating: gameStatusSchema.shape.rating,
 });
 
 export type AddManualGameBody = z.infer<typeof addManualGameSchema>;

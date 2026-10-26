@@ -1,7 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
+import {
+  ExternalLink,
+  Gamepad2,
+  Trophy,
+  Star,
+  MessageSquarePlus,
+  CalendarDays,
+} from 'lucide-react';
 
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
@@ -15,6 +22,9 @@ import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { DiaryListSkeleton } from './Skeleton';
 import type { DiaryEntry } from '@/hooks/useDiary';
 import { steamStoreUrl } from '@/lib/games/store-link';
+import { consoleOf } from '@/lib/games/manual';
+import { useAuth } from '@/hooks/useAuth';
+import { useManualGameActions } from '@/hooks/useManualGame';
 import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -164,6 +174,12 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
             {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
           </div>
         </div>
+        {consoleOf(entry) && (
+          <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-400">
+            <Gamepad2 className="w-3 h-3" aria-hidden="true" />
+            {consoleOf(entry)}
+          </p>
+        )}
         {editingNote ? (
           <DiaryNoteEditor
             initialText={entry.notes ?? ''}
@@ -218,6 +234,8 @@ export default function DiaryView() {
     handleConfirmDetail,
     handleSaveNotes,
   } = useDiary();
+  const { user } = useAuth();
+  const manualGames = useManualGameActions(user?.id ?? null);
 
   const [selectedYear, setSelectedYear] = useUrlState<string>('year', 'all');
 
@@ -291,6 +309,7 @@ export default function DiaryView() {
             playtimeMinutes={detailModal.game.playtime_forever}
             lastPlayedAt={detailModal.game.last_played_at}
             deckCompat={detailModal.game.deck_compat}
+            manual={manualGames.dialogProps(detailModal.game)}
             disablePlaying={hasPlayingGame}
           />
         )

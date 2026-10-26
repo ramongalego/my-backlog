@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, History, ThumbsUp } from 'lucide-react';
+import { Clock, ExternalLink, Gamepad2, History, ThumbsUp } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { steamReviewLabel } from '@/lib/steam/review-label';
 import { formatLastPlayed } from '@/lib/games/last-played';
@@ -115,6 +115,8 @@ interface GameMetaRowProps {
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
   hidePlaytimeOnMobile?: boolean;
+  /** The console a game added by hand is on (consoleOf); Steam games have none. */
+  platform?: string | null;
 }
 
 export function GameMetaRow({
@@ -125,10 +127,18 @@ export function GameMetaRow({
   lastPlayedAt,
   deckCompat,
   hidePlaytimeOnMobile,
+  platform,
 }: GameMetaRowProps) {
-  if (!mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat) return null;
+  if (!platform && !mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat)
+    return null;
   return (
     <div className="@container flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
+      {platform && (
+        <span className="inline-flex items-center gap-1 text-ink-400">
+          <Gamepad2 className="w-3 h-3" aria-hidden="true" />
+          {platform}
+        </span>
+      )}
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
       {playtimeMinutes >= 60 ? (
@@ -154,6 +164,8 @@ interface GameCardInfoProps {
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
+  /** The console a game added by hand is on (consoleOf). */
+  platform?: string | null;
 }
 
 export function GameCardInfo({
@@ -165,6 +177,7 @@ export function GameCardInfo({
   playtimeMinutes = 0,
   lastPlayedAt,
   deckCompat,
+  platform,
 }: GameCardInfoProps) {
   const storeUrl = steamStoreUrl(appId);
   return (
@@ -196,6 +209,7 @@ export function GameCardInfo({
           playtimeMinutes={playtimeMinutes}
           lastPlayedAt={lastPlayedAt}
           deckCompat={deckCompat}
+          platform={platform}
         />
       </div>
     </>

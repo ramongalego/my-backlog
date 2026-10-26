@@ -34,6 +34,7 @@ import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
 import { todayIso } from '@/lib/diary/date-utils';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { QueueListSkeleton } from './Skeleton';
+import { consoleOf } from '@/lib/games/manual';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
 interface NowPlayingRowProps {
@@ -117,6 +118,7 @@ function NowPlayingRow({
                 playtimeMinutes={game.playtime_forever}
                 lastPlayedAt={game.last_played_at}
                 deckCompat={game.deck_compat}
+                platform={consoleOf(game)}
               />
             )}
             <LastPlayed lastPlayedAt={game.last_played_at} className="mt-1.5 text-xs" />
@@ -247,6 +249,7 @@ function QueueItemRow({
             playtimeMinutes={item.game.playtime_forever}
             lastPlayedAt={item.game.last_played_at}
             deckCompat={item.game.deck_compat}
+            platform={consoleOf(item.game)}
           />
         </div>
 

@@ -2,6 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import DiaryView from '@/app/(app)/diary/View';
 import type { DiaryEntry } from '@/lib/data/loaders';
 
+// Manual-game edits are covered by their own tests.
+jest.mock('@/hooks/useManualGame', () => ({
+  useManualGameActions: () => ({
+    dialogProps: () => undefined,
+    saveHours: jest.fn(),
+    remove: jest.fn(),
+  }),
+}));
+jest.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: null }) }));
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage({ alt }: { alt: string }) {
@@ -22,6 +31,8 @@ jest.mock('@/components/games/GameStatusModal', () => ({
 
 const entry: DiaryEntry = {
   id: 1,
+  source: 'steam',
+  platform: 'PC',
   app_id: 1,
   name: 'Celeste',
   header_image: null,

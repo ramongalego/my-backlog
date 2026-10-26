@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { updateGameStatus } from '@/lib/games/status';
-import { deleteManualGame, updateHoursPlayed } from '@/lib/games/manual';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
 import { statusChangeFrom } from '@/lib/games/status-rules';
@@ -14,6 +13,7 @@ import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
 import { useUrlState } from './useUrlState';
+import { useManualGameActions } from './useManualGame';
 
 export type { GameItem };
 
@@ -127,7 +127,7 @@ interface UseGamesPageReturn {
   handleOpenDetail: (gameId: number) => void;
   handleAddToQueue: (gameId: number) => Promise<void>;
   handleSaveHours: (gameId: number, hours: number) => Promise<void>;
-  handleDelete: (gameId: number) => Promise<void>;
+  handleDelete: (gameId: number) => void;
   queuedGameIds: Set<number>;
 }
 
@@ -238,37 +238,12 @@ export function useGamesPage(): UseGamesPageReturn {
     if (game) addGameToQueue(game);
   };
 
-  // Games added by hand: hours played (consoles don't report it) and removal.
-  // Both change the cached list in place, like status changes do.
-  const handleSaveHours = async (gameId: number, hours: number) => {
-    const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
-    queryClient.setQueryData<GameItem[]>(gamesKey, (old) =>
-      old?.map((g) => (g.id === gameId ? { ...g, playtime_forever: Math.round(hours * 60) } : g)),
-    );
-    try {
-      await updateHoursPlayed(gameId, hours);
-    } catch (err) {
-      console.error(err);
-      if (previous) queryClient.setQueryData(gamesKey, previous);
-      toast.error('Could not save the hours played. Please try again.');
-    }
-    statusChanged();
-  };
-
-  const handleDelete = async (gameId: number) => {
-    const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
-    const name = previous?.find((g) => g.id === gameId)?.name;
-    queryClient.setQueryData<GameItem[]>(gamesKey, (old) => old?.filter((g) => g.id !== gameId));
-    try {
-      await deleteManualGame(gameId);
-      if (name) toast.success(`Removed ${name} from your library`);
-    } catch (err) {
-      console.error(err);
-      if (previous) queryClient.setQueryData(gamesKey, previous);
-      toast.error('Could not remove the game. Please try again.');
-    }
-    statusChanged();
-  };
+  // Games added by hand: hours played (consoles don't report it) and removal,
+  // shared with every other page's detail dialog.
+  const manualGames = useManualGameActions(userId);
+  const handleSaveHours = manualGames.saveHours;
+  const handleDelete = (gameId: number) =>
+    manualGames.remove(gameId, games.find((g) => g.id === gameId)?.name ?? 'the game');
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
   const searchFilteredGames = (() => {

@@ -122,7 +122,7 @@ export function Header() {
             ) : user ? (
               <>
                 {/* Signed-in pages need Steam linked, so the button does too. */}
-                {profile?.steam_id && <AddGameButton userId={user.id} />}
+                {profile?.steam_id && <AddGameButton />}
                 <UserMenu
                   user={user}
                   steamUsername={steamUsername}

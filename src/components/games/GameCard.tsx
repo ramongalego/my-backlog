@@ -6,6 +6,7 @@ import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { StatusBadge } from './StatusBadge';
+import { consoleOf } from '@/lib/games/manual';
 
 interface GameCardProps {
   game: GameItem;
@@ -26,10 +27,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
       ? STATUS_STYLE[status].label
       : null;
   // The badges read in on-screen order as one phrase ("Finished 9/10").
-  const platform = game.source === 'manual' ? game.platform : null;
-  const badges = [badgeText, platform, showRating ? `${game.rating}/10` : null]
-    .filter(Boolean)
-    .join(' ');
+  const badges = [badgeText, showRating ? `${game.rating}/10` : null].filter(Boolean).join(' ');
   const label = `Open details for ${game.name}${badges ? `, ${badges}` : ''}`;
 
   return (
@@ -63,12 +61,6 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
               showStatus && <StatusBadge status={status} />
             )}
           </div>
-          {/* Games added by hand say which console they're on. */}
-          {platform && (
-            <span className="absolute bottom-2 left-2 inline-flex items-center px-2 py-0.5 rounded-md bg-ink-950/90 text-ink-200 text-xs font-medium">
-              {platform}
-            </span>
-          )}
           {showRating && (
             <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-ink-950/90 text-xs font-medium">
               <Star className="w-3 h-3 shrink-0 fill-amber-400 text-amber-400" aria-hidden="true" />
@@ -88,6 +80,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
           playtimeMinutes={game.playtime_forever}
           lastPlayedAt={game.last_played_at}
           deckCompat={game.deck_compat}
+          platform={consoleOf(game)}
         />
       </div>
     </div>

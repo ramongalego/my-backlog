@@ -13,6 +13,12 @@ interface ModalProps {
   /** Id of a heading inside the content that names the dialog, when it renders its own. */
   labelledBy?: string;
   size?: 'md' | 'lg' | 'xl';
+  /**
+   * `top` pins the dialog near the top so it grows downward, for content that
+   * changes height as you use it (search results); centred dialogs re-centre
+   * and move under the pointer.
+   */
+  align?: 'center' | 'top';
 }
 
 // xl is a custom 34rem (544px) — a nudge wider than lg (32rem) so a 6-column
@@ -33,6 +39,7 @@ export function Modal({
   ariaLabel,
   labelledBy,
   size = 'md',
+  align = 'center',
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -93,7 +100,9 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="min-h-full flex items-center justify-center p-4">
+      <div
+        className={`min-h-full flex justify-center p-4 ${align === 'top' ? 'items-start pt-[8vh]' : 'items-center'}`}
+      >
         <div className="fixed inset-0 bg-black/75" onClick={onClose} aria-hidden="true" />
         <div
           ref={dialogRef}

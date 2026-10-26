@@ -13,6 +13,7 @@ import { useAddToQueue } from '@/hooks/useNowPlaying';
 import { updateGameStatus } from '@/lib/games/status';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
 import { statusChangeFrom } from '@/lib/games/status-rules';
+import { useManualGameActions } from '@/hooks/useManualGame';
 import { toast } from 'sonner';
 import type { PlayedALotGame, Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
@@ -344,6 +345,7 @@ export default function StatsView() {
   const { statusChanged } = useInvalidateQueries();
   const { user } = useAuth();
   const gamesList = usePatchGamesList(user?.id ?? null);
+  const manualGames = useManualGameActions(user?.id ?? null);
   const addGameToQueue = useAddToQueue(user?.id ?? null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
@@ -404,6 +406,7 @@ export default function StatsView() {
             playtimeMinutes={editModal.playtime_forever}
             lastPlayedAt={editModal.last_played_at}
             deckCompat={editModal.deck_compat}
+            manual={manualGames.dialogProps(editModal)}
             initialStatus="backlog"
             disablePlaying={hasPlayingGame}
             onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}

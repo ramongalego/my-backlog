@@ -189,7 +189,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.click(screen.getByLabelText(/finished on/i));
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
@@ -201,7 +201,7 @@ describe('GameDetailModal', () => {
       );
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', '', null);
@@ -235,7 +235,7 @@ describe('GameDetailModal', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
@@ -246,7 +246,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.click(screen.getByRole('checkbox'));
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       const today = new Date().toISOString().slice(0, 10);
@@ -267,7 +267,7 @@ describe('GameDetailModal', () => {
       );
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', 'Good game', 9);
@@ -277,7 +277,7 @@ describe('GameDetailModal', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
@@ -288,7 +288,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /finished/i }));
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', null);
@@ -299,7 +299,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: 'Amazing!' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith(
@@ -317,7 +317,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
@@ -329,7 +329,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '-1' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
@@ -341,7 +341,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '88' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
@@ -356,7 +356,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '0' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', 0);
@@ -367,7 +367,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '10' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', 10);
@@ -386,7 +386,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /^playing$/i }));
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
@@ -396,7 +396,7 @@ describe('GameDetailModal', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="playing" />);
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
@@ -477,7 +477,7 @@ describe('GameDetailModal', () => {
         );
 
         fireEvent.click(screen.getByRole('button', { name: /queue/i }));
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
         expect(onAddToQueue).toHaveBeenCalledTimes(1);
         expect(defaultProps.onClose).toHaveBeenCalledTimes(1);

@@ -33,6 +33,8 @@ export interface RatingBar {
 export interface PlayedALotGame {
   id: number;
   app_id: number | null;
+  source: string;
+  platform: string | null;
   name: string;
   playtime_forever: number;
   main_story_hours: number | null;
@@ -200,6 +202,8 @@ export function useStats() {
     ).map((g) => ({
       id: g.id,
       app_id: g.app_id,
+      source: g.source,
+      platform: g.platform,
       name: g.name,
       playtime_forever: g.playtime_forever,
       main_story_hours: g.main_story_hours,

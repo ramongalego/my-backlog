@@ -1,29 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import Image from 'next/image';
-import { Gamepad2, Loader2, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Check, Gamepad2, Loader2, Search, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
-import { ToggleGroup } from '@/components/ui/ToggleGroup';
+import { fieldClass } from '@/components/ui/Input';
+import { createClient } from '@/lib/supabase/client';
+import { loadCurrentlyPlaying, loadManualGames } from '@/lib/data/loaders';
+import { queryKeys } from '@/lib/query-keys';
 import {
   addManualGame,
+  getGameDetails,
   searchGames,
   shortPlatformName,
+  type GameDetails,
   type GameSearchResult,
 } from '@/lib/games/manual';
-
-type AddStatus = 'backlog' | 'queue' | 'playing';
+import { GameDetailModal, type AddStatus } from './GameStatusModal';
+import { defaultConsole, orderConsoles } from './ConsolePicker';
 
 // Wait for a pause in typing before searching.
 const SEARCH_DELAY_MS = 300;
 
-function BoxArt({ src, className }: { src: string | null; className: string }) {
+function BoxArt({ src }: { src: string | null }) {
   return (
-    <div className={`relative shrink-0 overflow-hidden rounded bg-ink-800 ${className}`}>
+    <div className="relative w-10 h-14 shrink-0 overflow-hidden rounded-md bg-ink-800">
       {src ? (
-        <Image src={src} alt="" fill sizes="64px" className="object-cover" />
+        <Image src={src} alt="" fill sizes="40px" className="object-cover" />
       ) : (
         <Gamepad2 className="absolute inset-0 m-auto w-4 h-4 text-ink-600" aria-hidden="true" />
       )}
@@ -32,35 +36,49 @@ function BoxArt({ src, className }: { src: string | null; className: string }) {
 }
 
 /**
- * Adds a game that isn't on Steam: search IGDB, pick the game, then the
- * console it's on, where it goes and (optionally) how long you've played.
+ * Adds a game from outside Steam: search IGDB, then the chosen game opens in
+ * the same detail dialog every game uses, with its console, status (finished
+ * games included), hours and "Add to library".
  */
 export function AddGameModal({
-  isOpen,
+  userId,
+  initialQuery = '',
   onClose,
   onAdded,
-  hasPlayingGame,
 }: {
-  isOpen: boolean;
+  userId: string;
+  initialQuery?: string;
   onClose: () => void;
-  onAdded: (name: string) => void;
-  /** Starting a game would replace the one being played, so Playing isn't offered then. */
-  hasPlayingGame: boolean;
+  onAdded: (name: string, status: AddStatus, warning?: string) => void;
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<GameSearchResult[]>([]);
+  const [searchedFor, setSearchedFor] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [active, setActive] = useState(0);
+  const [picked, setPicked] = useState<GameSearchResult | null>(null);
+  const [details, setDetails] = useState<GameDetails | null>(null);
 
-  const [selected, setSelected] = useState<GameSearchResult | null>(null);
-  const [platform, setPlatform] = useState('');
-  const [status, setStatus] = useState<AddStatus>('backlog');
-  const [hours, setHours] = useState('');
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
+  // Games you've already added by hand (to mark them in results) and the
+  // consoles you use (to suggest them first), plus the game being played.
+  const { data: manualGames = [] } = useQuery({
+    queryKey: queryKeys.games.manual(userId),
+    queryFn: () => loadManualGames(createClient(), userId),
+  });
+  const { data: playing = null } = useQuery({
+    queryKey: queryKeys.games.playing(userId),
+    queryFn: () => loadCurrentlyPlaying(createClient(), userId),
+    staleTime: 30 * 1000,
+  });
+  const usedConsoles = [...new Set(manualGames.flatMap((g) => (g.platform ? [g.platform] : [])))];
+  const ownedOn = (igdbId: number) =>
+    manualGames
+      .filter((g) => g.igdb_id === igdbId)
+      .flatMap((g) => (g.platform ? [g.platform] : []));
 
+  const text = query.trim();
   useEffect(() => {
-    const text = query.trim();
     if (text.length < 2) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
@@ -68,6 +86,8 @@ export function AddGameModal({
       setSearchError(null);
       try {
         setResults(await searchGames(text, controller.signal));
+        setSearchedFor(text);
+        setActive(0);
       } catch (err) {
         if (!controller.signal.aborted) setSearchError((err as Error).message);
       } finally {
@@ -78,191 +98,183 @@ export function AddGameModal({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [text]);
 
   const choose = (game: GameSearchResult) => {
-    setSelected(game);
-    setAddError(null);
-    // Most likely the console you play on rather than PC, if it's on one.
-    const platforms = game.platforms.map(shortPlatformName);
-    setPlatform(platforms.find((p) => p !== 'PC') ?? platforms[0] ?? '');
+    setPicked(game);
+    setDetails(null);
+    // The wide art and full platform list arrive a moment later; the box art
+    // and the search result's platforms stand in until then.
+    getGameDetails(game.igdbId)
+      .then(setDetails)
+      .catch(() => {});
   };
 
-  const add = async () => {
-    if (!selected) return;
-    const hoursPlayed = hours.trim() === '' ? undefined : Number(hours);
-    if (hoursPlayed !== undefined && !(hoursPlayed >= 0)) {
-      setAddError('Hours played must be a number');
-      return;
-    }
-    setAdding(true);
-    setAddError(null);
-    try {
-      const added = await addManualGame({
-        igdbId: selected.igdbId,
-        platform: platform.trim(),
-        status,
-        hoursPlayed,
-      });
-      onAdded(added.name);
-      onClose();
-    } catch (err) {
-      setAddError((err as Error).message);
-    } finally {
-      setAdding(false);
+  const showResults = text.length >= 2 && searchedFor === text;
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!showResults || results.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setActive((i) => (i + step + results.length) % results.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      choose(results[active]);
     }
   };
 
-  const platformOptions = [...new Set(selected?.platforms.map(shortPlatformName) ?? [])];
-  const statusOptions = [
-    { value: 'backlog' as const, label: 'Backlog' },
-    { value: 'queue' as const, label: 'Queue' },
-    ...(hasPlayingGame ? [] : [{ value: 'playing' as const, label: 'Playing' }]),
-  ];
-  const showResults = query.trim().length >= 2;
+  if (picked) {
+    const consoles = orderConsoles(
+      (details?.platforms ?? picked.platforms).map(shortPlatformName),
+      usedConsoles,
+    );
+    return (
+      <GameDetailModal
+        // A new game starts the form over (console, status, hours).
+        key={picked.igdbId}
+        isOpen
+        onClose={onClose}
+        gameName={picked.name}
+        headerImage={details?.header_image ?? picked.cover}
+        initialStatus="backlog"
+        adding={{
+          consoles,
+          defaultConsole: defaultConsole(consoles, usedConsoles),
+          year: picked.year,
+          playingName: playing?.name ?? null,
+          onChangeGame: () => setPicked(null),
+          onAdd: async ({ status, platform, hours, date, notes, rating }) => {
+            const added = await addManualGame({
+              igdbId: picked.igdbId,
+              platform,
+              status,
+              hoursPlayed: hours,
+              date: date || undefined,
+              notes: notes || undefined,
+              rating,
+            });
+            onAdded(added.name, status, added.warning);
+          },
+        }}
+      />
+    );
+  }
 
+  const listId = 'add-game-results';
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add a game" size="xl">
-      {!selected ? (
-        <div className="space-y-3">
-          <p className="text-sm text-ink-400">
-            For games outside your Steam library, on any console or store.
-          </p>
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for a game"
-              aria-label="Search for a game"
-              data-autofocus
-              className={`${fieldClass()} h-10 pl-9 pr-9 text-sm`}
-            />
+    <Modal isOpen onClose={onClose} title="Add a game" size="xl" align="top">
+      <div className="space-y-3">
+        <p className="text-sm text-ink-400">
+          For games outside your Steam library, on any console or store.
+        </p>
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500"
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
+            role="combobox"
+            aria-expanded={showResults && results.length > 0}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              showResults && results.length > 0 ? `${listId}-${active}` : undefined
+            }
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Search for a game"
+            aria-label="Search for a game"
+            data-autofocus
+            className={`${fieldClass()} h-10 pl-9 pr-16 text-sm`}
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {searching && (
-              <Loader2
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500 animate-spin"
-                aria-hidden="true"
-              />
+              <Loader2 className="w-4 h-4 text-ink-500 animate-spin" aria-hidden="true" />
+            )}
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
+                className="cursor-pointer p-1 rounded text-ink-500 hover:text-ink-100"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
             )}
           </div>
+        </div>
 
-          {searchError && showResults && (
-            <p className="text-sm text-rose-400" role="alert">
-              {searchError}
-            </p>
-          )}
+        {/* Result counts for screen readers; the list itself is the visual cue. */}
+        <p className="sr-only" aria-live="polite">
+          {showResults && !searchError
+            ? results.length === 0
+              ? 'No games found'
+              : `${results.length} ${results.length === 1 ? 'result' : 'results'}`
+            : ''}
+        </p>
 
-          {showResults && !searching && !searchError && results.length === 0 && (
-            <p className="text-sm text-ink-400 py-4 text-center">No games found</p>
-          )}
+        {searchError && text.length >= 2 && (
+          <p className="text-sm text-rose-400" role="alert">
+            {searchError}
+          </p>
+        )}
 
-          {showResults && results.length > 0 && (
-            <ul className="max-h-80 overflow-y-auto -mx-2" aria-label="Search results">
-              {results.map((game) => (
-                <li key={game.igdbId}>
-                  <button
-                    onClick={() => choose(game)}
-                    className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left hover:bg-ink-800 cursor-pointer transition-colors"
-                  >
-                    <BoxArt src={game.cover} className="w-9 h-12" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink-100 truncate">
-                        {game.name}
-                        {game.year && (
-                          <span className="text-ink-400 font-normal"> ({game.year})</span>
-                        )}
+        {showResults && !searchError && results.length === 0 && (
+          <p className="text-sm text-ink-400 py-6 text-center">
+            No games found for “{searchedFor}”. Try the name without subtitles or edition.
+          </p>
+        )}
+
+        {showResults && results.length > 0 && (
+          <ul
+            id={listId}
+            role="listbox"
+            aria-label="Search results"
+            className="max-h-[22rem] overflow-y-auto -mx-2 px-2"
+          >
+            {results.map((game, i) => {
+              const owned = ownedOn(game.igdbId);
+              return (
+                <li
+                  key={game.igdbId}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={i === active}
+                  onClick={() => choose(game)}
+                  onMouseMove={() => setActive(i)}
+                  className={`flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors ${
+                    i === active ? 'bg-ink-800' : ''
+                  }`}
+                >
+                  <BoxArt src={game.cover} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink-100 truncate">
+                      {game.name}
+                      {game.year && (
+                        <span className="text-ink-400 font-normal tabular-nums"> {game.year}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-ink-400 truncate">
+                      {game.platforms.map(shortPlatformName).join(', ')}
+                    </p>
+                    {owned.length > 0 && (
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-300">
+                        <Check className="w-3 h-3" aria-hidden="true" />
+                        In your library on {owned.join(', ')}
                       </p>
-                      <p className="text-xs text-ink-400 truncate">
-                        {game.platforms.map(shortPlatformName).join(', ')}
-                      </p>
-                    </div>
-                  </button>
+                    )}
+                  </div>
                 </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-5">
-          <div className="flex items-center gap-3">
-            <BoxArt src={selected.cover} className="w-12 h-16" />
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-ink-100">{selected.name}</p>
-              {selected.year && <p className="text-sm text-ink-400">{selected.year}</p>}
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-              Change
-            </Button>
-          </div>
-
-          <div>
-            <p className={FIELD_LABEL}>Platform</p>
-            {platformOptions.length > 0 ? (
-              <ToggleGroup
-                label="Platform"
-                options={platformOptions.map((p) => ({ value: p, label: p }))}
-                value={platform}
-                onChange={setPlatform}
-              />
-            ) : (
-              <input
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                placeholder="e.g. Switch 2"
-                aria-label="Platform"
-                maxLength={60}
-                className={`${fieldClass()} h-10 px-3 text-sm`}
-              />
-            )}
-          </div>
-
-          <div>
-            <p className={FIELD_LABEL}>Add to</p>
-            <ToggleGroup
-              label="Add to"
-              options={statusOptions}
-              value={status}
-              onChange={setStatus}
-            />
-          </div>
-
-          <div>
-            <label className={FIELD_LABEL} htmlFor="add-game-hours">
-              Hours played <span className="text-ink-500 font-normal">(optional)</span>
-            </label>
-            <input
-              id="add-game-hours"
-              type="number"
-              min={0}
-              step={0.5}
-              inputMode="decimal"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              placeholder="0"
-              className={`${fieldClass()} h-10 px-3 text-sm`}
-            />
-          </div>
-
-          {addError && (
-            <p className="text-sm text-rose-400" role="alert">
-              {addError}
-            </p>
-          )}
-
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose} disabled={adding} className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={add} isLoading={adding} disabled={!platform.trim()} className="flex-1">
-              {adding ? 'Adding…' : 'Add game'}
-            </Button>
-          </div>
-        </div>
-      )}
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </Modal>
   );
 }

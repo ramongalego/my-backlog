@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
+import { consoleOf } from '@/lib/games/manual';
 import {
   CAROUSEL_CARD_WIDTH as CARD_WIDTH,
   CAROUSEL_FADE_CLASS,
@@ -15,6 +16,8 @@ import {
 interface Game {
   id: number;
   app_id: number | null;
+  source?: string;
+  platform?: string | null;
   name: string;
   header_image: string | null;
   main_story_hours: number | null;
@@ -256,6 +259,7 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                       playtimeMinutes={game.playtime_forever}
                       lastPlayedAt={game.last_played_at}
                       deckCompat={game.deck_compat}
+                      platform={consoleOf(game)}
                     />
                   </div>
                 </div>

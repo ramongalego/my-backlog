@@ -205,11 +205,13 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover or tap). It renders at page level, so clipping containers can't cut it off. Triggers aren't tab stops (the text reaches screen readers via `aria-describedby`), so keep anything essential visible. Never use the native `title` attribute for this.
 
 **Games:** `src/components/games/`
-- `CoverArt`: any game image at the 460:215 ratio. `interactive` brightens the edge on hover, `CoverEditHint` adds the hover pencil, and `CoverThumb` is the small size for list rows.
+- `CoverArt` / `GameArt`: any game image at the 460:215 ratio. Games added by hand without wide art use their tall box art, drawn whole over a blurred, enlarged copy of itself (`GameArt`): the one sanctioned blur, because it fills the frame rather than decorating it. `interactive` brightens the edge on hover, `CoverEditHint` adds the hover pencil, and `CoverThumb` is the small size for list rows.
 - `StatusBadge`: status chip on art and in lists. Backlog is the default and shows no badge unless `showBacklog` is set.
 - `GameCard` (grid tile: art with title and meta underneath, no box), `GameMetaRow` / `GameCardInfo`.
 - `GameCarousel`: a Netflix-style row. With a mouse on a wide screen it shows whole pages (2, 3, 4 or 5 cards by width) and loops endlessly. The next card always peeks in under a right-edge fade, so the row reads as "more" without hovering, and it becomes the first card of the next page. Arrows sit over the edges of the art and appear on hover or keyboard focus (the next arrow covers the peeking card; the left one appears after the first move). On phones and touch screens it's a native swipe row with the next card peeking in. Only on-screen cards are reachable by keyboard.
 - `TimeToBeat`, `SteamScore`, `Playtime`, `SteamDeckBadge`: the meta-row indicators (clock + hours to beat, thumbs-up + percent, history icon + hours played, status icon + "Deck"), each with its tooltip. In a meta row they're always icon + value so a row fits on one line on narrow cards; `Playtime` adds the word "played" whenever there's room (a meta row 16rem or wider, via a container query; always on the Diary, playing cards and Stats), since its icon alone is easy to confuse with time-to-beat's clock.
+- `GameDetailModal`: the one dialog for a game, art header first. It also adds games from outside Steam (`adding`): search in `AddGameModal`, then the game opens here with `ConsolePicker`, the same status grid (finished games get their date, rating and notes) and "Add to library". Games added by hand get hours played and Remove (`manual`) wherever the dialog opens.
+- The console a game added by hand is on shows in its meta row (`platform`, gamepad icon), never as a badge on the art. Steam games show none.
 - `STATUS_STYLE` and `GAME_STATUSES` in `src/lib/games/status-style.ts`: label, icon, text, solid and fill classes for every status.
 
 **Interaction states:** every control needs hover, keyboard focus (the global `:focus-visible` orange outline covers buttons and links; it lives in the base layer, so a component can replace it, as text fields do with their border), disabled and loading states. A disabled primary button goes neutral grey rather than faded orange.
@@ -238,7 +240,7 @@ Copy reads like a person who plays games wrote it: plain, specific and short. Sa
 - Use `ink-*` and `accent-*` tokens, never raw hex or Tailwind's `zinc`, `violet` and so on.
 
 **Don't**
-- Gradient text, glows, orbs, particles, pulsing dots, glass or blur as decoration.
+- Gradient text, glows, orbs, particles, pulsing dots, glass or blur as decoration (the box-art backdrop in `GameArt` is the one exception: it fills space, it doesn't decorate).
 - Kicker labels, uppercase letter-spaced labels, or numbered section markers.
 - Cards inside cards, borders plus shadows on the same panel, or coloured side stripes.
 - Icons inside rounded-square tiles as a layout device, or a rainbow of icon colours.

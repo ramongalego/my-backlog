@@ -7,6 +7,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { loadLibraryMeta } from '@/lib/data/loaders';
 import type { Profile } from '@/types/games';
 import Providers from '../providers';
+import { AddGameProvider } from '@/components/games/AddGameProvider';
 
 // The app shell: React Query, the auth-aware header, background library sync
 // and playtime refreshes. The session is resolved here on the server and handed to useAuth, so
@@ -44,10 +45,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <Providers>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <Header />
-        <LibrarySyncGuard />
-        <PlaytimeRefresher />
-        {children}
+        <AddGameProvider>
+          <Header />
+          <LibrarySyncGuard />
+          <PlaytimeRefresher />
+          {children}
+        </AddGameProvider>
       </HydrationBoundary>
     </Providers>
   );

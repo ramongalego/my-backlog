@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Gamepad2 } from 'lucide-react';
+import { Gamepad2, Plus } from 'lucide-react';
 
 import { GameCard } from '@/components/games/GameCard';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
@@ -12,6 +12,8 @@ import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage, type GameFilter } from '@/hooks/useGamesPage';
 import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
+import { useAddGame } from '@/components/games/AddGameProvider';
 
 const EMPTY_COPY: Record<GameFilter, string> = {
   all: 'Your Steam library is empty, or still syncing.',
@@ -46,6 +48,7 @@ export default function GamesView() {
     handleDelete,
     queuedGameIds,
   } = useGamesPage();
+  const { open: openAddGame } = useAddGame();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -139,8 +142,18 @@ export default function GamesView() {
 
       {visibleGames.length === 0 ? (
         searchQuery.trim().length > 0 ? (
-          <EmptyState icon={Gamepad2} title="No games match your search.">
-            Try a different name or tag, or switch filters.
+          <EmptyState
+            icon={Gamepad2}
+            title="No games match your search."
+            action={
+              // The moment you notice a game is missing is when you search for it.
+              <Button variant="secondary" onClick={() => openAddGame(searchQuery.trim())}>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                Add “{searchQuery.trim()}” from another console
+              </Button>
+            }
+          >
+            Try a different name or tag, or switch filters. Not on Steam? Add it by hand.
           </EmptyState>
         ) : (
           <EmptyState icon={Gamepad2} title="Nothing here yet.">

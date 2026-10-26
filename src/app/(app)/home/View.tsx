@@ -18,6 +18,7 @@ import {
   StatusLoadingState,
 } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
+import { useManualGameActions } from '@/hooks/useManualGame';
 import { todayIso } from '@/lib/diary/date-utils';
 import type { SuggestionResult } from '@/lib/suggest/types';
 import { Dices, Sparkles } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function HomeView() {
 
   const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();
   const { user, profile, isLoading } = auth;
+  const manualGames = useManualGameActions(user?.id ?? null);
   const { historyCount, queuedGameIds } = meta;
   const { isSyncing, progress: syncProgress, games: syncingGames } = sync;
   const {
@@ -223,6 +225,7 @@ export default function HomeView() {
           lastPlayedAt={carouselModal.game.last_played_at}
           deckCompat={carouselModal.game.deck_compat}
           initialStatus="backlog"
+          manual={manualGames.dialogProps(carouselModal.game)}
           disablePlaying={!!currentlyPlaying}
           onAddToQueue={
             currentlyPlaying && !queuedGameIds.has(carouselModal.game.id)

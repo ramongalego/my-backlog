@@ -9,6 +9,14 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Heavy child components that aren't under test
+// Manual-game edits are covered by their own tests.
+jest.mock('@/hooks/useManualGame', () => ({
+  useManualGameActions: () => ({
+    dialogProps: () => undefined,
+    saveHours: jest.fn(),
+    remove: jest.fn(),
+  }),
+}));
 jest.mock('@/components/Header', () => ({ Header: () => <header /> }));
 jest.mock('@/components/GameCarousel', () => ({ GameCarousel: () => null }));
 jest.mock('@/components/SyncProgress', () => ({ SyncProgress: () => null }));

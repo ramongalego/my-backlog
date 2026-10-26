@@ -42,7 +42,7 @@ export function GameArt({
         aria-hidden="true"
         fill
         sizes="64px"
-        className="object-cover scale-125 blur-xl brightness-75"
+        className="object-cover scale-125 blur-xl brightness-75 saturate-150"
         draggable={false}
       />
       <Image

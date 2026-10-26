@@ -113,7 +113,7 @@ describe('GameCard', () => {
     expect(screen.getByText('Test Game')).toBeInTheDocument();
   });
 
-  it('labels games added by hand with their console', () => {
+  it('shows the console of games added by hand in the meta row, not on the art', () => {
     const { rerender } = render(
       <GameCard
         game={createGame({ source: 'manual', platform: 'Switch 2', app_id: null })}
@@ -121,11 +121,12 @@ describe('GameCard', () => {
       />,
     );
     expect(screen.getByText('Switch 2')).toBeInTheDocument();
+    // The art's button names only what's drawn on the art.
     expect(screen.getByRole('button', { name: /open details/i })).toHaveAccessibleName(
-      'Open details for Test Game, Switch 2',
+      'Open details for Test Game',
     );
 
-    // Steam games carry no platform label.
+    // Steam games are all "PC", which isn't worth a label on every card.
     rerender(<GameCard game={createGame({ platform: 'PC' })} onOpenDetail={mockOnOpenDetail} />);
     expect(screen.queryByText('PC')).not.toBeInTheDocument();
   });

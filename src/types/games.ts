@@ -17,6 +17,9 @@ export interface GameWithImage {
   id: number;
   /** Steam's app id, for Steam games only (store links). */
   app_id: number | null;
+  /** 'steam' or 'manual'; with platform, which console a game added by hand is on. */
+  source?: string;
+  platform?: string | null;
   name: string;
   header_image: string | null;
   main_story_hours: number | null;
@@ -40,6 +43,8 @@ export interface QueueItem {
   position: number;
   game: {
     app_id: number | null;
+    source?: string;
+    platform?: string | null;
     name: string;
     header_image: string | null;
     playtime_forever: number;

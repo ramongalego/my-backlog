@@ -9,6 +9,15 @@ export interface ToggleOption<T extends string> {
   count?: number;
 }
 
+/** A chip's classes, for chip rows that need more than ToggleGroup (e.g. a "More" chip). */
+export function chipClass(selected: boolean) {
+  return `shrink-0 flex items-center gap-2 h-8 px-3 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+    selected
+      ? 'bg-ink-100 text-ink-950'
+      : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50'
+  }`;
+}
+
 /**
  * Pick one of a few options. `chips` is for filters and choices that sit on
  * their own; `segmented` is for a small two- or three-way switch inside a

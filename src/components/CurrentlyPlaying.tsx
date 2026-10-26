@@ -7,11 +7,14 @@ import { CoverArt } from '@/components/games/CoverArt';
 import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { steamStoreUrl } from '@/lib/games/store-link';
+import { consoleOf } from '@/lib/games/manual';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
   id: number;
   app_id: number | null;
+  source?: string;
+  platform?: string | null;
   name: string;
   header_image: string | null;
   main_story_hours: number | null;
@@ -152,6 +155,9 @@ export function CurrentlyPlaying({
         <p className="mt-2 flex items-center gap-2 text-sm font-medium text-accent-400">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400" aria-hidden="true" />
           Playing now
+          {consoleOf(game) && (
+            <span className="text-ink-400 font-normal">on {consoleOf(game)}</span>
+          )}
         </p>
 
         <div className="mt-5">
