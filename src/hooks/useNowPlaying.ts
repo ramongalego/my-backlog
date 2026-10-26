@@ -19,6 +19,14 @@ import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 // Every mutation here touches the queue and/or the playing game. Sharing a
 // scope makes React Query run them one at a time, so e.g. two quick reorders
 // can't reach the server out of order or roll back over each other.
+interface QueuedStatusChange {
+  gameId: number;
+  status: string;
+  date: string;
+  notes: string;
+  rating: number | null;
+}
+
 const QUEUE_SCOPE = { id: 'queue' };
 
 /** Minimal game data needed to show a game in the queue before the server responds. */
@@ -275,6 +283,30 @@ export function useNowPlaying(userId: string | null) {
     onSettled: () => statusChanged(),
   });
 
+  // A queued game's status set from its detail dialog. The queue only holds
+  // backlog games, so any other status takes it off (the server does the same).
+  const queuedStatusMutation = useMutation({
+    scope: QUEUE_SCOPE,
+    mutationFn: (vars: QueuedStatusChange) =>
+      updateGameStatus(vars.gameId, vars.status, {
+        finishedAt: vars.status === 'finished' ? vars.date : undefined,
+        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
+        notes: vars.notes,
+        rating: vars.rating,
+      }),
+    onMutate: async (vars) => {
+      const context = await snapshot(statusChangeFrom(vars));
+      if (vars.status !== 'backlog') dropFromQueue(vars.gameId);
+      return context;
+    },
+    onError: (err, _change, context) => {
+      console.error('Failed to update game status:', err);
+      rollback(context);
+      toast.error('Could not save your changes. Please try again.');
+    },
+    onSettled: () => statusChanged(),
+  });
+
   const removeMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: removeFromQueue,
@@ -318,7 +350,8 @@ export function useNowPlaying(userId: string | null) {
     pickMutation.isPending ||
     completeMutation.isPending ||
     moveToQueueMutation.isPending ||
-    moveToBacklogMutation.isPending;
+    moveToBacklogMutation.isPending ||
+    queuedStatusMutation.isPending;
 
   return {
     currentlyPlaying,
@@ -351,6 +384,15 @@ export function useNowPlaying(userId: string | null) {
     moveToBacklog: () => currentlyPlaying && moveToBacklogMutation.mutate(currentlyPlaying),
     addToQueue: addGameToQueue,
     removeFromQueue: (gameId: number) => removeMutation.mutate(gameId),
+    /** A queued game's status from its detail dialog; playing starts it like Play does. */
+    setQueuedStatus: (vars: QueuedStatusChange) => {
+      const item = queue.find((q) => q.game_id === vars.gameId);
+      if (vars.status === 'playing') {
+        if (item) pickMutation.mutate(toPlayingGame(item));
+      } else if (vars.status !== 'backlog') {
+        queuedStatusMutation.mutate(vars);
+      }
+    },
     reorder: (gameIds: number[]) => reorderMutation.mutate(gameIds),
   };
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
 import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
+import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
 import { showsSteamDetails } from '@/lib/games/consoles';
@@ -32,18 +33,49 @@ interface CurrentlyPlayingProps {
   onDrop: () => void;
   onCancel: () => void;
   onMoveToQueue: () => void;
+  /** For a game on a console: saves the hours you enter (Steam tracks its own). */
+  onSaveHours?: (hours: number) => void | Promise<void>;
   isLoading?: boolean;
   /** Rendered under the game's actions (the "pick my next game" prompt). */
   footer?: ReactNode;
 }
 
-function Progress({ game }: { game: Game }) {
+function Progress({
+  game,
+  onSaveHours,
+}: {
+  game: Game;
+  onSaveHours?: (hours: number) => void | Promise<void>;
+}) {
   const mainStoryHours = game.main_story_hours ?? 0;
   const playedHours = Math.round(game.playtime_forever / 60);
+  const platform = consoleOf(game);
+  // A console game always shows its hours, even none yet, since you enter them.
+  const editable = !!onSaveHours && !!platform;
+  // What follows the hours is hidden while they're being edited.
+  const hours = (after?: ReactNode) =>
+    onSaveHours && platform ? (
+      <HoursPlayedEdit
+        minutes={game.playtime_forever}
+        platform={platform}
+        onSave={onSaveHours}
+        className="text-ink-200"
+        after={after}
+      />
+    ) : (
+      <>
+        <Playtime
+          minutes={game.playtime_forever}
+          lastPlayedAt={game.last_played_at}
+          className="text-ink-200"
+        />
+        {after}
+      </>
+    );
 
-  if (!mainStoryHours) return null;
+  if (!mainStoryHours) return editable ? <div className="text-sm">{hours()}</div> : null;
 
-  if (game.playtime_forever < 60) {
+  if (game.playtime_forever < 60 && !editable) {
     return (
       <div className="flex items-center gap-3 text-sm text-ink-400">
         <TimeToBeat hours={mainStoryHours} iconClassName="w-3.5 h-3.5" />
@@ -61,26 +93,16 @@ function Progress({ game }: { game: Game }) {
 
   if (playedHours >= mainStoryHours) {
     return (
-      <p className="text-sm">
-        <Playtime
-          minutes={game.playtime_forever}
-          lastPlayedAt={game.last_played_at}
-          className="text-ink-200"
-        />
-        <span className="text-ink-400"> · past the ~{mainStoryHours}h estimate</span>
-      </p>
+      <div className="flex flex-wrap items-center gap-x-1 text-sm">
+        {hours(<span className="text-ink-400">· past the ~{mainStoryHours}h estimate</span>)}
+      </div>
     );
   }
 
   return (
     <div className="max-w-sm">
-      <div className="flex items-center justify-between text-sm mb-2">
-        <Playtime
-          minutes={game.playtime_forever}
-          lastPlayedAt={game.last_played_at}
-          className="text-ink-200"
-        />
-        <span className="text-ink-400">~{mainStoryHours}h to beat</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm mb-2">
+        {hours(<span className="text-ink-400 whitespace-nowrap">~{mainStoryHours}h to beat</span>)}
       </div>
       <div className="h-1.5 bg-ink-800 rounded-full overflow-hidden">
         <div
@@ -120,6 +142,7 @@ export function CurrentlyPlaying({
   onDrop,
   onCancel,
   onMoveToQueue,
+  onSaveHours,
   isLoading,
   footer,
 }: CurrentlyPlayingProps) {
@@ -164,7 +187,7 @@ export function CurrentlyPlaying({
         </p>
 
         <div className="mt-5">
-          <Progress game={game} />
+          <Progress game={game} onSaveHours={onSaveHours} />
           <LastPlayed lastPlayedAt={game.last_played_at} className="mt-2 text-sm" />
         </div>
 

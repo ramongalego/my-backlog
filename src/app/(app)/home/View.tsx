@@ -121,6 +121,7 @@ export default function HomeView() {
               onDrop={handleDropGame}
               onCancel={handleCancelGame}
               onMoveToQueue={handleMoveCurrentToQueue}
+              onSaveHours={manualGames.dialogProps(currentlyPlaying)?.onSaveHours}
               isLoading={isStatusLoading}
               footer={
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

@@ -28,6 +28,8 @@ export function usePlayingQueuePage() {
     handleRemoveFromQueue: nowPlaying.removeFromQueue,
     handlePickFromQueue: nowPlaying.pickFromQueue,
     handleReorder: nowPlaying.reorder,
+    /** A queued game's status, set from its detail dialog. */
+    handleSetQueuedStatus: nowPlaying.setQueuedStatus,
     /** The finish/drop dialog's `manual` prop for a game on a console. */
     manualDialogProps: manualGames.dialogProps,
   };

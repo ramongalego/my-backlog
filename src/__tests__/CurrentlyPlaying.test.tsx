@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 
 jest.mock('next/image', () => ({
@@ -146,6 +146,71 @@ describe('CurrentlyPlaying', () => {
     it('shows nothing when Steam does not share it', () => {
       render(<CurrentlyPlaying game={createGame(600, 20)} {...defaultCallbacks} />);
       expect(screen.queryByText(/Last played/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('hours played on a console', () => {
+    const consoleGame = (playtime_forever: number, main_story_hours = 20) => ({
+      ...createGame(playtime_forever, main_story_hours),
+      app_id: null,
+      source: 'manual',
+      platform: 'PS5',
+      name: 'Persona 3 Reload',
+    });
+
+    it('shows the hours even before the first hour, and with no time to beat', () => {
+      const onSaveHours = jest.fn();
+      const { rerender } = render(
+        <CurrentlyPlaying game={consoleGame(0)} {...defaultCallbacks} onSaveHours={onSaveHours} />,
+      );
+      expect(screen.getByRole('button', { name: /Edit hours played on PS5/ })).toHaveTextContent(
+        '0h played',
+      );
+      rerender(
+        <CurrentlyPlaying
+          game={consoleGame(90, 0)}
+          {...defaultCallbacks}
+          onSaveHours={onSaveHours}
+        />,
+      );
+      expect(screen.getByRole('button', { name: /Edit hours played on PS5/ })).toHaveTextContent(
+        '2h played',
+      );
+    });
+
+    it('edits them in place: Enter saves, Escape cancels, nonsense is refused', () => {
+      const onSaveHours = jest.fn();
+      render(
+        <CurrentlyPlaying
+          game={consoleGame(150)}
+          {...defaultCallbacks}
+          onSaveHours={onSaveHours}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Edit hours played/ }));
+      const field = screen.getByRole('spinbutton', { name: 'Hours played on PS5' });
+      // Tenths, so an edit doesn't round 2.5h away.
+      expect(field).toHaveValue(2.5);
+
+      fireEvent.keyDown(field, { key: 'Escape' });
+      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+      expect(onSaveHours).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /Edit hours played/ }));
+      fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '-3' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-invalid', 'true');
+
+      fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '12' } });
+      fireEvent.submit(screen.getByRole('spinbutton'));
+      expect(onSaveHours).toHaveBeenCalledWith(12);
+      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    });
+
+    it("keeps a Steam game's hours read-only", () => {
+      render(<CurrentlyPlaying game={createGame(150)} {...defaultCallbacks} />);
+      expect(screen.getAllByText('3h played').length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: /Edit hours played/ })).not.toBeInTheDocument();
     });
   });
 });

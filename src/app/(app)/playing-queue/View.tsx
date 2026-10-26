@@ -25,7 +25,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 
-import { CoverArt } from '@/components/games/CoverArt';
+import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
+import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { LastPlayed } from '@/components/CurrentlyPlaying';
 import { GameMetaRow, Playtime } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
@@ -43,6 +44,8 @@ interface NowPlayingRowProps {
   onDrop: () => void;
   onMoveToQueue: () => void;
   onMoveToBacklog: () => void;
+  /** For a game on a console: saves the hours you enter (Steam tracks its own). */
+  onSaveHours?: (hours: number) => void | Promise<void>;
   isLoading?: boolean;
 }
 
@@ -52,18 +55,24 @@ function NowPlayingRow({
   onDrop,
   onMoveToQueue,
   onMoveToBacklog,
+  onSaveHours,
   isLoading,
 }: NowPlayingRowProps) {
+  const platform = consoleOf(game);
   const mainStoryHours = game.main_story_hours ?? 0;
   const hasEstimate = mainStoryHours > 0;
-  const hasPlaytime = game.playtime_forever >= 60;
+  // A console game always shows its hours, even none yet, since you enter them.
+  const editable = !!onSaveHours && !!platform;
+  const hasPlaytime = editable || game.playtime_forever >= 60;
   const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;
   const estimateHours = hasEstimate ? mainStoryHours : null;
   const isPastEstimate = hasEstimate && hasPlaytime && game.playtime_forever / 60 >= mainStoryHours;
   const progressPct =
-    !isPastEstimate && playedHours && estimateHours
+    !isPastEstimate && playedHours !== null && estimateHours
       ? Math.min((playedHours / estimateHours) * 100, 100)
       : null;
+
+  const pastEstimate = <span className="text-ink-400">· past the ~{estimateHours}h estimate</span>;
 
   const secondaryAction =
     'cursor-pointer flex items-center gap-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
@@ -90,26 +99,57 @@ function NowPlayingRow({
           </p>
           <div className="mt-2">
             {isPastEstimate ? (
-              <p className="text-xs">
-                <Playtime
-                  minutes={game.playtime_forever}
-                  lastPlayedAt={game.last_played_at}
-                  className="text-ink-200"
-                />
-                <span className="text-ink-400"> · past the ~{estimateHours}h estimate</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-x-1 text-xs">
+                {editable ? (
+                  <HoursPlayedEdit
+                    minutes={game.playtime_forever}
+                    platform={platform}
+                    onSave={onSaveHours}
+                    className="text-ink-200"
+                    after={pastEstimate}
+                  />
+                ) : (
+                  <>
+                    <Playtime
+                      minutes={game.playtime_forever}
+                      lastPlayedAt={game.last_played_at}
+                      className="text-ink-200"
+                    />
+                    {pastEstimate}
+                  </>
+                )}
+              </div>
             ) : progressPct !== null ? (
               <div className="max-w-56">
-                <p className="text-xs text-ink-400">
-                  <Playtime minutes={game.playtime_forever} lastPlayedAt={game.last_played_at} /> ·
-                  ~{estimateHours}h to beat
-                </p>
+                {editable ? (
+                  <div className="flex flex-wrap items-center gap-x-1 text-xs text-ink-400">
+                    <HoursPlayedEdit
+                      minutes={game.playtime_forever}
+                      platform={platform}
+                      onSave={onSaveHours}
+                      after={<span className="whitespace-nowrap">· ~{estimateHours}h to beat</span>}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-ink-400">
+                    <Playtime minutes={game.playtime_forever} lastPlayedAt={game.last_played_at} />{' '}
+                    · ~{estimateHours}h to beat
+                  </p>
+                )}
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
                   <div
                     className="h-full bg-accent-500 rounded-full"
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
+              </div>
+            ) : editable ? (
+              <div className="text-xs text-ink-400">
+                <HoursPlayedEdit
+                  minutes={game.playtime_forever}
+                  platform={platform}
+                  onSave={onSaveHours}
+                />
               </div>
             ) : (
               <GameMetaRow
@@ -166,6 +206,7 @@ interface QueueItemRowProps {
   isLoading: boolean;
   onPick: (gameId: number) => void;
   onRemove: (gameId: number) => void;
+  onOpen: (gameId: number) => void;
 }
 
 /**
@@ -197,6 +238,7 @@ function QueueItemRow({
   isLoading,
   onPick,
   onRemove,
+  onOpen,
   isOverlay,
   rowRef,
   style,
@@ -222,21 +264,31 @@ function QueueItemRow({
         {index + 1}
       </span>
 
-      <CoverArt
-        src={item.game.header_image}
-        alt=""
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px"
-        className="w-full sm:w-48 lg:w-56 shrink-0"
-        platform={consoleOf(item.game)}
+      {/* The art opens the game, as on every other card. */}
+      <button
+        type="button"
+        onClick={() => onOpen(item.game_id)}
+        aria-label={`Open details for ${item.game.name}`}
+        className="group w-full sm:w-48 lg:w-56 shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
       >
-        {/* On phones the position rides on the art. */}
-        <span
-          aria-hidden="true"
-          className="sm:hidden absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-ink-950/90 px-1.5 text-xs font-semibold text-ink-100 tabular-nums"
+        <CoverArt
+          src={item.game.header_image}
+          alt=""
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px"
+          className="w-full"
+          interactive
+          platform={consoleOf(item.game)}
         >
-          {index + 1}
-        </span>
-      </CoverArt>
+          <CoverEditHint />
+          {/* On phones the position rides on the art. */}
+          <span
+            aria-hidden="true"
+            className="sm:hidden absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-ink-950/90 px-1.5 text-xs font-semibold text-ink-100 tabular-nums"
+          >
+            {index + 1}
+          </span>
+        </CoverArt>
+      </button>
 
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="flex-1 min-w-0">
@@ -307,10 +359,15 @@ export default function PlayingQueueView() {
     handleRemoveFromQueue,
     handlePickFromQueue,
     handleReorder,
+    handleSetQueuedStatus,
     manualDialogProps,
   } = usePlayingQueuePage();
 
   const [activeId, setActiveId] = useState<number | null>(null);
+  // The queued game whose details are open; read from the queue each render so
+  // hours saved in the dialog show straight away.
+  const [detailGameId, setDetailGameId] = useState<number | null>(null);
+  const detailItem = queue.find((q) => q.game_id === detailGameId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -355,6 +412,27 @@ export default function PlayingQueueView() {
               manual={manualDialogProps(currentlyPlaying)}
             />
           )}
+          {detailItem && (
+            <GameDetailModal
+              isOpen={true}
+              onClose={() => setDetailGameId(null)}
+              onConfirm={(status, date, notes, rating) => {
+                setDetailGameId(null);
+                handleSetQueuedStatus({ gameId: detailItem.game_id, status, date, notes, rating });
+              }}
+              gameName={detailItem.game.name}
+              headerImage={detailItem.game.header_image}
+              initialStatus="backlog"
+              mainStoryHours={detailItem.game.main_story_hours}
+              steamReviewScore={detailItem.game.steam_review_score}
+              steamReviewCount={detailItem.game.steam_review_count}
+              playtimeMinutes={detailItem.game.playtime_forever}
+              lastPlayedAt={detailItem.game.last_played_at}
+              deckCompat={detailItem.game.deck_compat}
+              disablePlaying={!!currentlyPlaying}
+              manual={manualDialogProps({ ...detailItem.game, id: detailItem.game_id })}
+            />
+          )}
           {gameSummary && (
             <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
           )}
@@ -380,6 +458,7 @@ export default function PlayingQueueView() {
                 onDrop={handleDrop}
                 onMoveToQueue={handleMoveToQueue}
                 onMoveToBacklog={handleMoveToBacklog}
+                onSaveHours={manualDialogProps(currentlyPlaying)?.onSaveHours}
                 isLoading={isStatusLoading}
               />
             </>
@@ -411,6 +490,7 @@ export default function PlayingQueueView() {
                       isLoading={isStatusLoading}
                       onPick={handlePickFromQueue}
                       onRemove={handleRemoveFromQueue}
+                      onOpen={setDetailGameId}
                     />
                   ))}
                 </div>
@@ -424,6 +504,7 @@ export default function PlayingQueueView() {
                     isLoading={isStatusLoading}
                     onPick={handlePickFromQueue}
                     onRemove={handleRemoveFromQueue}
+                    onOpen={setDetailGameId}
                     isOverlay
                   />
                 )}
