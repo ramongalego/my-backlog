@@ -189,6 +189,7 @@ export function AddGameModal({
               : usedConsoles,
           ),
           fromSteam: !!steamGame,
+          movedTo: steamGame && playsOnConsole(steamGame.platform) ? steamGame.platform : null,
           year: picked.year,
           // Not when the game being moved from Steam is the one you're playing.
           playingName: steamGame && playing?.id === steamGame.id ? null : (playing?.name ?? null),

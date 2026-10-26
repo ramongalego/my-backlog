@@ -82,6 +82,8 @@ interface GameDetailModalProps {
     playingName: string | null;
     /** You own it on Steam: adding moves that entry to the console instead. */
     fromSteam?: boolean;
+    /** The console that Steam entry was already moved to, if any. */
+    movedTo?: string | null;
     /** Throws with a message to show if the game can't be added. */
     onAdd: (values: AddGameValues) => Promise<void>;
     onChangeGame: () => void;
@@ -295,8 +297,9 @@ export function GameDetailModal({
       <div className="space-y-5 mt-4">
         {adding?.fromSteam && (
           <p className="text-sm text-ink-300">
-            It&rsquo;s in your Steam library. Adding it here moves that entry to the console you
-            pick, so the game is only listed once.
+            {adding.movedTo
+              ? `It’s in your library on ${adding.movedTo}, from Steam. Adding it again moves it to the console you pick.`
+              : 'It’s in your Steam library. Adding it here moves that entry to the console you pick, so the game is only listed once.'}
           </p>
         )}
         {adding && (
@@ -562,7 +565,8 @@ export function GameDetailModal({
 
         {manual?.onMoveToSteam &&
           (confirmingDelete ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-ink-800 px-3 py-2.5">
+            // Outlined rather than filled, so its (filled) button stands out.
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink-700 px-3 py-2.5">
               <p className="text-sm text-ink-200">
                 Play it on Steam again? Steam&rsquo;s hours replace the ones you entered.
               </p>
