@@ -71,6 +71,26 @@ describe('getGameDetails', () => {
     games = [];
     expect(await getGameDetails(999)).toBeNull();
   });
+
+  it("finds the Steam listing on a port when the game hasn't one of its own", async () => {
+    // Persona 4 Golden: the Vita game, with its PC release as a separate port.
+    const steam = (uid: string) => ({ uid, external_game_source: 1 });
+    games = [
+      mkGame({
+        external_games: [{ uid: 'PCSE00120', external_game_source: 36 }],
+        ports: [{ external_games: [steam('1113000')] }],
+      }),
+    ];
+    expect((await getGameDetails(7))?.steamAppIds).toEqual([1113000]);
+
+    // An edition of a game on Steam is on Steam too.
+    games = [mkGame({ external_games: [], version_parent: { external_games: [steam('42')] } })];
+    expect((await getGameDetails(7))?.steamAppIds).toEqual([42]);
+
+    // Its own listing wins over a port's.
+    games = [mkGame({ ports: [{ external_games: [steam('1113000')] }] })];
+    expect((await getGameDetails(7))?.steamAppIds).toEqual([2369900]);
+  });
 });
 
 describe('igdbTags', () => {

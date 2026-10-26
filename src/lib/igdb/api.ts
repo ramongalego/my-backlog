@@ -85,21 +85,52 @@ interface IgdbGame {
   keywords?: { name: string }[];
   involved_companies?: { developer?: boolean; company?: { country?: number } }[];
   summary?: string;
-  external_games?: { uid?: string; external_game_source?: number }[];
+  external_games?: ExternalGame[];
+  /** Releases of the same game on other platforms that IGDB keeps as their own entries. */
+  ports?: { external_games?: ExternalGame[] }[];
+  /** The game this is an edition of. */
+  version_parent?: { external_games?: ExternalGame[] };
+}
+
+interface ExternalGame {
+  uid?: string;
+  external_game_source?: number;
 }
 
 // IGDB's id for Steam among a game's store listings (external games).
 const STEAM_SOURCE = 1;
-const EXTERNAL_FIELDS = 'external_games.uid, external_games.external_game_source';
+// Store listings of the game, its ports and the game it's an edition of.
+const EXTERNAL_FIELDS = ['', 'ports.', 'version_parent.']
+  .map((of) => `${of}external_games.uid, ${of}external_games.external_game_source`)
+  .join(', ');
 
-/** The game's Steam app ids, to recognise a game you already own on Steam. */
-function steamAppIds(game: Pick<IgdbGame, 'external_games'>): number[] {
-  return (game.external_games ?? []).flatMap((e) => {
+function steamIdsOf(listings: ExternalGame[] | undefined): number[] {
+  return (listings ?? []).flatMap((e) => {
     const appId = Number(e.uid);
     return e.external_game_source === STEAM_SOURCE && Number.isInteger(appId) && appId > 0
       ? [appId]
       : [];
   });
+}
+
+/**
+ * The game's Steam app ids: to recognise a game you already own on Steam, and
+ * to use Steam's art and tags. A game released on PC later often has its own
+ * IGDB entry, a port, that holds the Steam listing (Persona 4 Golden on Vita,
+ * then on PC), so without one of its own, its ports' and the game it's an
+ * edition of are used: they're the same game.
+ */
+function steamAppIds(
+  game: Pick<IgdbGame, 'external_games' | 'ports' | 'version_parent'>,
+): number[] {
+  const own = steamIdsOf(game.external_games);
+  if (own.length) return own;
+  return [
+    ...new Set([
+      ...(game.ports ?? []).flatMap((port) => steamIdsOf(port.external_games)),
+      ...steamIdsOf(game.version_parent?.external_games),
+    ]),
+  ];
 }
 
 export interface GameSearchResult {
