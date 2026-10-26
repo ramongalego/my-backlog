@@ -4,6 +4,7 @@ import { Archive, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Panel } from '@/components/ui/Panel';
+import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import {
   DndContext,
   DragOverlay,
@@ -99,6 +100,10 @@ function NowPlayingRow({
             <span className="w-1.5 h-1.5 rounded-full bg-accent-500" aria-hidden="true" />
             Playing now
           </p>
+        </div>
+
+        {/* As wide as the actions under it, so the progress bar ends where they do. */}
+        <div className="w-fit max-w-full">
           <div className="mt-2">
             {isPastEstimate ? (
               <div className="flex flex-wrap items-center gap-x-1 text-xs">
@@ -122,9 +127,8 @@ function NowPlayingRow({
                 )}
               </div>
             ) : progressPct !== null ? (
-              // Full width on phones; on wider screens about as wide as the
-              // playing card's on Home, with the two figures at either end.
-              <div className="sm:max-w-sm">
+              // The two figures at either end of the bar.
+              <div>
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-ink-400">
                   {editable ? (
                     <HoursPlayedEdit
@@ -171,34 +175,34 @@ function NowPlayingRow({
             )}
             <LastPlayed lastPlayedAt={game.last_played_at} className="mt-1.5 text-xs" />
           </div>
-        </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
-          <div className="flex gap-2">
-            <Button size="sm" onClick={onFinish} disabled={isLoading} className="cursor-pointer">
-              <Check className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Finish</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={onDrop}
-              disabled={isLoading}
-              className="cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Drop</span>
-            </Button>
-          </div>
-          <div className="flex items-center gap-4">
-            <button onClick={onMoveToQueue} disabled={isLoading} className={secondaryAction}>
-              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Move to Queue</span>
-            </button>
-            <button onClick={onMoveToBacklog} disabled={isLoading} className={secondaryAction}>
-              <Archive className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Move to Backlog</span>
-            </button>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <div className="flex gap-2">
+              <Button size="sm" onClick={onFinish} disabled={isLoading} className="cursor-pointer">
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Finish</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onDrop}
+                disabled={isLoading}
+                className="cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Drop</span>
+              </Button>
+            </div>
+            <div className="flex items-center gap-4">
+              <button onClick={onMoveToQueue} disabled={isLoading} className={secondaryAction}>
+                <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Move to Queue</span>
+              </button>
+              <button onClick={onMoveToBacklog} disabled={isLoading} className={secondaryAction}>
+                <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Move to Backlog</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -334,14 +338,18 @@ function QueueItemRow({
           >
             <GripVertical className="w-4 h-4" aria-hidden="true" />
           </button>
-          <button
-            onClick={() => onRemove(item.game_id)}
-            disabled={isLoading}
-            aria-label={`Remove ${item.game.name} from queue`}
-            className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 disabled:opacity-50 transition-colors rounded"
-          >
-            <X className="w-4 h-4" aria-hidden="true" />
-          </button>
+          {/* Taking a game off the queue puts it back in the backlog: the same
+              icon as "Move to Backlog" on the playing game, not Drop's X. */}
+          <Tooltip content={<TooltipText title="Move to Backlog" />}>
+            <button
+              onClick={() => onRemove(item.game_id)}
+              disabled={isLoading}
+              aria-label={`Move ${item.game.name} to backlog`}
+              className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 disabled:opacity-50 transition-colors rounded"
+            >
+              <Archive className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
