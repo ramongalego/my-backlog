@@ -82,7 +82,7 @@ export function useCurrentGame(userId: string | null) {
       if (count) {
         const index = Math.floor(Math.random() * count);
         const { data, error } = await eligible(
-          'id, app_id, name, header_image, main_story_hours, playtime_forever',
+          'id, app_id, source, platform, name, header_image, main_story_hours, playtime_forever',
         )
           .order('id')
           .range(index, index);

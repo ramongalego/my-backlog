@@ -98,8 +98,8 @@ interface GamesPageStatusModal {
   playtimeMinutes: number;
   lastPlayedAt: string | null;
   deckCompat?: number | null;
-  /** Set for games added by hand, which can be edited and removed. */
-  manual: { platform: string | null } | null;
+  /** The detail dialog's `manual` prop (hours, removal, back to Steam), for games on a console. */
+  manual: ReturnType<ReturnType<typeof useManualGameActions>['dialogProps']>;
 }
 
 interface UseGamesPageReturn {
@@ -126,8 +126,6 @@ interface UseGamesPageReturn {
   handleCloseStatusModal: () => void;
   handleOpenDetail: (gameId: number) => void;
   handleAddToQueue: (gameId: number) => Promise<void>;
-  handleSaveHours: (gameId: number, hours: number) => Promise<void>;
-  handleDelete: (gameId: number) => void;
   queuedGameIds: Set<number>;
 }
 
@@ -190,6 +188,8 @@ export function useGamesPage(): UseGamesPageReturn {
     onSettled: () => statusChanged(),
   });
 
+  const manualGames = useManualGameActions(userId);
+
   const handleOpenDetail = (gameId: number) => {
     const game = games.find((g) => g.id === gameId);
     if (!game) return;
@@ -217,7 +217,7 @@ export function useGamesPage(): UseGamesPageReturn {
       playtimeMinutes: game.playtime_forever,
       lastPlayedAt: game.last_played_at,
       deckCompat: game.deck_compat,
-      manual: game.source === 'manual' ? { platform: game.platform } : null,
+      manual: manualGames.dialogProps(game),
     });
   };
 
@@ -240,10 +240,6 @@ export function useGamesPage(): UseGamesPageReturn {
 
   // Games added by hand: hours played (consoles don't report it) and removal,
   // shared with every other page's detail dialog.
-  const manualGames = useManualGameActions(userId);
-  const handleSaveHours = manualGames.saveHours;
-  const handleDelete = (gameId: number) =>
-    manualGames.remove(gameId, games.find((g) => g.id === gameId)?.name ?? 'the game');
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
   const searchFilteredGames = (() => {
@@ -351,8 +347,6 @@ export function useGamesPage(): UseGamesPageReturn {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
-    handleSaveHours,
-    handleDelete,
     queuedGameIds,
   };
 }

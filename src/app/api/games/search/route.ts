@@ -66,8 +66,9 @@ export async function GET(request: NextRequest) {
           };
         }),
       },
-      // Private and short-lived: it depends on your library, which changes as you add games.
-      { headers: { 'Cache-Control': 'private, max-age=60' } },
+      // Not cached: it carries your library's current state (a game you just
+      // moved), which the dialog starts from and saves back.
+      { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (err) {
     console.error(err);

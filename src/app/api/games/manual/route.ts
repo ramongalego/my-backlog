@@ -7,6 +7,7 @@ import { getGameDetails } from '@/lib/igdb/api';
 import { getMainStoryHours } from '@/lib/hltb/api';
 import { applyStatusChange } from '@/lib/games/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
+import { STEAM_PLATFORM } from '@/lib/games/consoles';
 
 const STATUS_WORDS = {
   backlog: 'as backlog',
@@ -82,6 +83,8 @@ export async function POST(request: NextRequest) {
     }
     steamGame = data;
   }
+  if (steamGame && platform === STEAM_PLATFORM)
+    return jsonError("It's already in your Steam library. Pick the console you play it on.", 400);
 
   const { data: game, error } = steamGame
     ? await supabase
@@ -90,6 +93,9 @@ export async function POST(request: NextRequest) {
           platform,
           igdb_id: igdbId,
           playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
+          // Steam's last-played date is for the PC copy; the next sync after
+          // moving it back to Steam restores it.
+          last_played_at: null,
         })
         .eq('user_id', user.id)
         .eq('id', steamGame.id)

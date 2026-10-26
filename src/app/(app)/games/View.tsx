@@ -44,8 +44,6 @@ export default function GamesView() {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
-    handleSaveHours,
-    handleDelete,
     queuedGameIds,
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
@@ -97,15 +95,7 @@ export default function GamesView() {
                 ? () => handleAddToQueue(statusModal.gameId)
                 : undefined
             }
-            manual={
-              statusModal.manual
-                ? {
-                    platform: statusModal.manual.platform,
-                    onSaveHours: (hours) => handleSaveHours(statusModal.gameId, hours),
-                    onDelete: () => handleDelete(statusModal.gameId),
-                  }
-                : undefined
-            }
+            manual={statusModal.manual}
           />
         )
       }

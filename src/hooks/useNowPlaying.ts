@@ -29,7 +29,12 @@ export type QueueableGame = Pick<
   Partial<
     Pick<
       GameWithImage,
-      'steam_review_score' | 'steam_review_count' | 'deck_compat' | 'last_played_at'
+      | 'steam_review_score'
+      | 'steam_review_count'
+      | 'deck_compat'
+      | 'last_played_at'
+      | 'source'
+      | 'platform'
     >
   >;
 
@@ -48,6 +53,9 @@ function toQueueItem(game: QueueableGame, position: number): QueueItem {
       steam_review_count: game.steam_review_count ?? null,
       deck_compat: game.deck_compat ?? null,
       last_played_at: game.last_played_at ?? null,
+      // The console tag and Steam details depend on these.
+      source: game.source,
+      platform: game.platform,
     },
   };
 }
@@ -65,6 +73,8 @@ function toPlayingGame(item: QueueItem): GameWithImage {
     steam_review_count: item.game.steam_review_count ?? null,
     deck_compat: item.game.deck_compat ?? null,
     last_played_at: item.game.last_played_at ?? null,
+    source: item.game.source,
+    platform: item.game.platform,
   };
 }
 
@@ -324,9 +334,12 @@ export function useNowPlaying(userId: string | null) {
     closeStatusModal: () => setStatusModal(null),
     closeSummary: () => setGameSummary(null),
     confirmStatusChange: (status: string, date: string, notes: string, rating: number | null) => {
-      if (!currentlyPlaying) return;
+      // The cached game, not the one this render saw: the dialog may have just
+      // saved new hours, which the completion summary should show.
+      const game = queryClient.getQueryData<GameWithImage | null>(playingKey) ?? currentlyPlaying;
+      if (!game) return;
       setStatusModal(null);
-      completeMutation.mutate({ game: currentlyPlaying, status, date, notes, rating });
+      completeMutation.mutate({ game, status, date, notes, rating });
     },
 
     pick: (game: GameWithImage) => pickMutation.mutateAsync(game).catch(() => undefined),

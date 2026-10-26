@@ -30,17 +30,39 @@ export function useManualGameActions(userId: string | null) {
     playing: queryKeys.games.playing(userId ?? ''),
   };
 
+  const snapshotCaches = () => ({
+    list: queryClient.getQueryData<GameItem[]>(keys.list),
+    diary: queryClient.getQueryData<DiaryEntry[]>(keys.diary),
+    queue: queryClient.getQueryData<QueueItem[]>(keys.queue),
+    playing: queryClient.getQueryData<GameWithImage | null>(keys.playing),
+  });
+  const restoreCaches = (snapshot: ReturnType<typeof snapshotCaches>) => {
+    queryClient.setQueryData(keys.list, snapshot.list);
+    queryClient.setQueryData(keys.diary, snapshot.diary);
+    queryClient.setQueryData(keys.queue, snapshot.queue);
+    queryClient.setQueryData(keys.playing, snapshot.playing);
+  };
+
+  // Every cached copy of the game gets the new hours, so a summary or card
+  // built from any of them (finishing it from Now Playing) shows them.
   const saveHours = async (gameId: number, hours: number) => {
     const minutes = Math.round(hours * 60);
-    const previous = queryClient.getQueryData<GameItem[]>(keys.list);
-    queryClient.setQueryData<GameItem[]>(keys.list, (old) =>
-      old?.map((g) => (g.id === gameId ? { ...g, playtime_forever: minutes } : g)),
+    const snapshot = snapshotCaches();
+    const withHours = <T extends { id: number; playtime_forever: number }>(g: T) =>
+      g.id === gameId ? { ...g, playtime_forever: minutes } : g;
+    queryClient.setQueryData<GameItem[]>(keys.list, (old) => old?.map(withHours));
+    queryClient.setQueryData<DiaryEntry[]>(keys.diary, (old) => old?.map(withHours));
+    queryClient.setQueryData<QueueItem[]>(keys.queue, (old) =>
+      old?.map((q) =>
+        q.game_id === gameId ? { ...q, game: { ...q.game, playtime_forever: minutes } } : q,
+      ),
     );
+    queryClient.setQueryData<GameWithImage | null>(keys.playing, (old) => old && withHours(old));
     try {
       await updateHoursPlayed(gameId, hours);
     } catch (err) {
       console.error(err);
-      if (previous) queryClient.setQueryData(keys.list, previous);
+      restoreCaches(snapshot);
       toast.error("Couldn't save the hours played. Try again.");
     }
     statusChanged();
@@ -51,12 +73,7 @@ export function useManualGameActions(userId: string | null) {
    * itself is sent when the toast goes, so undoing needs no re-adding.
    */
   const remove = (gameId: number, name: string) => {
-    const snapshot = {
-      list: queryClient.getQueryData<GameItem[]>(keys.list),
-      diary: queryClient.getQueryData<DiaryEntry[]>(keys.diary),
-      queue: queryClient.getQueryData<QueueItem[]>(keys.queue),
-      playing: queryClient.getQueryData<GameWithImage | null>(keys.playing),
-    };
+    const snapshot = snapshotCaches();
     queryClient.setQueryData<GameItem[]>(keys.list, (old) => old?.filter((g) => g.id !== gameId));
     queryClient.setQueryData<DiaryEntry[]>(keys.diary, (old) =>
       old?.filter((g) => g.id !== gameId),
@@ -78,6 +95,10 @@ export function useManualGameActions(userId: string | null) {
         await deleteManualGame(gameId);
       } catch (err) {
         console.error(err);
+        // Put it back everywhere, the games list included (statusChanged
+        // doesn't refetch that).
+        restoreCaches(snapshot);
+        queryClient.invalidateQueries({ queryKey: queryKeys.carousels.all });
         toast.error(`Couldn't remove ${name}. It's back in your library.`);
       }
       statusChanged();
@@ -88,10 +109,7 @@ export function useManualGameActions(userId: string | null) {
         label: 'Undo',
         onClick: () => {
           settled = true;
-          queryClient.setQueryData(keys.list, snapshot.list);
-          queryClient.setQueryData(keys.diary, snapshot.diary);
-          queryClient.setQueryData(keys.queue, snapshot.queue);
-          queryClient.setQueryData(keys.playing, snapshot.playing);
+          restoreCaches(snapshot);
           queryClient.invalidateQueries({ queryKey: queryKeys.carousels.all });
         },
       },

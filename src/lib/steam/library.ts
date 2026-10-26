@@ -119,14 +119,18 @@ export async function syncOwnedGames(
     const results = await Promise.all(
       batch.map((game) => {
         const lastPlayed = lastPlayedAt(game);
-        return supabase
-          .from('games')
-          .update({
-            playtime_forever: game.playtime_forever,
-            ...(lastPlayed ? { last_played_at: lastPlayed } : {}),
-          })
-          .eq('user_id', userId)
-          .eq('app_id', game.appid);
+        return (
+          supabase
+            .from('games')
+            .update({
+              playtime_forever: game.playtime_forever,
+              ...(lastPlayed ? { last_played_at: lastPlayed } : {}),
+            })
+            .eq('user_id', userId)
+            .eq('app_id', game.appid)
+            // Not if it was moved to a console since this sync read the library.
+            .or(`platform.is.null,platform.eq.${STEAM_PLATFORM}`)
+        );
       }),
     );
     const failed = results.find((r) => r.error);
@@ -151,6 +155,18 @@ function lastPlayedAt(game: SteamGame): string | null {
  * that didn't come from Steam stay.
  */
 export async function clearLibrary(supabase: SupabaseClient, userId: string): Promise<void> {
+  // Games moved to a console are console games now: keep them (with their
+  // diary history), as games added by hand. Without the old account's app id,
+  // the new account can own the same game without clashing.
+  const { error: keepError } = await supabase
+    .from('games')
+    .update({ source: 'manual', app_id: null })
+    .eq('user_id', userId)
+    .eq('source', 'steam')
+    .not('platform', 'is', null)
+    .neq('platform', STEAM_PLATFORM);
+  if (keepError) throw keepError;
+
   const { error } = await supabase
     .from('games')
     .delete()

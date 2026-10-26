@@ -244,6 +244,9 @@ export default function HomeView() {
           headerImage={currentlyPlaying.header_image}
           initialStatus={statusModal.action}
           initialDate={todayIso()}
+          // Finishing a console game is a good moment to update its hours.
+          playtimeMinutes={currentlyPlaying.playtime_forever}
+          manual={manualGames.dialogProps(currentlyPlaying)}
         />
       )}
     </div>

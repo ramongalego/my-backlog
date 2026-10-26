@@ -169,7 +169,13 @@ describe('a game you own on Steam', () => {
     });
     expect(status).toBe(200);
     expect(inserted).toHaveLength(0);
-    expect(updated[0]).toEqual({ platform: 'Switch', igdb_id: 314944, playtime_forever: 180 });
+    expect(updated[0]).toEqual({
+      platform: 'Switch',
+      igdb_id: 314944,
+      playtime_forever: 180,
+      // Steam's last-played date was for the PC copy.
+      last_played_at: null,
+    });
     expect(body).toMatchObject({ id: 7, movedFromSteam: true });
     // Already in the backlog: nothing else changes.
     expect(applyStatusChange).not.toHaveBeenCalled();
@@ -182,6 +188,13 @@ describe('a game you own on Steam', () => {
       expect.any(String),
       expect.objectContaining({ gameId: 7, status: 'playing' }),
     );
+  });
+
+  it('refuses PC: that is where it already is', async () => {
+    const { status, body } = await post({ igdbId: 314944, platform: 'PC', status: 'backlog' });
+    expect(status).toBe(400);
+    expect(body.error).toMatch(/already in your Steam library/);
+    expect(updated).toHaveLength(0);
   });
 
   it("doesn't queue it twice", async () => {

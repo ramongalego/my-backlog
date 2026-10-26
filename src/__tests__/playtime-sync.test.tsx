@@ -55,6 +55,7 @@ describe('syncOwnedGames and last played', () => {
   ) {
     const updates: Record<string, unknown>[] = [];
     const inserts: Record<string, unknown>[] = [];
+    const guards: string[] = [];
     const done = (data: unknown) => ({
       then: (resolve: (v: unknown) => unknown) => resolve({ data, error: null }),
     });
@@ -79,13 +80,18 @@ describe('syncOwnedGames and last played', () => {
           },
           eq: (column: string, value: unknown) => {
             if (pending && column === 'app_id') updates.push({ app_id: value, ...pending });
-            return pending && column === 'app_id' ? done(null) : b;
+            return b;
+          },
+          // The update's guard against games moved to a console mid-sync.
+          or: (filter: string) => {
+            guards.push(filter);
+            return done(null);
           },
         };
         return b;
       },
     };
-    return { client: client as unknown as SupabaseClient, updates, inserts };
+    return { client: client as unknown as SupabaseClient, updates, inserts, guards };
   }
 
   const steamGame = (appid: number, playtime: number, lastPlayed?: string) => ({
@@ -125,7 +131,7 @@ describe('syncOwnedGames and last played', () => {
   });
 
   it('leaves a game you moved to a console alone: its hours are the ones you entered', async () => {
-    const { client, updates } = fakeSupabase([
+    const { client, updates, guards } = fakeSupabase([
       { app_id: 1, playtime_forever: 180, last_played_at: null, platform: 'Switch' },
       { app_id: 2, playtime_forever: 60, last_played_at: null, platform: 'PC' },
     ]);
@@ -134,6 +140,8 @@ describe('syncOwnedGames and last played', () => {
       steamGame(2, 120, '2026-10-24T20:00:00Z'),
     ]);
     expect(updates.map((u) => u.app_id)).toEqual([2]);
+    // And the write itself skips a game moved after the sync read the library.
+    expect(guards).toEqual(['platform.is.null,platform.eq.PC']);
   });
 
   it('keeps a known date when Steam stops sharing it', async () => {

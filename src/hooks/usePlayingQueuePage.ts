@@ -2,10 +2,12 @@
 
 import { useAuth } from './useAuth';
 import { useNowPlaying } from './useNowPlaying';
+import { useManualGameActions } from './useManualGame';
 
 export function usePlayingQueuePage() {
   const { user, authResolved } = useAuth();
   const nowPlaying = useNowPlaying(user?.id ?? null);
+  const manualGames = useManualGameActions(user?.id ?? null);
 
   const isLoading = !authResolved || nowPlaying.isLoading;
 
@@ -26,5 +28,7 @@ export function usePlayingQueuePage() {
     handleRemoveFromQueue: nowPlaying.removeFromQueue,
     handlePickFromQueue: nowPlaying.pickFromQueue,
     handleReorder: nowPlaying.reorder,
+    /** The finish/drop dialog's `manual` prop for a game on a console. */
+    manualDialogProps: manualGames.dialogProps,
   };
 }

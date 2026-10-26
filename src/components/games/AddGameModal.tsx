@@ -70,7 +70,8 @@ export function AddGameModal({
   const [results, setResults] = useState<GameSearchResult[]>([]);
   const [searchedFor, setSearchedFor] = useState('');
   const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  // Kept with the text it was for, so it doesn't show against newer text.
+  const [searchError, setSearchError] = useState<{ text: string; message: string } | null>(null);
   const [active, setActive] = useState(0);
   const [picked, setPicked] = useState<GameSearchResult | null>(null);
   const queryClient = useQueryClient();
@@ -104,7 +105,7 @@ export function AddGameModal({
         setSearchedFor(text);
         setActive(0);
       } catch (err) {
-        if (!controller.signal.aborted) setSearchError((err as Error).message);
+        if (!controller.signal.aborted) setSearchError({ text, message: (err as Error).message });
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
@@ -124,6 +125,7 @@ export function AddGameModal({
   });
 
   const showResults = text.length >= 2 && searchedFor === text;
+  const errorMessage = searchError?.text === text ? searchError.message : null;
 
   // Fetch the highlighted result's details while you look, so they're
   // usually there by the time you pick it.
@@ -188,7 +190,8 @@ export function AddGameModal({
           ),
           fromSteam: !!steamGame,
           year: picked.year,
-          playingName: playing?.name ?? null,
+          // Not when the game being moved from Steam is the one you're playing.
+          playingName: steamGame && playing?.id === steamGame.id ? null : (playing?.name ?? null),
           onChangeGame: () => setPicked(null),
           onAdd: async ({ status, platform, hours, date, notes, rating }) => {
             const added = await addManualGame({
@@ -239,7 +242,7 @@ export function AddGameModal({
             className={`${fieldClass()} h-10 pl-9 pr-16 text-sm`}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searching && (
+            {searching && text.length >= 2 && (
               <Loader2 className="w-4 h-4 text-ink-500 animate-spin" aria-hidden="true" />
             )}
             {query && (
@@ -257,20 +260,20 @@ export function AddGameModal({
 
         {/* Result counts for screen readers; the list itself is the visual cue. */}
         <p className="sr-only" aria-live="polite">
-          {showResults && !searchError
+          {showResults && !errorMessage
             ? results.length === 0
               ? 'No games found'
               : `${results.length} ${results.length === 1 ? 'result' : 'results'}`
             : ''}
         </p>
 
-        {searchError && text.length >= 2 && (
+        {errorMessage && (
           <p className="text-sm text-rose-400" role="alert">
-            {searchError}
+            {errorMessage}
           </p>
         )}
 
-        {showResults && !searchError && results.length === 0 && (
+        {showResults && !errorMessage && results.length === 0 && (
           <p className="text-sm text-ink-400 py-6 text-center">
             No games found for “{searchedFor}”. Try the name without subtitles or edition.
           </p>
