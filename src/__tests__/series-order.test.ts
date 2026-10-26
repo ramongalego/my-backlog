@@ -24,9 +24,7 @@ describe('withoutLaterEntries', () => {
   });
 
   it('treats an unnumbered first game as entry 1', () => {
-    expect(kept(g('The Witcher 3: Wild Hunt'), g('The Witcher: Enhanced Edition'))).toEqual([
-      'The Witcher: Enhanced Edition',
-    ]);
+    expect(kept(g('HITMAN 2'), g('HITMAN™'))).toEqual(['HITMAN™']);
     expect(kept(g('Yakuza 3 Remastered'), g('Yakuza 0'))).toEqual(['Yakuza 0']);
   });
 
@@ -45,6 +43,10 @@ describe('withoutLaterEntries', () => {
       g('FINAL FANTASY VII'),
       g('DRAGON QUEST XI S: Echoes of an Elusive Age – Definitive Edition'),
       g('DRAGON QUEST VIII'),
+      g('The Witcher 3: Wild Hunt'),
+      g('The Witcher: Enhanced Edition'),
+      g('The Sims 4'),
+      g('The Sims 3'),
     ];
     expect(kept(...games)).toEqual(games.map((x) => x.name));
   });

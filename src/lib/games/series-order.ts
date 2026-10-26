@@ -2,10 +2,11 @@ import { parseReleaseDate } from './release-date';
 import { EDITION_WORDS, editionKey } from './similarity';
 
 /**
- * Series whose numbered entries each tell their own story, so you can start
- * anywhere: an older one waiting in the backlog never holds a newer one back.
- * Direct sequels inside them (Final Fantasy VII Rebirth) are left to the
- * model, which knows the stories.
+ * Series you can start anywhere, so an older entry waiting in the backlog
+ * never holds a newer one back: each game tells its own story, or (The
+ * Witcher) nearly everyone starts with the later one. Direct sequels inside
+ * them (Final Fantasy VII Rebirth) are left to the model, which knows the
+ * stories. Titles are compared without "the", so entries leave it out too.
  */
 const STANDALONE_SERIES = [
   'final fantasy',
@@ -22,8 +23,9 @@ const STANDALONE_SERIES = [
   'battlefield',
   'civilization',
   'total war',
-  'the sims',
+  'sims',
   'football manager',
+  'witcher',
 ];
 
 const ROMAN: Record<string, number> = {
