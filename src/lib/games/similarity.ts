@@ -114,7 +114,7 @@ export function seriesMatch(a: string, b: string) {
 }
 
 // Edition words that don't make a different game.
-const EDITION_WORDS =
+export const EDITION_WORDS =
   /\b(the|definitive|remastered|remaster|complete|goty|game of the year|enhanced|ultimate|deluxe|edition|director's cut|hd|classic|anniversary)\b/g;
 
 /**

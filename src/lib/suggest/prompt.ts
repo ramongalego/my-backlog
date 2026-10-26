@@ -129,6 +129,8 @@ Pick the ONE game from the shortlist that best fits right now, usually one marke
 
 Only call a game a sequel, continuation or part of a series if its line has a "Series" field naming that game. Don't connect games from different series.
 
+Don't pick a direct story sequel unless they finished the game it follows (its "Series" line shows a finished entry). From what you know of the game, a direct sequel continues the same story and cast, like Final Fantasy VII Rebirth after Remake, Final Fantasy X-2, Mass Effect 2 or Neptunia Re;Birth2. Entries that stand alone are fine to pick on their own: most Final Fantasy, Dragon Quest, Persona and Tales of games, and other series where each game is a new story.
+
 ${
   previousReasonings.length > 0
     ? `

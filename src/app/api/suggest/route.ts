@@ -7,6 +7,7 @@ import { jsonError, rateLimited } from '@/lib/api/response';
 import { getOpenAIApiKey } from '@/lib/env.server';
 import { buildSuggestionPrompt, parseAIResponse, REASONING_STYLE } from '@/lib/suggest/prompt';
 import { pickShortlist, scoreCandidates, type HistoryGame } from '@/lib/suggest/shortlist';
+import { withoutLaterEntries } from '@/lib/games/series-order';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
 
@@ -23,6 +24,7 @@ interface BacklogGame extends GameForSuggestion {
   app_id: number | null;
   header_image: string | null;
   last_played_at: string | null;
+  release_date: string | null;
 }
 
 interface HistoryRow extends HistoryGame {
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
         supabase
           .from('games')
           .select(
-            'id, app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at',
+            'id, app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at, release_date',
           )
           .eq('user_id', userId)
           .eq('type', 'game')
@@ -139,8 +141,10 @@ export async function POST(request: NextRequest) {
   }
 
   const excluded = new Set([...excludeGameIds, ...queuedGames.map((q) => q.game_id)]);
+  // A sequel waits while the game before it is still in the backlog. This runs
+  // on the whole backlog, so a queued or skipped first game still holds it back.
   const ranked = scoreCandidates(
-    backlogGames.filter((g) => !excluded.has(g.id)),
+    withoutLaterEntries(backlogGames).filter((g) => !excluded.has(g.id)),
     history,
     preferences,
   );
