@@ -17,6 +17,10 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 
 export interface GameItem {
   id: number;
+  /** 'steam' (synced) or 'manual' (added by hand). */
+  source: string;
+  /** The console a manual game is on, e.g. "Switch 2". */
+  platform: string | null;
   /** Steam's app id, for Steam games only. */
   app_id: number | null;
   name: string;
@@ -50,7 +54,7 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
     supabase
       .from('games')
       .select(
-        'id, app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
+        'id, source, platform, app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
       )
       .eq('user_id', userId)
       .eq('type', 'game')

@@ -38,6 +38,8 @@ function filterGames(games: GameItem[], filter: GameFilter, searchQuery: string)
 }
 
 const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
+  source: 'steam',
+  platform: null,
   id: 1,
   app_id: 1,
   name: 'Test Game',

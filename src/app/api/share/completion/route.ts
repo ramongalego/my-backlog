@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
 import { checkRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
 
 // header_image is re-fetched server-side by the OG route (next/og ImageResponse
-// requires a raw <img src>). Restrict it to Steam's CDNs so we can't be tricked
+// requires a raw <img src>). Restrict it to Steam's CDNs and IGDB's image host
+// (games added by hand) so we can't be tricked
 // into SSRF against internal hosts through that code path.
 function isAllowedImageHost(hostname: string): boolean {
   return (
+    hostname === IGDB_IMAGE_HOST ||
     hostname === 'steamcdn-a.akamaihd.net' ||
     hostname.endsWith('.steamstatic.com') ||
     hostname === 'steamstatic.com'
@@ -27,7 +30,7 @@ const headerImageSchema = z
         return false;
       }
     },
-    { message: 'Header image must be from a Steam CDN' },
+    { message: 'Header image must be from Steam or IGDB' },
   );
 
 const shareSchema = z.object({

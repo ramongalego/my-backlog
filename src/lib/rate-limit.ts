@@ -172,6 +172,10 @@ export const RATE_LIMITS = {
   gameSyncBulk: { limit: 10, windowMs: 60 * 1000 },
   // Background HowLongToBeat lookups, up to 5 games per request
   gameSyncHltb: { limit: 60, windowMs: 60 * 1000 },
+  // IGDB searches while typing in Add game (debounced, so a few per title)
+  gameSearch: { limit: 60, windowMs: 60 * 1000 },
+  // Adding games by hand: each one looks up IGDB and HowLongToBeat
+  gameAdd: { limit: 30, windowMs: 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // 20 requests per minute for AI suggestions (accounts for rerolls)

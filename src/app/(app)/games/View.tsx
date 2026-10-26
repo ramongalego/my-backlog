@@ -42,6 +42,8 @@ export default function GamesView() {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
+    handleSaveHours,
+    handleDelete,
     queuedGameIds,
   } = useGamesPage();
 
@@ -90,6 +92,15 @@ export default function GamesView() {
             onAddToQueue={
               hasPlayingGame && statusModal.initialStatus === 'backlog'
                 ? () => handleAddToQueue(statusModal.gameId)
+                : undefined
+            }
+            manual={
+              statusModal.manual
+                ? {
+                    platform: statusModal.manual.platform,
+                    onSaveHours: (hours) => handleSaveHours(statusModal.gameId, hours),
+                    onDelete: () => handleDelete(statusModal.gameId),
+                  }
                 : undefined
             }
           />

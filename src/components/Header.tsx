@@ -7,6 +7,7 @@ import { Gamepad2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { UserMenu } from '@/components/UserMenu';
+import { AddGameButton } from '@/components/games/AddGameButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
@@ -119,15 +120,19 @@ export function Header() {
             {isLoading ? (
               <div className="w-10 h-10 bg-ink-800 rounded animate-pulse" />
             ) : user ? (
-              <UserMenu
-                user={user}
-                steamUsername={steamUsername}
-                steamAvatar={steamAvatar}
-                gameCount={libraryMetaLoaded ? gameCount : undefined}
-                onRefresh={handleRefreshLibrary}
-                isRefreshing={isRefreshing}
-                isRefreshDisabled={isRefreshDisabled}
-              />
+              <>
+                {/* Signed-in pages need Steam linked, so the button does too. */}
+                {profile?.steam_id && <AddGameButton userId={user.id} />}
+                <UserMenu
+                  user={user}
+                  steamUsername={steamUsername}
+                  steamAvatar={steamAvatar}
+                  gameCount={libraryMetaLoaded ? gameCount : undefined}
+                  onRefresh={handleRefreshLibrary}
+                  isRefreshing={isRefreshing}
+                  isRefreshDisabled={isRefreshDisabled}
+                />
+              </>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => openAuthModal('login')}>

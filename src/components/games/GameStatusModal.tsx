@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { Gamepad2, CalendarDays, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +14,7 @@ const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.Day
   ssr: false,
 });
 import { GameMetaRow } from './GameCardInfo';
+import { GameArt } from './GameArt';
 
 type InternalStatus = GameStatus | 'queue';
 
@@ -41,6 +41,12 @@ interface GameDetailModalProps {
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
+  /** For games added by hand: their console, hours played you enter, and removal. */
+  manual?: {
+    platform: string | null;
+    onSaveHours: (hours: number) => void | Promise<void>;
+    onDelete: () => void | Promise<void>;
+  };
 }
 
 // Converts "YYYY-MM-DD" → Date (local time, no timezone shift)
@@ -75,8 +81,13 @@ export function GameDetailModal({
   playtimeMinutes,
   lastPlayedAt,
   deckCompat,
+  manual,
 }: GameDetailModalProps) {
   const today = todayIso();
+  const initialHours = playtimeMinutes ? String(Math.round((playtimeMinutes / 60) * 10) / 10) : '';
+  const [hours, setHours] = useState(initialHours);
+  const [hoursError, setHoursError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [status, setStatus] = useState<InternalStatus>(initialStatus);
   const [hasDate, setHasDate] = useState(!!initialDate);
@@ -126,6 +137,15 @@ export function GameDetailModal({
   const [saving, setSaving] = useState(false);
 
   async function handleConfirm() {
+    if (manual && hours !== initialHours) {
+      const parsedHours = hours.trim() === '' ? 0 : Number(hours);
+      if (!(parsedHours >= 0)) {
+        setHoursError('Hours played must be a number');
+        return;
+      }
+      setHoursError(null);
+      await manual.onSaveHours(parsedHours);
+    }
     if (status === 'queue') {
       onAddToQueue?.();
       onClose();
@@ -151,13 +171,7 @@ export function GameDetailModal({
       {/* Hero image */}
       <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
         {headerImage ? (
-          <Image
-            src={headerImage}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 544px"
-          />
+          <GameArt src={headerImage} alt="" sizes="(max-width: 640px) 100vw, 544px" />
         ) : (
           <div className="w-full h-full bg-ink-800 flex items-center justify-center">
             <Gamepad2 className="w-10 h-10 text-ink-500" />
@@ -354,6 +368,35 @@ export function GameDetailModal({
           </>
         )}
 
+        {manual && (
+          <div>
+            <label className={FIELD_LABEL} htmlFor="detail-hours">
+              Hours played{manual.platform ? ` on ${manual.platform}` : ''}
+            </label>
+            <input
+              id="detail-hours"
+              type="number"
+              min={0}
+              step={0.5}
+              inputMode="decimal"
+              value={hours}
+              onChange={(e) => {
+                setHours(e.target.value);
+                setHoursError(null);
+              }}
+              placeholder="0"
+              aria-invalid={hoursError ? true : undefined}
+              aria-describedby={hoursError ? 'detail-hours-error' : undefined}
+              className={`${fieldClass(!!hoursError)} px-3 py-2 text-sm`}
+            />
+            {hoursError && (
+              <p id="detail-hours-error" className="text-rose-400 text-xs mt-1" role="alert">
+                {hoursError}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3 pt-1">
           <Button
@@ -368,6 +411,35 @@ export function GameDetailModal({
             {saving ? 'Saving…' : 'Save Changes'}
           </Button>
         </div>
+
+        {manual &&
+          (confirmingDelete ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-ink-800 px-3 py-2.5">
+              <p className="text-sm text-ink-200">Remove it from your library?</p>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
+                  Keep
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    void manual.onDelete();
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="cursor-pointer text-sm text-ink-400 hover:text-rose-400 transition-colors"
+            >
+              Remove from library
+            </button>
+          ))}
       </div>
     </Modal>
   );

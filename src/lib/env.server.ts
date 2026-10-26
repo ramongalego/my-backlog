@@ -13,6 +13,11 @@ export function getSteamApiKey(): string {
   return required('STEAM_API_KEY');
 }
 
+/** The Twitch app that IGDB authenticates, for adding games by hand. */
+export function getIgdbCredentials(): { clientId: string; clientSecret: string } {
+  return { clientId: required('IGDB_CLIENT_ID'), clientSecret: required('IGDB_CLIENT_SECRET') };
+}
+
 export function getOpenAIApiKey(): string {
   return required('OPENAI_API_KEY');
 }

@@ -1,7 +1,7 @@
 -- Snapshot of the full public schema, for reference and for recreating the
 -- database. The base tables were created in the Supabase dashboard before
 -- migrations were tracked, so migrations/ only holds later changes. This file
--- reflects the state after every migration up to 20261030 has been applied.
+-- reflects the state after every migration up to 20261031 has been applied.
 -- Keep it in sync when adding migrations.
 
 -- ─── Tables ─────────────────────────────────────────────────────────────────
@@ -52,6 +52,8 @@ create table games (
   deck_compat integer,
   achievements_total integer,
   achievements_unlocked integer,
+  -- The IGDB game a manual entry came from.
+  igdb_id integer,
   unique (user_id, app_id),
   -- Referenced by playing_queue, so a queue row can only point at its own user's game.
   unique (user_id, id),
@@ -132,6 +134,8 @@ create table roast_cache (
 create index idx_game_metadata_synced_at on game_metadata (synced_at);
 create index idx_game_metadata_refresh on game_metadata (type, main_story_hours, synced_at);
 create unique index games_one_playing_per_user on games (user_id) where status = 'playing';
+-- One manual entry per game and platform.
+create unique index games_manual_unique on games (user_id, igdb_id, platform) where source = 'manual';
 create index playing_queue_user_position on playing_queue (user_id, position);
 create index roast_cache_expires_at on roast_cache (expires_at);
 

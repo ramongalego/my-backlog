@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import Image from 'next/image';
+import { GameArt } from './GameArt';
 import { Gamepad2, Pencil } from 'lucide-react';
 
 /** Steam header capsules are 460×215; every game image in the app uses this ratio. */
@@ -45,16 +45,7 @@ export function CoverArt({
       } ${className}`}
     >
       {src ? (
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes={sizes}
-          priority={priority}
-          quality={quality}
-          className="object-cover"
-          draggable={false}
-        />
+        <GameArt src={src} alt={alt} sizes={sizes} priority={priority} quality={quality} />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
           <Gamepad2 className="w-1/5 max-w-8 h-auto text-ink-600" aria-hidden="true" />

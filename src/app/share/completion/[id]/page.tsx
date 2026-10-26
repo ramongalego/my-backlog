@@ -1,10 +1,10 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Gamepad2, Trophy, Star, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
+import { GameArt } from '@/components/games/GameArt';
 import type { Metadata } from 'next';
 
 interface PageProps {
@@ -67,11 +67,9 @@ export default async function SharedCompletionPage({ params }: PageProps) {
             {/* Hero image */}
             <div className="relative h-44 overflow-hidden">
               {data.header_image ? (
-                <Image
+                <GameArt
                   src={data.header_image}
                   alt={data.game_name}
-                  fill
-                  className="object-cover"
                   sizes="(max-width: 640px) 100vw, 512px"
                 />
               ) : (

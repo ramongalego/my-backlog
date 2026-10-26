@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { updateGameStatus } from '@/lib/games/status';
+import { deleteManualGame, updateHoursPlayed } from '@/lib/games/manual';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
 import { statusChangeFrom } from '@/lib/games/status-rules';
@@ -97,6 +98,8 @@ interface GamesPageStatusModal {
   playtimeMinutes: number;
   lastPlayedAt: string | null;
   deckCompat?: number | null;
+  /** Set for games added by hand, which can be edited and removed. */
+  manual: { platform: string | null } | null;
 }
 
 interface UseGamesPageReturn {
@@ -123,6 +126,8 @@ interface UseGamesPageReturn {
   handleCloseStatusModal: () => void;
   handleOpenDetail: (gameId: number) => void;
   handleAddToQueue: (gameId: number) => Promise<void>;
+  handleSaveHours: (gameId: number, hours: number) => Promise<void>;
+  handleDelete: (gameId: number) => Promise<void>;
   queuedGameIds: Set<number>;
 }
 
@@ -212,6 +217,7 @@ export function useGamesPage(): UseGamesPageReturn {
       playtimeMinutes: game.playtime_forever,
       lastPlayedAt: game.last_played_at,
       deckCompat: game.deck_compat,
+      manual: game.source === 'manual' ? { platform: game.platform } : null,
     });
   };
 
@@ -230,6 +236,38 @@ export function useGamesPage(): UseGamesPageReturn {
   const handleAddToQueue = async (gameId: number) => {
     const game = games.find((g) => g.id === gameId);
     if (game) addGameToQueue(game);
+  };
+
+  // Games added by hand: hours played (consoles don't report it) and removal.
+  // Both change the cached list in place, like status changes do.
+  const handleSaveHours = async (gameId: number, hours: number) => {
+    const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
+    queryClient.setQueryData<GameItem[]>(gamesKey, (old) =>
+      old?.map((g) => (g.id === gameId ? { ...g, playtime_forever: Math.round(hours * 60) } : g)),
+    );
+    try {
+      await updateHoursPlayed(gameId, hours);
+    } catch (err) {
+      console.error(err);
+      if (previous) queryClient.setQueryData(gamesKey, previous);
+      toast.error('Could not save the hours played. Please try again.');
+    }
+    statusChanged();
+  };
+
+  const handleDelete = async (gameId: number) => {
+    const previous = queryClient.getQueryData<GameItem[]>(gamesKey);
+    const name = previous?.find((g) => g.id === gameId)?.name;
+    queryClient.setQueryData<GameItem[]>(gamesKey, (old) => old?.filter((g) => g.id !== gameId));
+    try {
+      await deleteManualGame(gameId);
+      if (name) toast.success(`Removed ${name} from your library`);
+    } catch (err) {
+      console.error(err);
+      if (previous) queryClient.setQueryData(gamesKey, previous);
+      toast.error('Could not remove the game. Please try again.');
+    }
+    statusChanged();
   };
 
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
@@ -338,6 +376,8 @@ export function useGamesPage(): UseGamesPageReturn {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
+    handleSaveHours,
+    handleDelete,
     queuedGameIds,
   };
 }

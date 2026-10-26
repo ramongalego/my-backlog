@@ -84,10 +84,12 @@ export function Playtime({
     <Tooltip
       className={className}
       content={
+        // Only Steam reports when you last played. Without a date the hours may
+        // be ones you entered for a console game, so the tooltip doesn't say Steam.
         lastPlayed ? (
           <TooltipText title={lastPlayed} detail={`${hours}h played on Steam`} />
         ) : (
-          <TooltipText title={`${hours}h played`} detail="Playtime from Steam" />
+          <TooltipText title={`${hours}h played`} />
         )
       }
     >

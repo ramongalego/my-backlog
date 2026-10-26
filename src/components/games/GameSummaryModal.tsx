@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import {
   Gamepad2,
   Trophy,
@@ -15,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { GameArt } from '@/components/games/GameArt';
 
 export interface GameSummaryData {
   gameName: string;
@@ -172,13 +172,7 @@ export function GameSummaryModal({
       {/* Hero */}
       <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
         {headerImage ? (
-          <Image
-            src={headerImage}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 544px"
-          />
+          <GameArt src={headerImage} alt="" sizes="(max-width: 640px) 100vw, 544px" />
         ) : (
           <div className="w-full h-full bg-ink-800 flex items-center justify-center">
             <Gamepad2 className="w-10 h-10 text-ink-500" />

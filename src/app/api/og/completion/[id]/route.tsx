@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
 import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
 
 export const runtime = 'nodejs';
@@ -12,6 +13,7 @@ export const runtime = 'nodejs';
 // turn that into an SSRF primitive.
 function isAllowedImageHost(hostname: string): boolean {
   return (
+    hostname === IGDB_IMAGE_HOST ||
     hostname === 'steamcdn-a.akamaihd.net' ||
     hostname.endsWith('.steamstatic.com') ||
     hostname === 'steamstatic.com'

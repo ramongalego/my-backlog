@@ -22,6 +22,8 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   created_at: '2026-01-01T00:00:00Z',
   release_date: null,
   last_played_at: null,
+  source: 'steam',
+  platform: null,
   id: 123,
   app_id: 123,
   name: 'Test Game',
@@ -109,5 +111,22 @@ describe('GameCard', () => {
     rerender(<GameCard game={createGame({ app_id: null })} onOpenDetail={mockOnOpenDetail} />);
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.getByText('Test Game')).toBeInTheDocument();
+  });
+
+  it('labels games added by hand with their console', () => {
+    const { rerender } = render(
+      <GameCard
+        game={createGame({ source: 'manual', platform: 'Switch 2', app_id: null })}
+        onOpenDetail={mockOnOpenDetail}
+      />,
+    );
+    expect(screen.getByText('Switch 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open details/i })).toHaveAccessibleName(
+      'Open details for Test Game, Switch 2',
+    );
+
+    // Steam games carry no platform label.
+    rerender(<GameCard game={createGame({ platform: 'PC' })} onOpenDetail={mockOnOpenDetail} />);
+    expect(screen.queryByText('PC')).not.toBeInTheDocument();
   });
 });

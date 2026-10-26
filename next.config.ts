@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'steamcdn-a.akamaihd.net',
       },
+      // Art for games added by hand.
+      {
+        protocol: 'https',
+        hostname: 'images.igdb.com',
+      },
     ],
   },
   headers: async () => [

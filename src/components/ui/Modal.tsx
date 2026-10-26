@@ -69,9 +69,14 @@ export function Modal({
     const previousFocus = document.activeElement as HTMLElement | null;
     document.body.style.overflow = 'hidden';
 
-    // Focus the first focusable element in the dialog
+    // Focus the element marked data-autofocus (e.g. a search box you'll type
+    // into straight away), or else the first focusable element in the dialog.
     const frame = requestAnimationFrame(() => {
-      dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+      const dialog = dialogRef.current;
+      (
+        dialog?.querySelector<HTMLElement>('[data-autofocus]') ??
+        dialog?.querySelector<HTMLElement>(FOCUSABLE)
+      )?.focus();
     });
 
     document.addEventListener('keydown', handleKeyDown);

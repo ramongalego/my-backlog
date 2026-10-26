@@ -1,10 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import { Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
 import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import { steamStoreUrl } from '@/lib/games/store-link';
+import { GameArt } from '@/components/games/GameArt';
 import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
 
 interface SuggestionResultProps {
@@ -33,13 +33,7 @@ export function SuggestionResult({
       {/* Hero — bleeds to modal edges, same pattern as GameSummaryModal */}
       <div className="relative -mx-6 -mt-6 h-44 overflow-hidden rounded-t-2xl">
         {game.header_image ? (
-          <Image
-            src={game.header_image}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 544px"
-          />
+          <GameArt src={game.header_image} alt="" sizes="(max-width: 640px) 100vw, 544px" />
         ) : (
           <div className="w-full h-full bg-ink-800 flex items-center justify-center">
             <Gamepad2 className="w-10 h-10 text-ink-500" />

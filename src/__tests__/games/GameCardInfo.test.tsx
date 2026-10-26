@@ -71,10 +71,11 @@ describe('GameCardInfo', () => {
       expect(tooltip).toHaveTextContent('10h played on Steam');
     });
 
-    it('should fall back to the playtime source when Steam has no date', () => {
-      render(<GameCardInfo appId={1} name="Game" playtimeMinutes={600} />);
+    it("should show just the hours when there's no last-played date", () => {
+      // Steam games with private details, and console games with hours entered by hand.
+      render(<GameCardInfo appId={null} name="Game" playtimeMinutes={600} />);
 
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Playtime from Steam');
+      expect(screen.getByRole('tooltip')).toHaveTextContent(/^10h played$/);
     });
 
     it('should not show playtime when under 60 minutes', () => {

@@ -24,3 +24,21 @@ export const gameStatusSchema = z.object({
 });
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;
+
+// ─── Games added by hand ─────────────────────────────────────────────────────
+
+// Hours you've played, entered yourself (consoles don't report playtime).
+const hoursPlayed = z.number().min(0).max(100000);
+
+export const gameSearchSchema = z.string().trim().min(2).max(100);
+
+export const addManualGameSchema = z.object({
+  igdbId: z.number().int().positive(),
+  platform: safeText.pipe(z.string().min(1).max(60)),
+  status: z.enum(['backlog', 'queue', 'playing']),
+  hoursPlayed: hoursPlayed.optional(),
+});
+
+export type AddManualGameBody = z.infer<typeof addManualGameSchema>;
+
+export const updateManualGameSchema = z.object({ hoursPlayed });
