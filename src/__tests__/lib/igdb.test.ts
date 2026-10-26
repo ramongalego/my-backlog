@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { getGameDetails, pickWideArt, searchGames } from '@/lib/igdb/api';
+import { getGameDetails, igdbTags, pickWideArt, searchGames } from '@/lib/igdb/api';
 import { isBoxArt } from '@/lib/igdb/images';
 
 process.env.IGDB_CLIENT_ID = 'client';
@@ -70,6 +70,38 @@ describe('getGameDetails', () => {
   it('returns null for an unknown game', async () => {
     games = [];
     expect(await getGameDetails(999)).toBeNull();
+  });
+});
+
+describe('igdbTags', () => {
+  const rpg = [{ name: 'Role-playing (RPG)' }];
+  const japanese = [{ developer: true, company: { country: 392 } }];
+
+  it('tags an RPG made in Japan as a JRPG', () => {
+    expect(igdbTags({ genres: rpg, involved_companies: japanese })).toEqual(['RPG', 'JRPG']);
+    // Not for other genres from Japan, or for a Japanese publisher of a Western RPG.
+    expect(igdbTags({ genres: [{ name: 'Adventure' }], involved_companies: japanese })).toEqual([
+      'Adventure',
+    ]);
+    expect(
+      igdbTags({
+        genres: rpg,
+        involved_companies: [
+          { developer: true, company: { country: 840 } },
+          { developer: false, company: { country: 392 } },
+        ],
+      }),
+    ).toEqual(['RPG']);
+  });
+
+  it('adds only the keywords that match a Steam tag, after genres and themes', () => {
+    expect(
+      igdbTags({
+        genres: rpg,
+        themes: [{ name: 'Fantasy' }],
+        keywords: [{ name: 'Anime' }, { name: 'dog' }, { name: 'jrpg' }, { name: 'tactical rpg' }],
+      }),
+    ).toEqual(['RPG', 'Fantasy', 'Anime', 'JRPG', 'Tactical RPG']);
   });
 });
 

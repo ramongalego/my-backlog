@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/games/manual/route';
 import { applyStatusChange } from '@/lib/games/apply-status';
 import { getGameDetails } from '@/lib/igdb/api';
+import { getSteamTags } from '@/lib/steam/store-api';
 
 const inserted: Record<string, unknown>[] = [];
 const updated: Record<string, unknown>[] = [];
@@ -54,6 +55,7 @@ jest.mock('@/lib/supabase/server', () => ({
 }));
 jest.mock('@/lib/igdb/api', () => ({ getGameDetails: jest.fn() }));
 jest.mock('@/lib/hltb/api', () => ({ getMainStoryHours: jest.fn().mockResolvedValue(30) }));
+jest.mock('@/lib/steam/store-api', () => ({ getSteamTags: jest.fn() }));
 jest.mock('@/lib/games/apply-status', () => ({ applyStatusChange: jest.fn() }));
 
 const details = {
@@ -108,6 +110,19 @@ it('adds the game with its IGDB details, console and hours', async () => {
     status: 'backlog',
   });
   expect(applyStatusChange).not.toHaveBeenCalled();
+});
+
+it("uses Steam's tags for a game Steam also sells, else IGDB's", async () => {
+  jest.mocked(getGameDetails).mockResolvedValue({ ...details, steamAppIds: [2161700] });
+  jest.mocked(getSteamTags).mockResolvedValue(['JRPG', 'Anime', 'RPG']);
+  await post({ igdbId: 1, platform: 'PS5', status: 'backlog' });
+  expect(getSteamTags).toHaveBeenCalledWith(2161700);
+  expect(inserted[0].tags).toEqual(['JRPG', 'Anime', 'RPG']);
+
+  // Steam unavailable: still added, with IGDB's tags.
+  jest.mocked(getSteamTags).mockResolvedValue(null);
+  await post({ igdbId: 1, platform: 'PS4', status: 'backlog' });
+  expect(inserted[1].tags).toEqual(['Tactical', 'RPG']);
 });
 
 it('logs a game you already finished, with its date, rating and notes', async () => {

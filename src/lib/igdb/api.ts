@@ -82,6 +82,8 @@ interface IgdbGame {
   genres?: { name: string }[];
   themes?: { name: string }[];
   game_modes?: { name: string }[];
+  keywords?: { name: string }[];
+  involved_companies?: { developer?: boolean; company?: { country?: number } }[];
   summary?: string;
   external_games?: { uid?: string; external_game_source?: number }[];
 }
@@ -197,6 +199,71 @@ const TAG_NAMES: Record<string, string[]> = {
   Warfare: ['War'],
 };
 
+// IGDB's keywords are added by anyone and patchy (one game has thirty, the
+// next none, or junk), so only these, which mean what the Steam tag means.
+const KEYWORD_TAGS: Record<string, string> = {
+  jrpg: 'JRPG',
+  'tactical rpg': 'Tactical RPG',
+  'party-based rpg': 'Party-Based RPG',
+  crpg: 'CRPG',
+  'turn-based combat': 'Turn-Based Combat',
+  'turn-based rpg': 'Turn-Based Combat',
+  'turn-based tactics': 'Turn-Based Tactics',
+  'dungeon crawler': 'Dungeon Crawler',
+  metroidvania: 'Metroidvania',
+  roguelike: 'Roguelike',
+  roguelite: 'Roguelite',
+  soulslike: 'Souls-like',
+  'immersive sim': 'Immersive Sim',
+  'boomer shooter': 'Boomer Shooter',
+  'bullet hell': 'Bullet Hell',
+  'survival horror': 'Survival Horror',
+  deckbuilding: 'Deckbuilding',
+  'deck building': 'Deckbuilding',
+  'creature collection': 'Creature Collector',
+  'monster taming': 'Creature Collector',
+  'dating sim': 'Dating Sim',
+  'life simulation': 'Life Sim',
+  cozy: 'Cozy',
+  rhythm: 'Rhythm',
+  'story rich': 'Story Rich',
+  'choices matter': 'Choices Matter',
+  'multiple endings': 'Multiple Endings',
+  anime: 'Anime',
+  'pixel art': 'Pixel Graphics',
+  'hand-drawn': 'Hand-drawn',
+  'female protagonist': 'Female Protagonist',
+  'time travel': 'Time Travel',
+  'post-apocalyptic': 'Post-apocalyptic',
+  cyberpunk: 'Cyberpunk',
+  lovecraftian: 'Lovecraftian',
+  mecha: 'Mechs',
+};
+
+// IGDB's code for Japan (ISO 3166-1 numeric).
+const JAPAN = 392;
+
+/**
+ * The game's tags in Steam's words, for games Steam doesn't sell: its genres,
+ * then JRPG for an RPG made in Japan (IGDB has no such genre, and its "jrpg"
+ * keyword is on few games), then its themes and a few telling keywords.
+ */
+export function igdbTags(
+  game: Pick<IgdbGame, 'genres' | 'themes' | 'keywords' | 'involved_companies'>,
+): string[] {
+  const genres = (game.genres ?? []).map((g) => g.name);
+  const madeInJapan = (game.involved_companies ?? []).some(
+    (c) => c.developer && c.company?.country === JAPAN,
+  );
+  const tags = [
+    ...genres.flatMap((name) => TAG_NAMES[name] ?? [name]),
+    ...(madeInJapan && genres.includes('Role-playing (RPG)') ? ['JRPG'] : []),
+    ...(game.themes ?? []).flatMap((t) => TAG_NAMES[t.name] ?? [t.name]),
+    ...(game.keywords ?? []).flatMap((k) => KEYWORD_TAGS[k.name.toLowerCase()] ?? []),
+  ];
+  return [...new Set(tags)];
+}
+
 // IGDB's game modes as Steam categories, which decide what counts as
 // single-player (random pick, Pick My Game) and multiplayer-first.
 const CATEGORY_NAMES: Record<string, string> = {
@@ -226,20 +293,17 @@ export interface ManualGameDetails {
 export async function getGameDetails(igdbId: number): Promise<ManualGameDetails | null> {
   const [game] = await query<IgdbGame>(
     'games',
-    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, summary, ${EXTERNAL_FIELDS}; where id = ${Math.trunc(igdbId)};`,
+    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, keywords.name, involved_companies.developer, involved_companies.company.country, summary, ${EXTERNAL_FIELDS}; where id = ${Math.trunc(igdbId)};`,
   );
   if (!game) return null;
 
   const genres = (game.genres ?? []).map((g) => g.name);
-  const tags = [...genres, ...(game.themes ?? []).map((t) => t.name)].flatMap(
-    (name) => TAG_NAMES[name] ?? [name],
-  );
   const wideArt = pickWideArt(game);
   return {
     name: game.name,
     platforms: (game.platforms ?? []).map((p) => p.name),
     genres,
-    tags: [...new Set(tags)],
+    tags: igdbTags(game),
     categories: (game.game_modes ?? []).flatMap((m) =>
       CATEGORY_NAMES[m.name] ? [CATEGORY_NAMES[m.name]] : [],
     ),
