@@ -114,35 +114,19 @@ describe('GameCard', () => {
   });
 
   it('shows the console of games added by hand on the art, named for screen readers', () => {
-    const { container, rerender } = render(
+    const { rerender } = render(
       <GameCard
         game={createGame({ source: 'manual', platform: 'Switch 2', app_id: null })}
         onOpenDetail={mockOnOpenDetail}
       />,
     );
-    // The Switch logo plus "2" on the art, hidden from screen readers...
-    const badge = container.querySelector('[title="Switch 2"]');
-    expect(badge).toHaveAttribute('aria-hidden', 'true');
-    expect(badge?.querySelector('svg')).not.toBeNull();
-    expect(badge).toHaveTextContent('2');
+    // A tag on the art, hidden from screen readers...
+    expect(screen.getByText('Switch 2').closest('[aria-hidden="true"]')).not.toBeNull();
     // ...which read the console in the meta row instead.
     expect(screen.getByText('On Switch 2')).toHaveClass('sr-only');
 
     // Steam games are all "PC", which isn't worth a label on every card.
     rerender(<GameCard game={createGame({ platform: 'PC' })} onOpenDetail={mockOnOpenDetail} />);
-    expect(container.querySelector('[title="PC"]')).toBeNull();
     expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
-  });
-
-  it('names consoles without a logo on the art', () => {
-    const { container } = render(
-      <GameCard
-        game={createGame({ source: 'manual', platform: '3DS', app_id: null })}
-        onOpenDetail={mockOnOpenDetail}
-      />,
-    );
-    const badge = container.querySelector('[title="3DS"]');
-    expect(badge).toHaveTextContent('3DS');
-    expect(badge?.querySelector('svg')).toBeNull();
   });
 });
