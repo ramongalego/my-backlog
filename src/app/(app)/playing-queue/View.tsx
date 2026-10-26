@@ -163,7 +163,28 @@ interface QueueItemRowProps {
   isLoading: boolean;
   onPick: (gameId: number) => void;
   onRemove: (gameId: number) => void;
-  isOverlay?: boolean;
+}
+
+/**
+ * A queue row you can drag. The drag wiring stays here, out of QueueItemRow:
+ * the overlay that follows the pointer draws a QueueItemRow too, and if it
+ * registered under the same id it would replace this row as a drop target and
+ * take that registration with it when the drag ended, so the row couldn't be
+ * dropped on again until the page reloaded.
+ */
+function SortableQueueItem(props: QueueItemRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.item.id,
+  });
+  return (
+    <QueueItemRow
+      {...props}
+      rowRef={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      isDragging={isDragging}
+      handleProps={{ ...attributes, ...listeners }}
+    />
+  );
 }
 
 function QueueItemRow({
@@ -174,19 +195,21 @@ function QueueItemRow({
   onPick,
   onRemove,
   isOverlay,
-}: QueueItemRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
-
+  rowRef,
+  style,
+  isDragging,
+  handleProps,
+}: QueueItemRowProps & {
+  /** The copy that follows the pointer while dragging. */
+  isOverlay?: boolean;
+  rowRef?: (node: HTMLElement | null) => void;
+  style?: React.CSSProperties;
+  isDragging?: boolean;
+  handleProps?: React.HTMLAttributes<HTMLButtonElement>;
+}) {
   return (
     <div
-      ref={setNodeRef}
+      ref={rowRef}
       style={style}
       className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg py-4 sm:px-3 sm:py-3 transition-[opacity,background-color] ${
         isDragging ? 'opacity-0' : 'opacity-100'
@@ -241,8 +264,7 @@ function QueueItemRow({
             </Button>
           )}
           <button
-            {...attributes}
-            {...listeners}
+            {...handleProps}
             className="cursor-grab active:cursor-grabbing p-1.5 text-ink-500 hover:text-ink-200 transition-colors rounded"
             aria-label={`Reorder ${item.game.name}`}
           >
@@ -372,7 +394,7 @@ export default function PlayingQueueView() {
               >
                 <div className="divide-y divide-ink-800/70">
                   {queue.map((item, index) => (
-                    <QueueItemRow
+                    <SortableQueueItem
                       key={item.id}
                       item={item}
                       index={index}
