@@ -75,17 +75,12 @@ describe('pickWideArt', () => {
     artwork_type,
   });
 
-  it('prefers key art, then properly wide artwork', () => {
-    expect(
-      pickWideArt({
-        artworks: [
-          art('plain', 1600, 800, 1),
-          art('logo', 2788, 661, 7),
-          art('key', 1920, 1080, 3),
-        ],
-      }),
-    ).toBe('key');
-    expect(pickWideArt({ artworks: [art('plain', 1600, 800, 1)] })).toBe('plain');
+  it('prefers key art without its logo, then with, then wide artwork', () => {
+    const keyArt = [art('with logo', 1920, 1080, 3), art('key', 1920, 620, 2)];
+    const plain = art('plain', 1260, 840, 1);
+    expect(pickWideArt({ artworks: [plain, art('logo', 2788, 661, 7), ...keyArt] })).toBe('key');
+    expect(pickWideArt({ artworks: [plain, keyArt[0]] })).toBe('with logo');
+    expect(pickWideArt({ artworks: [plain] })).toBe('plain');
   });
 
   it('skips character renders, small art and logos for a sharp screenshot', () => {
@@ -105,7 +100,7 @@ describe('pickWideArt', () => {
   it('has none when the only screenshots are small, so the box art is used', () => {
     expect(
       pickWideArt({
-        artworks: [art('torso', 1260, 840)],
+        artworks: [art('torso', 1340, 930)],
         screenshots: [{ image_id: '3ds', width: 640 }],
       }),
     ).toBeNull();

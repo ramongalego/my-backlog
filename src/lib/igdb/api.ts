@@ -96,16 +96,16 @@ export function artworkUrl(imageId: string) {
 }
 
 // IGDB's artwork types that work as a game's header, best first, with how wide
-// each has to be. Key art (with its logo, the closest thing to a Steam header,
-// then without) is made to be cropped, so a little wider than square will do.
-// Plain artwork on older games is mostly character renders, which crop to a
-// torso unless they're properly wide. Logos, covers, icons, concept art and
-// infographics never work.
+// each has to be. Key art is made to be cropped, so a little wider than square
+// will do; without its logo first, since cropping cuts through a logo and the
+// app puts the name over the art anyway. Plain artwork on older games is often
+// a single character render, which crops to a torso unless it's at least 3:2.
+// Logos, covers, icons, concept art and infographics never work.
 const HEADER_ARTWORK: { type: number; minRatio: number }[] = [
-  { type: 3, minRatio: 1.3 },
   { type: 2, minRatio: 1.3 },
-  { type: 1, minRatio: 1.7 },
-  { type: 15, minRatio: 1.7 },
+  { type: 3, minRatio: 1.3 },
+  { type: 1, minRatio: 1.5 },
+  { type: 15, minRatio: 1.5 },
 ];
 const MIN_HEADER_WIDTH = 800;
 // Handheld screenshots (3DS at 400x240, DS at 256x192) are too small to fill
