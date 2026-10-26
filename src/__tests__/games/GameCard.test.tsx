@@ -129,4 +129,36 @@ describe('GameCard', () => {
     rerender(<GameCard game={createGame({ platform: 'PC' })} onOpenDetail={mockOnOpenDetail} />);
     expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
   });
+  it('shows a Steam game moved to a console like any console game: no Steam reviews or Deck', () => {
+    render(
+      <GameCard
+        game={createGame({
+          source: 'steam',
+          platform: 'Switch',
+          steam_review_score: 85,
+          deck_compat: 3,
+        })}
+        onOpenDetail={mockOnOpenDetail}
+      />,
+    );
+    expect(screen.getByText('Switch')).toBeInTheDocument();
+    expect(screen.queryByText('85%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Deck')).not.toBeInTheDocument();
+  });
+
+  it('shows Steam reviews and Deck for a Steam game played on Steam', () => {
+    render(
+      <GameCard
+        game={createGame({
+          source: 'steam',
+          platform: 'PC',
+          steam_review_score: 85,
+          deck_compat: 3,
+        })}
+        onOpenDetail={mockOnOpenDetail}
+      />,
+    );
+    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByText('Deck')).toBeInTheDocument();
+  });
 });

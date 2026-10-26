@@ -8,6 +8,7 @@ import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInf
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
+import { showsSteamDetails } from '@/lib/games/consoles';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
@@ -46,14 +47,14 @@ function Progress({ game }: { game: Game }) {
     return (
       <div className="flex items-center gap-3 text-sm text-ink-400">
         <TimeToBeat hours={mainStoryHours} iconClassName="w-3.5 h-3.5" />
-        {game.steam_review_score != null && (
+        {game.steam_review_score != null && showsSteamDetails(game) && (
           <SteamScore
             score={game.steam_review_score}
             count={game.steam_review_count}
             iconClassName="w-3.5 h-3.5"
           />
         )}
-        <SteamDeckBadge deckCompat={game.deck_compat} />
+        {showsSteamDetails(game) && <SteamDeckBadge deckCompat={game.deck_compat} />}
       </div>
     );
   }

@@ -10,6 +10,7 @@ import { pickShortlist, scoreCandidates, type HistoryGame } from '@/lib/suggest/
 import { withoutLaterEntries } from '@/lib/games/series-order';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
+import { showsSteamDetails } from '@/lib/games/consoles';
 
 // Compared against gpt-4o-mini and five others on the same prompts: it follows
 // the writing rules far more closely and costs about a third less. Its
@@ -25,6 +26,8 @@ interface BacklogGame extends GameForSuggestion {
   header_image: string | null;
   last_played_at: string | null;
   release_date: string | null;
+  source: string;
+  platform: string | null;
 }
 
 interface HistoryRow extends HistoryGame {
@@ -112,7 +115,7 @@ export async function POST(request: NextRequest) {
         supabase
           .from('games')
           .select(
-            'id, app_id, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at, release_date',
+            'id, app_id, source, platform, name, header_image, genres, categories, tags, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, reroll_count, last_rerolled_at, last_played_at, release_date',
           )
           .eq('user_id', userId)
           .eq('type', 'game')
@@ -244,8 +247,13 @@ export async function POST(request: NextRequest) {
         main_story_hours: suggestedGame.main_story_hours,
         genres: suggestedGame.genres,
         tags: suggestedGame.tags,
-        steam_review_score: suggestedGame.steam_review_score,
-        steam_review_count: suggestedGame.steam_review_count,
+        // Steam's reviews only for a game played on Steam.
+        ...(showsSteamDetails(suggestedGame)
+          ? {
+              steam_review_score: suggestedGame.steam_review_score,
+              steam_review_count: suggestedGame.steam_review_count,
+            }
+          : { steam_review_score: null, steam_review_count: null }),
         playtime_forever: suggestedGame.playtime_forever ?? 0,
         last_played_at: suggestedGame.last_played_at,
       },

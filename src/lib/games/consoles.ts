@@ -19,6 +19,15 @@ export function consoleOf(game: { source?: string; platform?: string | null }): 
   return playsOnConsole(game.platform) ? game.platform! : null;
 }
 
+/**
+ * Whether to show Steam's own details (review score, Steam Deck rating): only
+ * for games played on Steam. A game on a console shows none, like any game
+ * added by hand, until something takes their place for every console.
+ */
+export function showsSteamDetails(game: { source?: string; platform?: string | null }): boolean {
+  return consoleOf(game) === null;
+}
+
 /** A Steam game played on a console: its hours are yours to enter, and it can go back to Steam. */
 export function isMovedSteamGame(game: { source?: string; platform?: string | null }): boolean {
   return game.source === 'steam' && playsOnConsole(game.platform);

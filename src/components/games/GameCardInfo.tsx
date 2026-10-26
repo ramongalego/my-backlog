@@ -115,7 +115,10 @@ interface GameMetaRowProps {
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
   hidePlaytimeOnMobile?: boolean;
-  /** The console a game added by hand is on (consoleOf); Steam games have none. */
+  /**
+   * The console the game is played on (consoleOf); none for Steam games played
+   * on Steam. With one, Steam's reviews and Deck rating aren't shown.
+   */
   platform?: string | null;
 }
 
@@ -129,6 +132,10 @@ export function GameMetaRow({
   hidePlaytimeOnMobile,
   platform,
 }: GameMetaRowProps) {
+  if (platform) {
+    steamReviewScore = null;
+    deckCompat = null;
+  }
   if (!platform && !mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat)
     return null;
   return (
