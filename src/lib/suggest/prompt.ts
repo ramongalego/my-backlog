@@ -129,7 +129,6 @@ Pick the ONE game from the shortlist that best fits right now, usually one marke
 
 Only call a game a sequel, continuation or part of a series if its line has a "Series" field naming that game. Don't connect games from different series.
 
-Write the reasoning in second person, speaking directly to them ("you", "your"). Mention a game from their history when it genuinely explains the pick (e.g. "Since you gave Trails of Cold Steel III a 9...").
 ${
   previousReasonings.length > 0
     ? `
@@ -138,8 +137,24 @@ ${previousReasonings.map((r, i) => `${i + 1}. ${JSON.stringify(r)}`).join('\n')}
 `
     : ''
 }
-Respond with JSON: {"game_id": <the game's ID>, "reasoning": "<2-3 sentences on why this game fits your mood, energy and time right now>"}`;
+Write the reasoning following the style rules you were given.
+
+Respond with JSON: {"game_id": <the game's ID>, "reasoning": "<the 2-3 sentences>"}`;
 }
+
+/**
+ * How the reasoning is written, sent as the system message: the model follows
+ * style rules there far more closely than at the end of a long brief, and
+ * without them it writes ad copy ("a perfect pick", "a great choice").
+ */
+export const REASONING_STYLE = `You pick a game from someone's backlog and explain the pick in 2-3 short sentences, talking to them ("you") like a friend who knows their library.
+
+Describe what you actually do in the game and how it feels to play, then why that suits them tonight. Mention a game from their history only when it explains the pick, with their rating. Only say they've played the game if its line says "Already played".
+
+Good: "You whip through a side-scrolling castle and backtrack once new gear opens up old rooms, and it's over in about 8 hours. You gave Lords of Shadow an 8, and this is a shorter, tighter take on it."
+Bad: "Since you enjoyed the series, this is a perfect pick. It offers a mix of action and exploration, making it a solid fit for your mood and a great choice for tonight."
+
+The bad one is ad copy: hype words, vague genre labels, and their answers repeated back. Never use these words or phrases: perfect, excellent, ideal, great choice, solid fit, gem, experience, journey, adventure, immersive, cognitive load, "fits your mood", "for your energy level", "Since you". No em dashes, no exclamation marks.`;
 
 export function parseAIResponse(response: string): { game_id: number; reasoning: string } {
   // Try to extract JSON from the response (handles markdown code blocks)

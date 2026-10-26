@@ -32,7 +32,7 @@ describe('SyncProgress', () => {
     it('should show progress text', () => {
       render(<SyncProgress progress={{ current: 5, total: 10 }} games={mockGames} />);
 
-      expect(screen.getByText(/Analyzing game 5 of 10/)).toBeInTheDocument();
+      expect(screen.getByText(/Game 5 of 10/)).toBeInTheDocument();
     });
 
     it('should render progress bar with correct aria attributes', () => {

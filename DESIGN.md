@@ -216,6 +216,17 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 
 **Motion:** 150–250ms colour and opacity transitions. Motion shows a change of state; it is never ambient decoration. Respect `prefers-reduced-motion` (handled globally).
 
+## Writing
+
+Copy reads like a person who plays games wrote it: plain, specific and short. Say what the thing does or what happened, then stop.
+
+- Prefer the concrete detail ("imports your Steam library", "57h to beat") over the claim ("seamless", "smart", "the perfect game").
+- Avoid the words AI copy leans on: perfect, seamless, effortless, finally, actually, simply, surface, unlock, elevate, journey, dive in, at a glance, ready to go.
+- No slogan pairs ("Stop X. Start Y."), reflexive lists of three, or setups like "You know the drill:".
+- No capitals or exclamation marks for emphasis. One exclamation mark is fine for a real celebration ("You finished it!").
+- No em dashes in UI copy; use a comma, colon or full stop.
+- Prompts that generate text people read (Pick My Game reasons, roasts) spell out the same rules, since models fall back on these habits.
+
 ## Do's and Don'ts
 
 **Do**

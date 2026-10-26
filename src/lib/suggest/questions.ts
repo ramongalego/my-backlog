@@ -28,7 +28,7 @@ export interface Question<T> {
 
 export const MOOD_QUESTION: Question<MoodType> = {
   id: 'mood',
-  title: 'What do you want to FEEL right now?',
+  title: 'What do you want to feel?',
   options: [
     {
       value: 'adrenaline',
@@ -84,7 +84,7 @@ export const ENERGY_QUESTION: Question<EnergyLevel> = {
 
 export const TIME_QUESTION: Question<TimeCommitment> = {
   id: 'time',
-  title: "Time commitment you're willing to make?",
+  title: 'How much time do you have?',
   options: [
     {
       value: 'short',
@@ -96,13 +96,13 @@ export const TIME_QUESTION: Question<TimeCommitment> = {
       value: 'medium',
       icon: CalendarDays,
       label: 'A few nights (5–15h)',
-      description: 'Weekend-sized adventures',
+      description: 'A long weekend or a few evenings',
     },
     {
       value: 'long',
       icon: Mountain,
       label: 'Long haul (15h+)',
-      description: 'Deep dives, RPGs, big campaigns',
+      description: 'RPGs, open worlds, big campaigns',
     },
   ],
 };

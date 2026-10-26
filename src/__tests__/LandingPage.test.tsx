@@ -23,11 +23,11 @@ describe('LandingPage', () => {
   });
 
   describe('unauthenticated user', () => {
-    it('shows "Get Started" and not "Connect Your Steam"', () => {
+    it('shows "Get Started" and not "Connect Steam"', () => {
       render(<LandingPage user={null} onConnectSteam={mockOnConnectSteam} />);
 
       expect(screen.getAllByRole('button', { name: /get started/i }).length).toBeGreaterThan(0);
-      expect(screen.queryByText('Connect Your Steam')).not.toBeInTheDocument();
+      expect(screen.queryByText('Connect Steam')).not.toBeInTheDocument();
     });
 
     // The modal is loaded with next/dynamic, so it appears asynchronously.
@@ -53,25 +53,25 @@ describe('LandingPage', () => {
   describe('authenticated user without Steam', () => {
     const mockUser = { id: 'user-123' } as User;
 
-    it('shows "Connect Your Steam" and not "Get Started"', () => {
+    it('shows "Connect Steam" and not "Get Started"', () => {
       render(<LandingPage user={mockUser} onConnectSteam={mockOnConnectSteam} />);
 
-      expect(screen.getAllByText('Connect Your Steam').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Connect Steam').length).toBeGreaterThan(0);
       expect(screen.queryAllByRole('button', { name: /get started/i })).toHaveLength(0);
     });
 
-    it('calls onConnectSteam when "Connect Your Steam" is clicked', () => {
+    it('calls onConnectSteam when "Connect Steam" is clicked', () => {
       render(<LandingPage user={mockUser} onConnectSteam={mockOnConnectSteam} />);
 
-      fireEvent.click(screen.getAllByText('Connect Your Steam')[0]);
+      fireEvent.click(screen.getAllByText('Connect Steam')[0]);
 
       expect(mockOnConnectSteam).toHaveBeenCalledTimes(1);
     });
 
-    it('does not open auth modal when "Connect Your Steam" is clicked', () => {
+    it('does not open auth modal when "Connect Steam" is clicked', () => {
       render(<LandingPage user={mockUser} onConnectSteam={mockOnConnectSteam} />);
 
-      fireEvent.click(screen.getAllByText('Connect Your Steam')[0]);
+      fireEvent.click(screen.getAllByText('Connect Steam')[0]);
 
       expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
     });

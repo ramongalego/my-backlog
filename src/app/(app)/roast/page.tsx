@@ -64,7 +64,7 @@ export default function RoastPage() {
 
   return (
     <RoastShell>
-      <RoastHeader tagline="Enter a Steam Profile and get a savage roast of their gaming habits" />
+      <RoastHeader tagline="Paste a Steam profile and get a savage roast of their gaming habits" />
 
       {/* Input form */}
       <form onSubmit={handleSubmit} className="mb-10">

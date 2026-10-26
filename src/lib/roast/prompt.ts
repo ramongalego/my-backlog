@@ -160,6 +160,7 @@ export function buildRoastPrompt(
     `Reference specific games by name, call out specific numbers (hours, percentages), and make it sting. The user WANTS to be destroyed.`,
     `End with a final paragraph that sounds like a compliment but is actually one last insult.`,
     `Do NOT use markdown, headers, or bullet points. Just plain short paragraphs.`,
+    `Write like a funny person, not an AI: no em dashes, and don't open with "Ah," "Oh," "Well, well," or "Let's talk about". Skip stock phrases like "a testament to", "truly", "the sheer audacity" or "it's giving".`,
     ``,
     `Give a harsh roasting for the following Steam profile: ${profile.personaname}. Here are the details: "${JSON.stringify(data)}"`,
   ];

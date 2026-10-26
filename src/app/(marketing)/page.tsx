@@ -3,22 +3,22 @@ import { LandingPage } from '@/components/LandingPage';
 
 export const metadata: Metadata = {
   // absolute: this page sits under the root layout's '%s · MyBacklog' template.
-  title: { absolute: 'MyBacklog · Stop scrolling. Start playing.' },
+  title: { absolute: 'MyBacklog · Play the games you already own' },
   description:
-    'Your Steam library has hundreds of games. MyBacklog helps you pick the right one to play tonight, track your progress, and actually finish your backlog.',
+    'MyBacklog imports your Steam library, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
   openGraph: {
-    title: 'MyBacklog · Stop scrolling. Start playing.',
+    title: 'MyBacklog · Play the games you already own',
     description:
-      'Your Steam library has hundreds of games. MyBacklog helps you pick the right one to play tonight, track your progress, and actually finish your backlog.',
+      'MyBacklog imports your Steam library, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
     url: 'https://mybacklog.app',
     siteName: 'MyBacklog',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MyBacklog · Stop scrolling. Start playing.',
+    title: 'MyBacklog · Play the games you already own',
     description:
-      'Your Steam library has hundreds of games. MyBacklog helps you pick the right one to play tonight, track your progress, and actually finish your backlog.',
+      'MyBacklog imports your Steam library, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
   },
 };
 
@@ -28,7 +28,7 @@ const jsonLd = {
   name: 'MyBacklog',
   url: 'https://mybacklog.app',
   description:
-    'Stop buying new games and start finishing the ones you own. MyBacklog helps you pick the perfect game from your Steam library.',
+    'Track your Steam backlog, pick what to play next from the games you own, and log the ones you finish.',
   applicationCategory: 'GameApplication',
   operatingSystem: 'All',
   offers: {

@@ -293,7 +293,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
 
   const primaryCta = user ? (
     <Button size="lg" onClick={onConnectSteam}>
-      Connect Your Steam
+      Connect Steam
     </Button>
   ) : (
     <Button size="lg" onClick={() => openModal('signup')}>
@@ -308,14 +308,15 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,26rem)] gap-14 lg:gap-20 items-center">
             <div>
-              <h1 className="text-5xl md:text-6xl font-semibold text-ink-50 leading-[1.05] tracking-tight">
-                Stop scrolling.
+              {/* Sized so each half fits on one line, including the narrower two-column range. */}
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl font-semibold text-ink-50 leading-[1.05] tracking-tight">
+                Play the games
                 <br />
-                <span className="text-accent-400">Start playing.</span>
+                <span className="text-accent-400">you already own.</span>
               </h1>
               <p className="mt-6 text-lg md:text-xl text-ink-300 max-w-lg leading-relaxed">
-                Your Steam library has hundreds of games. We help you actually play them, and finish
-                them.
+                MyBacklog imports your Steam library and picks something from it for tonight, based
+                on your mood and how much time you have.
               </p>
               <p className="mt-3 text-sm text-ink-400 h-5 leading-5" aria-live="off">
                 <span
@@ -381,14 +382,14 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         {/* ── Game picker ── */}
         <section className="border-t border-ink-900">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
-            <SectionCopy title="Three questions, one game for tonight">
+            <SectionCopy title="Pick tonight's game in three questions">
               <p>
-                You know the drill: you sit down to play, spend 20 minutes scrolling through your
-                library, and end up watching YouTube instead.
+                You sit down to play, scroll through your library for 20 minutes, and end up
+                watching YouTube instead.
               </p>
               <p>
-                Answer three quick questions about your mood, your energy, and how much time you
-                have. We&apos;ll surface the right game from your own library. Try it:
+                Say how you want to feel, how much energy you have and how long you can play, and
+                MyBacklog picks a game you already own. Try it:
               </p>
             </SectionCopy>
 
@@ -473,15 +474,15 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
               </div>
             </Panel>
 
-            <SectionCopy title="Your whole Steam library, finally sorted">
+            <SectionCopy title="Your whole Steam library in one place">
               <p>
-                Hundreds of games, bought across years of sales. You probably have no idea what you
-                actually own anymore.
+                Years of sales add up to hundreds of games, and it&apos;s easy to lose track of what
+                you own.
               </p>
               <p>
-                MyBacklog pulls your full Steam library and lets you see it all clearly. Mark games
-                as playing, finished, dropped, or hidden. Rate the ones you finish, jot down your
-                thoughts. Filter and sort however you want.
+                MyBacklog imports every game with how long it takes to beat and how well it&apos;s
+                reviewed. Mark games as playing, finished, dropped or hidden, rate the ones you
+                finish, and filter or sort by any of it.
               </p>
             </SectionCopy>
           </div>
@@ -490,15 +491,14 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
         {/* ── Momentum ── */}
         <section className="border-t border-ink-900">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
-            <SectionCopy title="A queue, a diary, and stats that keep you finishing">
+            <SectionCopy title="A queue for what's next, a diary for what you finish">
               <p>
-                Finishing one game feels good. Finishing ten feels like you&apos;re actually making
-                progress.
+                Line up the next few games, so when you finish one you already know what to start.
               </p>
               <p>
-                Queue up what&apos;s next so you never start a session without a plan. Log every
-                game you finish, with a rating and notes. Then open Stats and watch your completion
-                rate climb.
+                Every game you finish goes in your diary with the date, your rating and a note.
+                Stats shows how much of your library you&apos;ve finished and how long the rest
+                would take at your pace.
               </p>
             </SectionCopy>
 
@@ -583,7 +583,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
                 Start clearing your backlog tonight
               </h2>
               <p className="mt-3 text-ink-400">
-                Free to use. Your Steam library, synced and ready to go.
+                It&apos;s free, and connecting Steam imports your whole library.
               </p>
             </div>
             <div className="shrink-0">{primaryCta}</div>

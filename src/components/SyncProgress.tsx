@@ -81,7 +81,7 @@ export function SyncProgress({ progress, games }: SyncProgressProps) {
           />
         </div>
         <p className="mt-2 text-ink-400 text-sm">
-          Analyzing game {progress.current} of {progress.total}...
+          Game {progress.current} of {progress.total}
         </p>
       </div>
     </div>

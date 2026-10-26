@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'nodejs';
-export const alt = 'MyBacklog - Stop scrolling. Start playing.';
+export const alt = 'MyBacklog: Play the games you already own';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -56,7 +56,7 @@ export default function OgImage() {
           display: 'flex',
         }}
       >
-        Stop scrolling. Start playing.
+        Play the games you already own
       </div>
 
       {/* Feature pills */}
@@ -66,7 +66,7 @@ export default function OgImage() {
           gap: '16px',
         }}
       >
-        {['Pick your next game', 'Track your backlog', 'Finish what you own'].map((text) => (
+        {['Pick your next game', 'Track your backlog', 'Log what you finish'].map((text) => (
           <div
             key={text}
             style={{

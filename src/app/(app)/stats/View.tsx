@@ -130,7 +130,7 @@ function TopTags({ stats }: { stats: Stats }) {
       <Panel>
         <SectionTitle>Top tags in your library</SectionTitle>
         <p className="text-sm text-ink-500">
-          No tag data yet. Tags fill in on the next metadata sync.
+          No tags yet. They&apos;re added the next time your library syncs.
         </p>
       </Panel>
     );
@@ -294,8 +294,8 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
     <Panel>
       <SectionTitle>Played a lot, still in your backlog</SectionTitle>
       <p className="-mt-2 mb-4 text-sm text-ink-400 max-w-md">
-        Finished these, or play them rather than finish them? Updating them keeps your backlog count
-        and pace honest.
+        If you&apos;ve finished these, or they&apos;re games you play rather than finish, update
+        them so your backlog count and pace stay accurate.
       </p>
       <ul className="space-y-3">
         {stats.playedALot.map((game) => {
@@ -406,7 +406,7 @@ export default function StatsView() {
     >
       <PageHeader
         title="Stats"
-        description={<>Your library at a glance, not counting hidden and won&apos;t play games.</>}
+        description={<>Your whole library, not counting hidden and Won&apos;t Play games.</>}
       />
 
       {loading ? (

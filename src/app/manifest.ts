@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'MyBacklog',
     short_name: 'MyBacklog',
     description:
-      'Stop buying new games and start finishing the ones you own. Track your Steam backlog and pick what to play next.',
+      'Track your Steam backlog, pick what to play next from the games you own, and log the ones you finish.',
     start_url: '/',
     display: 'standalone',
     background_color: '#0f0d0b',

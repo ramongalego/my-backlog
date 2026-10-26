@@ -5,7 +5,7 @@ import { fetchAllRows } from '@/lib/supabase/paginate';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
 import { getOpenAIApiKey } from '@/lib/env.server';
-import { buildSuggestionPrompt, parseAIResponse } from '@/lib/suggest/prompt';
+import { buildSuggestionPrompt, parseAIResponse, REASONING_STYLE } from '@/lib/suggest/prompt';
 import { pickShortlist, scoreCandidates, type HistoryGame } from '@/lib/suggest/shortlist';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
@@ -193,8 +193,11 @@ export async function POST(request: NextRequest) {
     try {
       const completion = await openai.chat.completions.create({
         model: MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
+        messages: [
+          { role: 'system', content: REASONING_STYLE },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5,
         max_tokens: 300,
         response_format: responseFormat(shortlistIds),
       });
