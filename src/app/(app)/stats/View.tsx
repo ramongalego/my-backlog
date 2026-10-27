@@ -446,7 +446,7 @@ export default function StatsView() {
     >
       <PageHeader
         title="Stats"
-        description={<>Your whole library, not counting hidden and Won&apos;t Play games</>}
+        description={<>Your whole library, except games you&apos;ve hidden or won&apos;t play</>}
       />
 
       {loading ? (
@@ -459,7 +459,7 @@ export default function StatsView() {
         <div className="space-y-6">
           <Summary
             items={[
-              { label: 'Games', value: stats.total, sub: 'not counting hidden' },
+              { label: 'Games', value: stats.total, sub: "except hidden or won't play" },
               {
                 label: 'Finished',
                 value: stats.finished,
