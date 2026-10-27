@@ -159,7 +159,9 @@ export function Modal({
           {onClose && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 text-ink-400 hover:text-ink-100 hover:bg-ink-800 rounded-lg transition-colors z-10"
+              // A dark disc behind the X, so it reads over a game's art (most
+              // dialogs open with it across the top) as well as on the panel.
+              className="absolute top-3 right-3 p-2 rounded-full bg-ink-950/60 text-ink-200 hover:bg-ink-950/85 hover:text-ink-50 transition-colors z-10 cursor-pointer"
               aria-label="Close"
             >
               <X className="w-5 h-5" aria-hidden="true" />

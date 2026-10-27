@@ -202,7 +202,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `EmptyState`: icon, title and a sentence that teaches what will appear here and how.
 - `SteamIcon`: Steam's logo, on every Connect Steam button (the one brand mark in the app; lucide has none). Steam is optional: Connect Steam is always the secondary action next to Add a game, never the primary.
 - `Input`, `fieldClass()`, `FIELD_LABEL`: every text field, textarea and search box. Focus brightens the border; it doesn't turn orange.
-- `Modal`, `Dropdown`. `Modal`'s `bare` mode is the quick search (Add game): no panel, title or close button of its own; the content draws a borderless search field as the panel's top edge (`h-14`, accent caret, an `Esc` chip, "Cancel" on phones), with results below a hairline and a short hint under the panel.
+- `Modal`, `Dropdown`. `Modal`'s close button is an X on a dark translucent disc (`bg-ink-950/60`), so it reads over the game art most dialogs open with as well as on the panel. `Modal`'s `bare` mode is the quick search (Add game): no panel, title or close button of its own; the content draws a borderless search field as the panel's top edge (`h-14`, accent caret, an `Esc` chip, "Cancel" on phones), with results below a hairline and a short hint under the panel.
 - `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover or tap). It renders at page level, so clipping containers can't cut it off. Triggers aren't tab stops (the text reaches screen readers via `aria-describedby`), so keep anything essential visible. Never use the native `title` attribute for this.
 
 **Games:** `src/components/games/`
