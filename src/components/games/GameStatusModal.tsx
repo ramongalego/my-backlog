@@ -16,6 +16,8 @@ import { GameMetaRow } from './GameCardInfo';
 import { GameArt } from './GameArt';
 import { ConsolePicker } from './ConsolePicker';
 import { ConsoleBadge } from './ConsoleBadge';
+import { ReleaseBadge } from './ReleaseBadge';
+import { upcomingRelease } from '@/lib/games/release-date';
 
 type InternalStatus = GameStatus | 'queue';
 
@@ -62,6 +64,8 @@ interface GameDetailModalProps {
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
+  /** An unreleased game gets "Out Nov 5" in the header, beside its console. */
+  releaseDate?: string | null;
   /** For games added by hand: their console, hours played you enter, and removal. */
   manual?: {
     platform: string | null;
@@ -131,6 +135,7 @@ export function GameDetailModal({
   playtimeMinutes,
   lastPlayedAt,
   deckCompat,
+  releaseDate,
   manual,
   adding,
 }: GameDetailModalProps) {
@@ -262,9 +267,10 @@ export function GameDetailModal({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
         {/* The title runs along the bottom, so the console sits top-left here. */}
-        {manual?.platform && (
-          <div className="absolute top-3 left-4 sm:left-6">
-            <ConsoleBadge platform={manual.platform} />
+        {(manual?.platform || upcomingRelease(releaseDate)) && (
+          <div className="absolute top-3 left-4 sm:left-6 right-12 flex gap-1">
+            {manual?.platform && <ConsoleBadge platform={manual.platform} />}
+            <ReleaseBadge releaseDate={releaseDate} />
           </div>
         )}
         <h2 className="absolute bottom-2 left-4 sm:left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">

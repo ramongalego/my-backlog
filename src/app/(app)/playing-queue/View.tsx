@@ -98,6 +98,7 @@ function NowPlayingRow({
         sizes="(max-width: 640px) 100vw, 288px"
         className="w-full"
         platform={consoleOf(game)}
+        releaseDate={game.release_date}
       />
 
       <div className="min-w-0">
@@ -254,6 +255,7 @@ function QueueItemRow({
           className="w-full"
           interactive
           platform={consoleOf(item.game)}
+          releaseDate={item.game.release_date}
         >
           <CoverEditHint />
           {/* On phones the position rides on the art. */}
@@ -413,6 +415,7 @@ export default function PlayingQueueView() {
               playtimeMinutes={detailItem.game.playtime_forever}
               lastPlayedAt={detailItem.game.last_played_at}
               deckCompat={detailItem.game.deck_compat}
+              releaseDate={detailItem.game.release_date}
               disablePlaying={!!currentlyPlaying}
               manual={manualDialogProps({ ...detailItem.game, id: detailItem.game_id })}
             />

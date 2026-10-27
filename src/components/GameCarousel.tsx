@@ -28,6 +28,7 @@ interface Game {
   critic_count?: number | null;
   deck_compat?: number | null;
   last_played_at?: string | null;
+  release_date?: string | null;
 }
 
 interface GameCarouselProps {
@@ -256,6 +257,7 @@ export function GameCarousel({
                       priority={priority && indexInList >= 0 && indexInList < 4 ? true : undefined}
                       interactive
                       platform={consoleOf(game)}
+                      releaseDate={game.release_date}
                     >
                       <CoverEditHint />
                     </CoverArt>

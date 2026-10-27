@@ -20,6 +20,7 @@ interface Game {
   main_story_hours: number | null;
   playtime_forever: number;
   last_played_at?: string | null;
+  release_date?: string | null;
 }
 
 interface CurrentlyPlayingProps {
@@ -141,6 +142,7 @@ export function CurrentlyPlaying({
         priority
         sizes="(max-width: 768px) 100vw, 512px"
         platform={consoleOf(game)}
+        releaseDate={game.release_date}
       />
 
       <div className="min-w-0">

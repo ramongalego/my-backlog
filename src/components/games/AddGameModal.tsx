@@ -176,6 +176,8 @@ export function AddGameModal({
         // If the details fail, the box art is all there is.
         headerImage={details ? details.header_image : picked.cover}
         headerLoading={detailsPending}
+        // Adding a game that isn't out yet says so, as its card will.
+        releaseDate={details?.release_date}
         initialStatus={steamStatus ?? 'backlog'}
         initialDate={steamGame?.date?.slice(0, 10) ?? null}
         initialNotes={steamGame?.notes}

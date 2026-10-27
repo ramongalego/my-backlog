@@ -267,6 +267,7 @@ export default function HomeView() {
           playtimeMinutes={carouselModal.game.playtime_forever}
           lastPlayedAt={carouselModal.game.last_played_at}
           deckCompat={carouselModal.game.deck_compat}
+          releaseDate={carouselModal.game.release_date}
           initialStatus="backlog"
           manual={manualGames.dialogProps(carouselModal.game)}
           disablePlaying={!!currentlyPlaying}

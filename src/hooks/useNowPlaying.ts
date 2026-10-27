@@ -43,6 +43,7 @@ export type QueueableGame = Pick<
       | 'critic_count'
       | 'deck_compat'
       | 'last_played_at'
+      | 'release_date'
       | 'source'
       | 'platform'
     >
@@ -65,6 +66,7 @@ function toQueueItem(game: QueueableGame, position: number): QueueItem {
       critic_count: game.critic_count ?? null,
       deck_compat: game.deck_compat ?? null,
       last_played_at: game.last_played_at ?? null,
+      release_date: game.release_date ?? null,
       // The console tag and Steam details depend on these.
       source: game.source,
       platform: game.platform,
@@ -87,6 +89,7 @@ function toPlayingGame(item: QueueItem): GameWithImage {
     critic_count: item.game.critic_count ?? null,
     deck_compat: item.game.deck_compat ?? null,
     last_played_at: item.game.last_played_at ?? null,
+    release_date: item.game.release_date ?? null,
     source: item.game.source,
     platform: item.game.platform,
   };

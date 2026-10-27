@@ -102,6 +102,7 @@ interface GamesPageStatusModal {
   playtimeMinutes: number;
   lastPlayedAt: string | null;
   deckCompat?: number | null;
+  releaseDate?: string | null;
   /** The detail dialog's `manual` prop (hours, removal, back to Steam), for games on a console. */
   manual: ReturnType<ReturnType<typeof useManualGameActions>['dialogProps']>;
 }
@@ -223,6 +224,7 @@ export function useGamesPage(): UseGamesPageReturn {
       playtimeMinutes: game.playtime_forever,
       lastPlayedAt: game.last_played_at,
       deckCompat: game.deck_compat,
+      releaseDate: game.release_date,
       manual: manualGames.dialogProps(game),
     });
   };

@@ -91,6 +91,7 @@ export default function GamesView() {
             playtimeMinutes={statusModal.playtimeMinutes}
             lastPlayedAt={statusModal.lastPlayedAt}
             deckCompat={statusModal.deckCompat}
+            releaseDate={statusModal.releaseDate}
             disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
             onAddToQueue={
               hasPlayingGame && statusModal.initialStatus === 'backlog'

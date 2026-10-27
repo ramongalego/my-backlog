@@ -31,6 +31,7 @@ export interface GameWithImage {
   critic_count?: number | null;
   deck_compat?: number | null;
   last_played_at?: string | null;
+  release_date?: string | null;
 }
 
 export interface SyncProgress {
@@ -57,5 +58,6 @@ export interface QueueItem {
     critic_count?: number | null;
     deck_compat?: number | null;
     last_played_at?: string | null;
+    release_date?: string | null;
   };
 }

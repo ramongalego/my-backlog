@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { GameArt } from './GameArt';
 import { Gamepad2, Pencil } from 'lucide-react';
 import { ConsoleBadge } from './ConsoleBadge';
+import { ReleaseBadge } from './ReleaseBadge';
+import { upcomingRelease } from '@/lib/games/release-date';
 
 /** Steam header capsules are 460×215; every game image in the app uses this ratio. */
 export const COVER_ASPECT = 'aspect-[460/215]';
@@ -16,7 +18,8 @@ const RADIUS = {
  * A game's header image at the shared ratio, with a hairline inner edge so
  * dark art doesn't melt into the page. Size it with a width class; height
  * follows from the ratio. `children` render on top (badges, hover overlays);
- * `platform`, for games added by hand, puts the console in the bottom-left.
+ * `platform`, for games added by hand, puts the console in the bottom-left, and
+ * `releaseDate` an "Out Nov 5" tag beside it for a game that isn't out yet.
  * Inside a `group`, set `interactive` to brighten the edge on hover.
  */
 export function CoverArt({
@@ -29,6 +32,7 @@ export function CoverArt({
   interactive = false,
   className = '',
   platform,
+  releaseDate,
   children,
 }: {
   src: string | null | undefined;
@@ -41,6 +45,8 @@ export function CoverArt({
   className?: string;
   /** The console a game added by hand is on (consoleOf). */
   platform?: string | null;
+  /** The game's release date: an unreleased game gets "Out Nov 5" beside the console. */
+  releaseDate?: string | null;
   children?: ReactNode;
 }) {
   return (
@@ -57,9 +63,10 @@ export function CoverArt({
         </div>
       )}
       {children}
-      {platform && (
-        <div className="absolute bottom-2 left-2 right-2 flex">
-          <ConsoleBadge platform={platform} />
+      {(platform || upcomingRelease(releaseDate)) && (
+        <div className="absolute bottom-2 left-2 right-2 flex gap-1">
+          {platform && <ConsoleBadge platform={platform} />}
+          <ReleaseBadge releaseDate={releaseDate} />
         </div>
       )}
     </div>

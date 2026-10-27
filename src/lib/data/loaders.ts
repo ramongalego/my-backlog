@@ -161,7 +161,7 @@ export async function loadDiaryEntries(
 // ─── Now playing + queue ────────────────────────────────────────────────────
 
 export const PLAYING_GAME_SELECT =
-  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at';
+  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at, release_date';
 
 export async function loadCurrentlyPlaying(
   supabase: SupabaseClient,
@@ -179,7 +179,7 @@ export async function loadCurrentlyPlaying(
 }
 
 const QUEUE_GAME_COLUMNS =
-  'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at';
+  'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at, release_date';
 
 export async function loadQueue(supabase: SupabaseClient, userId: string): Promise<QueueItem[]> {
   // The queue references its games, so one query returns each row with its game.
@@ -229,7 +229,7 @@ export async function loadLibraryMeta(
 export type { CarouselPools };
 
 const CAROUSEL_SELECT =
-  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, critic_score, critic_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
+  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, critic_score, critic_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at, release_date';
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
 /**

@@ -186,4 +186,25 @@ describe('GameCard', () => {
     expect(screen.getByText('85%')).toBeInTheDocument();
     expect(screen.getByText('Deck')).toBeInTheDocument();
   });
+
+  it("tags a game that isn't out yet, beside its console, and says so in its name", () => {
+    render(
+      <GameCard
+        game={createGame({ source: 'manual', platform: 'Switch 2', release_date: 'Nov 5, 2099' })}
+        onOpenDetail={mockOnOpenDetail}
+      />,
+    );
+    expect(screen.getByText('Out Nov 5, 2099')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /, Out Nov 5, 2099$/ })).toBeInTheDocument();
+  });
+
+  it('has no release tag once the game is out', () => {
+    render(
+      <GameCard
+        game={createGame({ release_date: 'Nov 5, 2020' })}
+        onOpenDetail={mockOnOpenDetail}
+      />,
+    );
+    expect(screen.queryByText(/^Out /)).not.toBeInTheDocument();
+  });
 });

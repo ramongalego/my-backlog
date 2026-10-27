@@ -7,6 +7,7 @@ import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { StatusBadge } from './StatusBadge';
 import { consoleOf } from '@/lib/games/manual';
+import { upcomingRelease } from '@/lib/games/release-date';
 
 interface GameCardProps {
   game: GameItem;
@@ -28,7 +29,8 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
       : null;
   // The badges read in on-screen order as one phrase ("Finished 9/10").
   const badges = [badgeText, showRating ? `${game.rating}/10` : null].filter(Boolean).join(' ');
-  const label = `Open details for ${game.name}${badges ? `, ${badges}` : ''}`;
+  const release = upcomingRelease(game.release_date)?.label;
+  const label = [`Open details for ${game.name}`, badges, release].filter(Boolean).join(', ');
 
   return (
     // content-visibility lets the browser skip layout/paint for off-screen
@@ -47,6 +49,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
           interactive
           platform={consoleOf(game)}
+          releaseDate={game.release_date}
         >
           <CoverEditHint />
           <div className="absolute top-2 right-2">
