@@ -147,7 +147,7 @@ export function UserMenu({
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900 p-2 shadow-2xl"
+          className="absolute right-0 top-full mt-2 w-56 origin-top-right rounded-xl border border-ink-800 bg-ink-900 p-2 shadow-2xl animate-menu-in motion-reduce:animate-overlay-in"
           role="menu"
           aria-label="Account"
         >
@@ -155,7 +155,11 @@ export function UserMenu({
             <p className="text-sm font-medium text-ink-100 truncate">
               {steamUsername ?? user.email}
             </p>
-            {gameCount != null && <p className="text-xs text-ink-500 mt-0.5">{gameCount} games</p>}
+            {gameCount != null && (
+              <p className="text-xs text-ink-500 mt-0.5">
+                {gameCount} {gameCount === 1 ? 'game' : 'games'}
+              </p>
+            )}
           </div>
 
           {onRefresh && (

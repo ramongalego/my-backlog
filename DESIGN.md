@@ -202,7 +202,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `EmptyState`: icon, title and a sentence that teaches what will appear here and how.
 - `SteamIcon`: Steam's logo, on every Connect Steam button (the one brand mark in the app; lucide has none). Steam is optional: Connect Steam is always the secondary action next to Add a game, never the primary.
 - `Input`, `fieldClass()`, `FIELD_LABEL`: every text field, textarea and search box. Focus brightens the border; it doesn't turn orange.
-- `Modal`, `Dropdown`.
+- `Modal`, `Dropdown`. `Modal`'s `bare` mode is the quick search (Add game): no panel, title or close button of its own; the content draws a borderless search field as the panel's top edge (`h-14`, accent caret, an `Esc` chip, "Cancel" on phones), with results below a hairline and a short hint under the panel.
 - `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover or tap). It renders at page level, so clipping containers can't cut it off. Triggers aren't tab stops (the text reaches screen readers via `aria-describedby`), so keep anything essential visible. Never use the native `title` attribute for this.
 
 **Games:** `src/components/games/`
@@ -222,7 +222,15 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 
 **Interaction states:** every control needs hover, keyboard focus (the global `:focus-visible` orange outline covers buttons and links; it lives in the base layer, so a component can replace it, as text fields do with their border), disabled and loading states. A disabled primary button goes neutral grey rather than faded orange.
 
-**Motion:** 150–250ms colour and opacity transitions. Motion shows a change of state; it is never ambient decoration. Respect `prefers-reduced-motion` (handled globally).
+**Motion:** 150–250ms colour and opacity transitions. Motion shows a change of state; it is never ambient decoration. Tokens live in `globals.css`'s `@theme`, all easing out on `cubic-bezier(0.16, 1, 0.3, 1)`:
+- **Pick My Game**, the product's moment: while the pick is made, art from the backlog Home already has flicks past (130ms each, up to 12 games) in the frame the result's art will fill; the picked game's art then comes into focus there (`animate-reveal`, 600ms: from blurred and slightly large) and its details settle in under it. A reroll replays the reveal. No art to show: the spinner.
+- **Quick search** (Add game): the page dims (`animate-overlay-in`) and the search drops in from just above where it settles (`animate-drop-in`, 320ms), leaves faster (`animate-drop-out`, 140ms), and results settle in one after another (`animate-result-in`, 25ms apart, capped at 8).
+- **Dialogs** (a game's details, opened all the time): the same dimming and a quieter 220ms rise into place (`animate-dialog-in`). Closing a dialog opened with a click returns focus to its button without the keyboard focus ring.
+- **Menus** (account menu, `Dropdown`): grow out of the button that opened them (`animate-menu-in`, 160ms, `origin-top-right` or `-left` to match).
+- **Stats charts**: bars grow from their baseline to their value (`animate-grow-x` / `-y`, 700ms, 35ms apart) when their chart scrolls into view (`useInView`, `growBar`), paused at nothing until then; the library breakdown grows as one bar. Switching Games by year's view regrows it.
+- **Progress**: a new game fills its `BacklogProgress` segment from the left (a 500ms `scale-x` transition), and new hours on the game you're playing (logged, or from Steam) ease its bar to the new length on Home and the Queue (a 700ms `width` transition).
+
+Entrances are filled `backwards`, so no transform stays on an element afterwards (it would offset fixed tooltips inside). Respect `prefers-reduced-motion` where the motion happens: movement becomes a plain fade or nothing (`motion-reduce:`), exits are skipped, and the picker shows its spinner.
 
 ## Writing
 

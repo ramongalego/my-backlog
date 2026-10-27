@@ -133,7 +133,8 @@ function NowPlayingRow({
                 </div>
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
                   <div
-                    className="h-full bg-accent-500 rounded-full"
+                    // New hours (logged, or from Steam) ease the bar to its new length.
+                    className="h-full bg-accent-500 rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
                     style={{ width: `${(playedHours / mainStoryHours) * 100}%` }}
                   />
                 </div>

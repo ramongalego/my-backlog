@@ -1,12 +1,40 @@
 'use client';
 
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
+import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/query-keys';
+import type { CarouselPools } from '@/lib/data/loaders';
 import { useSuggestion } from '@/hooks/useSuggestion';
 import { SuggestionWizard } from './SuggestionWizard';
 import { SuggestionResult } from './SuggestionResult';
 import { SuggestionLoading } from './SuggestionLoading';
 import { SuggestionError } from './SuggestionError';
 import type { SuggestionResult as Suggestion } from '@/lib/suggest/types';
+
+// How many games' art flicks past while a game is picked.
+const SHUFFLE_COVERS = 12;
+
+/** Art from the backlog games Home already has, in a random order. */
+function backlogCovers(pools: CarouselPools | undefined): string[] {
+  if (!pools) return [];
+  const games = [
+    ...pools.pickUpPool,
+    ...(pools.moreLike?.games ?? []),
+    ...pools.shortGamesPool,
+    ...pools.weekendGamesPool,
+    ...pools.highlyRatedGamesPool,
+    ...pools.hiddenGemsPool,
+    ...pools.recentlyAddedPool,
+  ];
+  const covers = [...new Set(games.flatMap((g) => (g.header_image ? [g.header_image] : [])))];
+  for (let i = covers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [covers[i], covers[j]] = [covers[j], covers[i]];
+  }
+  return covers.slice(0, SHUFFLE_COVERS);
+}
 
 interface SuggestionModalProps {
   isOpen: boolean;
@@ -37,6 +65,16 @@ export function SuggestionModal({
     reset,
     isLoading,
   } = useSuggestion();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  // Picked once per opening, so the shuffle doesn't change mid-flick.
+  const [covers] = useState(() =>
+    backlogCovers(
+      user
+        ? queryClient.getQueryData<CarouselPools>(queryKeys.carousels.byUser(user.id))
+        : undefined,
+    ),
+  );
 
   const handlePick = () => {
     if (suggestion) {
@@ -62,7 +100,7 @@ export function SuggestionModal({
         />
       )}
 
-      {step === 'loading' && <SuggestionLoading />}
+      {step === 'loading' && <SuggestionLoading covers={covers} />}
 
       {step === 'result' && error && (
         <SuggestionError error={error} onRetry={retry} onStartOver={reset} />
@@ -70,6 +108,8 @@ export function SuggestionModal({
 
       {step === 'result' && suggestion && !error && (
         <SuggestionResult
+          // A reroll's game comes into focus like the first.
+          key={suggestion.game.id}
           suggestion={suggestion}
           onPick={handlePick}
           onReroll={reroll}

@@ -2,7 +2,8 @@ import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 
 /**
  * How close a new backlog is to Pick My Game: one segment per game it needs,
- * filled in ember like the library import's bar in the same band.
+ * filled in ember like the library import's bar in the same band. Adding a
+ * game fills the next segment from the left, so the step forward shows.
  */
 export function BacklogProgress({
   count,
@@ -25,10 +26,11 @@ export function BacklogProgress({
         aria-label="Games to pick from"
       >
         {Array.from({ length: MIN_GAMES_TO_PICK }, (_, i) => (
-          <span
-            key={i}
-            className={`h-1.5 flex-1 rounded-full transition-colors duration-200 ${i < filled ? 'bg-accent-500' : 'bg-ink-800'}`}
-          />
+          <span key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-800">
+            <span
+              className={`block h-full origin-left rounded-full bg-accent-500 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${i < filled ? 'scale-x-100' : 'scale-x-0'}`}
+            />
+          </span>
         ))}
       </div>
       <p className="mt-2 text-sm text-ink-400">

@@ -93,7 +93,8 @@ function Progress({
       </div>
       <div className="h-1.5 bg-ink-800 rounded-full overflow-hidden">
         <div
-          className="h-full bg-accent-500 rounded-full"
+          // New hours (logged, or from Steam) ease the bar to its new length.
+          className="h-full bg-accent-500 rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
           style={{ width: `${Math.min((playedHours / mainStoryHours) * 100, 100)}%` }}
           role="progressbar"
           aria-label="Progress toward the time to beat"

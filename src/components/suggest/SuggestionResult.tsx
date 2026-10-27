@@ -33,7 +33,10 @@ export function SuggestionResult({
       {/* Hero — bleeds to modal edges, same pattern as GameSummaryModal */}
       <div className="relative -mx-6 -mt-6 h-44 overflow-hidden rounded-t-2xl">
         {game.header_image ? (
-          <GameArt src={game.header_image} alt="" sizes="(max-width: 640px) 100vw, 544px" />
+          // Comes into focus where the backlog was flicking past.
+          <div className="absolute inset-0 animate-reveal motion-reduce:animate-overlay-in">
+            <GameArt src={game.header_image} alt="" sizes="(max-width: 640px) 100vw, 544px" />
+          </div>
         ) : (
           <div className="w-full h-full bg-ink-800 flex items-center justify-center">
             <Gamepad2 className="w-10 h-10 text-ink-500" />
@@ -51,7 +54,7 @@ export function SuggestionResult({
         </div>
       </div>
 
-      <div className="space-y-4 mt-5">
+      <div className="space-y-4 mt-5 animate-result-in [animation-delay:150ms] motion-reduce:animate-none">
         {/* AI badge */}
         <div className="flex items-center gap-2 text-sm">
           <Sparkles className="w-4 h-4 text-accent-400 shrink-0" />

@@ -127,7 +127,7 @@ export function Dropdown<T extends string>({
           onBlur={(e) => {
             if (!ref.current?.contains(e.relatedTarget as Node)) setOpen(false);
           }}
-          className={`absolute top-full mt-1 bg-ink-900 border border-ink-700 rounded-lg shadow-lg z-10 w-max min-w-40 py-1 focus:outline-none ${ALIGN_CLASS[align]}`}
+          className={`absolute top-full mt-1 bg-ink-900 border border-ink-700 rounded-lg shadow-lg z-10 w-max min-w-40 py-1 focus:outline-none animate-menu-in motion-reduce:animate-overlay-in ${ALIGN_CLASS[align]} ${align === 'left' ? 'origin-top-left' : align === 'right' ? 'origin-top-right' : 'origin-top-left sm:origin-top-right'}`}
         >
           {options.map((option, i) => {
             const isSelected = value === option.value;

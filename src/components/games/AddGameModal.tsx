@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Gamepad2, Loader2, Search, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { fieldClass } from '@/components/ui/Input';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { loadCurrentlyPlaying, loadManualGames } from '@/lib/data/loaders';
@@ -30,6 +29,8 @@ const SEARCH_DELAY_MS = 300;
 // How long a result stays highlighted before its details are fetched, so
 // arrowing or moving the mouse past a result doesn't fetch it.
 const PREFETCH_DELAY_MS = 200;
+// The search's exit animation (animate-drop-out).
+const CLOSE_MS = 140;
 
 const detailsQuery = (igdbId: number) => ({
   queryKey: queryKeys.igdb.game(igdbId),
@@ -75,6 +76,14 @@ export function AddGameModal({
   const [searchError, setSearchError] = useState<{ text: string; message: string } | null>(null);
   const [active, setActive] = useState(0);
   const [picked, setPicked] = useState<GameSearchResult | null>(null);
+  // Closing the search plays its exit first; picking a game doesn't.
+  const [closing, setClosing] = useState(false);
+  const close = () => {
+    if (closing) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return onClose();
+    setClosing(true);
+    setTimeout(onClose, CLOSE_MS);
+  };
   const queryClient = useQueryClient();
   const { profile } = useAuth();
 
@@ -212,53 +221,55 @@ export function AddGameModal({
   }
 
   const listId = 'add-game-results';
+  const showEmpty = showResults && !errorMessage && results.length === 0;
+  const showList = showResults && results.length > 0;
   return (
-    <Modal isOpen onClose={onClose} title="Add a game" size="xl" align="top">
-      <div className="space-y-3">
-        <p className="text-sm text-ink-400">
-          {profile?.steam_id
-            ? 'For games outside your Steam library, on any console or store'
-            : 'Any game you own, on any console or store'}
-        </p>
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500"
-            aria-hidden="true"
-          />
+    <Modal isOpen onClose={close} ariaLabel="Add a game" size="xl" bare closing={closing}>
+      <div className="overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-900 shadow-2xl shadow-black/50">
+        {/* The search field is the panel's top edge, not a box inside it. */}
+        <div className="flex h-14 items-center gap-3 px-4">
+          {searching && text.length >= 2 ? (
+            <Loader2 className="w-5 h-5 shrink-0 text-ink-400 animate-spin" aria-hidden="true" />
+          ) : (
+            <Search className="w-5 h-5 shrink-0 text-ink-400" aria-hidden="true" />
+          )}
           <input
             type="text"
             inputMode="search"
             enterKeyHint="search"
             role="combobox"
-            aria-expanded={showResults && results.length > 0}
+            aria-expanded={showList}
             aria-controls={listId}
             aria-autocomplete="list"
-            aria-activedescendant={
-              showResults && results.length > 0 ? `${listId}-${active}` : undefined
-            }
+            aria-activedescendant={showList ? `${listId}-${active}` : undefined}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search for a game"
+            placeholder="Search for a game to add"
             aria-label="Search for a game"
             data-autofocus
-            className={`${fieldClass()} h-10 pl-9 pr-16 text-sm`}
+            className="h-full min-w-0 flex-1 bg-transparent text-base text-ink-50 caret-accent-400 placeholder:text-ink-500 focus:outline-none"
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searching && text.length >= 2 && (
-              <Loader2 className="w-4 h-4 text-ink-500 animate-spin" aria-hidden="true" />
-            )}
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                aria-label="Clear search"
-                className="cursor-pointer p-1 rounded text-ink-500 hover:text-ink-100"
-              >
-                <X className="w-4 h-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+              className="cursor-pointer rounded-md p-1 text-ink-500 transition-colors hover:text-ink-100"
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {/* Escape closes it; on a phone, there's no key to press. */}
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close"
+            className="cursor-pointer rounded-md text-sm text-ink-400 transition-colors hover:text-ink-100 sm:border sm:border-ink-700 sm:px-1.5 sm:py-0.5 sm:text-xs sm:font-medium"
+          >
+            <span className="sm:hidden">Cancel</span>
+            <kbd className="hidden font-sans sm:inline">Esc</kbd>
+          </button>
         </div>
 
         {/* Result counts for screen readers; the list itself is the visual cue. */}
@@ -271,23 +282,23 @@ export function AddGameModal({
         </p>
 
         {errorMessage && (
-          <p className="text-sm text-rose-400" role="alert">
+          <p className="border-t border-ink-800 px-4 py-3 text-sm text-rose-400" role="alert">
             {errorMessage}
           </p>
         )}
 
-        {showResults && !errorMessage && results.length === 0 && (
-          <p className="text-sm text-ink-400 py-6 text-center">
+        {showEmpty && (
+          <p className="border-t border-ink-800 px-4 py-8 text-center text-sm text-ink-400 animate-result-in motion-reduce:animate-none">
             No games found for “{searchedFor}”. Try the name without subtitles or edition.
           </p>
         )}
 
-        {showResults && results.length > 0 && (
+        {showList && (
           <ul
             id={listId}
             role="listbox"
             aria-label="Search results"
-            className="max-h-[22rem] overflow-y-auto -mx-2 px-2"
+            className="max-h-[min(26rem,60vh)] overflow-y-auto border-t border-ink-800 p-2"
           >
             {results.map((game, i) => {
               const owned = game.libraryGame;
@@ -299,7 +310,9 @@ export function AddGameModal({
                   aria-selected={i === active}
                   onClick={() => setPicked(game)}
                   onMouseMove={() => setActive(i)}
-                  className={`flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors ${
+                  // Each new result settles in just after the one above it.
+                  style={{ animationDelay: `${Math.min(i, 7) * 25}ms` }}
+                  className={`flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors animate-result-in motion-reduce:animate-none ${
                     i === active ? 'bg-ink-800' : ''
                   }`}
                 >
@@ -331,6 +344,11 @@ export function AddGameModal({
           </ul>
         )}
       </div>
+      <p className="mt-3 px-1 text-xs text-ink-300">
+        {profile?.steam_id
+          ? 'For games outside your Steam library, on any console or store'
+          : 'Any game you own, on any console or store'}
+      </p>
     </Modal>
   );
 }

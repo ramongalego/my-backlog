@@ -9,6 +9,7 @@ import { Playtime } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
 import { useAuth } from '@/hooks/useAuth';
+import { growBar, useInView } from '@/hooks/useInView';
 import { useAddToQueue } from '@/hooks/useNowPlaying';
 import { updateGameStatus } from '@/lib/games/status';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
@@ -99,11 +100,17 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
       color: STATUS_STYLE.backlog.fill,
     },
   ].filter((s) => s.count > 0);
+  const { ref, inView } = useInView<HTMLDivElement>();
+  const grow = growBar('x', inView, 0);
 
   return (
     <Panel>
       <SectionTitle>Library breakdown</SectionTitle>
-      <div className="flex h-2.5 rounded-full overflow-hidden gap-px mb-5">
+      <div
+        ref={ref}
+        className={`flex h-2.5 rounded-full overflow-hidden gap-px mb-5 ${grow.className}`}
+        style={grow.style}
+      >
         {segments.map((s) => (
           <div
             key={s.label}
@@ -143,23 +150,28 @@ function TopTags({ stats }: { stats: Stats }) {
   return (
     <Panel>
       <SectionTitle>Top tags in your library</SectionTitle>
-      <div className="space-y-3">
-        {stats.topTags.map(({ tag, count }) => (
-          <div key={tag} className="flex items-center gap-3">
-            <span className="text-sm text-ink-300 w-20 sm:w-32 truncate shrink-0">{tag}</span>
-            <div className="flex-1 h-1.5 bg-ink-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-ink-400 rounded-full"
-                style={{ width: `${(count / max) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs text-ink-400 w-6 text-right shrink-0 tabular-nums">
-              {count}
-            </span>
-          </div>
-        ))}
-      </div>
+      <TopTagBars tags={stats.topTags} max={max} />
     </Panel>
+  );
+}
+
+function TopTagBars({ tags, max }: { tags: Stats['topTags']; max: number }) {
+  const { ref, inView } = useInView<HTMLDivElement>();
+  return (
+    <div ref={ref} className="space-y-3">
+      {tags.map(({ tag, count }, i) => (
+        <div key={tag} className="flex items-center gap-3">
+          <span className="text-sm text-ink-300 w-20 sm:w-32 truncate shrink-0">{tag}</span>
+          <div className="flex-1 h-1.5 bg-ink-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full bg-ink-400 rounded-full ${growBar('x', inView, i).className}`}
+              style={{ width: `${(count / max) * 100}%`, ...growBar('x', inView, i).style }}
+            />
+          </div>
+          <span className="text-xs text-ink-400 w-6 text-right shrink-0 tabular-nums">{count}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -170,6 +182,7 @@ function YearChart({ stats }: { stats: Stats }) {
 
   const data = view === 'finished' ? stats.finishedByYear : stats.gamesByReleaseYear;
   const max = data.length > 0 ? Math.max(...data.map((y) => y.count)) : 1;
+  const { ref, inView } = useInView<HTMLDivElement>();
 
   const empty =
     view === 'finished'
@@ -195,18 +208,21 @@ function YearChart({ stats }: { stats: Stats }) {
       {data.length === 0 ? (
         <p className="text-sm text-ink-500">{empty}</p>
       ) : (
-        <div className="flex-1 flex items-end gap-1.5 min-h-[160px]">
+        <div ref={ref} className="flex-1 flex items-end gap-1.5 min-h-[160px]">
           {data.map(({ year, count }, i) => (
             <div key={year} className="self-stretch flex-1 flex flex-col items-center min-w-0">
               <div className="flex-1" />
               <span className="text-xs font-semibold text-ink-300 mb-1 tabular-nums">{count}</span>
               <div
-                className={`w-full rounded-sm transition-colors ${
+                className={`w-full rounded-sm transition-colors ${growBar('y', inView, i).className} ${
                   view === 'finished'
                     ? `${STATUS_STYLE.finished.fill} opacity-80 hover:opacity-100`
                     : 'bg-ink-500 hover:bg-ink-400'
                 }`}
-                style={{ height: `${Math.max((count / max) * 65, 3)}%` }}
+                style={{
+                  height: `${Math.max((count / max) * 65, 3)}%`,
+                  ...growBar('y', inView, i).style,
+                }}
               />
               <span
                 className={`text-xs mt-1 tabular-nums ${data.length <= 14 || i % 2 === 0 ? 'text-ink-400' : 'invisible'}`}
@@ -225,31 +241,38 @@ function RatingHistogram({ stats }: { stats: Stats }) {
   const totalRated = stats.ratingDistribution.reduce((sum, b) => sum + b.count, 0);
   if (totalRated < 3) return null;
 
-  const max = Math.max(...stats.ratingDistribution.map((b) => b.count), 1);
-  const BAR_MAX_HEIGHT = 80;
-
   return (
     <Panel>
       <SectionTitle>Rating distribution</SectionTitle>
-      <div className="flex items-end gap-2">
-        {stats.ratingDistribution.map(({ rating, count }) => (
-          <div key={rating} className="flex-1 flex flex-col items-center gap-1.5">
-            <span
-              className={`text-xs font-semibold tabular-nums ${count > 0 ? 'text-ink-300' : 'text-transparent'}`}
-            >
-              {count}
-            </span>
-            <div
-              className={`w-full rounded-sm transition-colors ${count > 0 ? 'bg-amber-400/80 hover:bg-amber-400' : 'bg-ink-800'}`}
-              style={{
-                height: `${Math.max((count / max) * BAR_MAX_HEIGHT, count > 0 ? 4 : 2)}px`,
-              }}
-            />
-            <span className="text-xs text-ink-400 tabular-nums">{rating}</span>
-          </div>
-        ))}
-      </div>
+      <RatingBars bars={stats.ratingDistribution} />
     </Panel>
+  );
+}
+
+function RatingBars({ bars }: { bars: Stats['ratingDistribution'] }) {
+  const max = Math.max(...bars.map((b) => b.count), 1);
+  const BAR_MAX_HEIGHT = 80;
+  const { ref, inView } = useInView<HTMLDivElement>();
+  return (
+    <div ref={ref} className="flex items-end gap-2">
+      {bars.map(({ rating, count }, i) => (
+        <div key={rating} className="flex-1 flex flex-col items-center gap-1.5">
+          <span
+            className={`text-xs font-semibold tabular-nums ${count > 0 ? 'text-ink-300' : 'text-transparent'}`}
+          >
+            {count}
+          </span>
+          <div
+            className={`w-full rounded-sm transition-colors ${growBar('y', inView, i).className} ${count > 0 ? 'bg-amber-400/80 hover:bg-amber-400' : 'bg-ink-800'}`}
+            style={{
+              height: `${Math.max((count / max) * BAR_MAX_HEIGHT, count > 0 ? 4 : 2)}px`,
+              ...growBar('y', inView, i).style,
+            }}
+          />
+          <span className="text-xs text-ink-400 tabular-nums">{rating}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -260,30 +283,37 @@ function TagCompletion({ stats }: { stats: Stats }) {
     <Panel>
       <SectionTitle>Completion rate by tag</SectionTitle>
       <p className="text-sm text-ink-400 mb-5 -mt-2">Tags with 3+ games in your library</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
-        {stats.tagCompletion.map(({ tag, total, finished, pct }) => (
-          <div key={tag} className="min-w-0">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium text-ink-200 truncate">{tag}</span>
-              <span
-                className={`text-sm font-semibold tabular-nums shrink-0 ${pct >= 50 ? 'text-emerald-400' : 'text-ink-300'}`}
-              >
-                {pct}%
-              </span>
-            </div>
-            <div className="mt-2 h-1 bg-ink-800 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${STATUS_STYLE.finished.fill}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <p className="mt-1.5 text-xs text-ink-500 tabular-nums">
-              {finished} of {total} finished
-            </p>
-          </div>
-        ))}
-      </div>
+      <TagCompletionGrid tags={stats.tagCompletion} />
     </Panel>
+  );
+}
+
+function TagCompletionGrid({ tags }: { tags: Stats['tagCompletion'] }) {
+  const { ref, inView } = useInView<HTMLDivElement>();
+  return (
+    <div ref={ref} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
+      {tags.map(({ tag, total, finished, pct }, i) => (
+        <div key={tag} className="min-w-0">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm font-medium text-ink-200 truncate">{tag}</span>
+            <span
+              className={`text-sm font-semibold tabular-nums shrink-0 ${pct >= 50 ? 'text-emerald-400' : 'text-ink-300'}`}
+            >
+              {pct}%
+            </span>
+          </div>
+          <div className="mt-2 h-1 bg-ink-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${STATUS_STYLE.finished.fill} ${growBar('x', inView, i).className}`}
+              style={{ width: `${pct}%`, ...growBar('x', inView, i).style }}
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-ink-500 tabular-nums">
+            {finished} of {total} finished
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 

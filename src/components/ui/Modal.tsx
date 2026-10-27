@@ -19,6 +19,14 @@ interface ModalProps {
    * and move under the pointer.
    */
   align?: 'center' | 'top';
+  /**
+   * Renders the children as they are, without the panel, title or close
+   * button, for a dialog that draws its own (the Add game quick search). It
+   * drops in from the top while the page dims.
+   */
+  bare?: boolean;
+  /** Plays a bare dialog's exit; the parent unmounts it once that's done. */
+  closing?: boolean;
 }
 
 // xl is a custom 34rem (544px) — a nudge wider than lg (32rem) so a 6-column
@@ -40,6 +48,8 @@ export function Modal({
   labelledBy,
   size = 'md',
   align = 'center',
+  bare = false,
+  closing = false,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -74,6 +84,9 @@ export function Modal({
     if (!isOpen) return;
 
     const previousFocus = document.activeElement as HTMLElement | null;
+    // Opened with a click: focus goes back to the button on close, but
+    // without the keyboard focus ring that closing with Escape would draw.
+    const openedByPointer = !!previousFocus && !previousFocus.matches(':focus-visible');
     document.body.style.overflow = 'hidden';
 
     // Focus the element marked data-autofocus (e.g. a search box you'll type
@@ -92,21 +105,52 @@ export function Modal({
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      previousFocus?.focus();
+      previousFocus?.focus({ focusVisible: !openedByPointer } as FocusOptions);
     };
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  if (bare)
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="min-h-full flex justify-center items-start p-4 pt-[8vh]">
+          <div
+            className={`fixed inset-0 bg-black/70 backdrop-blur-[2px] ${closing ? 'animate-overlay-out' : 'animate-overlay-in'}`}
+            onClick={onClose}
+            aria-hidden="true"
+          />
+          <div
+            ref={dialogRef}
+            className={`relative z-10 w-full ${SIZE_CLASS[size]} origin-top ${
+              closing
+                ? 'animate-drop-out motion-reduce:animate-overlay-out'
+                : 'animate-drop-in motion-reduce:animate-overlay-in'
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={labelledBy}
+            aria-label={labelledBy ? undefined : ariaLabel}
+          >
+            {children}
+          </div>
+        </div>
+      </div>
+    );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div
         className={`min-h-full flex justify-center p-4 ${align === 'top' ? 'items-start pt-[8vh]' : 'items-center'}`}
       >
-        <div className="fixed inset-0 bg-black/75" onClick={onClose} aria-hidden="true" />
+        <div
+          className="fixed inset-0 bg-black/75 animate-overlay-in"
+          onClick={onClose}
+          aria-hidden="true"
+        />
         <div
           ref={dialogRef}
-          className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-ink-900 rounded-2xl border border-ink-800`}
+          className={`relative z-10 w-full ${SIZE_CLASS[size]} bg-ink-900 rounded-2xl border border-ink-800 animate-dialog-in motion-reduce:animate-overlay-in`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? titleId : labelledBy}
