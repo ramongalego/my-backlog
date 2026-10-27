@@ -102,6 +102,30 @@ describe('SignUpForm', () => {
     });
   });
 
+  it('says the email already has an account, and offers to sign in, instead of promising an email', async () => {
+    // Supabase's stand-in user for an existing email: no sign-in methods.
+    const mockSignUp = jest.fn().mockResolvedValue({
+      data: { session: null, user: { id: 'x', identities: [] } },
+      error: null,
+    });
+    mockCreateClient.mockReturnValue({ auth: { signUp: mockSignUp } });
+    const onSwitchToLogin = jest.fn();
+
+    const user = userEvent.setup();
+    render(<SignUpForm onSwitchToLogin={onSwitchToLogin} />);
+    await user.type(screen.getByLabelText(/^email$/i), 'taken@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password123');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Password123');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That email already has an account.',
+    );
+    expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Sign in instead' }));
+    expect(onSwitchToLogin).toHaveBeenCalled();
+  });
+
   it('should display server error when sign up fails', async () => {
     const mockSignUp = jest.fn().mockResolvedValue({
       data: { session: null },

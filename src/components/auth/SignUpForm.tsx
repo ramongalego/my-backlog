@@ -20,6 +20,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof SignUpFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [accountExists, setAccountExists] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,12 +32,14 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
     if (serverError) {
       setServerError(null);
     }
+    if (accountExists) setAccountExists(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setServerError(null);
+    setAccountExists(false);
 
     const result = signUpSchema.safeParse(formData);
     if (!result.success) {
@@ -69,6 +72,13 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
 
       if (data.session) {
         window.location.reload();
+        return;
+      }
+
+      // For an email that already has an account, Supabase sends nothing and
+      // answers with a stand-in user that has no sign-in methods.
+      if (data.user && data.user.identities?.length === 0) {
+        setAccountExists(true);
         return;
       }
 
@@ -107,6 +117,23 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
       {serverError && (
         <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
           {serverError}
+        </div>
+      )}
+      {accountExists && (
+        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
+          That email already has an account.
+          {onSwitchToLogin && (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="font-medium text-rose-200 underline underline-offset-2 hover:text-rose-100 cursor-pointer"
+              >
+                Sign in instead
+              </button>
+            </>
+          )}
         </div>
       )}
 
