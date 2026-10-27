@@ -140,9 +140,13 @@ function invalidateConfig(stale: HLTBConfig): void {
 }
 
 // Strip special characters that confuse HLTB search, then split into terms.
-// Also splits letter-digit boundaries so e.g. "Birth1" becomes "Birth 1".
+// Accents come off their letters first ("Pokémon" is searched as "Pokemon",
+// not "Pok mon"), and letter-digit boundaries split, so e.g. "Birth1" becomes
+// "Birth 1".
 function toSearchTerms(name: string): string[] {
   return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9 ]/g, ' ')
     .replace(/([a-zA-Z])(\d)/g, '$1 $2')
     .replace(/(\d)([a-zA-Z])/g, '$1 $2')
@@ -180,13 +184,31 @@ function assertNotBlocked() {
   if (Date.now() < blockedUntil) throw new HLTBUnavailableError();
 }
 
-async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number | null> {
+interface SearchOptions {
+  /**
+   * Take the shortest title that has every search word, instead of the most
+   * popular result: the original game rather than a remake or sequel that
+   * shares its words ("Pokémon Ruby and Sapphire", not "Pokémon Omega Ruby
+   * and Alpha Sapphire").
+   */
+  preferShortestTitle?: boolean;
+}
+
+/** A title as search words, lowercased, for comparing with the terms. */
+const titleWords = (title: string) => toSearchTerms(title).map((w) => w.toLowerCase());
+
+async function searchHLTB(
+  config: HLTBConfig,
+  gameName: string,
+  { preferShortestTitle = false }: SearchOptions = {},
+): Promise<number | null> {
   assertNotBlocked();
+  const terms = toSearchTerms(gameName);
   const payload: Record<string, unknown> = {
     searchType: 'games',
-    searchTerms: toSearchTerms(gameName),
+    searchTerms: terms,
     searchPage: 1,
-    size: 2,
+    size: preferShortestTitle ? 8 : 2,
     searchOptions: {
       games: {
         userId: 0,
@@ -234,8 +256,20 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
   }
 
   const data = await res.json();
-  const results: { comp_main: number }[] = data?.data ?? [];
+  const results: { game_name?: string; comp_main: number }[] = data?.data ?? [];
   if (!results.length) return null;
+
+  if (preferShortestTitle) {
+    const wanted = terms.map((t) => t.toLowerCase());
+    const original = results
+      .filter((r) => r.comp_main > 0 && r.game_name)
+      .filter((r) => {
+        const words = titleWords(r.game_name!);
+        return wanted.every((w) => words.includes(w));
+      })
+      .sort((a, b) => a.game_name!.length - b.game_name!.length)[0];
+    if (original) return secondsToHours(original.comp_main);
+  }
 
   const ONE_HOUR_SECONDS = 3600;
   const first = results[0];
@@ -253,18 +287,18 @@ async function searchHLTB(config: HLTBConfig, gameName: string): Promise<number 
 }
 
 // Runs a search, refreshing the token once if HLTB rejects it as expired.
-async function searchWithRetry(gameName: string): Promise<number | null> {
+async function searchWithRetry(gameName: string, options?: SearchOptions): Promise<number | null> {
   const config = await getHLTBConfig();
   if (!config) return null;
   try {
-    return await searchHLTB(config, gameName);
+    return await searchHLTB(config, gameName, options);
   } catch (err) {
     if (!(err instanceof HLTBAuthError)) throw err;
     invalidateConfig(config);
     const fresh = await getHLTBConfig();
     if (!fresh) return null;
     try {
-      return await searchHLTB(fresh, gameName);
+      return await searchHLTB(fresh, gameName, options);
     } catch (retryErr) {
       if (!(retryErr instanceof HLTBAuthError)) throw retryErr;
       console.error(`[HLTB] 403 Forbidden for "${gameName}" even with a fresh token`);
@@ -283,6 +317,18 @@ export async function getMainStoryHours(gameName: string): Promise<number | null
   try {
     const result = await searchWithRetry(gameName);
     if (result !== null) return result;
+
+    // "Pokémon Ruby Version": HLTB lists the pair as one game ("Pokémon Ruby
+    // and Sapphire"), and its search needs every word in the title. Without
+    // "Version", and taking the original over a remake with the same words.
+    if (/\bversion\b/i.test(gameName)) {
+      const withoutVersion = gameName
+        .replace(/\bversion\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const paired = await searchWithRetry(withoutVersion, { preferShortestTitle: true });
+      if (paired !== null) return paired;
+    }
 
     // Fallback: strip common edition/variant words and parenthesised years, then retry
     const hasEditionWord = /\b(edition|enhanced|complete|ultimate|definitive)\b/i.test(gameName);
