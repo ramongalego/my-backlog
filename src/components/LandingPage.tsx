@@ -39,6 +39,12 @@ type Time = 'One session' | 'A few nights' | 'Long haul';
 const MOODS: Mood[] = ['Adrenaline', 'Relaxed', 'Engaged', 'Emotional'];
 const ENERGIES: Energy[] = ['High', 'Medium', 'Low'];
 const TIMES: Time[] = ['One session', 'A few nights', 'Long haul'];
+// What each answer means, as the app's own question says it.
+const TIME_HINTS: Record<Time, string> = {
+  'One session': 'Under 5 hours to beat, or built around short runs',
+  'A few nights': '5 to 15 hours to beat',
+  'Long haul': '15 hours or more',
+};
 
 type PickerGame = {
   image: string;
@@ -53,15 +59,15 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_hk.jpeg',
     title: 'Hollow Knight',
-    meta: '~27h to beat · 9.8 rating',
+    meta: '~27h to beat · 87 critic score',
     moods: ['Adrenaline'],
     energies: ['High'],
-    times: ['A few nights'],
+    times: ['Long haul'],
   },
   {
     image: '/lp_hades.jpg',
     title: 'Hades',
-    meta: '~23h to beat · 9.3 rating',
+    meta: '~23h to beat · 93 critic score',
     moods: ['Adrenaline'],
     energies: ['High', 'Medium'],
     times: ['One session'],
@@ -69,15 +75,15 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_celeste.png',
     title: 'Celeste',
-    meta: '~8h to beat · 9.4 rating',
+    meta: '~8h to beat · 92 critic score',
     moods: ['Emotional'],
     energies: ['High'],
-    times: ['One session'],
+    times: ['A few nights'],
   },
   {
     image: '/lp_disco.jpeg',
     title: 'Disco Elysium',
-    meta: '~23h to beat · 9.5 rating',
+    meta: '~23h to beat · 91 critic score',
     moods: ['Engaged'],
     energies: ['Medium', 'Low'],
     times: ['Long haul'],
@@ -85,15 +91,15 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_portal.jpg',
     title: 'Portal 2',
-    meta: '~9h to beat · 9.5 rating',
+    meta: '~9h to beat · 95 critic score',
     moods: ['Engaged'],
     energies: ['Medium', 'Low'],
-    times: ['One session', 'A few nights'],
+    times: ['A few nights'],
   },
   {
     image: '/lp_cyberpunk.jpg',
     title: 'Cyberpunk 2077',
-    meta: '~26h to beat · 8.7 rating',
+    meta: '~26h to beat · 86 critic score',
     moods: ['Adrenaline'],
     energies: ['Medium'],
     times: ['Long haul'],
@@ -101,7 +107,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_eldenring.jpg',
     title: 'Elden Ring',
-    meta: '~60h to beat · 9.6 rating',
+    meta: '~60h to beat · 94 critic score',
     moods: ['Adrenaline'],
     energies: ['High'],
     times: ['Long haul'],
@@ -109,7 +115,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_vampire.jpg',
     title: 'Vampire Survivors',
-    meta: '~15h to beat · 9.1 rating',
+    meta: '~15h to beat · 86 critic score',
     moods: ['Adrenaline'],
     energies: ['Low'],
     times: ['One session', 'A few nights'],
@@ -117,7 +123,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_stardew.png',
     title: 'Stardew Valley',
-    meta: '~53h to beat · 9.5 rating',
+    meta: '~53h to beat · 89 critic score',
     moods: ['Relaxed'],
     energies: ['Low', 'Medium'],
     times: ['Long haul'],
@@ -125,7 +131,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_shorthike.png',
     title: 'A Short Hike',
-    meta: '~2h to beat · 9.4 rating',
+    meta: '~2h to beat · 87 critic score',
     moods: ['Relaxed'],
     energies: ['Low'],
     times: ['One session'],
@@ -133,31 +139,31 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_dorf.webp',
     title: 'Dorfromantik',
-    meta: '~18h to beat · 8.8 rating',
+    meta: '~18h to beat · 83 critic score',
     moods: ['Relaxed'],
     energies: ['Medium', 'Low'],
-    times: ['One session', 'A few nights'],
+    times: ['Long haul'],
   },
   {
     image: '/lp_dave.webp',
     title: 'Dave the Diver',
-    meta: '~25h to beat · 9.0 rating',
+    meta: '~25h to beat · 90 critic score',
     moods: ['Relaxed'],
     energies: ['High', 'Medium'],
-    times: ['A few nights'],
+    times: ['Long haul'],
   },
   {
     image: '/lp_outerwilds.jpg',
     title: 'Outer Wilds',
-    meta: '~17h to beat · 9.7 rating',
+    meta: '~17h to beat · 85 critic score',
     moods: ['Engaged', 'Emotional'],
     energies: ['High', 'Medium'],
-    times: ['A few nights'],
+    times: ['Long haul'],
   },
   {
     image: '/lp_bg3.jpg',
     title: "Baldur's Gate 3",
-    meta: '~73h to beat · 9.7 rating',
+    meta: '~73h to beat · 96 critic score',
     moods: ['Engaged'],
     energies: ['High', 'Medium'],
     times: ['Long haul'],
@@ -165,7 +171,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_slaythespire.jpg',
     title: 'Slay the Spire',
-    meta: '~12h to beat · 9.2 rating',
+    meta: '~12h to beat · 89 critic score',
     moods: ['Engaged'],
     energies: ['High', 'Medium'],
     times: ['One session'],
@@ -173,7 +179,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_journey.jpg',
     title: 'Journey',
-    meta: '~2h to beat · 9.4 rating',
+    meta: '~2h to beat · 92 critic score',
     moods: ['Emotional', 'Relaxed'],
     energies: ['Low'],
     times: ['One session'],
@@ -181,7 +187,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_firewatch.jpg',
     title: 'Firewatch',
-    meta: '~4h to beat · 8.8 rating',
+    meta: '~4h to beat · 81 critic score',
     moods: ['Emotional'],
     energies: ['Low', 'Medium'],
     times: ['One session'],
@@ -189,7 +195,7 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_spiritfarer.jpg',
     title: 'Spiritfarer',
-    meta: '~26h to beat · 9.1 rating',
+    meta: '~26h to beat · 84 critic score',
     moods: ['Emotional', 'Relaxed'],
     energies: ['Low', 'Medium'],
     times: ['Long haul'],
@@ -254,7 +260,7 @@ export function LandingPage() {
 
   const [mood, setMood] = useState<Mood>('Adrenaline');
   const [energy, setEnergy] = useState<Energy>('High');
-  const [time, setTime] = useState<Time>('A few nights');
+  const [time, setTime] = useState<Time>('Long haul');
   const pickedGame = pickGame(mood, energy, time);
 
   const [teaseIndex, setTeaseIndex] = useState(0);
@@ -305,8 +311,8 @@ export function LandingPage() {
                 <span className="text-accent-400">you already own</span>
               </h1>
               <p className="mt-6 text-lg md:text-xl text-ink-300 max-w-lg leading-relaxed">
-                MyBacklog imports your Steam library and picks something from it for tonight, based
-                on your mood and how much time you have
+                MyBacklog imports your Steam library, or the games you add from any console, and
+                picks one for tonight based on your mood and how much time you have
               </p>
               <p className="mt-3 text-sm text-ink-400 h-5 leading-5" aria-live="off">
                 <span
@@ -406,6 +412,7 @@ export function LandingPage() {
                   onChange={setTime}
                   options={TIMES.map((v) => ({ value: v, label: v }))}
                 />
+                <p className="mt-2 text-xs text-ink-500">{TIME_HINTS[time]}</p>
               </div>
               <div
                 key={pickedGame.title}
@@ -423,9 +430,14 @@ export function LandingPage() {
                   <p className="font-medium text-ink-50">{pickedGame.title}</p>
                   <p className="text-sm text-ink-400">{pickedGame.meta}</p>
                 </div>
-                <span className="text-sm font-medium px-3 h-8 inline-flex items-center bg-accent-500 rounded-lg text-ink-950 shrink-0">
+                {/* The demo's pick leads to signing up, where it's your own library. */}
+                <Button
+                  size="sm"
+                  className="shrink-0 cursor-pointer"
+                  onClick={() => openModal('signup')}
+                >
                   Play this
-                </span>
+                </Button>
               </div>
             </Panel>
           </div>
@@ -460,15 +472,15 @@ export function LandingPage() {
               </div>
             </Panel>
 
-            <SectionCopy title="Your whole Steam library in one place">
+            <SectionCopy title="Your whole gaming library in one place">
               <p>
                 Years of sales add up to hundreds of games, and it&apos;s easy to lose track of what
                 you own.
               </p>
               <p>
-                MyBacklog imports every game with how long it takes to beat and how well it&apos;s
-                reviewed. Mark games as playing, finished, dropped or hidden, rate the ones you
-                finish, and filter or sort by any of it.
+                Connect Steam to bring them all in, or add games from any console. Each one comes
+                with how long it takes to beat and how well it&apos;s reviewed, ready to mark, rate
+                and sort however you like.
               </p>
             </SectionCopy>
           </div>
@@ -494,7 +506,7 @@ export function LandingPage() {
                 <ol className="space-y-2.5">
                   {[
                     { name: 'Disco Elysium', image: '/lp_disco.jpeg' },
-                    { name: 'Celeste', image: '/lp_celeste.png' },
+                    { name: 'Outer Wilds', image: '/lp_outerwilds.jpg' },
                     { name: 'Portal 2', image: '/lp_portal.jpg' },
                   ].map((game, i) => (
                     <li key={game.name} className="flex items-center gap-3">
@@ -525,7 +537,7 @@ export function LandingPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium text-ink-200">Hollow Knight</span>
-                    <span className="text-xs text-ink-400">Jan 2025</span>
+                    <span className="text-xs text-ink-400">Sep 2026</span>
                   </div>
                   <p className="mt-1 flex items-center gap-1 text-sm text-ink-200">
                     <Star
@@ -569,7 +581,8 @@ export function LandingPage() {
                 Start clearing your backlog tonight
               </h2>
               <p className="mt-3 text-ink-400">
-                It&apos;s free, and connecting Steam imports your whole library
+                It&apos;s free. Connect Steam to import your whole library, or add games from any
+                console
               </p>
             </div>
             <div className="shrink-0">{primaryCta}</div>

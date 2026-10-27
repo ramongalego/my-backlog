@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: 'MyBacklog',
   },
   description:
-    'Track your Steam backlog, pick what to play next from the games you own, and log the ones you finish.',
+    'Track your game backlog from Steam and any console, pick what to play next from the games you own, and log the ones you finish.',
 };
 
 export default function RootLayout({

@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   // absolute: this page sits under the root layout's '%s · MyBacklog' template.
   title: { absolute: 'MyBacklog · Play the games you already own' },
   description:
-    'MyBacklog imports your Steam library, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
+    'MyBacklog imports your Steam library or the games you add from any console, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
   openGraph: {
     title: 'MyBacklog · Play the games you already own',
     description:
-      'MyBacklog imports your Steam library, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
+      'MyBacklog imports your Steam library or the games you add from any console, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
     url: 'https://mybacklog.app',
     siteName: 'MyBacklog',
     type: 'website',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'MyBacklog · Play the games you already own',
     description:
-      'MyBacklog imports your Steam library, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
+      'MyBacklog imports your Steam library or the games you add from any console, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
   },
 };
 
@@ -28,7 +28,7 @@ const jsonLd = {
   name: 'MyBacklog',
   url: 'https://mybacklog.app',
   description:
-    'Track your Steam backlog, pick what to play next from the games you own, and log the ones you finish.',
+    'Track your game backlog from Steam and any console, pick what to play next from the games you own, and log the ones you finish.',
   applicationCategory: 'GameApplication',
   operatingSystem: 'All',
   offers: {
