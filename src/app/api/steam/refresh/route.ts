@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
-import { syncOwnedGames } from '@/lib/steam/library';
+import { syncOwnedGames, type LibrarySyncResult } from '@/lib/steam/library';
 import { refreshReviewScores } from '@/lib/steam/reviews';
 import { refreshCriticScores } from '@/lib/games/critic-scores';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
@@ -35,31 +35,31 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!profile?.steam_id) {
-    return jsonError('Steam not connected', 400);
-  }
+  // Without Steam there's no library to sync, but the games added by hand
+  // still get their review and critic scores refreshed below.
+  let result: LibrarySyncResult = { newGames: 0, updatedPlaytime: 0, updatedGames: 0 };
+  if (profile?.steam_id) {
+    let apiKey: string;
+    try {
+      apiKey = getSteamApiKey();
+    } catch {
+      return jsonError('Server config error', 500);
+    }
 
-  let apiKey: string;
-  try {
-    apiKey = getSteamApiKey();
-  } catch {
-    return jsonError('Server config error', 500);
-  }
+    let steamGames;
+    try {
+      steamGames = await getOwnedGames(profile.steam_id, apiKey);
+    } catch (error) {
+      console.error('Steam API error:', error);
+      return jsonError('Steam API failed', 502);
+    }
 
-  let steamGames;
-  try {
-    steamGames = await getOwnedGames(profile.steam_id, apiKey);
-  } catch (error) {
-    console.error('Steam API error:', error);
-    return jsonError('Steam API failed', 502);
-  }
-
-  let result;
-  try {
-    result = await syncOwnedGames(supabase, user.id, steamGames);
-  } catch (error) {
-    console.error('Library refresh failed:', error);
-    return jsonError('Failed to update library', 500);
+    try {
+      result = await syncOwnedGames(supabase, user.id, steamGames);
+    } catch (error) {
+      console.error('Library refresh failed:', error);
+      return jsonError('Failed to update library', 500);
+    }
   }
 
   // Review and critic scores drift slowly, and checking them costs a Steam

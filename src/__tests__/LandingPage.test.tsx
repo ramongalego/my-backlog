@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LandingPage } from '@/components/LandingPage';
-import type { User } from '@supabase/supabase-js';
 
 jest.mock('@/components/auth/AuthModal', () => ({
   AuthModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
@@ -15,65 +14,31 @@ jest.mock('@/components/Header', () => ({
   Header: () => <header data-testid="header">Header</header>,
 }));
 
+// Signed-in accounts, with or without Steam, go to Home instead.
 describe('LandingPage', () => {
-  const mockOnConnectSteam = jest.fn();
+  it('shows "Get Started" and not "Connect Steam"', () => {
+    render(<LandingPage />);
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+    expect(screen.getAllByRole('button', { name: /get started/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Connect Steam')).not.toBeInTheDocument();
   });
 
-  describe('unauthenticated user', () => {
-    it('shows "Get Started" and not "Connect Steam"', () => {
-      render(<LandingPage user={null} onConnectSteam={mockOnConnectSteam} />);
+  // The modal is loaded with next/dynamic, so it appears asynchronously.
+  it('opens auth modal when "Get Started" is clicked', async () => {
+    render(<LandingPage />);
 
-      expect(screen.getAllByRole('button', { name: /get started/i }).length).toBeGreaterThan(0);
-      expect(screen.queryByText('Connect Steam')).not.toBeInTheDocument();
-    });
+    fireEvent.click(screen.getAllByRole('button', { name: /get started/i })[0]);
 
-    // The modal is loaded with next/dynamic, so it appears asynchronously.
-    it('opens auth modal when "Get Started" is clicked', async () => {
-      render(<LandingPage user={null} onConnectSteam={mockOnConnectSteam} />);
-
-      fireEvent.click(screen.getAllByRole('button', { name: /get started/i })[0]);
-
-      expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
-    });
-
-    it('closes auth modal when close is triggered', async () => {
-      render(<LandingPage user={null} onConnectSteam={mockOnConnectSteam} />);
-
-      fireEvent.click(screen.getAllByRole('button', { name: /get started/i })[0]);
-      expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByText('Close'));
-      expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
-    });
+    expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
   });
 
-  describe('authenticated user without Steam', () => {
-    const mockUser = { id: 'user-123' } as User;
+  it('closes auth modal when close is triggered', async () => {
+    render(<LandingPage />);
 
-    it('shows "Connect Steam" and not "Get Started"', () => {
-      render(<LandingPage user={mockUser} onConnectSteam={mockOnConnectSteam} />);
+    fireEvent.click(screen.getAllByRole('button', { name: /get started/i })[0]);
+    expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
 
-      expect(screen.getAllByText('Connect Steam').length).toBeGreaterThan(0);
-      expect(screen.queryAllByRole('button', { name: /get started/i })).toHaveLength(0);
-    });
-
-    it('calls onConnectSteam when "Connect Steam" is clicked', () => {
-      render(<LandingPage user={mockUser} onConnectSteam={mockOnConnectSteam} />);
-
-      fireEvent.click(screen.getAllByText('Connect Steam')[0]);
-
-      expect(mockOnConnectSteam).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not open auth modal when "Connect Steam" is clicked', () => {
-      render(<LandingPage user={mockUser} onConnectSteam={mockOnConnectSteam} />);
-
-      fireEvent.click(screen.getAllByText('Connect Steam')[0]);
-
-      expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByText('Close'));
+    expect(screen.queryByTestId('auth-modal')).not.toBeInTheDocument();
   });
 });

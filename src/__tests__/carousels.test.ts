@@ -220,6 +220,18 @@ describe('Recently Added', () => {
     );
     expect(names(pools.recentlyAddedPool)).toEqual(['Multiplayer, bought last', 'Bought later']);
   });
+
+  it('lists every game added by hand, even without a Steam import', () => {
+    const pools = buildCarouselPools(
+      [
+        game({ name: 'Added first', source: 'manual', created_at: '2026-01-01T00:00:00Z' }),
+        game({ name: 'Added next', source: 'manual', created_at: '2026-01-01T00:05:00Z' }),
+      ],
+      [],
+      undefined,
+    );
+    expect(names(pools.recentlyAddedPool)).toEqual(['Added next', 'Added first']);
+  });
 });
 
 describe('editionKey', () => {

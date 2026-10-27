@@ -197,13 +197,18 @@ export async function loadQueue(supabase: SupabaseClient, userId: string): Promi
 export interface LibraryMeta {
   gameCount: number;
   historyCount: number;
+  /** Games still to play (backlog or no status): what Pick My Game picks from. */
+  backlogCount: number;
 }
+
+/** The fewest backlog games worth picking between; until then Home asks for more. */
+export const MIN_GAMES_TO_PICK = 3;
 
 export async function loadLibraryMeta(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<LibraryMeta> {
-  const [totalResult, historyResult] = await Promise.all([
+  const [totalResult, historyResult, backlogResult] = await Promise.all([
     supabase
       .from('games')
       .select('id', { count: 'exact', head: true })
@@ -216,13 +221,21 @@ export async function loadLibraryMeta(
       .eq('user_id', userId)
       .eq('type', 'game')
       .in('status', ['finished', 'dropped']),
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('type', 'game')
+      .or(BACKLOG_FILTER),
   ]);
   if (totalResult.error) throw totalResult.error;
   if (historyResult.error) throw historyResult.error;
+  if (backlogResult.error) throw backlogResult.error;
 
   return {
     gameCount: totalResult.count ?? 0,
     historyCount: historyResult.count ?? 0,
+    backlogCount: backlogResult.count ?? 0,
   };
 }
 
@@ -264,11 +277,13 @@ export async function loadCarouselPools(
       .gte('rating', 8)
       .order('finished_at', { ascending: false, nullsFirst: false })
       .limit(20),
-    // When the library was first imported, for Recently Added.
+    // When the Steam library was first imported, for Recently Added. Games
+    // added by hand before Steam was linked don't count.
     supabase
       .from('games')
       .select('created_at')
       .eq('user_id', userId)
+      .eq('source', 'steam')
       .order('created_at', { ascending: true })
       .limit(1),
   ]);

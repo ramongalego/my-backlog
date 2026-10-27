@@ -7,6 +7,7 @@ import { Check, Gamepad2, Loader2, Search, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { fieldClass } from '@/components/ui/Input';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { loadCurrentlyPlaying, loadManualGames } from '@/lib/data/loaders';
 import { queryKeys } from '@/lib/query-keys';
 import {
@@ -75,9 +76,10 @@ export function AddGameModal({
   const [active, setActive] = useState(0);
   const [picked, setPicked] = useState<GameSearchResult | null>(null);
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
-  // Games you've already added by hand (to mark them in results) and the
-  // consoles you use (to suggest them first), plus the game being played.
+  // The consoles you've added games on (to suggest them first), plus the game
+  // being played.
   const { data: manualGames = [] } = useQuery({
     queryKey: queryKeys.games.manual(userId),
     queryFn: () => loadManualGames(createClient(), userId),
@@ -88,10 +90,6 @@ export function AddGameModal({
     staleTime: 30 * 1000,
   });
   const usedConsoles = [...new Set(manualGames.flatMap((g) => (g.platform ? [g.platform] : [])))];
-  const ownedOn = (igdbId: number) =>
-    manualGames
-      .filter((g) => g.igdb_id === igdbId)
-      .flatMap((g) => (g.platform ? [g.platform] : []));
 
   const text = query.trim();
   useEffect(() => {
@@ -152,20 +150,24 @@ export function AddGameModal({
   };
 
   if (picked) {
-    const steamGame = picked.steamGame;
+    // Already in the library (from Steam or added by hand): adding it again
+    // moves that entry to the console you pick, so it's only listed once.
+    const existing = picked.libraryGame;
+    const fromSteam = !!existing?.fromSteam;
+    // The console it's on now, which the picker starts from.
+    const currentConsole =
+      existing && playsOnConsole(existing.platform) ? existing.platform! : null;
+    const preferred = currentConsole ? [currentConsole, ...usedConsoles] : usedConsoles;
     const consoles = orderConsoles(
       (details?.platforms ?? picked.platforms)
         .map(shortPlatformName)
         // Owned on Steam: PC is where it already is.
-        .filter((name) => !steamGame || name !== STEAM_PLATFORM),
-      // A Steam game moved before starts on the console it was moved to.
-      steamGame && playsOnConsole(steamGame.platform)
-        ? [steamGame.platform!, ...usedConsoles]
-        : usedConsoles,
+        .filter((name) => !fromSteam || name !== STEAM_PLATFORM),
+      preferred,
     );
-    // Moving a Steam game starts from where it is: its status, and its date,
-    // notes and rating if it's finished or dropped.
-    const steamStatus = ADDABLE.find((s) => s === steamGame?.status);
+    // Moving a game starts from where it is: its status, and its date, notes
+    // and rating if it's finished or dropped.
+    const existingStatus = ADDABLE.find((s) => s === existing?.status);
     return (
       <GameDetailModal
         // A new game starts the form over (console, status, hours).
@@ -178,23 +180,19 @@ export function AddGameModal({
         headerLoading={detailsPending}
         // Adding a game that isn't out yet says so, as its card will.
         releaseDate={details?.release_date}
-        initialStatus={steamStatus ?? 'backlog'}
-        initialDate={steamGame?.date?.slice(0, 10) ?? null}
-        initialNotes={steamGame?.notes}
-        initialRating={steamGame?.rating}
+        initialStatus={existingStatus ?? 'backlog'}
+        initialDate={existing?.date?.slice(0, 10) ?? null}
+        initialNotes={existing?.notes}
+        initialRating={existing?.rating}
         adding={{
           consoles,
-          defaultConsole: defaultConsole(
-            consoles,
-            steamGame && playsOnConsole(steamGame.platform)
-              ? [steamGame.platform!, ...usedConsoles]
-              : usedConsoles,
-          ),
-          fromSteam: !!steamGame,
-          movedTo: steamGame && playsOnConsole(steamGame.platform) ? steamGame.platform : null,
+          defaultConsole: defaultConsole(consoles, preferred),
+          fromSteam,
+          movedTo: fromSteam ? currentConsole : null,
+          inLibraryOn: existing && !fromSteam ? currentConsole : null,
           year: picked.year,
-          // Not when the game being moved from Steam is the one you're playing.
-          playingName: steamGame && playing?.id === steamGame.id ? null : (playing?.name ?? null),
+          // Not when the game being moved is the one you're playing.
+          playingName: existing && playing?.id === existing.id ? null : (playing?.name ?? null),
           onChangeGame: () => setPicked(null),
           onAdd: async ({ status, platform, hours, date, notes, rating }) => {
             const added = await addManualGame({
@@ -206,7 +204,7 @@ export function AddGameModal({
               notes: notes || undefined,
               rating,
             });
-            onAdded(added.name, status, added.warning, added.movedFromSteam ? platform : undefined);
+            onAdded(added.name, status, added.warning, added.moved ? platform : undefined);
           },
         }}
       />
@@ -218,7 +216,9 @@ export function AddGameModal({
     <Modal isOpen onClose={onClose} title="Add a game" size="xl" align="top">
       <div className="space-y-3">
         <p className="text-sm text-ink-400">
-          For games outside your Steam library, on any console or store
+          {profile?.steam_id
+            ? 'For games outside your Steam library, on any console or store'
+            : 'Any game you own, on any console or store'}
         </p>
         <div className="relative">
           <Search
@@ -290,8 +290,7 @@ export function AddGameModal({
             className="max-h-[22rem] overflow-y-auto -mx-2 px-2"
           >
             {results.map((game, i) => {
-              const owned = ownedOn(game.igdbId);
-              const steam = game.steamGame;
+              const owned = game.libraryGame;
               return (
                 <li
                   key={game.igdbId}
@@ -315,18 +314,14 @@ export function AddGameModal({
                     <p className="text-xs text-ink-400 truncate">
                       {game.platforms.map(shortPlatformName).join(', ')}
                     </p>
-                    {steam && (
+                    {owned && (
                       <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-300">
                         <Check className="w-3 h-3" aria-hidden="true" />
-                        {playsOnConsole(steam.platform)
-                          ? `In your library on ${steam.platform}, from Steam`
-                          : 'In your Steam library'}
-                      </p>
-                    )}
-                    {owned.length > 0 && (
-                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-ink-300">
-                        <Check className="w-3 h-3" aria-hidden="true" />
-                        In your library on {owned.join(', ')}
+                        {!playsOnConsole(owned.platform)
+                          ? 'In your Steam library'
+                          : owned.fromSteam
+                            ? `In your library on ${owned.platform}, from Steam`
+                            : `In your library on ${owned.platform}`}
                       </p>
                     )}
                   </div>

@@ -45,7 +45,7 @@ export default function LandingRoute() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingPage user={null} />
+      <LandingPage />
     </>
   );
 }

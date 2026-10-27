@@ -37,9 +37,14 @@ interface GameCarouselProps {
   onOpenDetail?: (game: Game) => void;
   /** Show Steam's review score first on these cards (a row picked by it). */
   preferSteamRating?: boolean;
+  /** Fewer games than this and the row is left out (MIN_CAROUSEL_GAMES by default). */
+  minGames?: number;
   /** Mark this carousel as above the fold so the first images get priority loading. */
   priority?: boolean;
 }
+
+/** A row of picks needs a few games to choose between; fewer reads as a gap. */
+export const MIN_CAROUSEL_GAMES = 3;
 
 // The endless, arrow-driven loop is for a mouse on a wide screen. Touch
 // screens and phones swipe a native scroller instead, as Netflix does.
@@ -107,6 +112,7 @@ export function GameCarousel({
   onOpenDetail,
   priority = false,
   preferSteamRating,
+  minGames = MIN_CAROUSEL_GAMES,
 }: GameCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const perPage = usePerPage(rowRef);
@@ -183,7 +189,7 @@ export function GameCarousel({
     return () => row.removeEventListener('wheel', onWheel);
   }, [loop]);
 
-  if (count < 3) return null;
+  if (count < minGames) return null;
 
   const positions = loop
     ? Array.from({ length: (before + 1 + after) * count }, (_, i) => i)

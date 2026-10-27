@@ -28,7 +28,7 @@ const fortunesWeave = {
   year: 2026,
   cover: null,
   platforms: ['Nintendo Switch 2'],
-  steamGame: null,
+  libraryGame: null,
 };
 const linkToThePast = {
   igdbId: 2,
@@ -42,7 +42,7 @@ const linkToThePast = {
     'New Nintendo 3DS',
     'Wii',
   ],
-  steamGame: null,
+  libraryGame: null,
 };
 
 function setup({ playing = null as { name: string } | null, owned = [] as unknown[] } = {}) {
@@ -118,13 +118,33 @@ it("makes you pick the console when it can't safely guess", async () => {
   expect(screen.getByText('Pick the console you play it on')).toBeInTheDocument();
 });
 
-it('marks games already in your library and suggests your consoles first', async () => {
+it('marks a game already in your library, and adding it again moves it instead', async () => {
   setup({ owned: [{ id: 5, igdb_id: 2, platform: 'Wii U', created_at: '2026-10-01' }] });
+  jest.mocked(searchGames).mockResolvedValue([
+    {
+      ...linkToThePast,
+      libraryGame: {
+        id: 5,
+        fromSteam: false,
+        status: 'backlog',
+        platform: 'Wii U',
+        date: null,
+        notes: null,
+        rating: null,
+      },
+    },
+  ]);
   await search('zelda');
   expect(screen.getByText('In your library on Wii U')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('option', { name: /A Link to the Past/ }));
+  // It starts on the console it's on, where adding it again just saves.
   expect(screen.getByRole('button', { name: 'Wii U' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText(/in your library on Wii U\. Pick another console/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Wii' }));
+  expect(screen.getByRole('button', { name: 'Move to Wii' })).toBeInTheDocument();
 });
 
 it('says when starting it moves the current game back to the backlog', async () => {
@@ -190,10 +210,18 @@ it('moves a game you own on Steam to the console you pick, keeping its status', 
     year: 2024,
     cover: null,
     platforms: ['PC (Microsoft Windows)', 'Nintendo Switch', 'PlayStation 5'],
-    steamGame: { id: 7, status: 'playing', platform: 'PC', date: null, notes: null, rating: null },
+    libraryGame: {
+      id: 7,
+      fromSteam: true,
+      status: 'playing',
+      platform: 'PC',
+      date: null,
+      notes: null,
+      rating: null,
+    },
   };
   jest.mocked(searchGames).mockResolvedValue([dominus]);
-  jest.mocked(addManualGame).mockResolvedValue({ id: 7, name: dominus.name, movedFromSteam: true });
+  jest.mocked(addManualGame).mockResolvedValue({ id: 7, name: dominus.name, moved: true });
   const { onAdded } = setup();
   await search('dominus');
   expect(screen.getByText('In your Steam library')).toBeInTheDocument();

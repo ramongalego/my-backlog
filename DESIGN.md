@@ -200,6 +200,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `Panel`: the raised surface. Padding `md` (default), `sm` or `none`. Use instead of `bg-ink-900 rounded-xl`.
 - `ToggleGroup`: pick-one controls. `chips` for filters and choices (selected is light `ink-100`, not orange), `segmented` for a small switch in a panel header. Supports counts.
 - `EmptyState`: icon, title and a sentence that teaches what will appear here and how.
+- `SteamIcon`: Steam's logo, on every Connect Steam button (the one brand mark in the app; lucide has none). Steam is optional: Connect Steam is always the secondary action next to Add a game, never the primary.
 - `Input`, `fieldClass()`, `FIELD_LABEL`: every text field, textarea and search box. Focus brightens the border; it doesn't turn orange.
 - `Modal`, `Dropdown`.
 - `Tooltip` / `TooltipText`: instant custom tooltip for compact indicators (hover or tap). It renders at page level, so clipping containers can't cut it off. Triggers aren't tab stops (the text reaches screen readers via `aria-describedby`), so keep anything essential visible. Never use the native `title` attribute for this.
@@ -215,6 +216,9 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `ConsoleBadge`: the console a game added by hand is on (or a Steam game was moved to, by adding it from another console), as a chip on its art (`CoverArt`'s `platform`, bottom-left; top-left in the detail dialog, where the title runs along the bottom). Its short name as text, in neutral ink like every other chip on art; no logos, and no colour per console, which would compete with the status colours. The chip is hidden from screen readers; the meta row carries the name as `sr-only` text. Steam games show none.
 - `ReleaseBadge`: "Out Nov 5" beside the console chip (`CoverArt`'s `releaseDate`; in the detail dialog's header too) on a game that isn't out yet ("Out in 3 days", "Out tomorrow" in its last week), "Coming soon" with no date; the tooltip has the full date and a countdown. Same neutral chip, no warning colours: a release getting closer is good news. Worked out from the stored date, so it goes away on release day by itself.
 - `STATUS_STYLE` and `GAME_STATUSES` in `src/lib/games/status-style.ts`: label, icon, text, solid and fill classes for every status.
+
+**Home:** `src/components/home/`
+- `BacklogProgress`: while the backlog has fewer than 3 games (`MIN_GAMES_TO_PICK`), Home's band says "Build your backlog" instead of offering Pick My Game, with a three-segment ember bar ("1 of 3 games", like the library import's bar) and Add a game / Connect Steam. Finished and dropped games don't count, and the caption says so once there are any. Recently Added shows from the first game, so what you've added is there below.
 
 **Interaction states:** every control needs hover, keyboard focus (the global `:focus-visible` orange outline covers buttons and links; it lives in the base layer, so a component can replace it, as text fields do with their border), disabled and loading states. A disabled primary button goes neutral grey rather than faded orange.
 

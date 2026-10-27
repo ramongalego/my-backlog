@@ -36,27 +36,44 @@ export async function GET(request: NextRequest) {
     const query = gameSearchSchema.safeParse(params.get('q') ?? '');
     if (!query.success) return jsonError('Search for at least 2 characters', 400);
     const results = await searchGames(query.data);
-    // Mark the games you already own on Steam: adding one moves that entry to
-    // the console you pick instead of listing the game twice.
+    // Mark the games already in your library, from Steam or added by hand:
+    // adding one again moves that entry to the console you pick instead of
+    // listing the game twice.
+    const LIBRARY_COLUMNS =
+      'id, app_id, igdb_id, status, platform, finished_at, dropped_at, notes, rating';
     const appIds = [...new Set(results.flatMap((r) => r.steamAppIds))];
-    const { data: owned, error } = appIds.length
-      ? await supabase
-          .from('games')
-          .select('id, app_id, status, platform, finished_at, dropped_at, notes, rating')
-          .eq('user_id', user.id)
-          .eq('source', 'steam')
-          .in('app_id', appIds)
-      : { data: [], error: null };
-    if (error) throw error;
+    const [steamOwned, manualOwned] = await Promise.all([
+      appIds.length
+        ? supabase
+            .from('games')
+            .select(LIBRARY_COLUMNS)
+            .eq('user_id', user.id)
+            .eq('source', 'steam')
+            .in('app_id', appIds)
+        : { data: [], error: null },
+      supabase
+        .from('games')
+        .select(LIBRARY_COLUMNS)
+        .eq('user_id', user.id)
+        .eq('source', 'manual')
+        .in(
+          'igdb_id',
+          results.map((r) => r.igdbId),
+        ),
+    ]);
+    if (steamOwned.error) throw steamOwned.error;
+    if (manualOwned.error) throw manualOwned.error;
     return NextResponse.json(
       {
         results: results.map(({ steamAppIds, ...result }) => {
-          const game = owned?.find((g) => steamAppIds.includes(g.app_id));
+          const steam = steamOwned.data?.find((g) => steamAppIds.includes(g.app_id));
+          const game = steam ?? manualOwned.data?.find((g) => g.igdb_id === result.igdbId);
           return {
             ...result,
-            steamGame: game
+            libraryGame: game
               ? {
                   id: game.id,
+                  fromSteam: !!steam,
                   status: game.status,
                   platform: game.platform,
                   date: game.finished_at ?? game.dropped_at,

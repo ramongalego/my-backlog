@@ -24,8 +24,13 @@ jest.mock('next/image', () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 jest.mock('@/components/GameCarousel', () => ({ GameCarousel: () => null }));
+const mockOpenAddGame = jest.fn();
+jest.mock('@/components/games/AddGameProvider', () => ({
+  useAddGame: () => ({ open: mockOpenAddGame }),
+}));
+const mockConnectSteam = jest.fn();
+jest.mock('@/lib/steam/connect', () => ({ connectSteam: () => mockConnectSteam() }));
 jest.mock('@/components/SyncProgress', () => ({ SyncProgress: () => null }));
-jest.mock('@/components/LandingPage', () => ({ LandingPage: () => null }));
 jest.mock('@/components/games/GameStatusModal', () => ({ GameDetailModal: () => null }));
 jest.mock('@/components/games/GameSummaryModal', () => ({ GameSummaryModal: () => null }));
 jest.mock('@/components/home/HomeLoadingStates', () => ({
@@ -55,8 +60,9 @@ const baseLibrary = {
     isLoading: false,
   },
   meta: {
-    gameCount: 0,
+    gameCount: 12,
     historyCount: 0,
+    backlogCount: 12,
     queuedAppIds: new Set<number>(),
   },
   sync: {
@@ -95,7 +101,6 @@ const baseLibrary = {
     handleCloseStatusModal: jest.fn(),
     handleCloseSummary: jest.fn(),
   },
-  handleConnectSteam: jest.fn(),
 };
 
 const mockGame: GameWithImage = {
@@ -194,5 +199,82 @@ describe('HomeContent — Pick My Next Game button', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pick My Next Game' }));
 
     expect(await screen.findByTestId('suggestion-modal')).toHaveAttribute('data-mode', 'queue');
+  });
+});
+
+describe('HomeContent — an empty library', () => {
+  const emptyLibrary = (steamId: string | null) => ({
+    ...baseLibrary,
+    auth: { ...baseLibrary.auth, profile: { steam_id: steamId } },
+    meta: { ...baseLibrary.meta, gameCount: 0, backlogCount: 0 },
+  });
+
+  it('offers to add a game or connect Steam, instead of picking from nothing', () => {
+    mockUseGameLibrary.mockReturnValue(emptyLibrary(null));
+    render(<HomePage />);
+
+    expect(screen.getByRole('heading', { name: 'Build your backlog' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pick My Game' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a game' }));
+    expect(mockOpenAddGame).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Connect Steam' }));
+    expect(mockConnectSteam).toHaveBeenCalled();
+  });
+
+  it('with Steam linked, explains an empty Steam library instead of offering to connect it', () => {
+    mockUseGameLibrary.mockReturnValue(emptyLibrary('steam-123'));
+    render(<HomePage />);
+
+    expect(screen.getByText(/game details are private/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a game' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect Steam' })).not.toBeInTheDocument();
+  });
+});
+
+describe('HomeContent — games but no Steam', () => {
+  it('shows the picker, with a quiet way to connect Steam', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      auth: { ...baseLibrary.auth, profile: { steam_id: null } },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByRole('button', { name: 'Pick My Game' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Steam' })).toBeInTheDocument();
+  });
+
+  it('says nothing about Steam once it is linked', () => {
+    render(<HomePage />);
+
+    expect(screen.queryByRole('button', { name: 'Connect Steam' })).not.toBeInTheDocument();
+  });
+});
+
+describe('HomeContent — fewer than 3 games to pick from', () => {
+  it('keeps asking for games, with progress toward 3', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      auth: { ...baseLibrary.auth, profile: { steam_id: null } },
+      meta: { ...baseLibrary.meta, gameCount: 1, historyCount: 0, backlogCount: 1 },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByRole('heading', { name: 'Build your backlog' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    expect(screen.getByText('1 of 3 games')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pick My Game' })).not.toBeInTheDocument();
+  });
+
+  it("says finished and dropped games don't count, so adding one doesn't look broken", () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      auth: { ...baseLibrary.auth, profile: { steam_id: null } },
+      meta: { ...baseLibrary.meta, gameCount: 2, historyCount: 1, backlogCount: 1 },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    expect(screen.getByText(/finished and dropped don't count/)).toBeInTheDocument();
   });
 });

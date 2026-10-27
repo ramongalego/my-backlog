@@ -423,7 +423,7 @@ export default function StatsView() {
         <StatsContentSkeleton />
       ) : !stats ? (
         <EmptyState icon={Gamepad2} title="No stats yet">
-          Sync your Steam library to see your stats.
+          Add games to your library, or connect Steam, to see your stats here.
         </EmptyState>
       ) : (
         <div className="space-y-6">

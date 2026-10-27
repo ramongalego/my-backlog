@@ -14,6 +14,8 @@ const queueInserts: Record<string, unknown>[] = [];
 let insertError: { code: string } | null = null;
 // The user's Steam entry for the game, if any.
 let steamRow: { id: number; name: string; status: string } | null = null;
+// The game added by hand before, on some console, if any.
+let manualRow: { id: number; name: string; status: string } | null = null;
 let alreadyQueued = false;
 
 jest.mock('@/lib/supabase/server', () => ({
@@ -21,6 +23,7 @@ jest.mock('@/lib/supabase/server', () => ({
     auth: { getUser: async () => ({ data: { user: { id: `user-${Math.random()}` } } }) },
     from: (table: string) => {
       let columns = '';
+      let source = '';
       const builder = {
         insert: (row: Record<string, unknown>) => {
           (table === 'games' ? inserted : queueInserts).push(row);
@@ -34,18 +37,25 @@ jest.mock('@/lib/supabase/server', () => ({
           columns = cols;
           return builder;
         },
-        eq: () => builder,
+        eq: (column: string, value: unknown) => {
+          if (column === 'source') source = String(value);
+          return builder;
+        },
         in: () => builder,
         order: () => builder,
         limit: () => builder,
         single: async () =>
           insertError
             ? { data: null, error: insertError }
-            : { data: { id: steamRow?.id ?? 42 }, error: null },
+            : { data: { id: steamRow?.id ?? manualRow?.id ?? 42 }, error: null },
         maybeSingle: async () => {
-          if (table === 'games') return { data: steamRow, error: null };
+          if (table === 'games')
+            return { data: source === 'manual' ? manualRow : steamRow, error: null };
           if (columns === 'game_id')
-            return { data: alreadyQueued ? { game_id: steamRow?.id } : null, error: null };
+            return {
+              data: alreadyQueued ? { game_id: steamRow?.id ?? manualRow?.id } : null,
+              error: null,
+            };
           return { data: { position: 2 }, error: null };
         },
         then: (resolve: (v: unknown) => unknown) => resolve({ error: null }),
@@ -92,6 +102,7 @@ beforeEach(() => {
   queueInserts.length = 0;
   insertError = null;
   steamRow = null;
+  manualRow = null;
   alreadyQueued = false;
   jest.mocked(getGameDetails).mockResolvedValue(details);
   jest.mocked(applyStatusChange).mockResolvedValue({ ok: true });
@@ -229,7 +240,7 @@ describe('a game you own on Steam', () => {
       // Steam's last-played date was for the PC copy.
       last_played_at: null,
     });
-    expect(body).toMatchObject({ id: 7, movedFromSteam: true });
+    expect(body).toMatchObject({ id: 7, moved: true });
     // Already in the backlog: nothing else changes.
     expect(applyStatusChange).not.toHaveBeenCalled();
   });
@@ -254,5 +265,35 @@ describe('a game you own on Steam', () => {
     alreadyQueued = true;
     await post({ igdbId: 314944, platform: 'Switch', status: 'queue' });
     expect(queueInserts).toHaveLength(0);
+  });
+});
+
+describe('a game you already added by hand', () => {
+  beforeEach(() => {
+    manualRow = { id: 9, name: 'Hades', status: 'backlog' };
+  });
+
+  it('moves it to the new console instead of adding it twice', async () => {
+    const { status, body } = await post({ igdbId: 1, platform: 'PS5', status: 'backlog' });
+    expect(status).toBe(200);
+    expect(inserted).toHaveLength(0);
+    expect(updated[0]).toEqual({ platform: 'PS5' });
+    expect(body).toMatchObject({ id: 9, name: 'Hades', moved: true });
+    // Same status as before: nothing to change.
+    expect(applyStatusChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps its hours unless you enter new ones', async () => {
+    await post({ igdbId: 1, platform: 'PS5', status: 'backlog', hoursPlayed: 4 });
+    expect(updated[0]).toEqual({ platform: 'PS5', playtime_forever: 240 });
+  });
+
+  it('saves a new status, like finishing it', async () => {
+    await post({ igdbId: 1, platform: 'Switch', status: 'finished', date: '2026-10-20' });
+    expect(applyStatusChange).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({ gameId: 9, status: 'finished', finishedAt: '2026-10-20' }),
+    );
   });
 });

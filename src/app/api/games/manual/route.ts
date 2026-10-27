@@ -86,7 +86,29 @@ export async function POST(request: NextRequest) {
   if (steamGame && platform === STEAM_PLATFORM)
     return jsonError("It's already in your Steam library. Pick the console you play it on.", 400);
 
-  const mainStory = steamGame ? null : await mainStoryHours(details.name);
+  // Already added by hand, on this console or another: the same game is one
+  // entry, so it moves to the console you pick (an old copy on the other
+  // console isn't kept). Its hours stay unless you entered new ones.
+  let manualGame: { id: number; name: string; status: string } | null = null;
+  if (!steamGame) {
+    const { data, error: lookupError } = await supabase
+      .from('games')
+      .select('id, name, status')
+      .eq('user_id', user.id)
+      .eq('source', 'manual')
+      .eq('igdb_id', igdbId)
+      .order('id')
+      .limit(1)
+      .maybeSingle();
+    if (lookupError) {
+      console.error(lookupError);
+      return jsonError('Failed to add the game', 500);
+    }
+    manualGame = data;
+  }
+  const existing = steamGame ?? manualGame;
+
+  const mainStory = existing ? null : await mainStoryHours(details.name);
 
   const { data: game, error } = steamGame
     ? await supabase
@@ -103,34 +125,47 @@ export async function POST(request: NextRequest) {
         .eq('id', steamGame.id)
         .select('id')
         .single()
-    : await supabase
-        .from('games')
-        .insert({
-          user_id: user.id,
-          source: 'manual',
-          igdb_id: igdbId,
-          platform,
-          type: 'game',
-          name: details.name,
-          genres: details.genres,
-          categories: details.categories,
-          tags: details.tags,
-          description: details.description,
-          release_date: details.release_date,
-          header_image: details.header_image,
-          critic_score: details.critic_score,
-          critic_count: details.critic_count,
-          steam_app_id: details.steam_app_id,
-          steam_review_score: details.steam_review_score,
-          steam_review_count: details.steam_review_count,
-          steam_review_weighted: details.steam_review_weighted,
-          main_story_hours: mainStory,
-          playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
-          metadata_synced: true,
-          status: 'backlog',
-        })
-        .select('id')
-        .single();
+    : manualGame
+      ? await supabase
+          .from('games')
+          .update({
+            platform,
+            ...(hoursPlayed !== undefined
+              ? { playtime_forever: Math.round(hoursPlayed * 60) }
+              : {}),
+          })
+          .eq('user_id', user.id)
+          .eq('id', manualGame.id)
+          .select('id')
+          .single()
+      : await supabase
+          .from('games')
+          .insert({
+            user_id: user.id,
+            source: 'manual',
+            igdb_id: igdbId,
+            platform,
+            type: 'game',
+            name: details.name,
+            genres: details.genres,
+            categories: details.categories,
+            tags: details.tags,
+            description: details.description,
+            release_date: details.release_date,
+            header_image: details.header_image,
+            critic_score: details.critic_score,
+            critic_count: details.critic_count,
+            steam_app_id: details.steam_app_id,
+            steam_review_score: details.steam_review_score,
+            steam_review_count: details.steam_review_count,
+            steam_review_weighted: details.steam_review_weighted,
+            main_story_hours: mainStory,
+            playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
+            metadata_synced: true,
+            status: 'backlog',
+          })
+          .select('id')
+          .single();
 
   if (error) {
     if (error.code === '23505')
@@ -141,18 +176,18 @@ export async function POST(request: NextRequest) {
 
   // The game is in the library either way; if putting it where it was asked
   // for fails, say so rather than reporting plain success.
-  const name = steamGame?.name ?? details.name;
-  const where = steamGame ? `Moved to ${platform}` : 'Added to your backlog';
+  const name = existing?.name ?? details.name;
+  const where = existing ? `Moved to ${platform}` : 'Added to your backlog';
   let warning: string | undefined;
-  // A moved Steam game keeps its status unless you changed it (restarting
+  // A moved game keeps its status unless you changed it (restarting
   // "playing" would reset when you started it); finished and dropped always
   // save, since the dialog shows their date, notes and rating to edit.
-  const statusChanged = !steamGame || steamGame.status !== status;
+  const statusChanged = !existing || existing.status !== status;
   if (
     status === 'finished' ||
     status === 'dropped' ||
     (status === 'playing' && statusChanged) ||
-    (status === 'backlog' && steamGame && statusChanged)
+    (status === 'backlog' && existing && statusChanged)
   ) {
     // The same rules as any status change: starting it moves another playing
     // game back to the backlog; finishing or dropping records date and review.
@@ -169,7 +204,7 @@ export async function POST(request: NextRequest) {
       warning = `${where}, but it couldn't be marked ${STATUS_WORDS[status]}. Open it to try again.`;
     }
   } else if (status === 'queue') {
-    // A Steam game you're moving may be queued already.
+    // A game you're moving may be queued already.
     const { data: queued } = await supabase
       .from('playing_queue')
       .select('game_id')
@@ -184,7 +219,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
     // Only backlog games are queued.
-    const { error: backlogError } = steamGame
+    const { error: backlogError } = existing
       ? await supabase.from('games').update(DEMOTED).eq('user_id', user.id).eq('id', game.id)
       : { error: null };
     const { error: queueError } =
@@ -199,5 +234,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ id: game.id, name, warning, movedFromSteam: !!steamGame });
+  return NextResponse.json({ id: game.id, name, warning, moved: !!existing });
 }

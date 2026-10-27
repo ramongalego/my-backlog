@@ -16,6 +16,7 @@ export function useLibraryMeta(userId: string | null) {
   return {
     gameCount: data?.gameCount ?? 0,
     historyCount: data?.historyCount ?? 0,
+    backlogCount: data?.backlogCount ?? 0,
     loaded: !isPending && !!data,
   };
 }

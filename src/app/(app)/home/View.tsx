@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/Button';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
-import { GameCarousel } from '@/components/GameCarousel';
+import { GameCarousel, MIN_CAROUSEL_GAMES } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
@@ -20,22 +19,23 @@ import {
 } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
 import { useManualGameActions } from '@/hooks/useManualGame';
+import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
+import { connectSteam } from '@/lib/steam/connect';
 import type { SuggestionResult } from '@/lib/suggest/types';
-import { Dices, Sparkles } from 'lucide-react';
-
-// Only shown before Steam is connected, so kept out of the dashboard's bundle.
-// The modals are imported directly, like on the other pages: loading them on
-// demand made the first open wait for their code.
-const LandingPage = dynamic(() => import('@/components/LandingPage').then((m) => m.LandingPage));
+import { Dices, Plus, Sparkles } from 'lucide-react';
+import { SteamIcon } from '@/components/ui/SteamIcon';
+import { BacklogProgress } from '@/components/home/BacklogProgress';
+import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 
 export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
 
-  const { auth, meta, sync, carousels, currentGame, handleConnectSteam } = useGameLibrary();
+  const { auth, meta, sync, carousels, currentGame } = useGameLibrary();
   const { user, profile, isLoading } = auth;
   const manualGames = useManualGameActions(user?.id ?? null);
-  const { historyCount, queuedGameIds } = meta;
+  const { open: openAddGame } = useAddGame();
+  const { gameCount, historyCount, backlogCount, queuedGameIds } = meta;
   const { isSyncing, progress: syncProgress, games: syncingGames } = sync;
   const {
     pickUp,
@@ -60,8 +60,10 @@ export default function HomeView() {
       games: moreLike?.games ?? [],
     },
     { key: 'gems', title: 'Hidden Gems', games: hiddenGems },
-    { key: 'recent', title: 'Recently Added', games: recentlyAdded },
-  ].filter((row) => row.games.length > 0);
+    // A plain list of what's new, so it shows from the first game: while the
+    // backlog is being built, it's the games added so far.
+    { key: 'recent', title: 'Recently Added', games: recentlyAdded, minGames: 1 },
+  ].filter((row) => row.games.length >= (row.minGames ?? MIN_CAROUSEL_GAMES));
   const carouselsLoading = carousels.loading;
   const {
     currentlyPlaying,
@@ -98,14 +100,14 @@ export default function HomeView() {
   };
 
   const isSteamConnected = profile?.steam_id != null;
-  const showDashboard = user && isSteamConnected;
+  // Until there are a few games to choose between, picking one has no point:
+  // Home asks for more, with a bar counting toward them. Finished and dropped
+  // games can't be picked, so they don't count.
+  const isBuildingBacklog = backlogCount < MIN_GAMES_TO_PICK && !isSyncing && !currentlyPlaying;
 
-  if (isLoading) {
+  // Signed-out visitors never get here (the proxy sends them to the landing page).
+  if (isLoading || !user) {
     return <LoadingState />;
-  }
-
-  if (!showDashboard) {
-    return <LandingPage user={user} onConnectSteam={handleConnectSteam} />;
   }
 
   return (
@@ -134,6 +136,43 @@ export default function HomeView() {
               />
             ) : isStatusLoading ? (
               <StatusLoadingState />
+            ) : isBuildingBacklog ? (
+              <div>
+                <div className="max-w-xl">
+                  <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
+                    Build your backlog
+                  </h1>
+                  <p className="mt-2 text-ink-400">
+                    {gameCount === 0 && isSteamConnected
+                      ? "Your Steam library came back empty. If your Steam profile's game details are private, make them public and refresh from your account menu, or add games by hand."
+                      : `Add the games you own and haven't played yet, on any console. Once you have ${MIN_GAMES_TO_PICK}, MyBacklog can pick what to play next.`}
+                  </p>
+                  <BacklogProgress count={backlogCount} historyCount={historyCount} />
+                  <div className="mt-6 flex flex-wrap items-center gap-2">
+                    <Button size="lg" className="cursor-pointer" onClick={() => openAddGame()}>
+                      <Plus className="w-5 h-5" aria-hidden="true" />
+                      <span>Add a game</span>
+                    </Button>
+                    {!isSteamConnected && (
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        className="cursor-pointer"
+                        onClick={connectSteam}
+                      >
+                        <SteamIcon className="w-5 h-5" />
+                        <span>Connect Steam</span>
+                      </Button>
+                    )}
+                  </div>
+                  {!isSteamConnected && (
+                    <p className="mt-4 text-sm text-ink-500">
+                      Connecting Steam imports your whole library with your hours played. It&apos;s
+                      optional, and you can do it later from your account menu.
+                    </p>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="max-w-xl">
                 <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
@@ -163,6 +202,18 @@ export default function HomeView() {
                     <span>Random</span>
                   </Button>
                 </div>
+                {!isSteamConnected && (
+                  <p className="mt-4 text-sm text-ink-400">
+                    Games on Steam too?{' '}
+                    <button
+                      onClick={connectSteam}
+                      className="cursor-pointer font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors"
+                    >
+                      Connect Steam
+                    </button>{' '}
+                    to bring in your library.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -228,6 +279,7 @@ export default function HomeView() {
                 onOpenDetail={handleOpenCarouselDetail}
                 // Hidden Gems are picked by what Steam's players think.
                 preferSteamRating={row.key === 'gems'}
+                minGames={row.minGames}
                 priority={i === 0}
               />
             ))}

@@ -10,16 +10,10 @@ import { Panel } from '@/components/ui/Panel';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
 import { StatusBadge } from '@/components/games/StatusBadge';
 import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
-import type { User } from '@supabase/supabase-js';
 import type { AuthMode } from '@/types/auth';
 
 // The auth forms pull in supabase-js; load them only when the modal opens.
 const AuthModal = dynamic(() => import('@/components/auth/AuthModal').then((m) => m.AuthModal));
-
-interface LandingPageProps {
-  user: User | null;
-  onConnectSteam?: () => void;
-}
 
 const MOCK_LIBRARY: { image: string; title: string; status: GameStatus }[] = [
   { image: '/lp_hades.jpg', title: 'Hades', status: 'playing' },
@@ -254,7 +248,7 @@ function SectionCopy({ title, children }: { title: string; children: React.React
   );
 }
 
-export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
+export function LandingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
 
@@ -291,11 +285,7 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
     setIsAuthModalOpen(true);
   };
 
-  const primaryCta = user ? (
-    <Button size="lg" onClick={onConnectSteam}>
-      Connect Steam
-    </Button>
-  ) : (
+  const primaryCta = (
     <Button size="lg" onClick={() => openModal('signup')}>
       Get Started
     </Button>
@@ -329,19 +319,15 @@ export function LandingPage({ user, onConnectSteam }: LandingPageProps) {
 
               <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
                 {primaryCta}
-                {user ? (
-                  <p className="text-sm text-ink-400">Free · syncs with your Steam library</p>
-                ) : (
-                  <button
-                    onClick={() => openModal('login')}
-                    className="text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
-                  >
-                    Already have an account?{' '}
-                    <span className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4">
-                      Sign in
-                    </span>
-                  </button>
-                )}
+                <button
+                  onClick={() => openModal('login')}
+                  className="text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
+                >
+                  Already have an account?{' '}
+                  <span className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4">
+                    Sign in
+                  </span>
+                </button>
               </div>
             </div>
 

@@ -9,20 +9,12 @@ import { useCurrentGame } from './useCurrentGame';
 export function useGameLibrary() {
   const { user, profile, authResolved } = useAuth();
   const sync = useSyncContext();
-  const scopedUserId = profile?.steam_id ? (user?.id ?? null) : null;
-  const carousels = useCarouselPools(scopedUserId);
-  const meta = useLibraryMeta(scopedUserId);
-  const currentGame = useCurrentGame(scopedUserId);
+  const userId = user?.id ?? null;
+  const carousels = useCarouselPools(userId);
+  const meta = useLibraryMeta(userId);
+  const currentGame = useCurrentGame(userId);
 
-  const steamConnected = !!profile?.steam_id;
-  const isLoading = !authResolved || (steamConnected && !meta.loaded && !sync.isSyncing);
-
-  const handleConnectSteam = () => {
-    // Full-page navigation is intentional: this route handler 307s to steamcommunity.com
-    // (OpenID), which a client-side router.push() cannot follow.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = '/api/steam/auth';
-  };
+  const isLoading = !authResolved || (!!user && !meta.loaded && !sync.isSyncing);
 
   return {
     auth: {
@@ -33,6 +25,7 @@ export function useGameLibrary() {
     meta: {
       gameCount: meta.gameCount,
       historyCount: meta.historyCount,
+      backlogCount: meta.backlogCount,
       queuedGameIds: currentGame.queuedGameIds,
     },
     sync: {
@@ -71,6 +64,5 @@ export function useGameLibrary() {
       handleCloseStatusModal: currentGame.handleCloseStatusModal,
       handleCloseSummary: currentGame.handleCloseSummary,
     },
-    handleConnectSteam,
   };
 }

@@ -15,9 +15,14 @@ export interface GameSearchResult {
   year: number | null;
   cover: string | null;
   platforms: string[];
-  /** Your Steam entry for this game, if you own it there (moved to a console or not). */
-  steamGame: {
+  /**
+   * Your entry for this game if it's already in your library: from Steam
+   * (moved to a console or not) or added by hand on a console. Adding it again
+   * moves that entry, so a game is only ever listed once.
+   */
+  libraryGame: {
     id: number;
+    fromSteam: boolean;
     status: string;
     platform: string | null;
     /** When it was finished or dropped, and your notes and rating, to start the dialog from. */
@@ -57,7 +62,7 @@ export async function addManualGame(body: {
   date?: string;
   notes?: string;
   rating?: number | null;
-}): Promise<{ id: number; name: string; warning?: string; movedFromSteam?: boolean }> {
+}): Promise<{ id: number; name: string; warning?: string; moved?: boolean }> {
   const res = await check(
     await fetch('/api/games/manual', {
       method: 'POST',

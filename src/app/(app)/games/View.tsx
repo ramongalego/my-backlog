@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Gamepad2, Plus } from 'lucide-react';
+import { SteamIcon } from '@/components/ui/SteamIcon';
 
 import { GameCard } from '@/components/games/GameCard';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
@@ -14,9 +15,11 @@ import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { useAddGame } from '@/components/games/AddGameProvider';
+import { useAuth } from '@/hooks/useAuth';
+import { connectSteam } from '@/lib/steam/connect';
 
 const EMPTY_COPY: Record<GameFilter, string> = {
-  all: 'Your Steam library is empty, or still syncing.',
+  all: 'Add the games you own, on any console, or connect Steam to bring in your whole library.',
   backlog: "Your backlog is clear. Games you haven't started or decided on show up here.",
   finished:
     'Nothing finished yet. Mark a game as finished from its details to log it in your diary.',
@@ -47,6 +50,7 @@ export default function GamesView() {
     queuedGameIds,
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
+  const isSteamConnected = !!useAuth().profile?.steam_id;
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -149,8 +153,29 @@ export default function GamesView() {
             Try a different name or tag, or switch filters. Not on Steam? Add it by hand.
           </EmptyState>
         ) : (
-          <EmptyState icon={Gamepad2} title="Nothing here yet.">
-            {EMPTY_COPY[filter]}
+          <EmptyState
+            icon={Gamepad2}
+            title="Nothing here yet."
+            action={
+              filter === 'all' && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button onClick={() => openAddGame()}>
+                    <Plus className="w-4 h-4" aria-hidden="true" />
+                    Add a game
+                  </Button>
+                  {!isSteamConnected && (
+                    <Button variant="secondary" onClick={connectSteam}>
+                      <SteamIcon className="w-4 h-4" />
+                      Connect Steam
+                    </Button>
+                  )}
+                </div>
+              )
+            }
+          >
+            {filter === 'all' && isSteamConnected
+              ? 'Your Steam library is empty, or still syncing. Games from other consoles can be added by hand.'
+              : EMPTY_COPY[filter]}
           </EmptyState>
         )
       ) : (

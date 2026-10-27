@@ -164,12 +164,15 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
   return null;
 }
 
-/** Games that arrived after the first import (Steam doesn't expose purchase dates). */
+/**
+ * Games that arrived after the first Steam import (Steam doesn't expose
+ * purchase dates), and every game added by hand: each of those was added on
+ * purpose, the first included.
+ */
 function addedSinceFirstSync(games: CarouselGame[], firstImportedAt: string | undefined) {
-  if (!firstImportedAt) return [];
-  const cutoff = Date.parse(firstImportedAt) + FIRST_SYNC_WINDOW_MS;
+  const cutoff = firstImportedAt ? Date.parse(firstImportedAt) + FIRST_SYNC_WINDOW_MS : null;
   return games
-    .filter((g) => Date.parse(g.created_at) > cutoff)
+    .filter((g) => g.source === 'manual' || (cutoff !== null && Date.parse(g.created_at) > cutoff))
     .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
     .slice(0, POOL_SIZE);
 }

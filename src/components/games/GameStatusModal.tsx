@@ -90,6 +90,8 @@ interface GameDetailModalProps {
     fromSteam?: boolean;
     /** The console that Steam entry was already moved to, if any. */
     movedTo?: string | null;
+    /** You added it by hand on this console: adding it again moves it, or just saves. */
+    inLibraryOn?: string | null;
     /** Throws with a message to show if the game can't be added. */
     onAdd: (values: AddGameValues) => Promise<void>;
     onChangeGame: () => void;
@@ -312,6 +314,11 @@ export function GameDetailModal({
             {adding.movedTo
               ? `It’s in your library on ${adding.movedTo}, from Steam. Adding it again moves it to the console you pick.`
               : 'It’s in your Steam library. Adding it here moves that entry to the console you pick, so the game is only listed once.'}
+          </p>
+        )}
+        {adding?.inLibraryOn && (
+          <p className="text-sm text-ink-300">
+            {`It’s in your library on ${adding.inLibraryOn}. Pick another console to move it there, so the game is only listed once.`}
           </p>
         )}
         {adding && (
@@ -561,9 +568,17 @@ export function GameDetailModal({
                   : platform.trim()
                     ? `Move to ${platform.trim()}`
                     : 'Move from Steam'
-                : saving
-                  ? 'Adding…'
-                  : 'Add to library'
+                : adding.inLibraryOn
+                  ? platform.trim() && platform.trim() !== adding.inLibraryOn
+                    ? saving
+                      ? 'Moving…'
+                      : `Move to ${platform.trim()}`
+                    : saving
+                      ? 'Saving…'
+                      : 'Save changes'
+                  : saving
+                    ? 'Adding…'
+                    : 'Add to library'
               : saving
                 ? 'Saving…'
                 : 'Save changes'}

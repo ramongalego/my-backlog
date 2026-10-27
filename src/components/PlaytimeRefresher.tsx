@@ -12,10 +12,10 @@ import { useSyncContext } from './SyncProvider';
  * app left open in a tab shows its new hours when you come back to it.
  */
 export function PlaytimeRefresher() {
-  const { user, profile, authResolved } = useAuth();
+  const { user, authResolved } = useAuth();
   const { isSyncing } = useSyncContext();
   const { refreshIfStale } = useLibraryRefresh();
-  const ready = authResolved && !!user && !!profile?.steam_id && !isSyncing;
+  const ready = authResolved && !!user && !isSyncing;
 
   useEffect(() => {
     if (!ready) return;

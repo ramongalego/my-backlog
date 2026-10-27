@@ -11,6 +11,7 @@ import { AddGameButton } from '@/components/games/AddGameButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
+import { connectSteam } from '@/lib/steam/connect';
 import type { AuthMode } from '@/types/auth';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
@@ -121,14 +122,15 @@ export function Header() {
               <div className="w-10 h-10 bg-ink-800 rounded animate-pulse" />
             ) : user ? (
               <>
-                {/* Signed-in pages need Steam linked, so the button does too. */}
-                {profile?.steam_id && <AddGameButton />}
+                <AddGameButton />
                 <UserMenu
                   user={user}
                   steamUsername={steamUsername}
                   steamAvatar={steamAvatar}
                   gameCount={libraryMetaLoaded ? gameCount : undefined}
-                  onRefresh={handleRefreshLibrary}
+                  // Without Steam there's no library to refresh, only one to link.
+                  onRefresh={profile?.steam_id ? handleRefreshLibrary : undefined}
+                  onConnectSteam={profile?.steam_id ? undefined : connectSteam}
                   isRefreshing={isRefreshing}
                   isRefreshDisabled={isRefreshDisabled}
                 />

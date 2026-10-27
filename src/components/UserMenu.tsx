@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { RefreshCw, LogOut, Bug } from 'lucide-react';
+import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/SupportModal';
 import { refreshKeys } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
@@ -16,6 +17,8 @@ interface UserMenuProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   isRefreshDisabled?: boolean;
+  /** Shown instead of Refresh Library until a Steam account is linked. */
+  onConnectSteam?: () => void;
 }
 
 export function UserMenu({
@@ -24,6 +27,7 @@ export function UserMenu({
   steamAvatar,
   gameCount,
   onRefresh,
+  onConnectSteam,
   isRefreshing,
   isRefreshDisabled,
 }: UserMenuProps) {
@@ -136,7 +140,7 @@ export function UserMenu({
           />
         ) : (
           <div className="w-10 h-10 bg-ink-700 rounded flex items-center justify-center text-ink-300 text-sm font-medium">
-            {steamUsername?.[0]?.toUpperCase() ?? '?'}
+            {(steamUsername ?? user.email)?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
       </button>
@@ -172,6 +176,17 @@ export function UserMenu({
                     ? `Available in${cooldownLabel ? ` ${cooldownLabel}` : ''}`
                     : 'Refresh Library'}
               </span>
+            </button>
+          )}
+
+          {onConnectSteam && (
+            <button
+              role="menuitem"
+              onClick={onConnectSteam}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer"
+            >
+              <SteamIcon className="w-4 h-4" />
+              <span>Connect Steam</span>
             </button>
           )}
 
