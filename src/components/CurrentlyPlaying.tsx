@@ -4,12 +4,10 @@ import type { ReactNode } from 'react';
 import { ExternalLink, Archive, Check, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
-import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
-import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
+import { Playtime } from '@/components/games/GameCardInfo';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
-import { showsDeckRating } from '@/lib/games/consoles';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
@@ -21,11 +19,6 @@ interface Game {
   header_image: string | null;
   main_story_hours: number | null;
   playtime_forever: number;
-  steam_review_score?: number | null;
-  steam_review_count?: number | null;
-  critic_score?: number | null;
-  critic_count?: number | null;
-  deck_compat?: number | null;
   last_played_at?: string | null;
 }
 
@@ -45,6 +38,11 @@ interface CurrentlyPlayingProps {
 const TEXT_ACTION =
   'flex items-center gap-1.5 py-3 -my-3 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer';
 
+/**
+ * Hours played against the time to beat, from the moment the game is picked
+ * (0h) to when it's finished. No rating or Deck rating: they help choose a
+ * game, and this one's chosen (its details dialog still has them).
+ */
 function Progress({
   game,
   onSaveHours,
@@ -55,8 +53,6 @@ function Progress({
   const mainStoryHours = game.main_story_hours ?? 0;
   const playedHours = Math.round(game.playtime_forever / 60);
   const platform = consoleOf(game);
-  // A console game always shows its hours, even none yet, since you enter them.
-  const editable = !!onSaveHours && !!platform;
   // What follows the hours is hidden while they're being edited.
   const hours = (after?: ReactNode) =>
     onSaveHours && platform ? (
@@ -78,23 +74,8 @@ function Progress({
       </>
     );
 
-  if (!mainStoryHours) return editable ? <div className="text-sm">{hours()}</div> : null;
-
-  if (game.playtime_forever < 60 && !editable) {
-    return (
-      <div className="flex items-center gap-3 text-sm text-ink-400">
-        <TimeToBeat hours={mainStoryHours} iconClassName="w-3.5 h-3.5" />
-        <GameRating
-          criticScore={game.critic_score}
-          criticCount={game.critic_count}
-          steamScore={game.steam_review_score}
-          steamCount={game.steam_review_count}
-          iconClassName="w-3.5 h-3.5"
-        />
-        {showsDeckRating(game) && <SteamDeckBadge deckCompat={game.deck_compat} />}
-      </div>
-    );
-  }
+  // Without a time to beat there's nothing to measure against: just the hours.
+  if (!mainStoryHours) return <div className="text-sm">{hours()}</div>;
 
   if (playedHours >= mainStoryHours) {
     return (

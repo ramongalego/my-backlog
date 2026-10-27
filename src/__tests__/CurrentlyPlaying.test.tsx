@@ -46,26 +46,28 @@ describe('CurrentlyPlaying', () => {
     });
   });
 
-  describe('playtime progress — under 1 hour played', () => {
-    it('should show only time to beat when playtime is 0', () => {
-      render(<CurrentlyPlaying game={createGame(0, 20)} {...defaultCallbacks} />);
+  describe('playtime progress — just picked', () => {
+    it('shows the progress bar from 0h, with no rating or Deck rating', () => {
+      render(
+        <CurrentlyPlaying
+          game={{ ...createGame(0, 20), steam_review_score: 95, deck_compat: 3 } as never}
+          {...defaultCallbacks}
+        />,
+      );
 
-      expect(screen.getByText('20h')).toBeInTheDocument();
-      expect(screen.queryByText(/played/)).not.toBeInTheDocument();
+      expect(screen.getAllByText('0h played')[0]).toBeInTheDocument();
+      expect(screen.getByText('~20h to beat')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar')).toHaveStyle({ width: '0%' });
+      expect(screen.queryByText('95%')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deck')).not.toBeInTheDocument();
     });
 
-    it('should show only time to beat when playtime is under 60 minutes', () => {
-      render(<CurrentlyPlaying game={createGame(59, 20)} {...defaultCallbacks} />);
-
-      expect(screen.getByText('20h')).toBeInTheDocument();
-      expect(screen.queryByText(/played/)).not.toBeInTheDocument();
-    });
-
-    it('should show nothing when main_story_hours is 0', () => {
+    it('shows just the hours played when there is no time to beat', () => {
       render(<CurrentlyPlaying game={createGame(120, 0)} {...defaultCallbacks} />);
 
+      expect(screen.getAllByText('2h played')[0]).toBeInTheDocument();
       expect(screen.queryByText(/to beat/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/played/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
   });
 

@@ -24,7 +24,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
@@ -61,21 +61,28 @@ function NowPlayingRow({
 }: NowPlayingRowProps) {
   const platform = consoleOf(game);
   const mainStoryHours = game.main_story_hours ?? 0;
-  const hasEstimate = mainStoryHours > 0;
-  // A console game always shows its hours, even none yet, since you enter them.
-  const editable = !!onSaveHours && !!platform;
-  const hasPlaytime = editable || game.playtime_forever >= 60;
-  const playedHours = hasPlaytime ? Math.round(game.playtime_forever / 60) : null;
-  const estimateHours = hasEstimate ? mainStoryHours : null;
-  const isPastEstimate = hasEstimate && hasPlaytime && game.playtime_forever / 60 >= mainStoryHours;
-  const progressPct =
-    !isPastEstimate && playedHours !== null && estimateHours
-      ? Math.min((playedHours / estimateHours) * 100, 100)
-      : null;
-
-  const pastEstimate = <span className="text-ink-400">· past the ~{estimateHours}h estimate</span>;
-
-  const toBeat = <span className="whitespace-nowrap">~{estimateHours}h to beat</span>;
+  const playedHours = Math.round(game.playtime_forever / 60);
+  // Hours played against the time to beat from 0h on, like the card on Home;
+  // no rating or Deck rating, which help choose a game and this one's chosen.
+  const hours = (after?: ReactNode) =>
+    onSaveHours && platform ? (
+      <HoursPlayedEdit
+        minutes={game.playtime_forever}
+        platform={platform}
+        onSave={onSaveHours}
+        className="text-ink-200"
+        after={after}
+      />
+    ) : (
+      <>
+        <Playtime
+          minutes={game.playtime_forever}
+          lastPlayedAt={game.last_played_at}
+          className="text-ink-200"
+        />
+        {after}
+      </>
+    );
 
   const secondaryAction =
     'cursor-pointer flex items-center gap-1.5 py-3 -my-3 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-50 transition-colors';
@@ -105,75 +112,31 @@ function NowPlayingRow({
         {/* As wide as the actions under it, so the progress bar ends where they do. */}
         <div className="w-fit max-w-full">
           <div className="mt-2">
-            {isPastEstimate ? (
+            {!mainStoryHours ? (
+              <div className="text-xs">{hours()}</div>
+            ) : playedHours >= mainStoryHours ? (
               <div className="flex flex-wrap items-center gap-x-1 text-xs">
-                {editable ? (
-                  <HoursPlayedEdit
-                    minutes={game.playtime_forever}
-                    platform={platform}
-                    onSave={onSaveHours}
-                    className="text-ink-200"
-                    after={pastEstimate}
-                  />
-                ) : (
-                  <>
-                    <Playtime
-                      minutes={game.playtime_forever}
-                      lastPlayedAt={game.last_played_at}
-                      className="text-ink-200"
-                    />
-                    {pastEstimate}
-                  </>
+                {hours(
+                  <span className="text-ink-400">· past the ~{mainStoryHours}h estimate</span>,
                 )}
               </div>
-            ) : progressPct !== null ? (
+            ) : (
               // The two figures at either end of the bar.
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-ink-400">
-                  {editable ? (
-                    <HoursPlayedEdit
-                      minutes={game.playtime_forever}
-                      platform={platform}
-                      onSave={onSaveHours}
-                      after={toBeat}
-                    />
-                  ) : (
-                    <>
-                      <Playtime
-                        minutes={game.playtime_forever}
-                        lastPlayedAt={game.last_played_at}
-                      />
-                      {toBeat}
-                    </>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs">
+                  {hours(
+                    <span className="text-ink-400 whitespace-nowrap">
+                      ~{mainStoryHours}h to beat
+                    </span>,
                   )}
                 </div>
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
                   <div
                     className="h-full bg-accent-500 rounded-full"
-                    style={{ width: `${progressPct}%` }}
+                    style={{ width: `${(playedHours / mainStoryHours) * 100}%` }}
                   />
                 </div>
               </div>
-            ) : editable ? (
-              <div className="text-xs text-ink-400">
-                <HoursPlayedEdit
-                  minutes={game.playtime_forever}
-                  platform={platform}
-                  onSave={onSaveHours}
-                />
-              </div>
-            ) : (
-              <GameMetaRow
-                mainStoryHours={estimateHours}
-                steamReviewScore={game.steam_review_score}
-                steamReviewCount={game.steam_review_count}
-                criticScore={game.critic_score}
-                criticCount={game.critic_count}
-                playtimeMinutes={game.playtime_forever}
-                lastPlayedAt={game.last_played_at}
-                deckCompat={game.deck_compat}
-                platform={consoleOf(game)}
-              />
             )}
             <LastPlayed lastPlayedAt={game.last_played_at} className="mt-1.5 text-xs" />
           </div>
