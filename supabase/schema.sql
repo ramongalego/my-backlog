@@ -59,6 +59,9 @@ create table games (
   -- IGDB's average of critics' reviews (0-100), and how many it's from.
   critic_score smallint,
   critic_count smallint,
+  -- When a manual entry without a time was last looked up on HowLongToBeat
+  -- (it's looked up again weekly).
+  hltb_checked_at timestamptz,
   unique (user_id, app_id),
   -- Referenced by playing_queue, so a queue row can only point at its own user's game.
   unique (user_id, id),

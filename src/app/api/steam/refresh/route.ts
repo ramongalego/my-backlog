@@ -4,6 +4,7 @@ import { getOwnedGames } from '@/lib/steam/api';
 import { syncOwnedGames, type LibrarySyncResult } from '@/lib/steam/library';
 import { refreshReviewScores } from '@/lib/steam/reviews';
 import { refreshCriticScores } from '@/lib/games/critic-scores';
+import { recheckMissingHours } from '@/lib/games/manual-hours';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { jsonError, rateLimited } from '@/lib/api/response';
@@ -66,19 +67,31 @@ export async function POST(request: NextRequest) {
   // call per 50 games and an IGDB call per 500, so the app asks for them about
   // once a day ({ reviews: false } skips them). A failure here shouldn't fail
   // the refresh, since the library itself is already up to date.
+  // Games added by hand without a time to beat are looked up again in the same
+  // pass, each at most weekly (see recheckMissingHours).
   const body: { reviews?: unknown } = await request.json().catch(() => ({}));
   let updatedReviews = 0;
   let updatedCriticScores = 0;
+  let updatedHours = 0;
   if (body.reviews !== false) {
-    const [reviews, critics] = await Promise.allSettled([
+    const [reviews, critics, hours] = await Promise.allSettled([
       refreshReviewScores(supabase, user.id, tryCreateServiceClient()),
       refreshCriticScores(supabase, user.id),
+      recheckMissingHours(supabase, user.id),
     ]);
     if (reviews.status === 'fulfilled') updatedReviews = reviews.value;
     else console.error('Review score refresh failed:', reviews.reason);
     if (critics.status === 'fulfilled') updatedCriticScores = critics.value;
     else console.error('Critic score refresh failed:', critics.reason);
+    if (hours.status === 'fulfilled') updatedHours = hours.value;
+    else console.error('Time to beat recheck failed:', hours.reason);
   }
 
-  return NextResponse.json({ success: true, ...result, updatedReviews, updatedCriticScores });
+  return NextResponse.json({
+    success: true,
+    ...result,
+    updatedReviews,
+    updatedCriticScores,
+    updatedHours,
+  });
 }
