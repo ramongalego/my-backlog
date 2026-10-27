@@ -3,36 +3,77 @@ import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { steamReviewLabel } from '@/lib/steam/review-label';
 import { formatLastPlayed } from '@/lib/games/last-played';
 import { steamStoreUrl } from '@/lib/games/store-link';
+import { MIN_CRITIC_REVIEWS } from '@/lib/games/rating';
 import { SteamDeckBadge } from './SteamDeckBadge';
 
 /**
- * Steam's review score the way Steam shows it: percent positive with a
- * thumbs-up (not a star, which the app uses for your own rating). Steam's
- * label and the review count are in the tooltip.
+ * How a game rates, as one item in a meta row with a thumbs-up: its critic
+ * score ("88") when enough critics reviewed it, Steam games and games added by
+ * hand alike, else Steam's review score ("94%"). The tooltip shows both when
+ * the game has both.
  */
-export function SteamScore({
-  score,
-  count,
+export function GameRating({
+  criticScore,
+  criticCount,
+  steamScore,
+  steamCount,
+  preferSteam = false,
   iconClassName = 'w-3 h-3',
 }: {
-  score: number;
-  count?: number | null;
+  criticScore?: number | null;
+  criticCount?: number | null;
+  steamScore?: number | null;
+  steamCount?: number | null;
+  /** Show Steam's score first, where it's what picked the game (Hidden Gems). */
+  preferSteam?: boolean;
   iconClassName?: string;
 }) {
-  const label = count != null ? steamReviewLabel(score, count) : null;
-  const detail =
-    count != null
-      ? `${score}% of ${count.toLocaleString('en-US')} Steam review${count === 1 ? '' : 's'} are positive`
-      : `${score}% of Steam reviews are positive`;
+  const critic =
+    criticScore != null && (criticCount ?? 0) >= MIN_CRITIC_REVIEWS ? criticScore : null;
+  const steam = steamScore || null;
+  const showCritic = critic !== null && !(preferSteam && steam !== null);
+  if (critic === null && steam === null) return null;
+
+  const steamLabel =
+    steam !== null && steamCount != null ? steamReviewLabel(steam, steamCount) : null;
+  const steamDetail =
+    steamCount != null
+      ? `${steam}% of ${steamCount.toLocaleString('en-US')} Steam review${steamCount === 1 ? '' : 's'} are positive`
+      : `${steam}% of Steam reviews are positive`;
+  const criticText = critic !== null && (
+    <TooltipText
+      title={`Critic score: ${critic}`}
+      detail={`The average of ${criticCount} critics' reviews`}
+    />
+  );
+  const steamText = steam !== null && (
+    <TooltipText title={steamLabel ?? steamDetail} detail={steamLabel ? steamDetail : undefined} />
+  );
   return (
     <Tooltip
       content={
-        label ? <TooltipText title={label} detail={detail} /> : <TooltipText title={detail} />
+        // The score on the card first, then the other.
+        (showCritic ? [criticText, steamText] : [steamText, criticText])
+          .filter(Boolean)
+          .map((text, i) => (
+            <span key={i} className={i ? 'mt-1.5 block' : 'block'}>
+              {text}
+            </span>
+          ))
       }
     >
       <ThumbsUp className={iconClassName} aria-hidden="true" />
-      <span>{score}%</span>
-      <span className="sr-only"> on Steam</span>
+      {showCritic ? (
+        <>
+          <span>{critic}</span>
+          <span className="sr-only"> critic score</span>
+        </>
+      ) : (
+        <>
+          <span>{steam}%</span>
+          <span className="sr-only"> on Steam</span>
+        </>
+      )}
     </Tooltip>
   );
 }
@@ -111,13 +152,16 @@ interface GameMetaRowProps {
   mainStoryHours?: number | null;
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
+  criticScore?: number | null;
+  criticCount?: number | null;
+  preferSteamRating?: boolean;
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
   hidePlaytimeOnMobile?: boolean;
   /**
    * The console the game is played on (consoleOf); none for Steam games played
-   * on Steam. With one, Steam's reviews and Deck rating aren't shown.
+   * on Steam. With one, the Deck rating isn't shown.
    */
   platform?: string | null;
 }
@@ -126,24 +170,34 @@ export function GameMetaRow({
   mainStoryHours,
   steamReviewScore,
   steamReviewCount,
+  criticScore,
+  criticCount,
+  preferSteamRating,
   playtimeMinutes = 0,
   lastPlayedAt,
   deckCompat,
   hidePlaytimeOnMobile,
   platform,
 }: GameMetaRowProps) {
-  if (platform) {
-    steamReviewScore = null;
-    deckCompat = null;
-  }
-  if (!platform && !mainStoryHours && !steamReviewScore && playtimeMinutes < 60 && !deckCompat)
+  if (platform) deckCompat = null;
+  const rating = (
+    <GameRating
+      criticScore={criticScore}
+      criticCount={criticCount}
+      steamScore={steamReviewScore}
+      steamCount={steamReviewCount}
+      preferSteam={preferSteamRating}
+    />
+  );
+  const hasRating = (criticCount ?? 0) >= MIN_CRITIC_REVIEWS || !!steamReviewScore;
+  if (!platform && !mainStoryHours && !hasRating && playtimeMinutes < 60 && !deckCompat)
     return null;
   return (
     <div className="@container flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
       {/* The console shows on the art (ConsoleBadge); this is its name for screen readers. */}
       {platform && <span className="sr-only">On {platform}</span>}
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
-      {steamReviewScore ? <SteamScore score={steamReviewScore} count={steamReviewCount} /> : null}
+      {rating}
       {playtimeMinutes >= 60 ? (
         <Playtime
           compact
@@ -164,6 +218,9 @@ interface GameCardInfoProps {
   mainStoryHours?: number | null;
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
+  criticScore?: number | null;
+  criticCount?: number | null;
+  preferSteamRating?: boolean;
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
@@ -177,6 +234,9 @@ export function GameCardInfo({
   mainStoryHours,
   steamReviewScore,
   steamReviewCount,
+  criticScore,
+  criticCount,
+  preferSteamRating,
   playtimeMinutes = 0,
   lastPlayedAt,
   deckCompat,
@@ -209,6 +269,9 @@ export function GameCardInfo({
           mainStoryHours={mainStoryHours}
           steamReviewScore={steamReviewScore}
           steamReviewCount={steamReviewCount}
+          criticScore={criticScore}
+          criticCount={criticCount}
+          preferSteamRating={preferSteamRating}
           playtimeMinutes={playtimeMinutes}
           lastPlayedAt={lastPlayedAt}
           deckCompat={deckCompat}

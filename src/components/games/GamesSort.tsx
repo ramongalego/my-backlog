@@ -10,7 +10,7 @@ interface GamesSortProps {
 }
 
 const SORT_OPTIONS = [
-  { value: 'score' as GameSort, label: 'Steam Rating' },
+  { value: 'score' as GameSort, label: 'Rating' },
   { value: 'rating' as GameSort, label: 'My Rating' },
   { value: 'recent' as GameSort, label: 'Recently Added' },
   { value: 'released' as GameSort, label: 'Release Date' },

@@ -243,3 +243,31 @@ describe('slimPools', () => {
     });
   });
 });
+
+describe('ratings', () => {
+  it('ranks by critic score where there is one, so console games are rated too', () => {
+    const steamOnly = game({ name: 'Steam only', steam_review_weighted: 85 });
+    const console = game({
+      name: 'Console',
+      source: 'manual',
+      platform: 'Switch',
+      steam_review_score: null,
+      steam_review_count: null,
+      steam_review_weighted: null,
+      critic_score: 93,
+      critic_count: 9,
+    });
+    // Steam players love it, critics less so: the critic score counts.
+    const critics = game({
+      name: 'Critics',
+      steam_review_weighted: 95,
+      critic_score: 70,
+      critic_count: 12,
+    });
+    expect(names(build([steamOnly, console, critics]).highlyRatedGamesPool)).toEqual([
+      'Console',
+      'Steam only',
+      'Critics',
+    ]);
+  });
+});

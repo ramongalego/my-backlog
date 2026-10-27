@@ -46,6 +46,8 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   playtime_forever: 100,
   steam_review_score: 90,
   steam_review_count: 1000,
+  critic_score: null,
+  critic_count: null,
   steam_review_weighted: 85,
   header_image: 'https://example.com/image.jpg',
   main_story_hours: 10,

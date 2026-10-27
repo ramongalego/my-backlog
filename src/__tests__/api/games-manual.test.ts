@@ -68,6 +68,8 @@ const details = {
   release_date: 'Mar 1, 2026',
   header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
   steamAppIds: [] as number[],
+  critic_score: 92,
+  critic_count: 6,
 };
 
 const post = async (body: unknown) => {
@@ -112,20 +114,25 @@ it('adds the game with its IGDB details, console and hours', async () => {
   expect(applyStatusChange).not.toHaveBeenCalled();
 });
 
-it("uses Steam's art and tags for a game Steam also sells, else IGDB's", async () => {
+it("uses Steam's art, tags and reviews for a game Steam also sells, else IGDB's", async () => {
   jest.mocked(getGameDetails).mockResolvedValue({ ...details, steamAppIds: [2161700] });
   jest.mocked(getStoreItemInfo).mockResolvedValue({
     tags: ['JRPG', 'Anime', 'RPG'],
     headerImage2x: 'https://steam/header_2x.jpg',
     headerImage: 'https://steam/header.jpg',
-    reviews: null,
+    reviews: { score: 92, count: 30000 },
   });
   await post({ igdbId: 1, platform: 'PS5', status: 'backlog' });
   expect(getStoreItemInfo).toHaveBeenCalledWith(2161700);
   expect(inserted[0]).toMatchObject({
     tags: ['JRPG', 'Anime', 'RPG'],
     header_image: 'https://steam/header_2x.jpg',
+    steam_app_id: 2161700,
+    steam_review_score: 92,
+    steam_review_count: 30000,
   });
+  // Kept apart from app_id, which marks a game in your Steam library.
+  expect(inserted[0].app_id).toBeUndefined();
 
   // Steam unavailable: still added, with IGDB's.
   jest.mocked(getStoreItemInfo).mockResolvedValue(null);

@@ -167,6 +167,8 @@ function NowPlayingRow({
                 mainStoryHours={estimateHours}
                 steamReviewScore={game.steam_review_score}
                 steamReviewCount={game.steam_review_count}
+                criticScore={game.critic_score}
+                criticCount={game.critic_count}
                 playtimeMinutes={game.playtime_forever}
                 lastPlayedAt={game.last_played_at}
                 deckCompat={game.deck_compat}
@@ -311,6 +313,8 @@ function QueueItemRow({
             mainStoryHours={item.game.main_story_hours}
             steamReviewScore={item.game.steam_review_score}
             steamReviewCount={item.game.steam_review_count}
+            criticScore={item.game.critic_score}
+            criticCount={item.game.critic_count}
             playtimeMinutes={item.game.playtime_forever}
             lastPlayedAt={item.game.last_played_at}
             deckCompat={item.game.deck_compat}
@@ -441,6 +445,8 @@ export default function PlayingQueueView() {
               mainStoryHours={detailItem.game.main_story_hours}
               steamReviewScore={detailItem.game.steam_review_score}
               steamReviewCount={detailItem.game.steam_review_count}
+              criticScore={detailItem.game.critic_score}
+              criticCount={detailItem.game.critic_count}
               playtimeMinutes={detailItem.game.playtime_forever}
               lastPlayedAt={detailItem.game.last_played_at}
               deckCompat={detailItem.game.deck_compat}

@@ -39,6 +39,8 @@ export type QueueableGame = Pick<
       GameWithImage,
       | 'steam_review_score'
       | 'steam_review_count'
+      | 'critic_score'
+      | 'critic_count'
       | 'deck_compat'
       | 'last_played_at'
       | 'source'
@@ -59,6 +61,8 @@ function toQueueItem(game: QueueableGame, position: number): QueueItem {
       main_story_hours: game.main_story_hours,
       steam_review_score: game.steam_review_score ?? null,
       steam_review_count: game.steam_review_count ?? null,
+      critic_score: game.critic_score ?? null,
+      critic_count: game.critic_count ?? null,
       deck_compat: game.deck_compat ?? null,
       last_played_at: game.last_played_at ?? null,
       // The console tag and Steam details depend on these.
@@ -79,6 +83,8 @@ function toPlayingGame(item: QueueItem): GameWithImage {
     started_at: null,
     steam_review_score: item.game.steam_review_score,
     steam_review_count: item.game.steam_review_count ?? null,
+    critic_score: item.game.critic_score ?? null,
+    critic_count: item.game.critic_count ?? null,
     deck_compat: item.game.deck_compat ?? null,
     last_played_at: item.game.last_played_at ?? null,
     source: item.game.source,

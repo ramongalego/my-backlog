@@ -229,6 +229,8 @@ export default function HomeView() {
                 title={row.title}
                 games={row.games}
                 onOpenDetail={handleOpenCarouselDetail}
+                // Hidden Gems are picked by what Steam's players think.
+                preferSteamRating={row.key === 'gems'}
                 priority={i === 0}
               />
             ))}
@@ -260,6 +262,8 @@ export default function HomeView() {
           mainStoryHours={carouselModal.game.main_story_hours}
           steamReviewScore={carouselModal.game.steam_review_score}
           steamReviewCount={carouselModal.game.steam_review_count}
+          criticScore={carouselModal.game.critic_score}
+          criticCount={carouselModal.game.critic_count}
           playtimeMinutes={carouselModal.game.playtime_forever}
           lastPlayedAt={carouselModal.game.last_played_at}
           deckCompat={carouselModal.game.deck_compat}

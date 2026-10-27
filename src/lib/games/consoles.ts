@@ -20,11 +20,11 @@ export function consoleOf(game: { source?: string; platform?: string | null }): 
 }
 
 /**
- * Whether to show Steam's own details (review score, Steam Deck rating): only
- * for games played on Steam. A game on a console shows none, like any game
- * added by hand, until something takes their place for every console.
+ * Whether to show the Steam Deck rating: only for games played on Steam. A
+ * game on a console still shows its Steam reviews when Steam sells it, next to
+ * its critic score, but how it runs on a Deck says nothing about it there.
  */
-export function showsSteamDetails(game: { source?: string; platform?: string | null }): boolean {
+export function showsDeckRating(game: { source?: string; platform?: string | null }): boolean {
   return consoleOf(game) === null;
 }
 

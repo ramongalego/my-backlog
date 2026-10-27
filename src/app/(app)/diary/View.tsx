@@ -305,6 +305,8 @@ export default function DiaryView() {
             mainStoryHours={detailModal.game.main_story_hours}
             steamReviewScore={detailModal.game.steam_review_score}
             steamReviewCount={detailModal.game.steam_review_count}
+            criticScore={detailModal.game.critic_score}
+            criticCount={detailModal.game.critic_count}
             playtimeMinutes={detailModal.game.playtime_forever}
             lastPlayedAt={detailModal.game.last_played_at}
             deckCompat={detailModal.game.deck_compat}

@@ -1,4 +1,5 @@
 import { isSoftware } from '@/lib/games/software';
+import { ratingOf } from '@/lib/games/rating';
 import {
   multiplayerFocus,
   seriesKey,
@@ -27,6 +28,8 @@ export interface CandidateGame {
   main_story_hours: number | null;
   playtime_forever: number | null;
   steam_review_weighted: number | null;
+  critic_score: number | null;
+  critic_count: number | null;
   reroll_count: number | null;
   last_rerolled_at: string | null;
 }
@@ -447,10 +450,8 @@ export function scoreCandidates<T extends CandidateGame>(
       const length = game.main_story_hours;
       const playedOut = length ? hoursPlayed >= Math.max(3, length * 1.2) : hoursPlayed >= 40;
       const started = !playedOut && hoursPlayed >= 0.5;
-      const quality =
-        game.steam_review_weighted == null
-          ? 0.3
-          : Math.max(0, Math.min(1, (game.steam_review_weighted - 50) / 45));
+      const rating = ratingOf(game);
+      const quality = rating == null ? 0.3 : Math.max(0, Math.min(1, (rating - 50) / 45));
       const reroll = rerollPenalty(game, now);
 
       const score =

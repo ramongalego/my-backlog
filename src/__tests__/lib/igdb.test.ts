@@ -1,7 +1,13 @@
 /**
  * @jest-environment node
  */
-import { getGameDetails, igdbTags, pickWideArt, searchGames } from '@/lib/igdb/api';
+import {
+  getCriticScoresBySteamId,
+  getGameDetails,
+  igdbTags,
+  pickWideArt,
+  searchGames,
+} from '@/lib/igdb/api';
 import { isBoxArt } from '@/lib/igdb/images';
 
 process.env.IGDB_CLIENT_ID = 'client';
@@ -34,6 +40,8 @@ const mkGame = (extra: Record<string, unknown> = {}) => ({
   themes: [{ name: 'Science fiction' }, { name: 'Open world' }],
   game_modes: [{ name: 'Single player' }, { name: 'Multiplayer' }],
   summary: 'Explore Mira.',
+  aggregated_rating: 81.6,
+  aggregated_rating_count: 9,
   external_games: [
     { uid: '9P07H5JQ4R5Q', external_game_source: 11 },
     { uid: '2369900', external_game_source: 1 },
@@ -55,6 +63,9 @@ describe('getGameDetails', () => {
       header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
       // Its Steam listing, to recognise it in your Steam library.
       steamAppIds: [2369900],
+      // Critics' average, rounded, and how many reviews it's from.
+      critic_score: 82,
+      critic_count: 9,
     });
   });
 
@@ -227,4 +238,36 @@ it('tells box art from wide art', () => {
   expect(isBoxArt('https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg')).toBe(false);
   expect(isBoxArt('https://shared.steamstatic.com/header.jpg')).toBe(false);
   expect(isBoxArt(null)).toBe(false);
+});
+
+describe('getCriticScoresBySteamId', () => {
+  it('matches Steam ids, keeping the entry more critics reviewed and skipping unrated ones', async () => {
+    games = [
+      { uid: '10', game: { aggregated_rating: 81.4, aggregated_rating_count: 2 } },
+      // The same Steam listing on a second IGDB entry, with more reviews.
+      { uid: '10', game: { aggregated_rating: 86.6, aggregated_rating_count: 9 } },
+      { uid: '20', game: {} },
+    ];
+    const scores = await getCriticScoresBySteamId([10, 20, 30]);
+    expect([...scores]).toEqual([[10, { critic_score: 87, critic_count: 9 }]]);
+    expect(requests.at(-1)?.body).toContain('uid = ("10","20","30")');
+  });
+
+  it("uses the game's score for an edition critics barely reviewed", async () => {
+    // Steam sells the Game of the Year edition; critics reviewed the game.
+    games = [
+      {
+        uid: '200260',
+        game: {
+          aggregated_rating: 94,
+          aggregated_rating_count: 1,
+          version_parent: { aggregated_rating: 91.2, aggregated_rating_count: 10 },
+        },
+      },
+    ];
+    expect((await getCriticScoresBySteamId([200260])).get(200260)).toEqual({
+      critic_score: 91,
+      critic_count: 10,
+    });
+  });
 });

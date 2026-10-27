@@ -57,6 +57,8 @@ interface GameDetailModalProps {
   mainStoryHours?: number | null;
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
+  criticScore?: number | null;
+  criticCount?: number | null;
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
@@ -124,6 +126,8 @@ export function GameDetailModal({
   mainStoryHours,
   steamReviewScore,
   steamReviewCount,
+  criticScore,
+  criticCount,
   playtimeMinutes,
   lastPlayedAt,
   deckCompat,
@@ -286,6 +290,8 @@ export function GameDetailModal({
             mainStoryHours={mainStoryHours}
             steamReviewScore={steamReviewScore}
             steamReviewCount={steamReviewCount}
+            criticScore={criticScore}
+            criticCount={criticCount}
             playtimeMinutes={playtimeMinutes}
             lastPlayedAt={lastPlayedAt}
             deckCompat={deckCompat}

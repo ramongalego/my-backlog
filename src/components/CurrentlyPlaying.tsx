@@ -4,12 +4,12 @@ import type { ReactNode } from 'react';
 import { ExternalLink, Archive, Check, ListOrdered, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CoverArt } from '@/components/games/CoverArt';
-import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
+import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
 import { SteamDeckBadge } from '@/components/games/SteamDeckBadge';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
-import { showsSteamDetails } from '@/lib/games/consoles';
+import { showsDeckRating } from '@/lib/games/consoles';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
@@ -23,6 +23,8 @@ interface Game {
   playtime_forever: number;
   steam_review_score?: number | null;
   steam_review_count?: number | null;
+  critic_score?: number | null;
+  critic_count?: number | null;
   deck_compat?: number | null;
   last_played_at?: string | null;
 }
@@ -82,14 +84,14 @@ function Progress({
     return (
       <div className="flex items-center gap-3 text-sm text-ink-400">
         <TimeToBeat hours={mainStoryHours} iconClassName="w-3.5 h-3.5" />
-        {game.steam_review_score != null && showsSteamDetails(game) && (
-          <SteamScore
-            score={game.steam_review_score}
-            count={game.steam_review_count}
-            iconClassName="w-3.5 h-3.5"
-          />
-        )}
-        {showsSteamDetails(game) && <SteamDeckBadge deckCompat={game.deck_compat} />}
+        <GameRating
+          criticScore={game.critic_score}
+          criticCount={game.critic_count}
+          steamScore={game.steam_review_score}
+          steamCount={game.steam_review_count}
+          iconClassName="w-3.5 h-3.5"
+        />
+        {showsDeckRating(game) && <SteamDeckBadge deckCompat={game.deck_compat} />}
       </div>
     );
   }

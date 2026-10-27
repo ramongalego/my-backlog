@@ -43,6 +43,8 @@ const entry: DiaryEntry = {
   main_story_hours: 8.3,
   steam_review_score: 97,
   steam_review_count: 140237,
+  critic_score: null,
+  critic_count: null,
   deck_compat: 3,
   last_played_at: '2026-10-20T09:00:00Z',
 };

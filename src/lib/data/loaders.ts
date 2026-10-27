@@ -27,6 +27,8 @@ export interface GameItem {
   playtime_forever: number;
   steam_review_score: number | null;
   steam_review_count: number | null;
+  critic_score: number | null;
+  critic_count: number | null;
   steam_review_weighted: number | null;
   header_image: string | null;
   main_story_hours: number | null;
@@ -54,7 +56,7 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
     supabase
       .from('games')
       .select(
-        'id, source, platform, app_id, name, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
+        'id, source, platform, app_id, name, playtime_forever, steam_review_score, steam_review_count, critic_score, critic_count, steam_review_weighted, header_image, main_story_hours, status, notes, rating, finished_at, dropped_at, tags, deck_compat, created_at, release_date, last_played_at',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
@@ -133,6 +135,8 @@ export interface DiaryEntry {
   main_story_hours: number | null;
   steam_review_score: number | null;
   steam_review_count: number | null;
+  critic_score: number | null;
+  critic_count: number | null;
   deck_compat: number | null;
   last_played_at: string | null;
 }
@@ -144,7 +148,7 @@ export async function loadDiaryEntries(
   const { data, error } = await supabase
     .from('games')
     .select(
-      'id, source, platform, app_id, name, header_image, rating, notes, finished_at, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at',
+      'id, source, platform, app_id, name, header_image, rating, notes, finished_at, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at',
     )
     .eq('user_id', userId)
     .eq('status', 'finished')
@@ -157,7 +161,7 @@ export async function loadDiaryEntries(
 // ─── Now playing + queue ────────────────────────────────────────────────────
 
 export const PLAYING_GAME_SELECT =
-  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, deck_compat, last_played_at';
+  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at';
 
 export async function loadCurrentlyPlaying(
   supabase: SupabaseClient,
@@ -175,7 +179,7 @@ export async function loadCurrentlyPlaying(
 }
 
 const QUEUE_GAME_COLUMNS =
-  'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, deck_compat, last_played_at';
+  'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at';
 
 export async function loadQueue(supabase: SupabaseClient, userId: string): Promise<QueueItem[]> {
   // The queue references its games, so one query returns each row with its game.
@@ -225,7 +229,7 @@ export async function loadLibraryMeta(
 export type { CarouselPools };
 
 const CAROUSEL_SELECT =
-  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
+  'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, steam_review_score, steam_review_count, critic_score, critic_count, steam_review_weighted, deck_compat, tags, categories, created_at, last_played_at';
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
 /**

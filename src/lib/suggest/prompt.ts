@@ -1,4 +1,5 @@
 import type { HistoryGame, ScoredCandidate } from './shortlist';
+import { criticScoreOf } from '@/lib/games/rating';
 import type { FinishedGame, GameForSuggestion, SuggestionContext } from './types';
 
 const MOOD_DESCRIPTIONS = {
@@ -48,6 +49,9 @@ function formatCandidate(
     game.tags?.length ? `Tags: ${game.tags.slice(0, 6).join(', ')}` : null,
     game.main_story_hours ? `Length: ${game.main_story_hours}h` : 'Length: unknown',
     hoursPlayed > 0 ? `Already played: ${hoursPlayed}h` : 'Never played',
+    criticScoreOf(game) != null
+      ? `Critic score: ${criticScoreOf(game)} (from ${game.critic_count} reviews)`
+      : null,
     game.steam_review_score != null && game.steam_review_count
       ? `Steam reviews: ${game.steam_review_score}% positive of ${game.steam_review_count.toLocaleString('en-US')}`
       : null,

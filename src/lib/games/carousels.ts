@@ -6,6 +6,7 @@ import {
   MAX_PLAYTIME_MINUTES,
 } from './filtering';
 import { editionKey, multiplayerFocus, seriesMatch, similarity, topTags } from './similarity';
+import { criticScoreOf, ratingOf } from './rating';
 
 /** A backlog game with what the carousels sort and filter on. */
 export interface CarouselGame extends GameWithImage {
@@ -74,7 +75,7 @@ const byGemRank = (a: CarouselGame, b: CarouselGame) =>
 // many it needs before the carousel is worth showing.
 const MORE_LIKE_MIN_RATING = 8;
 const MORE_LIKE_MIN_SIMILARITY = 0.25;
-const MORE_LIKE_MIN_STEAM_SCORE = 75;
+const MORE_LIKE_MIN_SCORE = 75;
 export const MORE_LIKE_MIN_GAMES = 3;
 const SAME_SERIES_BONUS = 0.5;
 
@@ -116,8 +117,9 @@ function isStarted(g: CarouselGame) {
     : g.playtime_forever >= STARTED_MIN_MINUTES_UNKNOWN_LENGTH;
 }
 
-const byWeighted = (a: CarouselGame, b: CarouselGame) =>
-  (b.steam_review_weighted ?? -1) - (a.steam_review_weighted ?? -1) || a.id - b.id;
+// Best rated first: critic score, else Steam's weighted score (ratingOf).
+const byRating = (a: CarouselGame, b: CarouselGame) =>
+  (ratingOf(b) ?? -1) - (ratingOf(a) ?? -1) || a.id - b.id;
 
 /** One game per edition: the better-reviewed of "Ori" and "Ori: Definitive Edition". */
 function oneEditionEach(games: CarouselGame[]) {
@@ -125,7 +127,7 @@ function oneEditionEach(games: CarouselGame[]) {
   for (const g of games) {
     const key = editionKey(g.name) || String(g.id);
     const kept = best.get(key);
-    if (!kept || byWeighted(g, kept) < 0) best.set(key, g);
+    if (!kept || byRating(g, kept) < 0) best.set(key, g);
   }
   const keep = new Set(best.values());
   return games.filter((g) => keep.has(g));
@@ -142,7 +144,7 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
       (a, b) => b.rating - a.rating || (b.finished_at ?? '').localeCompare(a.finished_at ?? ''),
     );
   const worthPlaying = games.filter(
-    (g) => (g.steam_review_score ?? 0) >= MORE_LIKE_MIN_STEAM_SCORE,
+    (g) => (criticScoreOf(g) ?? g.steam_review_score ?? 0) >= MORE_LIKE_MIN_SCORE,
   );
 
   for (const seed of seeds) {
@@ -155,7 +157,7 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
           (seriesMatch(game.name, seed.name) === 1 ? SAME_SERIES_BONUS : 0),
       }))
       .filter((m) => m.score >= MORE_LIKE_MIN_SIMILARITY)
-      .sort((a, b) => b.score - a.score || byWeighted(a.game, b.game));
+      .sort((a, b) => b.score - a.score || byRating(a.game, b.game));
     if (matches.length >= MORE_LIKE_MIN_GAMES) {
       return { basedOn: seed.name, games: matches.slice(0, POOL_SIZE).map((m) => m.game) };
     }
@@ -204,7 +206,8 @@ export function buildCarouselPools(
 ): CarouselPools {
   const candidates = oneEditionEach(backlog.filter((g) => !isMultiplayerFirst(g)));
   const unfinished = candidates.filter((g) => !isPlayedOut(g));
-  const reviewed = unfinished.filter((g) => g.steam_review_weighted != null).sort(byWeighted);
+  // Rated by critics or on Steam; Hidden Gems below keeps to Steam's players.
+  const reviewed = unfinished.filter((g) => ratingOf(g) != null).sort(byRating);
 
   const lengthBetween = (min: number, max: number, minInclusive: boolean) =>
     reviewed.filter(

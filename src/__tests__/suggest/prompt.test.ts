@@ -13,6 +13,8 @@ describe('buildSuggestionPrompt', () => {
     playtime_forever: 60,
     steam_review_score: 92,
     steam_review_count: 12439,
+    critic_score: null,
+    critic_count: null,
     steam_review_weighted: 85,
     reroll_count: 0,
     last_rerolled_at: null,

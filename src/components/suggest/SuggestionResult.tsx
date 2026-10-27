@@ -1,7 +1,7 @@
 'use client';
 
 import { Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
-import { Playtime, SteamScore, TimeToBeat } from '@/components/games/GameCardInfo';
+import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { GameArt } from '@/components/games/GameArt';
@@ -63,13 +63,13 @@ export function SuggestionResult({
           {game.main_story_hours ? (
             <TimeToBeat hours={game.main_story_hours} iconClassName="w-3.5 h-3.5" />
           ) : null}
-          {game.steam_review_score ? (
-            <SteamScore
-              score={game.steam_review_score}
-              count={game.steam_review_count}
-              iconClassName="w-3.5 h-3.5"
-            />
-          ) : null}
+          <GameRating
+            criticScore={game.critic_score}
+            criticCount={game.critic_count}
+            steamScore={game.steam_review_score}
+            steamCount={game.steam_review_count}
+            iconClassName="w-3.5 h-3.5"
+          />
           {game.playtime_forever >= 60 ? (
             <Playtime
               compact

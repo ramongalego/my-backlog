@@ -85,11 +85,18 @@ interface IgdbGame {
   keywords?: { name: string }[];
   involved_companies?: { developer?: boolean; company?: { country?: number } }[];
   summary?: string;
+  /** The average of critics' reviews, 0-100, and how many reviews it's from. */
+  aggregated_rating?: number;
+  aggregated_rating_count?: number;
   external_games?: ExternalGame[];
   /** Releases of the same game on other platforms that IGDB keeps as their own entries. */
   ports?: { external_games?: ExternalGame[] }[];
   /** The game this is an edition of. */
-  version_parent?: { external_games?: ExternalGame[] };
+  version_parent?: {
+    external_games?: ExternalGame[];
+    aggregated_rating?: number;
+    aggregated_rating_count?: number;
+  };
 }
 
 interface ExternalGame {
@@ -326,13 +333,15 @@ export interface ManualGameDetails {
   header_image: string | null;
   /** Not a games column: used to find the game in your Steam library. */
   steamAppIds: number[];
+  critic_score: number | null;
+  critic_count: number | null;
 }
 
 /** The game's details in the shape of the games table, or null if IGDB doesn't know it. */
 export async function getGameDetails(igdbId: number): Promise<ManualGameDetails | null> {
   const [game] = await query<IgdbGame>(
     'games',
-    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, keywords.name, involved_companies.developer, involved_companies.company.country, summary, ${EXTERNAL_FIELDS}; where id = ${Math.trunc(igdbId)};`,
+    `fields name, first_release_date, platforms.name, cover.image_id, artworks.image_id, artworks.width, artworks.height, artworks.artwork_type, screenshots.image_id, screenshots.width, genres.name, themes.name, game_modes.name, keywords.name, involved_companies.developer, involved_companies.company.country, summary, ${CRITIC_FIELDS}, ${EXTERNAL_FIELDS}; where id = ${Math.trunc(igdbId)};`,
   );
   if (!game) return null;
 
@@ -357,5 +366,88 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
       : null,
     header_image: wideArt ? artworkUrl(wideArt) : game.cover ? coverUrl(game.cover.image_id) : null,
     steamAppIds: steamAppIds(game),
+    ...criticScore(game),
   };
+}
+
+// ─── Critic scores ───────────────────────────────────────────────────────────
+
+// The game's own score and, for an edition, the game it's an edition of.
+const CRITIC_FIELDS =
+  'aggregated_rating, aggregated_rating_count, version_parent.aggregated_rating, version_parent.aggregated_rating_count';
+// IGDB returns at most 500 results a query.
+const LOOKUP_BATCH = 500;
+
+export interface CriticScore {
+  critic_score: number | null;
+  critic_count: number | null;
+}
+
+/**
+ * The game's critic score. Critics review a game, rarely its editions, so an
+ * edition (a Game of the Year release, often what Steam sells) with fewer
+ * reviews than the game it's an edition of takes that game's score.
+ */
+function criticScore(
+  game: Pick<IgdbGame, 'aggregated_rating' | 'aggregated_rating_count' | 'version_parent'>,
+): CriticScore {
+  const best = [game, game.version_parent ?? {}]
+    .filter((g) => g.aggregated_rating && g.aggregated_rating_count)
+    .sort((a, b) => b.aggregated_rating_count! - a.aggregated_rating_count!)[0];
+  return best
+    ? {
+        critic_score: Math.round(best.aggregated_rating!),
+        critic_count: best.aggregated_rating_count!,
+      }
+    : { critic_score: null, critic_count: null };
+}
+
+/**
+ * Critic scores for Steam games, by Steam app id, a few hundred per request.
+ * Games IGDB doesn't know, or that no critic reviewed, are left out.
+ */
+export async function getCriticScoresBySteamId(
+  appIds: number[],
+): Promise<Map<number, CriticScore>> {
+  const scores = new Map<number, CriticScore>();
+  for (let i = 0; i < appIds.length; i += LOOKUP_BATCH) {
+    const uids = appIds.slice(i, i + LOOKUP_BATCH).map((id) => `"${id}"`);
+    const listings = await query<{ uid: string; game?: IgdbGame }>(
+      'external_games',
+      `fields uid, ${CRITIC_FIELDS.split(', ')
+        .map((f) => `game.${f}`)
+        .join(
+          ', ',
+        )}; where external_game_source = ${STEAM_SOURCE} & uid = (${uids.join(',')}); limit ${LOOKUP_BATCH};`,
+    );
+    for (const { uid, game } of listings) {
+      const score = game && criticScore(game);
+      const appId = Number(uid);
+      // Several IGDB entries can share a Steam listing (a game and its
+      // edition): the one more critics reviewed speaks for it.
+      if (score?.critic_count && (scores.get(appId)?.critic_count ?? 0) < score.critic_count) {
+        scores.set(appId, score);
+      }
+    }
+  }
+  return scores;
+}
+
+/** Critic scores for games added by hand, by IGDB id. */
+export async function getCriticScoresByIgdbId(
+  igdbIds: number[],
+): Promise<Map<number, CriticScore>> {
+  const scores = new Map<number, CriticScore>();
+  for (let i = 0; i < igdbIds.length; i += LOOKUP_BATCH) {
+    const ids = igdbIds.slice(i, i + LOOKUP_BATCH).map((id) => Math.trunc(id));
+    const games = await query<IgdbGame>(
+      'games',
+      `fields ${CRITIC_FIELDS}; where id = (${ids.join(',')}); limit ${LOOKUP_BATCH};`,
+    );
+    for (const game of games) {
+      const score = criticScore(game);
+      if (score.critic_count) scores.set(game.id, score);
+    }
+  }
+  return scores;
 }

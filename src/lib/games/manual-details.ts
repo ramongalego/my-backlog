@@ -2,23 +2,36 @@
 // dialog previews them and the add route saves them.
 import { getGameDetails, type ManualGameDetails } from '@/lib/igdb/api';
 import { getStoreItemInfo } from '@/lib/steam/store-api';
+import { calculateBayesianScore } from './scoring';
+
+export interface AddableGameDetails extends ManualGameDetails {
+  /** The game's Steam app id when Steam sells it too, for its reviews. */
+  steam_app_id: number | null;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
+  steam_review_weighted: number | null;
+}
 
 /**
- * IGDB's details, with Steam's art and tags when Steam also sells the game:
- * its store header is made for the shape every game image here uses, and its
- * tags are the words the rest of the library is described in (JRPG,
- * Roguelite...). Games Steam doesn't sell keep IGDB's, and so does any game
- * when Steam doesn't answer.
+ * IGDB's details, with Steam's art, tags and reviews when Steam also sells the
+ * game: its store header is made for the shape every game image here uses,
+ * its tags are the words the rest of the library is described in (JRPG,
+ * Roguelite...), and its reviews show next to the critic score. Games Steam
+ * doesn't sell keep IGDB's, and so does any game when Steam doesn't answer.
  */
-export async function getAddableGameDetails(igdbId: number): Promise<ManualGameDetails | null> {
+export async function getAddableGameDetails(igdbId: number): Promise<AddableGameDetails | null> {
   const details = await getGameDetails(igdbId);
-  const appId = details?.steamAppIds[0];
-  if (!details || !appId) return details;
-
-  const steam = await getStoreItemInfo(appId);
+  if (!details) return null;
+  const appId = details.steamAppIds[0] ?? null;
+  const steam = appId ? await getStoreItemInfo(appId) : null;
+  const reviews = steam?.reviews ?? null;
   return {
     ...details,
     header_image: steam?.headerImage2x ?? steam?.headerImage ?? details.header_image,
     tags: steam?.tags ?? details.tags,
+    steam_app_id: appId,
+    steam_review_score: reviews?.score ?? null,
+    steam_review_count: reviews?.count ?? null,
+    steam_review_weighted: reviews ? calculateBayesianScore(reviews.score, reviews.count) : null,
   };
 }

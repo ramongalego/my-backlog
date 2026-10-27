@@ -86,6 +86,8 @@ export default function GamesView() {
             mainStoryHours={statusModal.mainStoryHours}
             steamReviewScore={statusModal.steamReviewScore}
             steamReviewCount={statusModal.steamReviewCount}
+            criticScore={statusModal.criticScore}
+            criticCount={statusModal.criticCount}
             playtimeMinutes={statusModal.playtimeMinutes}
             lastPlayedAt={statusModal.lastPlayedAt}
             deckCompat={statusModal.deckCompat}

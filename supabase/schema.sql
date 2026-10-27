@@ -54,6 +54,11 @@ create table games (
   achievements_unlocked integer,
   -- The IGDB game a manual entry came from.
   igdb_id integer,
+  -- A manual entry's Steam app id when Steam sells it too (for its reviews).
+  steam_app_id integer,
+  -- IGDB's average of critics' reviews (0-100), and how many it's from.
+  critic_score smallint,
+  critic_count smallint,
   unique (user_id, app_id),
   -- Referenced by playing_queue, so a queue row can only point at its own user's game.
   unique (user_id, id),

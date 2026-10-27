@@ -24,6 +24,8 @@ interface Game {
   playtime_forever: number;
   steam_review_score?: number | null;
   steam_review_count?: number | null;
+  critic_score?: number | null;
+  critic_count?: number | null;
   deck_compat?: number | null;
   last_played_at?: string | null;
 }
@@ -32,6 +34,8 @@ interface GameCarouselProps {
   title: string;
   games: Game[];
   onOpenDetail?: (game: Game) => void;
+  /** Show Steam's review score first on these cards (a row picked by it). */
+  preferSteamRating?: boolean;
   /** Mark this carousel as above the fold so the first images get priority loading. */
   priority?: boolean;
 }
@@ -96,7 +100,13 @@ function usePerPage(rowRef: React.RefObject<HTMLDivElement | null>) {
   return perPage;
 }
 
-export function GameCarousel({ title, games, onOpenDetail, priority = false }: GameCarouselProps) {
+export function GameCarousel({
+  title,
+  games,
+  onOpenDetail,
+  priority = false,
+  preferSteamRating,
+}: GameCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const perPage = usePerPage(rowRef);
   const loopMode = useLoopMode();
@@ -257,6 +267,9 @@ export function GameCarousel({ title, games, onOpenDetail, priority = false }: G
                       mainStoryHours={game.main_story_hours}
                       steamReviewScore={game.steam_review_score}
                       steamReviewCount={game.steam_review_count}
+                      criticScore={game.critic_score}
+                      criticCount={game.critic_count}
+                      preferSteamRating={preferSteamRating}
                       playtimeMinutes={game.playtime_forever}
                       lastPlayedAt={game.last_played_at}
                       deckCompat={game.deck_compat}

@@ -30,6 +30,8 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   playtime_forever: 120,
   steam_review_score: 85,
   steam_review_count: 1000,
+  critic_score: null,
+  critic_count: null,
   steam_review_weighted: 82,
   header_image: 'https://example.com/image.jpg',
   main_story_hours: 10,
@@ -129,7 +131,7 @@ describe('GameCard', () => {
     rerender(<GameCard game={createGame({ platform: 'PC' })} onOpenDetail={mockOnOpenDetail} />);
     expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
   });
-  it('shows a Steam game moved to a console like any console game: no Steam reviews or Deck', () => {
+  it('keeps Steam reviews on a Steam game moved to a console, but not its Deck rating', () => {
     render(
       <GameCard
         game={createGame({
@@ -142,8 +144,31 @@ describe('GameCard', () => {
       />,
     );
     expect(screen.getByText('Switch')).toBeInTheDocument();
-    expect(screen.queryByText('85%')).not.toBeInTheDocument();
+    expect(screen.getByText('85%')).toBeInTheDocument();
     expect(screen.queryByText('Deck')).not.toBeInTheDocument();
+  });
+
+  it('shows the Steam reviews of a game added by hand that Steam sells, behind its critic score', () => {
+    render(
+      <GameCard
+        game={createGame({
+          source: 'manual',
+          app_id: null,
+          platform: 'PS5',
+          critic_score: 89,
+          critic_count: 8,
+          steam_review_score: 92,
+          steam_review_count: 30000,
+        })}
+        onOpenDetail={mockOnOpenDetail}
+      />,
+    );
+    expect(screen.getByText('89')).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole('tooltip')
+        .some((t) => t.textContent?.includes('92% of 30,000 Steam reviews')),
+    ).toBe(true);
   });
 
   it('shows Steam reviews and Deck for a Steam game played on Steam', () => {

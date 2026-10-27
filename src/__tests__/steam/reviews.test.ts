@@ -24,7 +24,7 @@ describe('steamReviewLabel', () => {
 });
 
 describe('reviewsChanged', () => {
-  const stored = { app_id: 1, steam_review_score: 90, steam_review_count: 1000 };
+  const stored = { steam_review_score: 90, steam_review_count: 1000 };
 
   it('saves a change in the percentage', () => {
     expect(reviewsChanged(stored, { score: 89, count: 1000 })).toBe(true);
@@ -41,7 +41,7 @@ describe('reviewsChanged', () => {
   it('saves scores for games that had none', () => {
     expect(
       reviewsChanged(
-        { app_id: 2, steam_review_score: null, steam_review_count: null },
+        { steam_review_score: null, steam_review_count: null },
         { score: 75, count: 26487 },
       ),
     ).toBe(true);

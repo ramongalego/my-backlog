@@ -25,6 +25,8 @@ const game = (overrides: Partial<CandidateGame> = {}): CandidateGame => ({
   main_story_hours: 10,
   playtime_forever: 0,
   steam_review_weighted: 80,
+  critic_score: null,
+  critic_count: null,
   reroll_count: 0,
   last_rerolled_at: null,
   ...overrides,

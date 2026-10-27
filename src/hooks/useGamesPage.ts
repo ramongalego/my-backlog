@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { parseReleaseDate } from '@/lib/games/release-date';
+import { ratingOf } from '@/lib/games/rating';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
@@ -47,14 +48,15 @@ function myRating(game: GameItem): number {
 export function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
   switch (sort) {
     case 'score':
-      return (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0);
+      // Critic score, else Steam's weighted score (ratingOf), as the cards show.
+      return (ratingOf(b) ?? 0) - (ratingOf(a) ?? 0);
     case 'rating':
       // Your own rating, highest first; ties show the most recently finished
-      // first. Unrated games follow, by Steam score.
+      // first. Unrated games follow, by their rating.
       return (
         myRating(b) - myRating(a) ||
         (b.finished_at ?? '').localeCompare(a.finished_at ?? '') ||
-        (b.steam_review_weighted ?? 0) - (a.steam_review_weighted ?? 0)
+        (ratingOf(b) ?? 0) - (ratingOf(a) ?? 0)
       );
     case 'recent':
       // When the game joined the library. The first sync imports everything
@@ -95,6 +97,8 @@ interface GamesPageStatusModal {
   mainStoryHours: number | null;
   steamReviewScore: number | null;
   steamReviewCount: number | null;
+  criticScore: number | null;
+  criticCount: number | null;
   playtimeMinutes: number;
   lastPlayedAt: string | null;
   deckCompat?: number | null;
@@ -214,6 +218,8 @@ export function useGamesPage(): UseGamesPageReturn {
       mainStoryHours: game.main_story_hours,
       steamReviewScore: game.steam_review_score,
       steamReviewCount: game.steam_review_count,
+      criticScore: game.critic_score,
+      criticCount: game.critic_count,
       playtimeMinutes: game.playtime_forever,
       lastPlayedAt: game.last_played_at,
       deckCompat: game.deck_compat,

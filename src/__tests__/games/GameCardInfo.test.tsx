@@ -16,6 +16,49 @@ describe('GameCardInfo', () => {
     });
   });
 
+  describe('critic score', () => {
+    it('shows the critic score instead of Steam reviews, with both in the tooltip', () => {
+      render(
+        <GameCardInfo
+          appId={1}
+          name="Game"
+          criticScore={88}
+          criticCount={9}
+          steamReviewScore={94}
+          steamReviewCount={12345}
+        />,
+      );
+
+      expect(screen.getByText('88')).toBeInTheDocument();
+      expect(screen.queryByText('94%')).not.toBeInTheDocument();
+      const tooltip = screen.getByRole('tooltip');
+      expect(tooltip).toHaveTextContent("Critic score: 88The average of 9 critics' reviews");
+      expect(tooltip).toHaveTextContent('94% of 12,345 Steam reviews are positive');
+    });
+
+    it('needs 3 reviews, else Steam reviews show', () => {
+      render(
+        <GameCardInfo
+          appId={1}
+          name="Game"
+          criticScore={100}
+          criticCount={1}
+          steamReviewScore={95}
+        />,
+      );
+
+      expect(screen.getByText('95%')).toBeInTheDocument();
+      expect(screen.queryByText('100')).not.toBeInTheDocument();
+    });
+
+    it('shows on a console game, which has no Steam reviews', () => {
+      render(<GameCardInfo name="Game" platform="Switch" criticScore={93} criticCount={9} />);
+
+      expect(screen.getByText('93')).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).not.toHaveTextContent('Steam');
+    });
+  });
+
   describe('steam review score', () => {
     it('should show the percent positive, the way Steam does', () => {
       render(<GameCardInfo appId={1} name="Game" steamReviewScore={85} />);

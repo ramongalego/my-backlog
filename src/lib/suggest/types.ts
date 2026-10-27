@@ -21,6 +21,8 @@ export interface SuggestionPreferences {
 export interface GameForSuggestion extends CandidateGame {
   steam_review_score: number | null;
   steam_review_count: number | null;
+  critic_score: number | null;
+  critic_count: number | null;
 }
 
 export interface FinishedGame {
@@ -48,6 +50,8 @@ export interface SuggestionResult {
     tags: string[] | null;
     steam_review_score: number | null;
     steam_review_count: number | null;
+    critic_score: number | null;
+    critic_count: number | null;
     playtime_forever: number;
     last_played_at: string | null;
   };
