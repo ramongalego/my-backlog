@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEMOTED, statusUpdate, type StatusChange } from './status-rules';
+import { DEMOTED, statusUpdate, withLastPlayed, type StatusChange } from './status-rules';
 import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
 import type { GameWithImage } from '@/types/games';
 
@@ -27,7 +27,7 @@ export async function applyStatusChange(
   // so a bad gameId can't demote the current game and then update nothing.
   const { data: target, error: targetError } = await supabase
     .from('games')
-    .select('id')
+    .select('id, status, source, platform')
     .eq('user_id', userId)
     .eq('id', gameId)
     .maybeSingle();
@@ -36,18 +36,26 @@ export async function applyStatusChange(
 
   // Only one game can be playing: move any other one back to the backlog.
   if (status === 'playing') {
-    const { error: demoteError } = await supabase
+    const { data: others, error: playingError } = await supabase
       .from('games')
-      .update(DEMOTED)
+      .select('id, status, source, platform')
       .eq('user_id', userId)
       .eq('status', 'playing')
       .neq('id', gameId);
-    if (demoteError) return failed(demoteError);
+    if (playingError) return failed(playingError);
+    for (const other of others ?? []) {
+      const { error: demoteError } = await supabase
+        .from('games')
+        .update(withLastPlayed(other, DEMOTED))
+        .eq('user_id', userId)
+        .eq('id', other.id);
+      if (demoteError) return failed(demoteError);
+    }
   }
 
   const { error } = await supabase
     .from('games')
-    .update(statusUpdate(change))
+    .update(withLastPlayed(target, statusUpdate(change)))
     .eq('user_id', userId)
     .eq('id', gameId);
   if (error) return failed(error);

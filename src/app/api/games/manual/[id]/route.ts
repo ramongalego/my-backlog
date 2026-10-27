@@ -46,6 +46,29 @@ export async function PATCH(request: NextRequest, context: Context) {
   const parsed = updateManualGameSchema.safeParse(body);
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
 
+  // A game added by hand, or a Steam game moved to a console.
+  const onConsole = `source.eq.manual,platform.neq.${STEAM_PLATFORM}`;
+  const minutes = 'hoursPlayed' in parsed.data ? Math.round(parsed.data.hoursPlayed * 60) : 0;
+  // More hours means you played it, which consoles don't report: today becomes
+  // its last-played date, so it ranks among recently played games like Steam
+  // games do. Fewer is a correction.
+  let played = false;
+  if ('hoursPlayed' in parsed.data) {
+    const { data: current, error: lookupError } = await auth.supabase
+      .from('games')
+      .select('playtime_forever')
+      .or(onConsole)
+      .eq('user_id', auth.userId)
+      .eq('id', auth.gameId)
+      .maybeSingle();
+    if (lookupError) {
+      console.error(lookupError);
+      return jsonError('Failed to save', 500);
+    }
+    if (!current) return jsonError('Game not found', 404);
+    played = minutes > current.playtime_forever;
+  }
+
   const query =
     'playOnSteam' in parsed.data
       ? auth.supabase
@@ -54,9 +77,11 @@ export async function PATCH(request: NextRequest, context: Context) {
           .eq('source', 'steam')
       : auth.supabase
           .from('games')
-          .update({ playtime_forever: Math.round(parsed.data.hoursPlayed * 60) })
-          // A game added by hand, or a Steam game moved to a console.
-          .or(`source.eq.manual,platform.neq.${STEAM_PLATFORM}`);
+          .update({
+            playtime_forever: minutes,
+            ...(played ? { last_played_at: new Date().toISOString() } : {}),
+          })
+          .or(onConsole);
   const { data, error } = await query.eq('user_id', auth.userId).eq('id', auth.gameId).select('id');
   if (error) {
     console.error(error);

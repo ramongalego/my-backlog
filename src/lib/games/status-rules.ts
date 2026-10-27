@@ -1,4 +1,5 @@
 import type { GameStatusBody } from '@/lib/validations/games';
+import { consoleOf } from './consoles';
 
 export type StatusChange = GameStatusBody;
 
@@ -9,6 +10,7 @@ export interface GameUpdate {
   dropped_at?: string | null;
   notes?: string | null;
   rating?: number | null;
+  last_played_at?: string;
 }
 
 /**
@@ -64,6 +66,29 @@ export function statusChangeFrom(vars: {
 /** What starting a game does to whichever other game was playing. */
 export const DEMOTED: GameUpdate = { status: 'backlog', started_at: null };
 
+/**
+ * The update, plus a last-played date for a game played on a console, which
+ * doesn't report one: so it ranks among recently played games (Pick Up Where
+ * You Left Off) and shows when you last played it, like Steam games do.
+ * Finishing or dropping it dates it to the day you entered (none without
+ * one, as for a game finished long ago); stopping it any other way, to now.
+ * Steam reports its own games' dates.
+ */
+export function withLastPlayed(
+  game: { status: string | null; source?: string; platform?: string | null },
+  update: GameUpdate,
+  now = new Date(),
+): GameUpdate {
+  if (!consoleOf(game)) return update;
+  if (update.status === 'finished' || update.status === 'dropped') {
+    const endedOn = update.status === 'finished' ? update.finished_at : update.dropped_at;
+    return endedOn ? { ...update, last_played_at: endedOn } : update;
+  }
+  return game.status === 'playing' && update.status !== 'playing'
+    ? { ...update, last_played_at: now.toISOString() }
+    : update;
+}
+
 /** Copies the update's fields that the cached row has, so rows keep their shape. */
 function patch<T extends object>(row: T, update: GameUpdate): T {
   const next = { ...row } as Record<string, unknown>;
@@ -76,15 +101,14 @@ function patch<T extends object>(row: T, update: GameUpdate): T {
  * applies it to the table: the game gets the new columns, and starting a game
  * moves any other playing game back to the backlog.
  */
-export function applyStatusToList<T extends { id: number; status: string | null }>(
-  games: T[],
-  change: StatusChange,
-  now = new Date(),
-): T[] {
+export function applyStatusToList<
+  T extends { id: number; status: string | null; source?: string; platform?: string | null },
+>(games: T[], change: StatusChange, now = new Date()): T[] {
   const update = statusUpdate(change, now);
   return games.map((g) => {
-    if (g.id === change.gameId) return patch(g, update);
-    if (change.status === 'playing' && g.status === 'playing') return patch(g, DEMOTED);
+    if (g.id === change.gameId) return patch(g, withLastPlayed(g, update, now));
+    if (change.status === 'playing' && g.status === 'playing')
+      return patch(g, withLastPlayed(g, DEMOTED, now));
     return g;
   });
 }

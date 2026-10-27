@@ -118,18 +118,23 @@ export function useManualGameActions(userId: string | null) {
   };
 
   // Every cached copy of the game gets the new hours, so a summary or card
-  // built from any of them (finishing it from Now Playing) shows them.
+  // built from any of them (finishing it from Now Playing) shows them. More
+  // hours also makes today its last-played date, as the server records.
   const saveHours = async (gameId: number, hours: number) => {
     const minutes = Math.round(hours * 60);
+    const now = new Date().toISOString();
     const snapshot = snapshotCaches();
+    const updated = <T extends { playtime_forever: number }>(g: T): T => ({
+      ...g,
+      playtime_forever: minutes,
+      ...(minutes > g.playtime_forever && 'last_played_at' in g ? { last_played_at: now } : {}),
+    });
     const withHours = <T extends { id: number; playtime_forever: number }>(g: T) =>
-      g.id === gameId ? { ...g, playtime_forever: minutes } : g;
+      g.id === gameId ? updated(g) : g;
     queryClient.setQueryData<GameItem[]>(keys.list, (old) => old?.map(withHours));
     queryClient.setQueryData<DiaryEntry[]>(keys.diary, (old) => old?.map(withHours));
     queryClient.setQueryData<QueueItem[]>(keys.queue, (old) =>
-      old?.map((q) =>
-        q.game_id === gameId ? { ...q, game: { ...q.game, playtime_forever: minutes } } : q,
-      ),
+      old?.map((q) => (q.game_id === gameId ? { ...q, game: updated(q.game) } : q)),
     );
     queryClient.setQueryData<GameWithImage | null>(keys.playing, (old) => old && withHours(old));
     try {

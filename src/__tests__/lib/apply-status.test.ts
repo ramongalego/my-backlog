@@ -110,6 +110,37 @@ describe('applyStatusChange', () => {
     expect(tables.games.map((g) => g.status)).toEqual(['backlog', 'playing']);
   });
 
+  it('records when a console game was last played as it stops, but not a Steam game', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [
+        { ...game(1, 'playing'), source: 'manual', platform: 'Switch' },
+        { ...game(2, 'backlog'), source: 'steam', platform: 'PC' },
+        { ...game(3, 'backlog'), source: 'steam', platform: 'PS5' },
+      ],
+      playing_queue: [],
+    });
+
+    // Starting another game stops the console one.
+    await applyStatusChange(client, 'u', { gameId: 2, status: 'playing' });
+    expect(tables.games[0]).toMatchObject({
+      status: 'backlog',
+      last_played_at: expect.any(String),
+    });
+
+    // Steam reports its own games' dates.
+    await applyStatusChange(client, 'u', { gameId: 2, status: 'finished' });
+    expect(tables.games[1].last_played_at).toBeUndefined();
+
+    // A Steam game moved to a console is yours to track, like one added by hand;
+    // finishing it dates it to the day you finished, even from the backlog.
+    await applyStatusChange(client, 'u', {
+      gameId: 3,
+      status: 'finished',
+      finishedAt: '2026-10-20',
+    });
+    expect(tables.games[2].last_played_at).toBe('2026-10-20');
+  });
+
   it('refuses a game that is not in the library, without touching anything', async () => {
     const { client, log } = fakeSupabase({ games: [game(1, 'playing')], playing_queue: [] });
 
