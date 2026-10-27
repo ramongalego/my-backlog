@@ -6,7 +6,7 @@ import {
   MAX_PLAYTIME_MINUTES,
 } from './filtering';
 import { editionKey, multiplayerFocus, seriesMatch, similarity, topTags } from './similarity';
-import { criticScoreOf, ratingOf } from './rating';
+import { ratingOf } from './rating';
 
 /** A backlog game with what the carousels sort and filter on. */
 export interface CarouselGame extends GameWithImage {
@@ -143,9 +143,8 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
     .sort(
       (a, b) => b.rating - a.rating || (b.finished_at ?? '').localeCompare(a.finished_at ?? ''),
     );
-  const worthPlaying = games.filter(
-    (g) => (criticScoreOf(g) ?? g.steam_review_score ?? 0) >= MORE_LIKE_MIN_SCORE,
-  );
+  // Well enough liked to recommend, by the same rating the rows rank by.
+  const worthPlaying = games.filter((g) => (ratingOf(g) ?? 0) >= MORE_LIKE_MIN_SCORE);
 
   for (const seed of seeds) {
     const seedTags = topTags(seed.tags);

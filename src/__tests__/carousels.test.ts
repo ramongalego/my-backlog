@@ -44,8 +44,8 @@ const build = (backlog: CarouselGame[], lovedGames: LovedGame[] = []) =>
 describe('every carousel', () => {
   it('keeps one edition of a game, the better reviewed', () => {
     const pools = build([
-      game({ name: 'Ori and the Blind Forest', steam_review_weighted: 80 }),
-      game({ name: 'Ori and the Blind Forest: Definitive Edition', steam_review_weighted: 90 }),
+      game({ name: 'Ori and the Blind Forest', steam_review_score: 80 }),
+      game({ name: 'Ori and the Blind Forest: Definitive Edition', steam_review_score: 90 }),
       game({ name: 'Portal' }),
       game({ name: 'Portal 2' }),
     ]);
@@ -245,8 +245,8 @@ describe('slimPools', () => {
 });
 
 describe('ratings', () => {
-  it('ranks by critic score where there is one, so console games are rated too', () => {
-    const steamOnly = game({ name: 'Steam only', steam_review_weighted: 85 });
+  it('ranks by both critics and players, so console games are rated too', () => {
+    const steamOnly = game({ name: 'Steam only', steam_review_score: 85 });
     const console = game({
       name: 'Console',
       source: 'manual',
@@ -257,10 +257,10 @@ describe('ratings', () => {
       critic_score: 93,
       critic_count: 9,
     });
-    // Steam players love it, critics less so: the critic score counts.
+    // Steam's players love it, critics didn't: the two average out lower.
     const critics = game({
       name: 'Critics',
-      steam_review_weighted: 95,
+      steam_review_score: 95,
       critic_score: 70,
       critic_count: 12,
     });

@@ -28,6 +28,8 @@ export interface CandidateGame {
   main_story_hours: number | null;
   playtime_forever: number | null;
   steam_review_weighted: number | null;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
   critic_score: number | null;
   critic_count: number | null;
   reroll_count: number | null;

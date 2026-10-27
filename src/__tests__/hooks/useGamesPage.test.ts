@@ -319,7 +319,7 @@ describe('useGamesPage filtering logic', () => {
         app_id: 1,
         name: 'Game A',
         playtime_forever: 100,
-        steam_review_weighted: 70,
+        steam_review_score: 70,
         status: 'backlog',
       }),
       createGame({
@@ -327,7 +327,7 @@ describe('useGamesPage filtering logic', () => {
         app_id: 3,
         name: 'Game B',
         playtime_forever: 300,
-        steam_review_weighted: 90,
+        steam_review_score: 90,
         status: 'backlog',
       }),
       createGame({
@@ -335,7 +335,7 @@ describe('useGamesPage filtering logic', () => {
         app_id: 2,
         name: 'Game C',
         playtime_forever: 200,
-        steam_review_weighted: 80,
+        steam_review_score: 80,
         status: 'backlog',
       }),
     ];
@@ -398,7 +398,7 @@ describe('useGamesPage filtering logic', () => {
           app_id: 1,
           name: 'Unrated, great on Steam',
           rating: null,
-          steam_review_weighted: 99,
+          steam_review_score: 99,
         }),
         finished({
           id: 2,
@@ -439,7 +439,7 @@ describe('useGamesPage filtering logic', () => {
           name: 'Backlog, old 10',
           status: 'backlog',
           rating: 10,
-          steam_review_weighted: 50,
+          steam_review_score: 50,
         }),
         createGame({ id: 2, app_id: 2, name: 'Finished 6', status: 'finished', rating: 6 }),
         createGame({
@@ -448,7 +448,7 @@ describe('useGamesPage filtering logic', () => {
           name: 'Backlog, unrated',
           status: 'backlog',
           rating: null,
-          steam_review_weighted: 90,
+          steam_review_score: 90,
         }),
       ];
 
@@ -486,14 +486,14 @@ describe('useGamesPage filtering logic', () => {
           id: 1,
           app_id: 1,
           name: 'No Score',
-          steam_review_weighted: null,
+          steam_review_score: null,
           status: 'backlog',
         }),
         createGame({
           id: 2,
           app_id: 2,
           name: 'Has Score',
-          steam_review_weighted: 85,
+          steam_review_score: 85,
           status: 'backlog',
         }),
       ];
