@@ -22,6 +22,10 @@ const pendingRemovals = new Set<number>();
 // A delete went through (or a game came back) while others were pending:
 // refresh once they're done.
 let refreshWhenSettled = false;
+// Games deleted since the last refresh. A page opened while their Undo was on
+// offer loaded the library from the server with them still in it, and the
+// games list isn't refetched after an edit, so they're taken off it again.
+const deletedIds = new Set<number>();
 
 /**
  * The list with one item put back where it was in an earlier copy of it:
@@ -104,6 +108,12 @@ export function useManualGameActions(userId: string | null) {
   const settleRemovals = () => {
     if (pendingRemovals.size > 0 || !refreshWhenSettled) return;
     refreshWhenSettled = false;
+    if (deletedIds.size > 0) {
+      queryClient.setQueryData<GameItem[]>(keys.list, (old) =>
+        old?.filter((g) => !deletedIds.has(g.id)),
+      );
+      deletedIds.clear();
+    }
     statusChanged();
   };
 
@@ -167,6 +177,7 @@ export function useManualGameActions(userId: string | null) {
       try {
         await deleteManualGame(gameId);
         pendingRemovals.delete(gameId);
+        deletedIds.add(gameId);
         refreshWhenSettled = true;
       } catch (err) {
         console.error(err);

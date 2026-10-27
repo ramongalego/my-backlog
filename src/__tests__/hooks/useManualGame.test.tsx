@@ -100,3 +100,19 @@ it('undoing both brings both back, each where it was', () => {
   // Nothing was deleted, but the carousels are rebuilt to bring the games back.
   expect(statusChanged).toHaveBeenCalledTimes(1);
 });
+
+it('takes a deleted game off a games list loaded while its Undo was on offer', async () => {
+  const { result, queryClient, toastOptions } = setup();
+  const listKey = queryKeys.games.list('u');
+  act(() => result.current.remove(1, 'Old game'));
+
+  // Opening Stats meanwhile loads the library from the server, which still
+  // has the game; the list isn't refetched after the delete.
+  act(() => {
+    queryClient.setQueryData(listKey, [entry(1, 'Old game'), entry(3, 'Kept')]);
+  });
+  await act(() => toastOptions(0).onAutoClose());
+  expect(queryClient.getQueryData<{ name: string }[]>(listKey)?.map((g) => g.name)).toEqual([
+    'Kept',
+  ]);
+});
