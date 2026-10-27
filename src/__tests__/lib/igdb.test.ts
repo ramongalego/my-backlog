@@ -63,6 +63,7 @@ describe('getGameDetails', () => {
       header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
       // Its Steam listing, to recognise it in your Steam library.
       steamAppIds: [2369900],
+      hasKeyArt: true,
       // Critics' average, rounded, and how many reviews it's from.
       critic_score: 82,
       critic_count: 9,

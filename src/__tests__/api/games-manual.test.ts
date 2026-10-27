@@ -6,6 +6,7 @@ import { POST } from '@/app/api/games/manual/route';
 import { applyStatusChange } from '@/lib/games/apply-status';
 import { getGameDetails } from '@/lib/igdb/api';
 import { getStoreItemInfo } from '@/lib/steam/store-api';
+import { findWideArt } from '@/lib/steamgriddb/api';
 
 const inserted: Record<string, unknown>[] = [];
 const updated: Record<string, unknown>[] = [];
@@ -56,6 +57,7 @@ jest.mock('@/lib/supabase/server', () => ({
 jest.mock('@/lib/igdb/api', () => ({ getGameDetails: jest.fn() }));
 jest.mock('@/lib/hltb/api', () => ({ getMainStoryHours: jest.fn().mockResolvedValue(30) }));
 jest.mock('@/lib/steam/store-api', () => ({ getStoreItemInfo: jest.fn() }));
+jest.mock('@/lib/steamgriddb/api', () => ({ findWideArt: jest.fn() }));
 jest.mock('@/lib/games/apply-status', () => ({ applyStatusChange: jest.fn() }));
 
 const details = {
@@ -70,6 +72,7 @@ const details = {
   steamAppIds: [] as number[],
   critic_score: 92,
   critic_count: 6,
+  hasKeyArt: true,
 };
 
 const post = async (body: unknown) => {
@@ -138,6 +141,26 @@ it("uses Steam's art, tags and reviews for a game Steam also sells, else IGDB's"
   jest.mocked(getStoreItemInfo).mockResolvedValue(null);
   await post({ igdbId: 1, platform: 'PS4', status: 'backlog' });
   expect(inserted[1]).toMatchObject({ tags: details.tags, header_image: details.header_image });
+});
+
+it("uses SteamGridDB's art when IGDB has no key art and Steam doesn't sell the game", async () => {
+  jest.mocked(getStoreItemInfo).mockResolvedValue(null);
+  jest.mocked(findWideArt).mockResolvedValue('https://cdn2.steamgriddb.com/grid/shield.png');
+  // IGDB's key art wins when there is some.
+  await post({ igdbId: 1, platform: 'Switch', status: 'backlog' });
+  expect(findWideArt).not.toHaveBeenCalled();
+  expect(inserted[0].header_image).toBe(details.header_image);
+
+  // Without it, SteamGridDB is looked up by name and release year.
+  jest.mocked(getGameDetails).mockResolvedValue({ ...details, hasKeyArt: false });
+  await post({ igdbId: 1, platform: 'Switch 2', status: 'backlog' });
+  expect(findWideArt).toHaveBeenCalledWith(details.name, 2026);
+  expect(inserted[1].header_image).toBe('https://cdn2.steamgriddb.com/grid/shield.png');
+
+  // And when it has nothing, IGDB's other art stays.
+  jest.mocked(findWideArt).mockResolvedValue(null);
+  await post({ igdbId: 1, platform: 'Switch Lite', status: 'backlog' });
+  expect(inserted[2].header_image).toBe(details.header_image);
 });
 
 it('logs a game you already finished, with its date, rating and notes', async () => {

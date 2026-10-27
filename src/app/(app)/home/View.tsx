@@ -189,10 +189,7 @@ export default function HomeView() {
                   <span className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
                     {queue[0].game.name}
                   </span>
-                  <span className="block text-sm text-ink-400">
-                    Next in your queue
-                    {queue.length > 1 && ` · ${queue.length - 1} more after it`}
-                  </span>
+                  <span className="block text-sm text-ink-400">Next in your queue</span>
                 </span>
               </Link>
             ) : (

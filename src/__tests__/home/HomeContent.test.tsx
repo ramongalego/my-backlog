@@ -165,7 +165,7 @@ describe('HomeContent — Pick My Next Game button', () => {
     expect(link).toHaveAttribute('href', '/playing-queue');
   });
 
-  it('shows the next queued game and how many follow it', () => {
+  it('shows the next queued game', () => {
     const queued = (id: number, name: string) => ({
       id,
       game_id: id,
@@ -184,7 +184,8 @@ describe('HomeContent — Pick My Next Game button', () => {
 
     const link = screen.getByRole('link', { name: /Celeste/ });
     expect(link).toHaveAttribute('href', '/playing-queue');
-    expect(link).toHaveTextContent('Next in your queue · 2 more after it');
+    expect(link).toHaveTextContent('Next in your queue');
+    expect(link).not.toHaveTextContent('more');
   });
 
   it('opens the suggestion modal in queue mode when "Pick My Next Game" is clicked', async () => {

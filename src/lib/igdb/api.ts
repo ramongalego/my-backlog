@@ -172,6 +172,8 @@ const HEADER_ARTWORK: { type: number; minRatio: number }[] = [
   { type: 1, minRatio: 1.5 },
   { type: 15, minRatio: 1.5 },
 ];
+// Key art, with or without its logo: the publisher's own promotional images.
+const KEY_ART_TYPES = new Set([2, 3]);
 // The shape every game image is shown at (Steam's 460×215 header).
 const HEADER_RATIO = 460 / 215;
 const MIN_HEADER_WIDTH = 800;
@@ -333,6 +335,12 @@ export interface ManualGameDetails {
   header_image: string | null;
   /** Not a games column: used to find the game in your Steam library. */
   steamAppIds: number[];
+  /**
+   * Not a games column: whether header_image is the publisher's key art. If
+   * not (plain artwork, a screenshot or the box art), better art is worth
+   * looking for elsewhere.
+   */
+  hasKeyArt: boolean;
   critic_score: number | null;
   critic_count: number | null;
 }
@@ -347,6 +355,9 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
 
   const genres = (game.genres ?? []).map((g) => g.name);
   const wideArt = pickWideArt(game);
+  const hasKeyArt = (game.artworks ?? []).some(
+    (a) => a.image_id === wideArt && KEY_ART_TYPES.has(a.artwork_type ?? 1),
+  );
   return {
     name: game.name,
     platforms: (game.platforms ?? []).map((p) => p.name),
@@ -366,6 +377,7 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
       : null,
     header_image: wideArt ? artworkUrl(wideArt) : game.cover ? coverUrl(game.cover.image_id) : null,
     steamAppIds: steamAppIds(game),
+    hasKeyArt,
     ...criticScore(game),
   };
 }

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { loadGamesList, type GameItem } from '@/lib/data/loaders';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { ratingOf } from '@/lib/games/rating';
+import { matchesSearch } from '@/lib/games/search';
 import { updateGameStatus } from '@/lib/games/status';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
@@ -252,12 +253,7 @@ export function useGamesPage(): UseGamesPageReturn {
   // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
   const searchFilteredGames = (() => {
     if (!deferredSearchQuery) return games;
-    const searchLower = deferredSearchQuery.toLowerCase();
-    return games.filter((game) => {
-      const nameMatch = game.name.toLowerCase().includes(searchLower);
-      const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
-      return nameMatch || tagMatch;
-    });
+    return games.filter((game) => matchesSearch(game, deferredSearchQuery));
   })();
 
   // Filter and sort games — uses deferredSearchQuery so input stays responsive

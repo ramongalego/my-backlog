@@ -18,6 +18,11 @@ export function getIgdbCredentials(): { clientId: string; clientSecret: string }
   return { clientId: required('IGDB_CLIENT_ID'), clientSecret: required('IGDB_CLIENT_SECRET') };
 }
 
+/** SteamGridDB, for art of games added by hand; optional, it's a fallback. */
+export function getSteamGridDbKey(): string | null {
+  return process.env.STEAM_GRID_API_KEY || null;
+}
+
 export function getOpenAIApiKey(): string {
   return required('OPENAI_API_KEY');
 }
