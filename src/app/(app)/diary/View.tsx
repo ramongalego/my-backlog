@@ -105,7 +105,11 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const storeUrl = steamStoreUrl(entry.app_id);
 
   return (
-    <div className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70">
+    // content-visibility lets the browser skip laying out and drawing rows
+    // that are off screen, so a diary of hundreds of games scrolls smoothly.
+    // The intrinsic size (a row's usual height: about 19rem stacked on phones,
+    // 8rem side by side) keeps the scrollbar steady until a row is drawn.
+    <div className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70 [content-visibility:auto] [contain-intrinsic-size:auto_19rem] sm:[contain-intrinsic-size:auto_8rem]">
       {/* Day — desktop */}
       <div
         className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end w-6 shrink-0 text-sm text-ink-400 tabular-nums`}
