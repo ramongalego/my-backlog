@@ -60,6 +60,8 @@ export function useGameLibrary() {
       handleCancelGame: currentGame.handleCancelGame,
       handleMoveCurrentToQueue: currentGame.handleMoveCurrentToQueue,
       handleRandomPick: currentGame.handleRandomPick,
+      rollCovers: currentGame.rollCovers,
+      rolledGameId: currentGame.rolledGameId,
       handleConfirmStatusChange: currentGame.handleConfirmStatusChange,
       handleCloseStatusModal: currentGame.handleCloseStatusModal,
       handleCloseSummary: currentGame.handleCloseSummary,

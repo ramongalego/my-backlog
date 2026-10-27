@@ -29,6 +29,40 @@ export function removeGameFromPools(pools: CarouselPools, gameId: number): Carou
   };
 }
 
+// How many games' art flicks past while a game is picked.
+const SHUFFLE_COVERS = 16;
+
+/**
+ * Art from the backlog games Home already has, in a random order: what flicks
+ * past while Pick My Game or Random picks one (ArtShuffle).
+ */
+export function backlogCovers(
+  pools: CarouselPools | undefined,
+  /** Queued games, which neither picks from. */
+  exclude: ReadonlySet<number> = new Set(),
+): string[] {
+  if (!pools) return [];
+  const games = [
+    ...pools.pickUpPool,
+    ...(pools.moreLike?.games ?? []),
+    ...pools.shortGamesPool,
+    ...pools.weekendGamesPool,
+    ...pools.highlyRatedGamesPool,
+    ...pools.hiddenGemsPool,
+    ...pools.recentlyAddedPool,
+  ];
+  const covers = [
+    ...new Set(
+      games.flatMap((g) => (g.header_image && !exclude.has(g.id) ? [g.header_image] : [])),
+    ),
+  ];
+  for (let i = covers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [covers[i], covers[j]] = [covers[j], covers[i]];
+  }
+  return covers.slice(0, SHUFFLE_COVERS);
+}
+
 async function fetchCarouselPools(): Promise<CarouselPools> {
   const res = await fetch('/api/carousels');
   if (!res.ok) throw new Error(`Failed to load carousels (${res.status})`);

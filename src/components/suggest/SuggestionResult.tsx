@@ -1,6 +1,6 @@
 'use client';
 
-import { Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
+import { Dices, Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
 import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import { steamStoreUrl } from '@/lib/games/store-link';
@@ -14,6 +14,8 @@ interface SuggestionResultProps {
   cooldownRemaining: number;
   isLoading: boolean;
   mode?: 'play' | 'queue';
+  /** Picked at random, not for your answers: no reasoning, and Roll again. */
+  random?: boolean;
 }
 
 export function SuggestionResult({
@@ -23,6 +25,7 @@ export function SuggestionResult({
   cooldownRemaining,
   isLoading,
   mode = 'play',
+  random = false,
 }: SuggestionResultProps) {
   const { game, reasoning } = suggestion;
   const isOnCooldown = cooldownRemaining > 0;
@@ -57,8 +60,12 @@ export function SuggestionResult({
       <div className="space-y-4 mt-5 animate-result-in [animation-delay:150ms] motion-reduce:animate-none">
         {/* AI badge */}
         <div className="flex items-center gap-2 text-sm">
-          <Sparkles className="w-4 h-4 text-accent-400 shrink-0" />
-          <p className="text-ink-100 font-medium">Picked for you</p>
+          {random ? (
+            <Dices className="w-4 h-4 text-accent-400 shrink-0" aria-hidden="true" />
+          ) : (
+            <Sparkles className="w-4 h-4 text-accent-400 shrink-0" aria-hidden="true" />
+          )}
+          <p className="text-ink-100 font-medium">{random ? 'Left to chance' : 'Picked for you'}</p>
         </div>
 
         {/* Meta row */}
@@ -105,7 +112,7 @@ export function SuggestionResult({
         )}
 
         {/* AI reasoning */}
-        <p className="text-sm text-ink-300 leading-relaxed">{reasoning}</p>
+        {reasoning && <p className="text-sm text-ink-300 leading-relaxed">{reasoning}</p>}
 
         {/* Action buttons */}
         <div className="flex gap-3 pt-1">
@@ -117,13 +124,19 @@ export function SuggestionResult({
             onClick={onReroll}
             disabled={isOnCooldown || isLoading}
             className="cursor-pointer tabular-nums"
-            title={isOnCooldown ? `Wait ${cooldownRemaining}s` : 'Get another suggestion'}
+            title={
+              isOnCooldown
+                ? `Wait ${cooldownRemaining}s`
+                : random
+                  ? 'Roll for another game'
+                  : 'Get another suggestion'
+            }
           >
             <RotateCcw
               className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
               aria-hidden="true"
             />
-            <span>{isOnCooldown ? `${cooldownRemaining}s` : 'Reroll'}</span>
+            <span>{isOnCooldown ? `${cooldownRemaining}s` : random ? 'Roll again' : 'Reroll'}</span>
           </Button>
         </div>
       </div>

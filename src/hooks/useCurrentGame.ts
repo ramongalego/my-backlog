@@ -1,22 +1,30 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { updateGameStatus } from '@/lib/games/status';
-import { RANDOM_PICK_MAX_PLAYTIME_MINUTES } from '@/lib/games/filtering';
+import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/games/random-pick';
 import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
 import { statusChangeFrom } from '@/lib/games/status-rules';
 import { useNowPlaying } from './useNowPlaying';
 import type { GameWithImage } from '@/types/games';
-import { scrollBehavior } from '@/lib/motion';
+import { prefersReducedMotion, scrollBehavior } from '@/lib/motion';
+import { queryKeys } from '@/lib/query-keys';
+import { backlogCovers, type CarouselPools } from './useCarouselPools';
 
 /** Home page: the shared now-playing actions plus carousel detail and random pick. */
 export function useCurrentGame(userId: string | null) {
   const nowPlaying = useNowPlaying(userId);
   const { statusChanged } = useInvalidateQueries();
   const gamesList = usePatchGamesList(userId);
+  const queryClient = useQueryClient();
   const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
+  // While Random picks: the art flicking past. Then the game it picked, whose
+  // art comes into focus as it starts playing.
+  const [rollCovers, setRollCovers] = useState<string[] | null>(null);
+  const [rolledGameId, setRolledGameId] = useState<number | null>(null);
 
   const handlePickGame = async (game: GameWithImage) => {
     window.scrollTo({ top: 0, behavior: scrollBehavior() });
@@ -57,54 +65,38 @@ export function useCurrentGame(userId: string | null) {
   };
 
   const handleRandomPick = async () => {
-    if (!userId || nowPlaying.isStatusLoading) return;
+    if (!userId || nowPlaying.isStatusLoading || rollCovers) return;
 
-    // Count the eligible games, then fetch only the one at a random position,
-    // instead of downloading them all to choose one.
-    const supabase = createClient();
-    const eligible = (columns: string, options?: { count: 'exact'; head: true }) =>
-      supabase
-        .from('games')
-        .select(columns, options)
-        .eq('user_id', userId)
-        .eq('type', 'game')
-        .not('main_story_hours', 'is', null)
-        .lte('playtime_forever', RANDOM_PICK_MAX_PLAYTIME_MINUTES)
-        .contains('categories', ['Single-player'])
-        .or('status.is.null,status.eq.backlog');
-
-    let picked: GameWithImage | undefined;
-    let count: number | null = null;
-    try {
-      const counted = await eligible('id', { count: 'exact', head: true });
-      if (counted.error) throw counted.error;
-      count = counted.count;
-      if (count) {
-        const index = Math.floor(Math.random() * count);
-        const { data, error } = await eligible(
-          'id, app_id, source, platform, name, header_image, main_story_hours, playtime_forever',
-        )
-          .order('id')
-          .range(index, index);
-        if (error) throw error;
-        picked = (data as unknown as GameWithImage[] | null)?.[0];
-      }
-    } catch (err) {
-      console.error('Failed to load a game for random pick:', err);
-      toast.error('Could not pick a random game. Please try again.');
-      return;
-    }
-
-    if (!count) {
-      toast.info('No eligible backlog games to pick from.');
-      return;
-    }
-    // The library changed between the two requests; asking again is enough.
+    const covers = prefersReducedMotion()
+      ? []
+      : backlogCovers(
+          queryClient.getQueryData<CarouselPools>(queryKeys.carousels.byUser(userId)),
+          nowPlaying.queuedGameIds,
+        );
+    const rolling = covers.length >= 2;
+    if (rolling) setRollCovers(covers);
+    const [picked] = await Promise.all([
+      findRandomGame(userId),
+      rolling ? new Promise((resolve) => setTimeout(resolve, RANDOM_ROLL_MS)) : null,
+    ]);
     if (!picked) {
-      toast.error('Could not pick a random game. Please try again.');
+      setRollCovers(null);
       return;
     }
+    setRolledGameId(picked.id);
+    // Starting it shows it at once (before the server answers), so the roll
+    // ends with the game in its place.
     await handlePickGame(picked);
+    setRollCovers(null);
+  };
+
+  /** A random backlog game to play, or null (having said why). */
+  const findRandomGame = async (userId: string): Promise<GameWithImage | null> => {
+    const found = await findRandomBacklogGame(createClient(), userId);
+    if ('game' in found) return found.game;
+    if (found.error === 'none') toast.info('No eligible backlog games to pick from.');
+    else toast.error('Could not pick a random game. Please try again.');
+    return null;
   };
 
   return {
@@ -128,5 +120,7 @@ export function useCurrentGame(userId: string | null) {
     handleCancelGame: nowPlaying.moveToBacklog,
     handleMoveCurrentToQueue: nowPlaying.moveToQueue,
     handleRandomPick,
+    rollCovers,
+    rolledGameId,
   };
 }

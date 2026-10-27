@@ -26,6 +26,7 @@ import type { SuggestionResult } from '@/lib/suggest/types';
 import { Dices, Plus, Sparkles } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { BacklogProgress } from '@/components/home/BacklogProgress';
+import { RandomRoll } from '@/components/home/RandomRoll';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 
 export default function HomeView() {
@@ -82,6 +83,8 @@ export default function HomeView() {
     handleCancelGame,
     handleMoveCurrentToQueue,
     handleRandomPick,
+    rollCovers,
+    rolledGameId,
     handleConfirmStatusChange,
     handleCloseStatusModal,
     handleCloseSummary,
@@ -133,7 +136,10 @@ export default function HomeView() {
                 onMoveToQueue={handleMoveCurrentToQueue}
                 onSaveHours={manualGames.dialogProps(currentlyPlaying)?.onSaveHours}
                 isLoading={isStatusLoading}
+                reveal={currentlyPlaying.id === rolledGameId}
               />
+            ) : rollCovers ? (
+              <RandomRoll covers={rollCovers} />
             ) : isStatusLoading ? (
               <StatusLoadingState />
             ) : isBuildingBacklog ? (

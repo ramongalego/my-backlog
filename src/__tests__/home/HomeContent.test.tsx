@@ -43,8 +43,10 @@ jest.mock('@/components/suggest', () => ({
     isOpen ? <div data-testid="suggestion-modal" data-mode={mode} /> : null,
 }));
 jest.mock('@/components/CurrentlyPlaying', () => ({
-  CurrentlyPlaying: ({ game }: { game: GameWithImage }) => (
-    <div data-testid="currently-playing">{game.name}</div>
+  CurrentlyPlaying: ({ game, reveal }: { game: GameWithImage; reveal?: boolean }) => (
+    <div data-testid="currently-playing" data-reveal={reveal}>
+      {game.name}
+    </div>
   ),
 }));
 
@@ -276,5 +278,28 @@ describe('HomeContent — fewer than 3 games to pick from', () => {
 
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
     expect(screen.getByText(/finished and dropped don't count/)).toBeInTheDocument();
+  });
+});
+
+describe('HomeContent — Random', () => {
+  it('flicks through the backlog while it picks, in place of the picker', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      currentGame: { ...baseLibrary.currentGame, rollCovers: ['https://a.jpg', 'https://b.jpg'] },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByRole('heading', { name: 'Rolling the dice…' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Random' })).not.toBeInTheDocument();
+  });
+
+  it('brings the game it picked into focus as it starts playing', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      currentGame: { ...baseLibrary.currentGame, currentlyPlaying: mockGame, rolledGameId: 1 },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByTestId('currently-playing')).toHaveAttribute('data-reveal', 'true');
   });
 });

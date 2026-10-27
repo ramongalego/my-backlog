@@ -32,6 +32,8 @@ interface CurrentlyPlayingProps {
   /** For a game on a console: saves the hours you enter (Steam tracks its own). */
   onSaveHours?: (hours: number) => void | Promise<void>;
   isLoading?: boolean;
+  /** Just picked by Random: its art comes into focus where the backlog flicked past. */
+  reveal?: boolean;
 }
 
 // The quiet actions under Finish and Drop. The padding, cancelled by the
@@ -132,21 +134,28 @@ export function CurrentlyPlaying({
   onMoveToQueue,
   onSaveHours,
   isLoading,
+  reveal = false,
 }: CurrentlyPlayingProps) {
   const storeUrl = steamStoreUrl(game.app_id);
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
-      <CoverArt
-        src={game.header_image}
-        alt=""
-        rounded="xl"
-        priority
-        sizes="(max-width: 768px) 100vw, 512px"
-        platform={consoleOf(game)}
-        releaseDate={game.release_date}
-      />
+      {/* Clipped, so the art coming into focus stays inside its frame. */}
+      <div className="overflow-hidden rounded-xl">
+        <CoverArt
+          src={game.header_image}
+          alt=""
+          rounded="xl"
+          priority
+          sizes="(max-width: 768px) 100vw, 512px"
+          platform={consoleOf(game)}
+          releaseDate={game.release_date}
+          className={reveal ? 'animate-reveal motion-reduce:animate-overlay-in' : ''}
+        />
+      </div>
 
-      <div className="min-w-0">
+      <div
+        className={`min-w-0 ${reveal ? 'animate-result-in [animation-delay:150ms] motion-reduce:animate-none' : ''}`}
+      >
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-ink-50">
           {storeUrl ? (
             <a

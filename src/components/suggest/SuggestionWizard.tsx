@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Dices } from 'lucide-react';
 import { QuestionStep } from './QuestionStep';
 import { MOOD_QUESTION, ENERGY_QUESTION, TIME_QUESTION } from '@/lib/suggest/questions';
 import type { MoodType, EnergyLevel, TimeCommitment } from '@/lib/suggest/types';
@@ -14,6 +14,8 @@ interface SuggestionWizardProps {
   onSelectTime: (time: TimeCommitment) => void;
   onBack: () => void;
   showHistoryWarning?: boolean;
+  /** Skips the questions for a random game (Pick My Next Game, for the queue). */
+  onLeaveToChance?: () => void;
 }
 
 export function SuggestionWizard({
@@ -23,6 +25,7 @@ export function SuggestionWizard({
   onSelectTime,
   onBack,
   showHistoryWarning = false,
+  onLeaveToChance,
 }: SuggestionWizardProps) {
   // Progress indicator
   const stepNumber = step === 'mood' ? 1 : step === 'energy' ? 2 : 3;
@@ -79,6 +82,18 @@ export function SuggestionWizard({
           options={TIME_QUESTION.options}
           onSelect={onSelectTime}
         />
+      )}
+
+      {/* Instead of answering: a quiet way out, under the first question. */}
+      {step === 'mood' && onLeaveToChance && (
+        <button
+          type="button"
+          onClick={onLeaveToChance}
+          className="mt-5 flex items-center gap-2 py-2 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
+        >
+          <Dices className="w-4 h-4" aria-hidden="true" />
+          <span>Or leave it to chance</span>
+        </button>
       )}
 
       {/* History warning — shown on all steps */}
