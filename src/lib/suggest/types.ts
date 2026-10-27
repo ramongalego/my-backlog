@@ -54,6 +54,9 @@ export interface SuggestionResult {
     critic_count: number | null;
     playtime_forever: number;
     last_played_at: string | null;
+    /** Where it's played: a Steam game moved to a console doesn't link to Steam. */
+    source?: string;
+    platform?: string | null;
   };
   reasoning: string;
 }

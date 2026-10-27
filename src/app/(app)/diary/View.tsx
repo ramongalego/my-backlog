@@ -102,7 +102,7 @@ function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const canAddNote = !entry.notes && !editingNote;
   const startNote = () => setEditingNote(true);
   const edit = () => onEdit(entry.id);
-  const storeUrl = steamStoreUrl(entry.app_id);
+  const storeUrl = steamStoreUrl(entry);
 
   return (
     // content-visibility lets the browser skip laying out and drawing rows

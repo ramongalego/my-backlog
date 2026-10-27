@@ -29,7 +29,7 @@ export function SuggestionResult({
 }: SuggestionResultProps) {
   const { game, reasoning } = suggestion;
   const isOnCooldown = cooldownRemaining > 0;
-  const storeUrl = steamStoreUrl(game.app_id);
+  const storeUrl = steamStoreUrl(game);
 
   return (
     <>

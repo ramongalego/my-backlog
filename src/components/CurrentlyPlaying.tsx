@@ -136,7 +136,7 @@ export function CurrentlyPlaying({
   isLoading,
   reveal = false,
 }: CurrentlyPlayingProps) {
-  const storeUrl = steamStoreUrl(game.app_id);
+  const storeUrl = steamStoreUrl(game);
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
       {/* Clipped, so the art coming into focus stays inside its frame. */}

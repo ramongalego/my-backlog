@@ -252,6 +252,8 @@ export async function POST(request: NextRequest) {
         critic_count: suggestedGame.critic_count,
         playtime_forever: suggestedGame.playtime_forever ?? 0,
         last_played_at: suggestedGame.last_played_at,
+        source: suggestedGame.source,
+        platform: suggestedGame.platform,
       },
       reasoning,
     },

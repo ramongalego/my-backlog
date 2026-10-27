@@ -242,7 +242,7 @@ export function GameCardInfo({
   deckCompat,
   platform,
 }: GameCardInfoProps) {
-  const storeUrl = steamStoreUrl(appId);
+  const storeUrl = steamStoreUrl({ app_id: appId, platform });
   return (
     <>
       {storeUrl ? (

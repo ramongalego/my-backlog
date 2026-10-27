@@ -9,10 +9,7 @@ import type { SuggestionResult } from '@/lib/suggest/types';
 export const RANDOM_ROLL_MS = 2200;
 
 /** A randomly picked game: what the playing band and the picker's result card show. */
-export type RandomGame = SuggestionResult['game'] & {
-  source: string;
-  platform: string | null;
-};
+export type RandomGame = SuggestionResult['game'] & { source: string; platform: string | null };
 
 const RANDOM_GAME_SELECT =
   'id, app_id, source, platform, name, header_image, main_story_hours, genres, tags, steam_review_score, steam_review_count, critic_score, critic_count, playtime_forever, last_played_at';

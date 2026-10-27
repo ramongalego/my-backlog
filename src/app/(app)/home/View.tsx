@@ -94,6 +94,9 @@ export default function HomeView() {
     const game = {
       id: suggested.id,
       app_id: suggested.app_id,
+      // Where it's played, so its card shows the console and links the right way.
+      source: suggested.source,
+      platform: suggested.platform,
       name: suggested.name,
       header_image: suggested.header_image,
       main_story_hours: suggested.main_story_hours ?? 0,
