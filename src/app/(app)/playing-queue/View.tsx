@@ -35,7 +35,7 @@ import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
 import { todayIso } from '@/lib/diary/date-utils';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
-import { QueueListSkeleton } from './Skeleton';
+import { QueueContentSkeleton } from './Skeleton';
 import { consoleOf } from '@/lib/games/manual';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
@@ -430,7 +430,7 @@ export default function PlayingQueueView() {
       <PageHeader title="Playing Queue" description="What you're playing now and what's up next" />
 
       {isLoading ? (
-        <QueueListSkeleton />
+        <QueueContentSkeleton />
       ) : isEmpty ? (
         <EmptyState icon={ListOrdered} title="Your queue is empty">
           Pick a game to play first, then queue up what&apos;s next from your library

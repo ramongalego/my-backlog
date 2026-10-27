@@ -11,24 +11,82 @@ import {
 // Skeletons for the home dashboard. They use the same sections, padding and
 // tile sizes as HomeView and GameCarousel so the page doesn't shift on load.
 
+/** Which of Home's bands to draw, and what goes around it. */
+export interface HomeShape {
+  /** A game being played, picking one, or building a backlog first. */
+  band: 'playing' | 'picker' | 'building';
+  /** Playing: whether a game is queued after it (the Up next strip's thumbnail). */
+  queued: boolean;
+  /** Not on Steam: the band's line about connecting it. */
+  steamConnected: boolean;
+  /** How many carousel rows to hold space for. */
+  carouselRows: number;
+}
+
 /**
- * Full home skeleton: the band with a game being played (the usual case for a
- * returning player, so it's the one that doesn't jump), the Up next strip and
- * the carousels.
+ * The usual case for a returning player, so it's the one that doesn't jump
+ * when nothing is known yet: a game being played, one queued after it.
  */
-export function LoadingState() {
+export const PLAYING_SHAPE: HomeShape = {
+  band: 'playing',
+  queued: true,
+  steamConnected: true,
+  carouselRows: 2,
+};
+
+/**
+ * Full home skeleton: the band in the shape Home will have (see HomeLoading,
+ * which works it out from what's already known), the Up next strip under a
+ * game being played, and the carousels.
+ */
+export function LoadingState({ shape = PLAYING_SHAPE }: { shape?: HomeShape }) {
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col" role="status" aria-busy="true">
       <span className="sr-only">Loading…</span>
       <div className="pt-14 sm:pt-16 pb-16 flex-1">
         <section className="bg-ink-900">
           <div className={`${PAGE_CONTAINER} py-8 sm:py-12`}>
-            <StatusLoadingState />
+            {shape.band === 'playing' ? (
+              <StatusLoadingState />
+            ) : (
+              <TextBandLoadingState
+                progress={shape.band === 'building'}
+                steamNote={!shape.steamConnected}
+              />
+            )}
           </div>
         </section>
-        <UpNextLoadingState />
-        <CarouselsLoadingState />
+        {shape.band === 'playing' && <UpNextLoadingState queued={shape.queued} />}
+        {shape.carouselRows > 0 && <CarouselsLoadingState rows={shape.carouselRows} />}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Mirrors the bands without a game: picking one ("What are you playing
+ * next?") or building a backlog first, which adds the three-step bar.
+ */
+function TextBandLoadingState({ progress, steamNote }: { progress: boolean; steamNote: boolean }) {
+  return (
+    <div className="max-w-xl">
+      <Skeleton className="h-8 sm:h-9 w-3/4" />
+      {/* Two lines of text-base. */}
+      <div className="mt-2 space-y-2 py-1">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+      {progress && (
+        <div className="mt-5">
+          <Skeleton className="h-1.5 max-w-xs rounded-full" />
+          <Skeleton className="h-4 w-24 mt-2.5" />
+        </div>
+      )}
+      <div className="mt-6 flex gap-2">
+        <Skeleton className="h-12 w-40 rounded-lg" />
+        <Skeleton className="h-12 w-36 rounded-lg" />
+      </div>
+      {steamNote && <Skeleton className="h-4 w-80 max-w-full mt-5" />}
     </div>
   );
 }
@@ -38,10 +96,10 @@ export function LoadingState() {
  * widths (a page plus the peeking card under the fade). No arrows, since the
  * carousel only shows them on hover.
  */
-export function CarouselsLoadingState() {
+export function CarouselsLoadingState({ rows = 2 }: { rows?: number }) {
   return (
     <section className={`${PAGE_CONTAINER} mt-12 sm:mt-14 space-y-16`}>
-      {[1, 2].map((i) => (
+      {Array.from({ length: rows }, (_, i) => (
         <div key={i}>
           <Skeleton className="mb-4 h-7 w-56 sm:w-72" />
           <div className={`relative ${CAROUSEL_PER_PAGE}`}>
@@ -65,19 +123,26 @@ export function CarouselsLoadingState() {
   );
 }
 
-/** Mirrors the Up next strip under the band: the next queued game and the Pick button. */
-function UpNextLoadingState() {
+/**
+ * Mirrors the Up next strip under the band: the next queued game (or the line
+ * saying the queue is empty) and the Pick button.
+ */
+function UpNextLoadingState({ queued }: { queued: boolean }) {
   return (
     <div
       className={`${PAGE_CONTAINER} mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4`}
     >
-      <div className="flex items-center gap-3 sm:gap-4">
-        <Skeleton className={`${COVER_ASPECT} w-20 sm:w-28 rounded-md`} />
-        <div>
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-32 mt-1.5" />
+      {queued ? (
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Skeleton className={`${COVER_ASPECT} w-20 sm:w-28 rounded-md`} />
+          <div>
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-32 mt-1.5" />
+          </div>
         </div>
-      </div>
+      ) : (
+        <Skeleton className="h-4 w-96 max-w-full" />
+      )}
       <Skeleton className="h-10 w-44 rounded-lg" />
     </div>
   );

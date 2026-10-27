@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Flame } from 'lucide-react';
 import { RoastHeader, RoastShell } from '@/components/roast/RoastLayout';
-
+import { RoastResultSkeleton } from '@/components/roast/RoastSkeletons';
 import { RoastResult } from '@/components/roast/RoastResult';
 import type { RoastResponse } from '@/lib/roast/cache';
 import { queryKeys } from '@/lib/query-keys';
@@ -45,14 +44,12 @@ export default function SharedRoastView({ steamId }: { steamId: string }) {
     <RoastShell>
       <RoastHeader />
 
-      {/* Loading */}
+      {/* Loading (or writing a new roast): the same skeleton as the page's
+          loading state, so it goes straight from there to the roast. */}
       {isPending && (
-        <div className="text-center py-16">
-          <div className="relative inline-block">
-            <div className="w-16 h-16 border-4 border-ink-700 border-t-accent-400 rounded-full animate-spin" />
-            <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-accent-400" />
-          </div>
-          <p className="mt-6 text-ink-400">Loading roast...</p>
+        <div role="status" aria-busy="true">
+          <span className="sr-only">Loading roast…</span>
+          <RoastResultSkeleton />
         </div>
       )}
 

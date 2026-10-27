@@ -12,11 +12,7 @@ import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { CoverThumb } from '@/components/games/CoverArt';
 import { SuggestionModal } from '@/components/suggest';
 import { SyncProgress } from '@/components/SyncProgress';
-import {
-  LoadingState,
-  CarouselsLoadingState,
-  StatusLoadingState,
-} from '@/components/home/HomeLoadingStates';
+import { CarouselsLoadingState, StatusLoadingState } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
 import { useManualGameActions } from '@/hooks/useManualGame';
 import { useAddGame } from '@/components/games/AddGameProvider';
@@ -26,6 +22,7 @@ import type { SuggestionResult } from '@/lib/suggest/types';
 import { Dices, Plus, Sparkles } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { BacklogProgress } from '@/components/home/BacklogProgress';
+import { HomeLoading } from '@/components/home/HomeLoading';
 import { RandomRoll } from '@/components/home/RandomRoll';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 
@@ -113,7 +110,7 @@ export default function HomeView() {
 
   // Signed-out visitors never get here (the proxy sends them to the landing page).
   if (isLoading || !user) {
-    return <LoadingState />;
+    return <HomeLoading />;
   }
 
   return (

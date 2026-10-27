@@ -1,5 +1,5 @@
-import { LoadingState } from '@/components/home/HomeLoadingStates';
+import { HomeLoading } from '@/components/home/HomeLoading';
 
-export default function HomeLoading() {
-  return <LoadingState />;
+export default function Loading() {
+  return <HomeLoading />;
 }
