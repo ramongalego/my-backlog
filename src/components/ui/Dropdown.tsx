@@ -110,7 +110,7 @@ export function Dropdown<T extends string>({
         }}
         className={
           inline
-            ? 'group cursor-pointer text-ink-100 hover:text-ink-50 transition-colors'
+            ? 'group cursor-pointer text-left text-ink-100 hover:text-ink-50 transition-colors'
             : 'flex items-center gap-2 h-10 text-sm font-medium text-ink-300 hover:text-ink-50 transition-colors cursor-pointer'
         }
         aria-haspopup="listbox"
@@ -120,25 +120,17 @@ export function Dropdown<T extends string>({
         aria-label={ariaLabel ? `${ariaLabel}: ${selected?.label}` : undefined}
       >
         {icon && <span aria-hidden="true">{icon}</span>}
-        {inline ? (
-          // Every label stacked in one cell, only the chosen one showing, so
-          // the sentence keeps its width (and where it wraps on phones)
-          // whichever is picked. From `sm` the sentence fits on its line,
-          // so the others drop out rather than leave a gap.
-          <span className="inline-grid">
-            {options.map((option) => (
-              <span
-                key={option.value}
-                className={`[grid-area:1/1] underline decoration-ink-500 underline-offset-4 group-hover:decoration-ink-300 transition-colors ${option.value === value ? '' : 'invisible sm:hidden'}`}
-                aria-hidden={option.value === value ? undefined : true}
-              >
-                {option.label}
-              </span>
-            ))}
-          </span>
-        ) : (
-          <span>{selected?.label}</span>
-        )}
+        {/* The underline sits on the label: it doesn't carry into an
+            inline-block from the button. */}
+        <span
+          className={
+            inline
+              ? 'underline decoration-ink-500 underline-offset-4 group-hover:decoration-ink-300 transition-colors'
+              : undefined
+          }
+        >
+          {selected?.label}
+        </span>
       </button>
       {open && (
         <ul

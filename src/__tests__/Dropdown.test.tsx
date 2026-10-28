@@ -16,7 +16,7 @@ it('reads as part of a sentence and picks from its list', () => {
     </div>,
   );
   const trigger = screen.getByRole('button', { name: 'Clear it in: 5 years' });
-  // The label carries the underline; it doesn't reach into the stacked labels from the button.
+  // The label carries the underline (it doesn't reach in from the button).
   expect(within(trigger).getByText('5 years')).toHaveClass('underline');
 
   fireEvent.click(trigger);
