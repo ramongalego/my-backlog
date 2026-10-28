@@ -19,7 +19,8 @@ import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
 import { connectSteam } from '@/lib/steam/connect';
 import type { SuggestionResult } from '@/lib/suggest/types';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { PickIcon } from '@/components/suggest/PickIcon';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { BacklogProgress } from '@/components/home/BacklogProgress';
 import { HomeLoading } from '@/components/home/HomeLoading';
@@ -243,10 +244,10 @@ export default function HomeView() {
             )}
             <Button
               variant="secondary"
-              className="cursor-pointer"
+              className="group cursor-pointer"
               onClick={() => setIsSuggestionModalOpen(true)}
             >
-              <Sparkles className="w-4 h-4" aria-hidden="true" />
+              <PickIcon />
               <span>Pick My Next Game</span>
             </Button>
           </div>

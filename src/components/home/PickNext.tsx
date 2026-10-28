@@ -1,6 +1,7 @@
 'use client';
 
-import { Dices, Sparkles } from 'lucide-react';
+import { Dices } from 'lucide-react';
+import { PickIcon } from '@/components/suggest/PickIcon';
 import { Button } from '@/components/ui/Button';
 import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { CoverShelf } from '@/components/suggest/CoverShelf';
@@ -76,8 +77,8 @@ export function PickNext({ covers, backlogCount, onPick, onRandom, children }: P
           MyBacklog picks one from your backlog for tonight. Or leave it to chance.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-2">
-          <Button size="lg" className="cursor-pointer" onClick={onPick}>
-            <Sparkles className="w-5 h-5" aria-hidden="true" />
+          <Button size="lg" className="group cursor-pointer" onClick={onPick}>
+            <PickIcon className="w-5 h-5" />
             <span>Pick My Game</span>
           </Button>
           <Button

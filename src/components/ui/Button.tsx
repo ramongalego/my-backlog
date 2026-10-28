@@ -26,7 +26,8 @@ export function Button({
 
   const variants = {
     // A faded accent reads as muddy brown, so a disabled (not loading) primary goes neutral.
-    primary: `bg-accent-500 text-ink-950 hover:bg-accent-400${isLoading ? '' : ' disabled:bg-ink-800 disabled:text-ink-500 disabled:opacity-100'}`,
+    // (Each class stands apart from the ${}: Tailwind only finds whole words.)
+    primary: `bg-accent-500 text-ink-950 hover:bg-accent-400 ${isLoading ? '' : 'disabled:bg-ink-800 disabled:text-ink-500 disabled:opacity-100'}`,
     secondary: 'bg-ink-800 text-ink-100 hover:bg-ink-700',
     ghost: 'bg-transparent text-ink-300 hover:bg-ink-800 hover:text-ink-100',
     success: 'bg-emerald-500 text-ink-950 hover:bg-emerald-400',

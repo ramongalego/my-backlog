@@ -301,7 +301,7 @@ function QueueItemRow({
               aria-label={`Play ${item.game.name}`}
               className="cursor-pointer px-2.5 sm:px-3"
             >
-              <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+              <Play className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Play</span>
             </Button>
           )}
