@@ -64,29 +64,37 @@ export function LoadingState({ shape = PLAYING_SHAPE }: { shape?: HomeShape }) {
 }
 
 /**
- * Mirrors the bands without a game: picking one ("What are you playing
- * next?") or building a backlog first, which adds the three-step bar.
+ * Mirrors the bands without a game, laid out like the playing band: picking
+ * one (PickNext: the backlog wall, then the question) or building a backlog
+ * first (BuildBacklog: its three slots, then the count).
  */
 function TextBandLoadingState({ progress, steamNote }: { progress: boolean; steamNote: boolean }) {
   return (
-    <div className="max-w-xl">
-      <Skeleton className="h-8 sm:h-9 w-3/4" />
-      {/* Two lines of text-base. */}
-      <div className="mt-2 space-y-2 py-1">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-      {progress && (
-        <div className="mt-5">
-          <Skeleton className="h-1.5 max-w-xs rounded-full" />
-          <Skeleton className="h-4 w-24 mt-2.5" />
+    <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
+      {progress ? (
+        <div className="grid grid-cols-[2fr_1fr] grid-rows-2 gap-2">
+          <Skeleton className={`row-span-2 ${COVER_ASPECT} rounded-xl`} />
+          <Skeleton className="rounded-xl" />
+          <Skeleton className="rounded-xl" />
         </div>
+      ) : (
+        <Skeleton className={`${COVER_ASPECT} rounded-xl`} />
       )}
-      <div className="mt-6 flex gap-2">
-        <Skeleton className="h-12 w-40 rounded-lg" />
-        <Skeleton className="h-12 w-36 rounded-lg" />
+      <div className="max-w-xl">
+        <Skeleton className="h-8 sm:h-9 lg:h-10 w-3/4" />
+        {/* Two or three lines of text-base. */}
+        <div className="mt-3 space-y-2 py-1">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+        {progress && <Skeleton className="h-4 w-24 mt-2.5" />}
+        <div className="mt-6 flex gap-2">
+          <Skeleton className="h-12 w-40 rounded-lg" />
+          <Skeleton className="h-12 w-36 rounded-lg" />
+        </div>
+        {steamNote && <Skeleton className="h-4 w-80 max-w-full mt-5" />}
       </div>
-      {steamNote && <Skeleton className="h-4 w-80 max-w-full mt-5" />}
     </div>
   );
 }

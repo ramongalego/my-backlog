@@ -298,6 +298,15 @@ export function computeStats(
   };
 }
 
+/**
+ * Nothing to report yet: no game finished, dropped or played, as on a new
+ * account. Stats shows what you have and how to start instead of empty
+ * sections.
+ */
+export function isStarting(stats: Stats): boolean {
+  return stats.finished === 0 && stats.dropped === 0 && stats.totalPlaytimeHours === 0;
+}
+
 export function useStats() {
   const { user } = useAuth();
   const userId = user?.id ?? null;

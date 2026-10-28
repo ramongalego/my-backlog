@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
@@ -19,18 +21,23 @@ import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
 import { connectSteam } from '@/lib/steam/connect';
 import type { SuggestionResult } from '@/lib/suggest/types';
-import { Plus } from 'lucide-react';
 import { PickIcon } from '@/components/suggest/PickIcon';
-import { SteamIcon } from '@/components/ui/SteamIcon';
-import { BacklogProgress } from '@/components/home/BacklogProgress';
+import { BuildBacklog } from '@/components/home/BuildBacklog';
 import { HomeLoading } from '@/components/home/HomeLoading';
 import { RandomRoll } from '@/components/home/RandomRoll';
 import { PickNext, wallCovers } from '@/components/home/PickNext';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 import { steamLastPlayed } from '@/lib/games/consoles';
 
+// Below this many backlog games, the picker band says picks get better with more.
+const SMALL_BACKLOG = 10;
+
+const INLINE_LINK =
+  'cursor-pointer font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors';
+
 export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
+  const router = useRouter();
 
   const { auth, meta, sync, carousels, currentGame } = useGameLibrary();
   const { user, profile, isLoading } = auth;
@@ -110,6 +117,9 @@ export default function HomeView() {
   // Home asks for more, with a bar counting toward them. Finished and dropped
   // games can't be picked, so they don't count.
   const isBuildingBacklog = backlogCount < MIN_GAMES_TO_PICK && !isSyncing && !currentlyPlaying;
+  // Both picks leave queued games out, so once every backlog game is queued
+  // there's nothing left to pick, and a pick would only come back empty.
+  const nothingToPick = backlogCount - queuedGameIds.size <= 0;
 
   // Signed-out visitors never get here (the proxy sends them to the landing page).
   if (isLoading || !user) {
@@ -146,60 +156,64 @@ export default function HomeView() {
             ) : isStatusLoading ? (
               <StatusLoadingState />
             ) : isBuildingBacklog ? (
-              <div>
-                <div className="max-w-xl">
-                  <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
-                    Build your backlog
-                  </h1>
-                  <p className="mt-2 text-ink-400">
-                    {gameCount === 0 && isSteamConnected
-                      ? "Your Steam library came back empty. If your Steam profile's game details are private, make them public and refresh from your account menu, or add games by hand."
-                      : `Add the games you own and haven't played yet, on any console. Once you have ${MIN_GAMES_TO_PICK}, MyBacklog can pick what to play next.`}
-                  </p>
-                  <BacklogProgress count={backlogCount} historyCount={historyCount} />
-                  <div className="mt-6 flex flex-wrap items-center gap-2">
-                    <Button size="lg" className="cursor-pointer" onClick={() => openAddGame()}>
-                      <Plus className="w-5 h-5" aria-hidden="true" />
-                      <span>Add a game</span>
-                    </Button>
-                    {!isSteamConnected && (
-                      <Button
-                        variant="secondary"
-                        size="lg"
-                        className="cursor-pointer"
-                        onClick={connectSteam}
-                      >
-                        <SteamIcon className="w-5 h-5" />
-                        <span>Connect Steam</span>
-                      </Button>
-                    )}
-                  </div>
-                  {!isSteamConnected && (
-                    <p className="mt-4 text-sm text-ink-500">
-                      Connecting Steam imports your whole library with your hours played. It&apos;s
-                      optional, and you can do it later from your account menu.
-                    </p>
-                  )}
-                </div>
-              </div>
+              <BuildBacklog
+                // Recently Added lists them newest first, from the first game.
+                covers={wallCovers([recentlyAdded])}
+                count={backlogCount}
+                historyCount={historyCount}
+                steamEmpty={gameCount === 0 && isSteamConnected}
+                isSteamConnected={isSteamConnected}
+                onAddGame={() => openAddGame()}
+                onConnectSteam={connectSteam}
+              />
             ) : (
               <PickNext
-                covers={wallCovers(carouselRows.map((row) => row.games))}
+                // The carousels leave queued games out, so with everything queued
+                // the wall shows the queue instead.
+                covers={wallCovers(
+                  nothingToPick ? [queue.map((q) => q.game)] : carouselRows.map((row) => row.games),
+                )}
                 backlogCount={backlogCount}
                 onPick={() => setIsSuggestionModalOpen(true)}
                 onRandom={handleRandomPick}
+                allQueued={
+                  nothingToPick
+                    ? {
+                        onOpenQueue: () => router.push('/playing-queue'),
+                        onAddGame: () => openAddGame(),
+                      }
+                    : undefined
+                }
               >
-                {!isSteamConnected && (
+                {nothingToPick ? null : backlogCount < SMALL_BACKLOG ? (
+                  // Three games is enough to pick between, not enough to pick
+                  // well: say the picks improve with more, and how to get there.
                   <p className="mt-4 text-sm text-ink-400">
-                    Games on Steam too?{' '}
-                    <button
-                      onClick={connectSteam}
-                      className="cursor-pointer font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors"
-                    >
-                      Connect Steam
-                    </button>{' '}
-                    to bring in your library.
+                    Picks get better the more games you have.{' '}
+                    <button onClick={() => openAddGame()} className={INLINE_LINK}>
+                      Add a few more
+                    </button>
+                    {!isSteamConnected && (
+                      <>
+                        , or{' '}
+                        <button onClick={connectSteam} className={INLINE_LINK}>
+                          connect Steam
+                        </button>{' '}
+                        to bring in your whole library
+                      </>
+                    )}
+                    .
                   </p>
+                ) : (
+                  !isSteamConnected && (
+                    <p className="mt-4 text-sm text-ink-400">
+                      Games on Steam too?{' '}
+                      <button onClick={connectSteam} className={INLINE_LINK}>
+                        Connect Steam
+                      </button>{' '}
+                      to bring in your library.
+                    </p>
+                  )
                 )}
               </PickNext>
             )}
@@ -239,17 +253,28 @@ export default function HomeView() {
                 >
                   queue
                 </Link>{' '}
-                is empty. The game you pick goes there, to play after this one.
+                is empty.{' '}
+                {nothingToPick
+                  ? 'Add a game to have one ready for after this.'
+                  : 'The game you pick goes there, to play after this one.'}
               </p>
             )}
-            <Button
-              variant="secondary"
-              className="group cursor-pointer"
-              onClick={() => setIsSuggestionModalOpen(true)}
-            >
-              <PickIcon />
-              <span>Pick My Next Game</span>
-            </Button>
+            {nothingToPick ? (
+              // Every backlog game is playing or queued: nothing left to pick.
+              <Button variant="secondary" className="cursor-pointer" onClick={() => openAddGame()}>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                <span>Add a game</span>
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                className="group cursor-pointer"
+                onClick={() => setIsSuggestionModalOpen(true)}
+              >
+                <PickIcon />
+                <span>Pick My Next Game</span>
+              </Button>
+            )}
           </div>
         )}
 

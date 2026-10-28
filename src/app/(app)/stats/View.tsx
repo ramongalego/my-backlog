@@ -9,7 +9,10 @@ import { Playtime } from '@/components/games/GameCardInfo';
 import { Rating } from '@/components/games/Rating';
 import { Figure, Lead } from '@/components/ui/Lead';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
-import { useStats } from '@/hooks/useStats';
+import { isStarting, useStats } from '@/hooks/useStats';
+import { useAddGame } from '@/components/games/AddGameProvider';
+import { StatsStart, StatsStartButtons } from '@/components/stats/StatsStart';
+import { connectSteam } from '@/lib/steam/connect';
 import { useAuth } from '@/hooks/useAuth';
 import { growBar, useInView } from '@/hooks/useInView';
 import { useAddToQueue } from '@/hooks/useNowPlaying';
@@ -209,13 +212,15 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
   );
 }
 
-function TopTags({ stats }: { stats: Stats }) {
+function TopTags({ stats, syncs }: { stats: Stats; syncs: boolean }) {
   if (stats.topTags.length === 0) {
     return (
       <Panel>
         <SectionTitle>Top tags in your library</SectionTitle>
         <p className="text-sm text-ink-500">
-          No tags yet. They&apos;re added the next time your library syncs.
+          {syncs
+            ? 'No tags yet. They’re added the next time your library syncs.'
+            : 'None of your games have tags yet.'}
         </p>
       </Panel>
     );
@@ -514,7 +519,14 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
 export default function StatsView() {
   const { stats, loading, hasPlayingGame } = useStats();
   const { statusChanged } = useInvalidateQueries();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isSteamConnected = profile?.steam_id != null;
+  const { open: openAddGame } = useAddGame();
+  const start = {
+    isSteamConnected,
+    onAddGame: () => openAddGame(),
+    onConnectSteam: connectSteam,
+  };
   const gamesList = usePatchGamesList(user?.id ?? null);
   const manualGames = useManualGameActions(user?.id ?? null);
   const addGameToQueue = useAddToQueue(user?.id ?? null);
@@ -593,9 +605,11 @@ export default function StatsView() {
       {loading ? (
         <StatsContentSkeleton />
       ) : !stats ? (
-        <EmptyState icon={Gamepad2} title="No stats yet">
+        <EmptyState icon={Gamepad2} title="No stats yet" action={<StatsStartButtons {...start} />}>
           Add games to your library, or connect Steam, to see your stats here.
         </EmptyState>
+      ) : isStarting(stats) ? (
+        <StatsStart backlog={stats.backlog} storyHours={stats.estimatedBacklogHours} {...start} />
       ) : (
         <div className="space-y-6">
           {/* Your games first: where the hours went, then what's left and
@@ -607,7 +621,7 @@ export default function StatsView() {
           <Favourites stats={stats} />
           <TagCompletion stats={stats} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TopTags stats={stats} />
+            <TopTags stats={stats} syncs={isSteamConnected} />
             <YearChart stats={stats} />
           </div>
           {stats.playedALot.length > 0 && (

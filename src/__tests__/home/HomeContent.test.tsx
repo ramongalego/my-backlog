@@ -65,7 +65,7 @@ const baseLibrary = {
     gameCount: 12,
     historyCount: 0,
     backlogCount: 12,
-    queuedAppIds: new Set<number>(),
+    queuedGameIds: new Set<number>(),
   },
   sync: {
     isSyncing: false,
@@ -301,5 +301,67 @@ describe('HomeContent — Random', () => {
     render(<HomePage />);
 
     expect(screen.getByTestId('currently-playing')).toHaveAttribute('data-reveal', 'true');
+  });
+});
+
+describe('HomeContent — nothing left to pick', () => {
+  // Both picks leave queued games out, so a backlog that's all queued has none.
+  const allQueued = (ids: number[]) => ({
+    ...baseLibrary.meta,
+    backlogCount: ids.length,
+    queuedGameIds: new Set(ids),
+  });
+
+  it('offers Add a game instead of Pick My Next Game while one plays and the rest are queued', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      meta: allQueued([2, 3]),
+      currentGame: { ...baseLibrary.currentGame, currentlyPlaying: mockGame },
+    });
+    render(<HomePage />);
+
+    expect(screen.queryByRole('button', { name: 'Pick My Next Game' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a game' })).toBeInTheDocument();
+  });
+
+  it('points at the queue instead of offering picks when nothing plays and all is queued', () => {
+    mockUseGameLibrary.mockReturnValue({ ...baseLibrary, meta: allQueued([1, 2, 3]) });
+    render(<HomePage />);
+
+    expect(screen.queryByRole('button', { name: 'Pick My Game' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Random' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to your queue' })).toBeInTheDocument();
+    expect(screen.getByText(/already in your queue/)).toBeInTheDocument();
+  });
+});
+
+describe('HomeContent — a small backlog', () => {
+  const small = (steamId: string | null) => ({
+    ...baseLibrary,
+    auth: { ...baseLibrary.auth, profile: { steam_id: steamId } },
+    meta: { ...baseLibrary.meta, gameCount: 4, backlogCount: 4 },
+  });
+
+  it('says picks get better with more games, and how to add them', () => {
+    mockUseGameLibrary.mockReturnValue(small(null));
+    render(<HomePage />);
+
+    expect(screen.getByText(/Picks get better the more games you have/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a few more' }));
+    expect(mockOpenAddGame).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'connect Steam' })).toBeInTheDocument();
+  });
+
+  it('leaves Steam out of it once Steam is connected', () => {
+    mockUseGameLibrary.mockReturnValue(small('steam-123'));
+    render(<HomePage />);
+
+    expect(screen.getByText(/Picks get better/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'connect Steam' })).not.toBeInTheDocument();
+  });
+
+  it('says nothing about it for a backlog of 10 or more', () => {
+    render(<HomePage />);
+    expect(screen.queryByText(/Picks get better/)).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { Dices } from 'lucide-react';
+import { Dices, ListOrdered, Plus } from 'lucide-react';
 import { PickIcon } from '@/components/suggest/PickIcon';
 import { Button } from '@/components/ui/Button';
 import { COVER_ASPECT } from '@/components/games/CoverArt';
@@ -30,6 +30,12 @@ interface PickNextProps {
   backlogCount: number;
   onPick: () => void;
   onRandom: () => void;
+  /**
+   * Every backlog game is already queued, so there's nothing to pick from
+   * (both picks leave queued games out): point at the queue and at adding
+   * more instead of offering picks that would come back empty.
+   */
+  allQueued?: { onOpenQueue: () => void; onAddGame: () => void };
   /** Shown under the buttons, e.g. the nudge to connect Steam. */
   children?: React.ReactNode;
 }
@@ -40,14 +46,21 @@ interface PickNextProps {
  * beside it. Random shuffles through that same frame (`RandomRoll`), and the
  * game it lands on takes its place.
  */
-export function PickNext({ covers, backlogCount, onPick, onRandom, children }: PickNextProps) {
+export function PickNext({
+  covers,
+  backlogCount,
+  onPick,
+  onRandom,
+  allQueued,
+  children,
+}: PickNextProps) {
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
       {/* The art opens Pick My Game too; the button beside it is the one to
           reach by keyboard and screen reader. */}
       <button
         type="button"
-        onClick={onPick}
+        onClick={allQueued ? allQueued.onOpenQueue : onPick}
         tabIndex={-1}
         aria-hidden="true"
         className={`group relative ${COVER_ASPECT} overflow-hidden rounded-xl bg-ink-800 cursor-pointer`}
@@ -72,26 +85,52 @@ export function PickNext({ covers, backlogCount, onPick, onRandom, children }: P
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-ink-50">
           What are you playing next?
         </h1>
-        <p className="mt-3 text-ink-300 leading-relaxed">
-          Say how you want to feel, how much energy you have and how long you can play, and
-          MyBacklog picks one from your backlog for tonight. Or leave it to chance.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center gap-2">
-          <Button size="lg" className="group cursor-pointer" onClick={onPick}>
-            <PickIcon className="w-5 h-5" />
-            <span>Pick My Game</span>
-          </Button>
-          <Button
-            onClick={onRandom}
-            variant="secondary"
-            size="lg"
-            className="cursor-pointer"
-            title="Pick a random game"
-          >
-            <Dices className="w-5 h-5" aria-hidden="true" />
-            <span>Random</span>
-          </Button>
-        </div>
+        {allQueued ? (
+          <>
+            <p className="mt-3 text-ink-300 leading-relaxed">
+              Every game in your backlog is already in your queue. Start one from there, or add more
+              games for MyBacklog to pick from.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <Button size="lg" className="cursor-pointer" onClick={allQueued.onOpenQueue}>
+                <ListOrdered className="w-5 h-5" aria-hidden="true" />
+                <span>Go to your queue</span>
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                className="cursor-pointer"
+                onClick={allQueued.onAddGame}
+              >
+                <Plus className="w-5 h-5" aria-hidden="true" />
+                <span>Add a game</span>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-3 text-ink-300 leading-relaxed">
+              Say how you want to feel, how much energy you have and how long you can play, and
+              MyBacklog picks one from your backlog for tonight. Or leave it to chance.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <Button size="lg" className="group cursor-pointer" onClick={onPick}>
+                <PickIcon className="w-5 h-5" />
+                <span>Pick My Game</span>
+              </Button>
+              <Button
+                onClick={onRandom}
+                variant="secondary"
+                size="lg"
+                className="cursor-pointer"
+                title="Pick a random game"
+              >
+                <Dices className="w-5 h-5" aria-hidden="true" />
+                <span>Random</span>
+              </Button>
+            </div>
+          </>
+        )}
         {children}
       </div>
     </div>
