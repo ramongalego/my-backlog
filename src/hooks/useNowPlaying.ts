@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
-import { loadCurrentlyPlaying, loadQueue } from '@/lib/data/loaders';
+import { loadCurrentlyPlaying, loadQueue, type LibraryMeta } from '@/lib/data/loaders';
 import { completeGame, updateGameStatus } from '@/lib/games/status';
 import { buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
@@ -240,13 +240,18 @@ export function useNowPlaying(userId: string | null) {
       );
       queryClient.setQueryData(playingKey, promoted);
       if (promoted) dropFromQueue(promoted.id);
+      // The summary opened as soon as it was saved (confirmStatusChange); the
+      // server's counts and next game replace the estimate, unless it's been
+      // closed by now.
       if (status === 'finished') {
-        setGameSummary(buildCompletionSummary({ finishedGame: game, promoted, counts, rating }));
-        celebrateGameFinished();
+        const summary = buildCompletionSummary({ finishedGame: game, promoted, counts, rating });
+        setGameSummary((open) => open && summary);
       }
     },
     onError: (err, { status }) => {
       console.error(`Failed to set game to ${status}:`, err);
+      // It isn't finished after all.
+      setGameSummary(null);
       toast.error('Could not update the game. Please try again.');
     },
     onSettled: () => statusChanged(),
@@ -434,6 +439,23 @@ export function useNowPlaying(userId: string | null) {
       const game = queryClient.getQueryData<GameWithImage | null>(playingKey) ?? currentlyPlaying;
       if (!game) return;
       setStatusModal(null);
+      // Finishing goes straight to the summary, from what's already known: one
+      // more finished game, and the first in the queue starts next. The
+      // server's answer fills in the exact figures when it arrives.
+      if (status === 'finished') {
+        const meta = queryClient.getQueryData<LibraryMeta>(queryKeys.library.meta(userId ?? ''));
+        setGameSummary(
+          buildCompletionSummary({
+            finishedGame: game,
+            promoted: queue[0] ? toPlayingGame(queue[0]) : null,
+            counts: meta
+              ? { gamesFinished: meta.finishedCount + 1, totalGames: meta.gameCount }
+              : { gamesFinished: 0, totalGames: 0 },
+            rating,
+          }),
+        );
+        celebrateGameFinished();
+      }
       completeMutation.mutate({ game, status, date, notes, rating });
     },
 

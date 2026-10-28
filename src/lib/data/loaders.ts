@@ -199,6 +199,8 @@ export interface LibraryMeta {
   historyCount: number;
   /** Games still to play (backlog or no status): what Pick My Game picks from. */
   backlogCount: number;
+  /** Finished games: the "12/150 finished" the finish summary shows straight away. */
+  finishedCount: number;
 }
 
 /** The fewest backlog games worth picking between; until then Home asks for more. */
@@ -208,7 +210,7 @@ export async function loadLibraryMeta(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<LibraryMeta> {
-  const [totalResult, historyResult, backlogResult] = await Promise.all([
+  const [totalResult, historyResult, backlogResult, finishedResult] = await Promise.all([
     supabase
       .from('games')
       .select('id', { count: 'exact', head: true })
@@ -227,15 +229,23 @@ export async function loadLibraryMeta(
       .eq('user_id', userId)
       .eq('type', 'game')
       .or(BACKLOG_FILTER),
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('type', 'game')
+      .eq('status', 'finished'),
   ]);
   if (totalResult.error) throw totalResult.error;
   if (historyResult.error) throw historyResult.error;
   if (backlogResult.error) throw backlogResult.error;
+  if (finishedResult.error) throw finishedResult.error;
 
   return {
     gameCount: totalResult.count ?? 0,
     historyCount: historyResult.count ?? 0,
     backlogCount: backlogResult.count ?? 0,
+    finishedCount: finishedResult.count ?? 0,
   };
 }
 
