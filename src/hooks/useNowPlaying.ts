@@ -244,7 +244,13 @@ export function useNowPlaying(userId: string | null) {
       // server's counts and next game replace the estimate, unless it's been
       // closed by now.
       if (status === 'finished') {
-        const summary = buildCompletionSummary({ finishedGame: game, promoted, counts, rating });
+        const summary = buildCompletionSummary({
+          finishedGame: game,
+          promoted,
+          counts,
+          rating,
+          finishedAt: date,
+        });
         setGameSummary((open) => open && summary);
       }
     },
@@ -472,6 +478,7 @@ export function useNowPlaying(userId: string | null) {
               ? { gamesFinished: meta.finishedCount + 1, totalGames: meta.gameCount }
               : { gamesFinished: 0, totalGames: 0 },
             rating,
+            finishedAt: date,
           }),
         );
         celebrateGameFinished();

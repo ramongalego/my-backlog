@@ -7,6 +7,7 @@ import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validatio
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { AuthMessage } from '@/components/auth/AuthMessage';
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -69,13 +70,9 @@ export function ResetPasswordForm() {
   if (isDone) {
     return (
       <div className="space-y-4">
-        <div className="flex flex-col items-center text-center gap-3 py-4">
-          <div className="p-3 rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400" aria-hidden="true" />
-          </div>
-          <p className="text-ink-100 font-medium">Password updated</p>
-          <p className="text-sm text-ink-400">You can now use your new password to sign in.</p>
-        </div>
+        <AuthMessage icon={CheckCircle2} tone="success" title="Password updated">
+          You can now use your new password to sign in.
+        </AuthMessage>
         <Button className="w-full" onClick={() => router.push('/home')}>
           Continue
         </Button>

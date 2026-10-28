@@ -36,120 +36,114 @@ describe('GameSummaryModal', () => {
     jest.clearAllMocks();
   });
 
-  describe('stat blocks', () => {
-    it('should render Steam hours when playtime > 0', () => {
-      render(<GameSummaryModal {...defaultProps} playtimeMinutes={1440} />);
-
-      expect(screen.getByText('24h of playtime')).toBeInTheDocument();
+  describe('time played', () => {
+    it('says how long it took, rounded to a decimal', () => {
+      render(<GameSummaryModal {...defaultProps} playtimeMinutes={90} mainStoryHours={null} />);
+      expect(screen.getByTestId('estimate-text')).toHaveTextContent(
+        'You finished it in 1.5 hours.',
+      );
     });
 
-    it('should always render "of playtime" label alongside hours', () => {
-      render(<GameSummaryModal {...defaultProps} playtimeMinutes={1440} />);
-
-      expect(screen.getByText(/of playtime/)).toBeInTheDocument();
-    });
-
-    it('should round Steam hours to 1 decimal', () => {
-      render(<GameSummaryModal {...defaultProps} playtimeMinutes={90} />); // 1.5h
-
-      expect(screen.getByText('1.5h of playtime')).toBeInTheDocument();
-    });
-
-    it('should not render playtime row when playtime is 0', () => {
+    it('leaves the sentence out with no hours played (a console game without hours)', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={0} />);
-
       expect(screen.queryByTestId('estimate-text')).not.toBeInTheDocument();
-    });
-
-    it('should render games finished count', () => {
-      render(<GameSummaryModal {...defaultProps} gamesFinished={3} totalGames={15} />);
-
-      expect(screen.getByText('3/15')).toBeInTheDocument();
-      expect(screen.getByText('games finished')).toBeInTheDocument();
-    });
-
-    it('should not render games finished when totalGames is 0', () => {
-      render(<GameSummaryModal {...defaultProps} totalGames={0} />);
-
-      expect(screen.queryByText('games finished')).not.toBeInTheDocument();
-    });
-
-    it('should render backlog hours removed when provided', () => {
-      render(<GameSummaryModal {...defaultProps} backlogHoursRemoved={20} />);
-
-      expect(screen.getByText('-20h')).toBeInTheDocument();
-      expect(screen.getByText('from backlog')).toBeInTheDocument();
-    });
-
-    it('should not render backlog hours when null', () => {
-      render(<GameSummaryModal {...defaultProps} backlogHoursRemoved={null} />);
-
-      expect(screen.queryByText('from backlog')).not.toBeInTheDocument();
     });
   });
 
   describe('estimate comparison', () => {
-    it('should show over-estimate text when played more than estimate', () => {
-      // 24h played vs 20h estimate → 4h over (+20%)
+    it('says how far over the estimate it went', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={1440} mainStoryHours={20} />);
-
-      const el = screen.getByTestId('estimate-text');
-      expect(el).toHaveTextContent(/over/i);
-      expect(el).toHaveTextContent('20h');
+      expect(screen.getByTestId('estimate-text')).toHaveTextContent(
+        'You finished it in 24 hours, 4 hours over the ~20h estimate.',
+      );
     });
 
-    it('should show under-estimate text when played less than estimate', () => {
-      // 10h played vs 20h estimate → 10h under
+    it('says how far under the estimate it came', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={600} mainStoryHours={20} />);
-
-      const el = screen.getByTestId('estimate-text');
-      expect(el).toHaveTextContent(/under/i);
-      expect(el).toHaveTextContent('20h');
+      expect(screen.getByTestId('estimate-text')).toHaveTextContent(
+        '10 hours under the ~20h estimate',
+      );
     });
 
-    it('should show "Right on" text when within 0.5h of estimate', () => {
-      // 20.2h played vs 20h estimate — within 0.5h
+    it('says "right on" within half an hour of the estimate', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={1212} mainStoryHours={20} />);
-
-      expect(screen.getByTestId('estimate-text')).toHaveTextContent(/right on/i);
+      expect(screen.getByTestId('estimate-text')).toHaveTextContent(/right on the ~20h estimate/);
     });
 
-    it('should not show over/under text when mainStoryHours is null', () => {
+    it('leaves the comparison out without an estimate', () => {
       render(<GameSummaryModal {...defaultProps} mainStoryHours={null} />);
+      expect(screen.getByTestId('estimate-text')).not.toHaveTextContent(/over|under|right on/i);
+    });
+  });
 
-      const el = screen.getByTestId('estimate-text');
-      expect(el).not.toHaveTextContent(/over|under|right on/i);
+  describe('what it did to the library', () => {
+    it('counts the games finished and the hours off the backlog', () => {
+      render(<GameSummaryModal {...defaultProps} gamesFinished={3} totalGames={15} />);
+      expect(
+        screen.getByText(/That's 3 of your 15 games finished, and 20 hours off your backlog./),
+      ).toBeInTheDocument();
     });
 
-    it('should not show estimate text when playtime is 0', () => {
-      render(<GameSummaryModal {...defaultProps} playtimeMinutes={0} mainStoryHours={20} />);
+    it('leaves out what it has no figure for', () => {
+      render(<GameSummaryModal {...defaultProps} totalGames={0} backlogHoursRemoved={null} />);
+      expect(screen.queryByText(/That's/)).not.toBeInTheDocument();
+    });
+  });
 
-      expect(screen.queryByTestId('estimate-text')).not.toBeInTheDocument();
+  describe('this finish', () => {
+    const year = new Date().getFullYear();
+
+    it('places it in the year and says how long it took from starting it', () => {
+      render(
+        <GameSummaryModal
+          {...defaultProps}
+          startedAt={`${year}-01-01T20:00:00Z`}
+          finishedAt={`${year}-01-22`}
+          finishedThisYear={5}
+        />,
+      );
+      expect(
+        screen.getByText(/It's your 5th game finished this year, played over 3 weeks./),
+      ).toBeInTheDocument();
+    });
+
+    it("doesn't place a backdated finish in this year", () => {
+      render(
+        <GameSummaryModal
+          {...defaultProps}
+          finishedAt={`${year - 1}-12-30`}
+          finishedThisYear={5}
+        />,
+      );
+      expect(screen.queryByText(/this year/)).not.toBeInTheDocument();
+    });
+
+    it('says nothing about a same-day finish, likely catching up on an old game', () => {
+      render(
+        <GameSummaryModal
+          {...defaultProps}
+          startedAt={`${year}-03-02T09:00:00Z`}
+          finishedAt={`${year}-03-02`}
+        />,
+      );
+      expect(screen.queryByText(/played it over/)).not.toBeInTheDocument();
     });
   });
 
   describe('rating', () => {
-    it('should show rating when provided', () => {
+    it('shows the rating as everywhere else', () => {
       render(<GameSummaryModal {...defaultProps} rating={9} />);
-
-      expect(screen.getByText('You rated it')).toBeInTheDocument();
-      expect(screen.getByText('9')).toBeInTheDocument();
-      expect(screen.getByText('/ 10')).toBeInTheDocument();
+      expect(screen.getByText('9/10')).toBeInTheDocument();
     });
 
-    it('should not show rating when null', () => {
-      render(<GameSummaryModal {...defaultProps} rating={null} />);
-
-      expect(screen.queryByText('You rated it')).not.toBeInTheDocument();
-      expect(screen.queryByText('/ 10')).not.toBeInTheDocument();
-    });
-
-    it('should show rating of 0', () => {
+    it('shows a rating of 0', () => {
       render(<GameSummaryModal {...defaultProps} rating={0} />);
+      expect(screen.getByText('0/10')).toBeInTheDocument();
+    });
 
-      expect(screen.getByText('You rated it')).toBeInTheDocument();
-      expect(screen.getByText('0')).toBeInTheDocument();
-      expect(screen.getByText('/ 10')).toBeInTheDocument();
+    it('leaves it out without one', () => {
+      render(<GameSummaryModal {...defaultProps} rating={null} />);
+      expect(screen.queryByText('/10', { exact: false })).not.toBeInTheDocument();
     });
   });
 
@@ -157,14 +151,14 @@ describe('GameSummaryModal', () => {
     it('should show next up when provided', () => {
       render(<GameSummaryModal {...defaultProps} nextGame="Hollow Knight" />);
 
-      expect(screen.getByText('Next up:')).toBeInTheDocument();
+      expect(screen.getByText(/Next up:/)).toBeInTheDocument();
       expect(screen.getByText('Hollow Knight')).toBeInTheDocument();
     });
 
     it('should not show next up when null', () => {
       render(<GameSummaryModal {...defaultProps} nextGame={null} />);
 
-      expect(screen.queryByText('Next up:')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Next up:/)).not.toBeInTheDocument();
     });
   });
 });

@@ -5,6 +5,8 @@ import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 export interface CompletionCounts {
   gamesFinished: number;
   totalGames: number;
+  /** Including the one just finished, for "your 5th game finished this year". */
+  finishedThisYear?: number;
 }
 
 /**
@@ -16,22 +18,35 @@ export async function fetchCompletionCounts(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<CompletionCounts> {
-  const [{ count: finishedCount }, { count: totalCount }] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .eq('status', 'finished'),
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('type', 'game')
-      .neq('status', 'hidden'),
-  ]);
+  const yearStart = `${new Date().getFullYear()}-01-01`;
+  const [{ count: finishedCount }, { count: totalCount }, { count: thisYearCount }] =
+    await Promise.all([
+      supabase
+        .from('games')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', 'game')
+        .eq('status', 'finished'),
+      supabase
+        .from('games')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', 'game')
+        .neq('status', 'hidden'),
+      supabase
+        .from('games')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', 'game')
+        .eq('status', 'finished')
+        .gte('finished_at', yearStart),
+    ]);
 
-  return { gamesFinished: finishedCount ?? 0, totalGames: totalCount ?? 0 };
+  return {
+    gamesFinished: finishedCount ?? 0,
+    totalGames: totalCount ?? 0,
+    finishedThisYear: thisYearCount ?? undefined,
+  };
 }
 
 /**
@@ -44,11 +59,14 @@ export function buildCompletionSummary({
   promoted,
   counts,
   rating,
+  finishedAt,
 }: {
   finishedGame: GameWithImage;
   promoted: GameWithImage | null;
   counts: CompletionCounts;
   rating: number | null;
+  /** The finish date chosen (YYYY-MM-DD), which can be in the past. */
+  finishedAt: string;
 }): GameSummaryData {
   const hours = (finishedGame.main_story_hours ?? 0) > 0 ? finishedGame.main_story_hours : null;
 
@@ -62,5 +80,8 @@ export function buildCompletionSummary({
     totalGames: counts.totalGames,
     backlogHoursRemoved: hours,
     nextGame: promoted?.name ?? null,
+    startedAt: finishedGame.started_at ?? null,
+    finishedAt,
+    finishedThisYear: counts.finishedThisYear ?? null,
   };
 }

@@ -1,20 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Gamepad2,
-  Trophy,
-  TrendingUp,
-  TrendingDown,
-  Check,
-  Star,
-  ChevronRight,
-  Share2,
-  Link2,
-  Loader2,
-} from 'lucide-react';
+import { Check, Share2, Link2, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { GameArt } from '@/components/games/GameArt';
+import { ArtHeader } from './ArtHeader';
+import { CompletionSummary } from './CompletionSummary';
 
 export interface GameSummaryData {
   gameName: string;
@@ -26,6 +16,12 @@ export interface GameSummaryData {
   totalGames: number;
   backlogHoursRemoved: number | null;
   nextGame: string | null;
+  /** When you started playing it, for how long it took. */
+  startedAt?: string | null;
+  /** The finish date chosen (YYYY-MM-DD). */
+  finishedAt?: string | null;
+  /** Games finished this year, counting this one. */
+  finishedThisYear?: number | null;
 }
 
 interface GameSummaryModalProps extends GameSummaryData {
@@ -61,47 +57,15 @@ export function GameSummaryModal({
   totalGames,
   backlogHoursRemoved,
   nextGame,
+  startedAt,
+  finishedAt,
+  finishedThisYear,
 }: GameSummaryModalProps) {
   const [shareState, setShareState] = useState<'idle' | 'loading' | 'shared'>('idle');
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const steamHours = Math.round((playtimeMinutes / 60) * 10) / 10;
-
-  type EstimateInfo = {
-    icon: React.ReactNode;
-    value: string;
-    middle: string;
-    pct: string | null;
-  };
-  let estimate: EstimateInfo | null = null;
-  if (mainStoryHours && mainStoryHours > 0 && steamHours > 0) {
-    const diff = steamHours - mainStoryHours;
-    const absDiff = Math.round(Math.abs(diff) * 10) / 10;
-    const pct = Math.abs(Math.round((diff / mainStoryHours) * 100));
-    if (absDiff < 0.5) {
-      estimate = {
-        icon: <Check className="w-4 h-4 shrink-0 text-emerald-400" />,
-        value: 'Right on',
-        middle: `the ~${mainStoryHours}h estimate`,
-        pct: null,
-      };
-    } else if (diff > 0) {
-      estimate = {
-        icon: <TrendingUp className="w-4 h-4 shrink-0 text-amber-400" />,
-        value: `${absDiff}h`,
-        middle: `over the ~${mainStoryHours}h estimate`,
-        pct: `(+${pct}%)`,
-      };
-    } else {
-      estimate = {
-        icon: <TrendingDown className="w-4 h-4 shrink-0 text-emerald-400" />,
-        value: `${absDiff}h`,
-        middle: `under the ~${mainStoryHours}h estimate`,
-        pct: `(−${pct}%)`,
-      };
-    }
-  }
 
   const handleShare = async () => {
     if (shareState === 'loading') return;
@@ -169,93 +133,21 @@ export function GameSummaryModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel={gameName}>
-      {/* Hero */}
-      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
-        {headerImage ? (
-          <GameArt src={headerImage} alt="" sizes="(max-width: 640px) 100vw, 544px" />
-        ) : (
-          <div className="w-full h-full bg-ink-800 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-ink-500" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-        <h2 className="absolute bottom-3 left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
-          {gameName}
-        </h2>
-      </div>
+      <ArtHeader src={headerImage} title={gameName} />
 
       <div className="space-y-5 mt-5 -mb-2">
-        {/* Tagline */}
-        <div className="flex items-center gap-2 text-sm">
-          <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
-          <p className="text-ink-100 font-medium">You finished it!</p>
-        </div>
-
-        {/* Playtime + estimate */}
-        {steamHours > 0 && (
-          <div data-testid="estimate-text" className="flex items-center gap-2 text-sm">
-            {estimate ? estimate.icon : null}
-            <span className="flex items-center gap-1 flex-wrap">
-              <span className="font-semibold text-ink-100">{steamHours}h of playtime</span>
-              {estimate && (
-                <>
-                  <span className="text-ink-500">·</span>
-                  <span className="text-ink-400">
-                    {estimate.value === 'Right on'
-                      ? 'right on'
-                      : `${estimate.value} ${estimate.middle}`}
-                  </span>
-                  {estimate.pct && (
-                    <span className="font-semibold text-ink-100">{estimate.pct}</span>
-                  )}
-                </>
-              )}
-            </span>
-          </div>
-        )}
-
-        {/* Rating */}
-        {rating !== null && (
-          <div className="flex items-center gap-2 text-sm">
-            <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
-            <span className="flex items-center gap-1.5">
-              <span className="text-ink-400">You rated it</span>
-              <span className="text-ink-100 font-semibold">{rating}</span>
-              <span className="text-ink-500">/ 10</span>
-            </span>
-          </div>
-        )}
-
-        {/* Impact stats */}
-        {(totalGames > 0 || backlogHoursRemoved) && (
-          <div className="flex divide-x divide-ink-800 py-3">
-            {totalGames > 0 && (
-              <div className={`text-center ${backlogHoursRemoved ? 'flex-1 pr-3' : 'w-full'}`}>
-                <p className="text-2xl font-semibold tracking-tight text-ink-50">
-                  {gamesFinished}/{totalGames}
-                </p>
-                <p className="text-xs text-ink-500 mt-1">games finished</p>
-              </div>
-            )}
-            {backlogHoursRemoved && (
-              <div className={`text-center ${totalGames > 0 ? 'flex-1 pl-3' : 'w-full'}`}>
-                <p className="text-2xl font-semibold tracking-tight text-emerald-400">
-                  -{backlogHoursRemoved}h
-                </p>
-                <p className="text-xs text-ink-500 mt-1">from backlog</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Next up */}
-        {nextGame && (
-          <div className="flex items-center gap-2 text-sm">
-            <ChevronRight className="w-4 h-4 text-ink-400 shrink-0" />
-            <span className="text-ink-400">Next up:</span>
-            <span className="font-semibold text-ink-100 truncate pr-1">{nextGame}</span>
-          </div>
-        )}
+        <CompletionSummary
+          playtimeMinutes={playtimeMinutes}
+          mainStoryHours={mainStoryHours}
+          rating={rating}
+          gamesFinished={gamesFinished}
+          totalGames={totalGames}
+          backlogHoursRemoved={backlogHoursRemoved}
+          nextGame={nextGame}
+          startedAt={startedAt}
+          finishedAt={finishedAt}
+          finishedThisYear={finishedThisYear}
+        />
 
         {/* Share section */}
         <div className="pt-4 border-t border-ink-800">

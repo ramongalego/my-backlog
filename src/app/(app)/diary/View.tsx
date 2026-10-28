@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Trophy, Star, MessageSquarePlus, CalendarDays } from 'lucide-react';
+import { ExternalLink, Trophy, MessageSquarePlus, CalendarDays } from 'lucide-react';
+import { Rating } from '@/components/games/Rating';
 
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
@@ -52,18 +53,6 @@ const COVER_WIDTH = 'w-full sm:w-48 lg:w-56';
 const COVER_SIZES = '(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px';
 const COVER_HEIGHT = 'sm:min-h-[90px] lg:min-h-[105px]';
 const ALIGN_WITH_COVER = 'h-[90px] lg:h-[105px] flex items-center';
-
-function Rating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) {
-  return (
-    <span className="flex items-center gap-1 text-sm font-medium text-ink-200 tabular-nums">
-      <Star
-        className={`${size === 'md' ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0 fill-amber-400 text-amber-400`}
-        aria-hidden="true"
-      />
-      <span>{rating}/10</span>
-    </span>
-  );
-}
 
 /**
  * The hours a finished game took, styled to sit beside the rating: for a

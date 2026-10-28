@@ -6,6 +6,8 @@ import { Gamepad2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { CoverArt, CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
+import { Rating } from '@/components/games/Rating';
+import { Figure, Lead } from '@/components/ui/Lead';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,20 +43,6 @@ function formatYears(years: number): string {
   if (years < 1) return 'under a year';
   const rounded = years < 10 ? Math.round(years * 10) / 10 : Math.round(years);
   return `~${rounded} year${rounded === 1 ? '' : 's'}`;
-}
-
-/** The figures in a sentence stand out from the words around them. */
-function Figure({ children }: { children: React.ReactNode }) {
-  return <span className="text-ink-50">{children}</span>;
-}
-
-/** A sentence that leads a section, carrying its numbers. */
-function Lead({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="max-w-3xl text-xl sm:text-2xl font-semibold tracking-tight text-balance text-ink-300">
-      {children}
-    </p>
-  );
 }
 
 /** Where the hours went: the total, then the games that took most of them. */
@@ -332,10 +320,9 @@ function Favourites({ stats }: { stats: Stats }) {
                   sizes="(max-width: 640px) 50vw, 220px"
                   className="w-full"
                 >
-                  <span className="absolute top-1.5 right-1.5 rounded-md bg-ink-950/80 px-1.5 text-xs font-semibold leading-5 tabular-nums text-amber-300">
-                    {game.rating}
-                    <span className="sr-only"> out of 10</span>
-                  </span>
+                  {game.rating != null && (
+                    <Rating rating={game.rating} onArt className="absolute bottom-1.5 right-1.5" />
+                  )}
                 </CoverArt>
                 <p className="mt-1.5 text-sm text-ink-200 truncate">{game.name}</p>
               </li>

@@ -1,10 +1,10 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Gamepad2, Trophy, Star, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
-import { GameArt } from '@/components/games/GameArt';
+import { ArtHeader } from '@/components/games/ArtHeader';
+import { CompletionSummary } from '@/components/games/CompletionSummary';
 import type { Metadata } from 'next';
 
 interface PageProps {
@@ -56,93 +56,30 @@ export default async function SharedCompletionPage({ params }: PageProps) {
 
   if (!data) notFound();
 
-  const steamHours = Math.round((data.playtime_minutes / 60) * 10) / 10;
-
   return (
     <div className="min-h-screen bg-ink-950">
       <main id="main-content" className="pt-16 pb-16">
         <div className="max-w-lg mx-auto px-6">
-          {/* Card */}
+          {/* The same summary the player saw when they finished it. */}
           <div className="bg-ink-900 border border-ink-800 rounded-2xl overflow-hidden">
-            {/* Hero image */}
-            <div className="relative h-44 overflow-hidden">
-              {data.header_image ? (
-                <GameArt
-                  src={data.header_image}
-                  alt={data.game_name}
-                  sizes="(max-width: 640px) 100vw, 512px"
-                />
-              ) : (
-                <div className="w-full h-full bg-ink-800 flex items-center justify-center">
-                  <Gamepad2 className="w-10 h-10 text-ink-500" />
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-              <h1 className="absolute bottom-3 left-6 right-6 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
-                {data.game_name}
-              </h1>
-            </div>
-
-            <div className="p-6 space-y-5">
-              {/* Tagline */}
-              <div className="flex items-center gap-2 text-sm">
-                <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
-                <p className="text-ink-100 font-medium">Game completed!</p>
-              </div>
-
-              {/* Playtime */}
-              {steamHours > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-semibold text-ink-100">{steamHours}h of playtime</span>
-                </div>
-              )}
-
-              {/* Rating */}
-              {data.rating !== null && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-ink-400">Rated</span>
-                    <span className="text-ink-100 font-semibold">{data.rating}</span>
-                    <span className="text-ink-500">/ 10</span>
-                  </span>
-                </div>
-              )}
-
-              {/* Stats */}
-              {(data.total_games > 0 || data.backlog_hours_removed) && (
-                <div className="flex divide-x divide-ink-800 py-3">
-                  {data.total_games > 0 && (
-                    <div
-                      className={`text-center ${data.backlog_hours_removed ? 'flex-1 pr-3' : 'w-full'}`}
-                    >
-                      <p className="text-2xl font-semibold tracking-tight text-ink-50">
-                        {data.games_finished}/{data.total_games}
-                      </p>
-                      <p className="text-xs text-ink-500 mt-1">games finished</p>
-                    </div>
-                  )}
-                  {data.backlog_hours_removed && (
-                    <div
-                      className={`text-center ${data.total_games > 0 ? 'flex-1 pl-3' : 'w-full'}`}
-                    >
-                      <p className="text-2xl font-semibold tracking-tight text-emerald-400">
-                        -{data.backlog_hours_removed}h
-                      </p>
-                      <p className="text-xs text-ink-500 mt-1">from backlog</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Next up */}
-              {data.next_game && (
-                <div className="flex items-center gap-2 text-sm">
-                  <ChevronRight className="w-4 h-4 text-ink-400 shrink-0" />
-                  <span className="text-ink-400">Next up:</span>
-                  <span className="font-semibold text-ink-100 truncate">{data.next_game}</span>
-                </div>
-              )}
+            <ArtHeader
+              src={data.header_image}
+              title={data.game_name}
+              as="h1"
+              bleed={false}
+              priority
+            />
+            <div className="p-6">
+              <CompletionSummary
+                shared
+                playtimeMinutes={data.playtime_minutes}
+                mainStoryHours={data.main_story_hours}
+                rating={data.rating}
+                gamesFinished={data.games_finished}
+                totalGames={data.total_games}
+                backlogHoursRemoved={data.backlog_hours_removed}
+                nextGame={data.next_game}
+              />
             </div>
           </div>
 

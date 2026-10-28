@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Gamepad2, CalendarDays, ListOrdered } from 'lucide-react';
+import { CalendarDays, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -13,7 +13,7 @@ const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.Day
   ssr: false,
 });
 import { GameMetaRow } from './GameCardInfo';
-import { GameArt } from './GameArt';
+import { ArtHeader } from './ArtHeader';
 import { ConsolePicker } from './ConsolePicker';
 import { ConsoleBadge } from './ConsoleBadge';
 import { ReleaseBadge } from './ReleaseBadge';
@@ -256,29 +256,15 @@ export function GameDetailModal({
       ariaLabel={adding ? `Add ${gameName}` : gameName}
       align={adding ? 'top' : 'center'}
     >
-      {/* Hero image */}
-      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 h-44 overflow-hidden rounded-t-2xl">
-        {headerLoading ? (
-          <div className="w-full h-full bg-ink-800 animate-pulse" data-testid="header-loading" />
-        ) : headerImage ? (
-          <GameArt src={headerImage} alt="" sizes="(max-width: 640px) 100vw, 544px" priority />
-        ) : (
-          <div className="w-full h-full bg-ink-800 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-ink-500" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-        {/* The title runs along the bottom, so the console sits top-left here. */}
+      {/* The title runs along the bottom, so the console sits top-left here. */}
+      <ArtHeader src={headerImage} title={gameName} loading={headerLoading} priority>
         {(manual?.platform || upcomingRelease(releaseDate)) && (
-          <div className="absolute top-3 left-4 sm:left-6 right-12 flex gap-1">
+          <>
             {manual?.platform && <ConsoleBadge platform={manual.platform} />}
             <ReleaseBadge releaseDate={releaseDate} />
-          </div>
+          </>
         )}
-        <h2 className="absolute bottom-2 left-4 sm:left-6 right-12 text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
-          {gameName}
-        </h2>
-      </div>
+      </ArtHeader>
 
       {adding ? (
         <div className="mt-1 flex items-center gap-2 text-xs text-ink-400">

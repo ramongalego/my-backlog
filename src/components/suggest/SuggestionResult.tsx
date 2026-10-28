@@ -1,11 +1,11 @@
 'use client';
 
-import { Dices, Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
+import { Dices, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
+import { ArtHeader } from '@/components/games/ArtHeader';
 import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { steamLastPlayed } from '@/lib/games/consoles';
-import { GameArt } from '@/components/games/GameArt';
 import type {
   SuggestionPreferences,
   SuggestionResult as SuggestionResultType,
@@ -41,29 +41,14 @@ export function SuggestionResult({
 
   return (
     <>
-      {/* The art, whole, bleeding to the dialog's edges (where the backlog was flicking past). */}
-      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 aspect-[460/215] overflow-hidden rounded-t-2xl">
-        {game.header_image ? (
-          // Comes into focus where the backlog was flicking past.
-          <div className="absolute inset-0 animate-reveal motion-reduce:animate-overlay-in">
-            <GameArt src={game.header_image} alt="" sizes="(max-width: 640px) 100vw, 544px" />
-          </div>
-        ) : (
-          <div className="w-full h-full bg-ink-800 flex items-center justify-center">
-            <Gamepad2 className="w-10 h-10 text-ink-500" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-        <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6">
-          <h2 className="text-2xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
-            {game.name}
-          </h2>
-          {/* What kind of game it is, under its name; the tags below describe it. */}
-          {game.genres && game.genres.length > 0 && (
-            <p className="mt-1 text-sm text-ink-300">{game.genres.slice(0, 2).join(' · ')}</p>
-          )}
-        </div>
-      </div>
+      {/* The art comes into focus where the backlog was flicking past. Under
+          the name, what kind of game it is; the tags below describe it. */}
+      <ArtHeader
+        src={game.header_image}
+        title={game.name}
+        subtitle={game.genres?.length ? game.genres.slice(0, 2).join(' · ') : undefined}
+        artClassName="animate-reveal motion-reduce:animate-overlay-in"
+      />
 
       <div className="space-y-4 mt-5 animate-result-in [animation-delay:150ms] motion-reduce:animate-none">
         {/* Why this game: your answers, or that it was left to chance. */}
