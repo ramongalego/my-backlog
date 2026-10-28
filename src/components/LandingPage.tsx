@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
+import { Clock, Star, ThumbsUp } from 'lucide-react';
 import Image, { getImageProps } from 'next/image';
 import dynamic from 'next/dynamic';
 
@@ -11,6 +11,8 @@ import { ToggleGroup } from '@/components/ui/ToggleGroup';
 import { StatusBadge } from '@/components/games/StatusBadge';
 import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import type { AuthMode } from '@/types/auth';
+import { growBar, useInView } from '@/hooks/useInView';
+import { prefersReducedMotion } from '@/lib/motion';
 
 // The auth forms pull in supabase-js; load them only when the modal opens.
 const AuthModal = dynamic(() => import('@/components/auth/AuthModal').then((m) => m.AuthModal));
@@ -49,7 +51,9 @@ const TIME_HINTS: Record<Time, string> = {
 type PickerGame = {
   image: string;
   title: string;
-  meta: string;
+  /** Time to beat (HowLongToBeat main story) and critic score, as the app shows them. */
+  hours: number;
+  critic: number;
   moods: Mood[];
   energies: Energy[];
   times: Time[];
@@ -59,7 +63,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_hk.jpeg',
     title: 'Hollow Knight',
-    meta: '~27h to beat · 87 critic score',
+    hours: 27,
+    critic: 87,
     moods: ['Adrenaline'],
     energies: ['High'],
     times: ['Long haul'],
@@ -67,7 +72,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_hades.jpg',
     title: 'Hades',
-    meta: '~23h to beat · 93 critic score',
+    hours: 23,
+    critic: 93,
     moods: ['Adrenaline'],
     energies: ['High', 'Medium'],
     times: ['One session'],
@@ -75,7 +81,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_celeste.png',
     title: 'Celeste',
-    meta: '~8h to beat · 92 critic score',
+    hours: 8,
+    critic: 92,
     moods: ['Emotional'],
     energies: ['High'],
     times: ['A few nights'],
@@ -83,7 +90,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_disco.jpeg',
     title: 'Disco Elysium',
-    meta: '~23h to beat · 91 critic score',
+    hours: 23,
+    critic: 91,
     moods: ['Engaged'],
     energies: ['Medium', 'Low'],
     times: ['Long haul'],
@@ -91,7 +99,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_portal.jpg',
     title: 'Portal 2',
-    meta: '~9h to beat · 95 critic score',
+    hours: 9,
+    critic: 95,
     moods: ['Engaged'],
     energies: ['Medium', 'Low'],
     times: ['A few nights'],
@@ -99,7 +108,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_cyberpunk.jpg',
     title: 'Cyberpunk 2077',
-    meta: '~26h to beat · 86 critic score',
+    hours: 26,
+    critic: 86,
     moods: ['Adrenaline'],
     energies: ['Medium'],
     times: ['Long haul'],
@@ -107,7 +117,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_eldenring.jpg',
     title: 'Elden Ring',
-    meta: '~60h to beat · 94 critic score',
+    hours: 60,
+    critic: 94,
     moods: ['Adrenaline'],
     energies: ['High'],
     times: ['Long haul'],
@@ -115,7 +126,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_vampire.jpg',
     title: 'Vampire Survivors',
-    meta: '~15h to beat · 86 critic score',
+    hours: 15,
+    critic: 86,
     moods: ['Adrenaline'],
     energies: ['Low'],
     times: ['One session', 'A few nights'],
@@ -123,7 +135,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_stardew.png',
     title: 'Stardew Valley',
-    meta: '~53h to beat · 89 critic score',
+    hours: 53,
+    critic: 89,
     moods: ['Relaxed'],
     energies: ['Low', 'Medium'],
     times: ['Long haul'],
@@ -131,7 +144,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_shorthike.png',
     title: 'A Short Hike',
-    meta: '~2h to beat · 87 critic score',
+    hours: 2,
+    critic: 87,
     moods: ['Relaxed'],
     energies: ['Low'],
     times: ['One session'],
@@ -139,7 +153,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_dorf.webp',
     title: 'Dorfromantik',
-    meta: '~18h to beat · 83 critic score',
+    hours: 18,
+    critic: 83,
     moods: ['Relaxed'],
     energies: ['Medium', 'Low'],
     times: ['Long haul'],
@@ -147,7 +162,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_dave.webp',
     title: 'Dave the Diver',
-    meta: '~25h to beat · 90 critic score',
+    hours: 25,
+    critic: 90,
     moods: ['Relaxed'],
     energies: ['High', 'Medium'],
     times: ['Long haul'],
@@ -155,7 +171,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_outerwilds.jpg',
     title: 'Outer Wilds',
-    meta: '~17h to beat · 85 critic score',
+    hours: 17,
+    critic: 85,
     moods: ['Engaged', 'Emotional'],
     energies: ['High', 'Medium'],
     times: ['Long haul'],
@@ -163,7 +180,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_bg3.jpg',
     title: "Baldur's Gate 3",
-    meta: '~73h to beat · 96 critic score',
+    hours: 73,
+    critic: 96,
     moods: ['Engaged'],
     energies: ['High', 'Medium'],
     times: ['Long haul'],
@@ -171,7 +189,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_slaythespire.jpg',
     title: 'Slay the Spire',
-    meta: '~12h to beat · 89 critic score',
+    hours: 12,
+    critic: 89,
     moods: ['Engaged'],
     energies: ['High', 'Medium'],
     times: ['One session'],
@@ -179,7 +198,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_journey.jpg',
     title: 'Journey',
-    meta: '~2h to beat · 92 critic score',
+    hours: 2,
+    critic: 92,
     moods: ['Emotional', 'Relaxed'],
     energies: ['Low'],
     times: ['One session'],
@@ -187,7 +207,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_firewatch.jpg',
     title: 'Firewatch',
-    meta: '~4h to beat · 81 critic score',
+    hours: 4,
+    critic: 81,
     moods: ['Emotional'],
     energies: ['Low', 'Medium'],
     times: ['One session'],
@@ -195,7 +216,8 @@ const PICKER_GAMES: PickerGame[] = [
   {
     image: '/lp_spiritfarer.jpg',
     title: 'Spiritfarer',
-    meta: '~26h to beat · 84 critic score',
+    hours: 26,
+    critic: 84,
     moods: ['Emotional', 'Relaxed'],
     energies: ['Low', 'Medium'],
     times: ['Long haul'],
@@ -243,6 +265,38 @@ const BREAKDOWN = [
   { label: 'Backlog', pct: 73, color: STATUS_STYLE.backlog.fill },
 ];
 
+/**
+ * A list row that settles in a moment after the one above it, once its panel
+ * scrolls into view (paused, at nothing, until then).
+ */
+function riseIn(inView: boolean, index: number) {
+  return {
+    className: `animate-rise-in motion-reduce:animate-none ${inView ? '' : '[animation-play-state:paused]'}`,
+    style: { animationDelay: `${index * 80}ms` },
+  };
+}
+
+/** Counts up to `to` once `active`, easing out; straight to it with reduced motion. */
+function useCountUp(to: number, active: boolean, durationMs = 900) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / durationMs, 1);
+      setValue(Math.round(to * (1 - (1 - t) ** 3)));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    let frame = requestAnimationFrame(prefersReducedMotion() ? () => setValue(to) : tick);
+    return () => cancelAnimationFrame(frame);
+  }, [to, active, durationMs]);
+  return value;
+}
+
+function CountUpPercent({ to, active }: { to: number; active: boolean }) {
+  return <>{useCountUp(to, active)}%</>;
+}
+
 function SectionCopy({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="max-w-lg">
@@ -262,6 +316,13 @@ export function LandingPage() {
   const [energy, setEnergy] = useState<Energy>('High');
   const [time, setTime] = useState<Time>('Long haul');
   const pickedGame = pickGame(mood, energy, time);
+
+  // The picker and the mock panels further down come alive as they scroll into view.
+  const { ref: pickerRef, inView: pickerInView } = useInView<HTMLDivElement>();
+  const { ref: libraryRowsRef, inView: libraryRowsInView } = useInView<HTMLDivElement>();
+  const { ref: queueRowsRef, inView: queueRowsInView } = useInView<HTMLOListElement>();
+  const { ref: breakdownRef, inView: breakdownInView } = useInView<HTMLDivElement>();
+  const breakdownBar = growBar('x', breakdownInView, 0);
 
   const [teaseIndex, setTeaseIndex] = useState(0);
 
@@ -348,7 +409,10 @@ export function LandingPage() {
                     <div
                       key={game.title}
                       // Phones get one row of covers so the shelf doesn't fill the screen.
-                      className={`${r > 0 ? 'hidden sm:block ' : ''}relative aspect-[2/3] overflow-hidden rounded-lg bg-ink-900 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/10`}
+                      // On load the covers rise into place one by one, across the top
+                      // row and then the second, like games being set on a shelf.
+                      className={`${r > 0 ? 'hidden sm:block ' : ''}relative aspect-[2/3] overflow-hidden rounded-lg bg-ink-900 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/10 animate-rise-in motion-reduce:animate-none`}
+                      style={{ animationDelay: `${100 + (r * 3 + c) * 80}ms` }}
                     >
                       <Image
                         src={game.image}
@@ -386,7 +450,11 @@ export function LandingPage() {
             </SectionCopy>
 
             <Panel className="space-y-5">
-              <div>
+              <div
+                ref={pickerRef}
+                className={riseIn(pickerInView, 0).className}
+                style={riseIn(pickerInView, 0).style}
+              >
                 <p className="text-sm text-ink-300 mb-2.5">What do you want to feel?</p>
                 <ToggleGroup
                   label="What do you want to feel?"
@@ -395,7 +463,10 @@ export function LandingPage() {
                   options={MOODS.map((v) => ({ value: v, label: v }))}
                 />
               </div>
-              <div>
+              <div
+                className={riseIn(pickerInView, 1).className}
+                style={riseIn(pickerInView, 1).style}
+              >
                 <p className="text-sm text-ink-300 mb-2.5">How much mental energy do you have?</p>
                 <ToggleGroup
                   label="How much mental energy do you have?"
@@ -404,7 +475,10 @@ export function LandingPage() {
                   options={ENERGIES.map((v) => ({ value: v, label: v }))}
                 />
               </div>
-              <div>
+              <div
+                className={riseIn(pickerInView, 2).className}
+                style={riseIn(pickerInView, 2).style}
+              >
                 <p className="text-sm text-ink-300 mb-2.5">How much time do you have?</p>
                 <ToggleGroup
                   label="How much time do you have?"
@@ -414,30 +488,47 @@ export function LandingPage() {
                 />
                 <p className="mt-2 text-xs text-ink-500">{TIME_HINTS[time]}</p>
               </div>
+              {/* The pick settles in last; each new pick then pops in on its own. */}
               <div
-                key={pickedGame.title}
-                className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
-                aria-live="polite"
+                className={riseIn(pickerInView, 3).className}
+                style={riseIn(pickerInView, 3).style}
               >
-                <Image
-                  src={pickedGame.image}
-                  alt=""
-                  width={56}
-                  height={56}
-                  className="w-14 h-14 rounded-lg object-cover shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-ink-50">{pickedGame.title}</p>
-                  <p className="text-sm text-ink-400">{pickedGame.meta}</p>
-                </div>
-                {/* The demo's pick leads to signing up, where it's your own library. */}
-                <Button
-                  size="sm"
-                  className="shrink-0 cursor-pointer"
-                  onClick={() => openModal('signup')}
+                <div
+                  key={pickedGame.title}
+                  className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
+                  aria-live="polite"
                 >
-                  Play this
-                </Button>
+                  <Image
+                    src={pickedGame.image}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="w-14 h-14 rounded-lg object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-ink-50">{pickedGame.title}</p>
+                    {/* As the app shows them: each fact with its icon, no separator to
+                        strand at a line's end when a phone wraps them. */}
+                    <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-ink-400">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <Clock className="w-3.5 h-3.5" aria-hidden="true" />~{pickedGame.hours}h to
+                        beat
+                      </span>
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                        <ThumbsUp className="w-3.5 h-3.5" aria-hidden="true" />
+                        {pickedGame.critic} critic score
+                      </span>
+                    </p>
+                  </div>
+                  {/* The demo's pick leads to signing up, where it's your own library. */}
+                  <Button
+                    size="sm"
+                    className="shrink-0 cursor-pointer"
+                    onClick={() => openModal('signup')}
+                  >
+                    Play this
+                  </Button>
+                </div>
               </div>
             </Panel>
           </div>
@@ -451,9 +542,13 @@ export function LandingPage() {
                 <span className="text-sm font-medium text-ink-200">My Library</span>
                 <span className="text-sm text-ink-400">457 games</span>
               </div>
-              <div className="divide-y divide-ink-800/70">
-                {MOCK_LIBRARY.map((game) => (
-                  <div key={game.title} className="flex items-center gap-3.5 px-5 py-3">
+              <div ref={libraryRowsRef} className="divide-y divide-ink-800/70">
+                {MOCK_LIBRARY.map((game, i) => (
+                  <div
+                    key={game.title}
+                    className={`flex items-center gap-3.5 px-5 py-3 ${riseIn(libraryRowsInView, i).className}`}
+                    style={riseIn(libraryRowsInView, i).style}
+                  >
                     <Image
                       src={game.image}
                       alt=""
@@ -503,13 +598,17 @@ export function LandingPage() {
             <Panel padding="none" className="divide-y divide-ink-800">
               <div className="px-5 py-4">
                 <p className="text-sm font-medium text-ink-200 mb-3">Up next</p>
-                <ol className="space-y-2.5">
+                <ol ref={queueRowsRef} className="space-y-2.5">
                   {[
                     { name: 'Disco Elysium', image: '/lp_disco.jpeg' },
                     { name: 'Outer Wilds', image: '/lp_outerwilds.jpg' },
                     { name: 'Portal 2', image: '/lp_portal.jpg' },
                   ].map((game, i) => (
-                    <li key={game.name} className="flex items-center gap-3">
+                    <li
+                      key={game.name}
+                      className={`flex items-center gap-3 ${riseIn(queueRowsInView, i).className}`}
+                      style={riseIn(queueRowsInView, i).style}
+                    >
                       <span className="text-sm text-ink-500 w-3 shrink-0 tabular-nums">
                         {i + 1}
                       </span>
@@ -554,7 +653,11 @@ export function LandingPage() {
 
               <div className="px-5 py-4">
                 <p className="text-sm font-medium text-ink-200 mb-3">Library breakdown</p>
-                <div className="flex h-2 rounded-full overflow-hidden gap-px">
+                <div
+                  ref={breakdownRef}
+                  className={`flex h-2 rounded-full overflow-hidden gap-px ${breakdownBar.className}`}
+                  style={breakdownBar.style}
+                >
                   {BREAKDOWN.map((s) => (
                     <div key={s.label} className={s.color} style={{ width: `${s.pct}%` }} />
                   ))}
@@ -564,7 +667,9 @@ export function LandingPage() {
                     <span key={s.label} className="flex items-center gap-2 text-sm text-ink-400">
                       <span className={`w-2 h-2 rounded-full ${s.color}`} aria-hidden="true" />
                       {s.label}
-                      <span className="text-ink-200 font-medium">{s.pct}%</span>
+                      <span className="text-ink-200 font-medium tabular-nums">
+                        <CountUpPercent to={s.pct} active={breakdownInView} />
+                      </span>
                     </span>
                   ))}
                 </div>

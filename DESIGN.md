@@ -229,6 +229,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - **Menus** (account menu, `Dropdown`): grow out of the button that opened them (`animate-menu-in`, 160ms, `origin-top-right` or `-left` to match).
 - **Stats charts**: bars grow from their baseline to their value (`animate-grow-x` / `-y`, 700ms, 35ms apart) when their chart scrolls into view (`useInView`, `growBar`), paused at nothing until then; the library breakdown grows as one bar. Switching Games by year's view regrows it.
 - **Progress**: a new game fills its `BacklogProgress` segment from the left (a 500ms `scale-x` transition), and new hours on the game you're playing (logged, or from Steam) ease its bar to the new length on Home and the Queue (a 700ms `width` transition).
+- **Landing page**: the hero's box art rises into place on load, across the top row and then the second (`animate-rise-in`, 600ms, 80ms apart, from 100ms), while the headline stays put. Further down, the panels come alive as they scroll into view, once each: the picker's three questions and its pick, and the library and queue rows, settle in one after another, and the library breakdown bar grows to its split while its percentages count up. Section copy never moves: no section fade-ins.
 
 Entrances are filled `backwards`, so no transform stays on an element afterwards (it would offset fixed tooltips inside). Respect `prefers-reduced-motion` where the motion happens: movement becomes a plain fade or nothing (`motion-reduce:`), exits are skipped, and the picker shows its spinner.
 
