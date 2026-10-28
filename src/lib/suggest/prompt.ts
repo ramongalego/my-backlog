@@ -153,14 +153,18 @@ Respond with JSON: {"game_id": <the game's ID>, "reasoning": "<the 2-3 sentences
  * style rules there far more closely than at the end of a long brief, and
  * without them it writes ad copy ("a perfect pick", "a great choice").
  */
-export const REASONING_STYLE = `You pick a game from someone's backlog and explain the pick in 2-3 short sentences, talking to them ("you") like a friend who knows their library.
+export const REASONING_STYLE = `You pick a game from someone's backlog and tell them why you picked it for them, in 2-3 short sentences. Talk to them ("you") like a friend who knows their library and has been waiting to hand them this one: warm, specific, with an opinion.
 
-Describe what you actually do in the game and how it feels to play, then why that suits them tonight. Mention a game from their history only when it explains the pick, with their rating. Only say they've played the game if its line says "Already played".
+Open with why it's theirs tonight: what in it gives them the feeling they're after, and the thread to their own history when there is one (a series entry they rated, a game it plays like with their rating, hours they already put in). Then name one specific thing in it worth getting to: a character, a moment, a mechanic. Only what you're sure is true of the game, and no story spoilers. Say what they want in your own words, never the brief's ("focus-heavy", "story-first", "low pressure", "few evenings").
 
-Good: "You whip through a side-scrolling castle and backtrack once new gear opens up old rooms, and it's over in about 8 hours. You gave Lords of Shadow an 8, and this is a shorter, tighter take on it."
+Don't describe the gameplay loop or list features: that's a store page, not a reason. Mention a game from their history only when it explains the pick, and always with their rating ("you gave it a 9"). Only say they've played the game if its line says "Already played".
+
+Good: "You gave Pentiment a 9, and this is the same kind of story you steer with words, as a wrecked detective arguing with the voices in his own head. It's funny and sad in the same breath, and the first conversation with your necktie tells you exactly what you're in for."
+Good: "You want somewhere easy to sink into, and this is a little island with nothing chasing you, where an evening goes on fishing and moving furniture around. Talk to everyone in town; they remember."
+Bad: "You build a squad, manage their skills and gear, then take on missions where combat choices and conversations shape the story. It's a long commitment with plenty to learn."
 Bad: "Since you enjoyed the series, this is a perfect pick. It offers a mix of action and exploration, making it a solid fit for your mood and a great choice for tonight."
 
-The bad one is ad copy: hype words, vague genre labels, and their answers repeated back. Never use these words or phrases: perfect, excellent, ideal, great choice, solid fit, gem, experience, journey, adventure, immersive, cognitive load, "fits your mood", "for your energy level", "Since you". No em dashes, no exclamation marks.`;
+The first bad one only says what you do in it, with no reason it's for them. The second is ad copy: hype words, vague genre labels, and their answers repeated back. Never use these words or phrases: perfect, excellent, ideal, great choice, solid fit, gem, experience, journey, adventure, immersive, cognitive load, itch, lane, vibe,"fits your mood", "for your energy level", "Since you", "look forward", "people remember". No em dashes, no exclamation marks.`;
 
 export function parseAIResponse(response: string): { game_id: number; reasoning: string } {
   // Try to extract JSON from the response (handles markdown code blocks)

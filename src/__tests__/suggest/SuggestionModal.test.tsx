@@ -51,13 +51,13 @@ beforeEach(() => {
 
 it('offers leaving it to chance when picking for the queue, not when starting a game', () => {
   setup('play');
-  expect(screen.queryByRole('button', { name: 'Or leave it to chance' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Leave it to chance/ })).not.toBeInTheDocument();
 });
 
 it('rolls a random game, then adds it to the queue or rolls again', async () => {
   const { onPick, onClose } = setup('queue');
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Or leave it to chance' }));
+    fireEvent.click(screen.getByRole('button', { name: /Leave it to chance/ }));
   });
 
   expect(screen.getByText('Left to chance')).toBeInTheDocument();
@@ -77,10 +77,10 @@ it("says so when there's nothing left to pick, and goes back to the questions", 
   jest.mocked(findRandomBacklogGame).mockResolvedValue({ error: 'none' });
   setup('queue');
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Or leave it to chance' }));
+    fireEvent.click(screen.getByRole('button', { name: /Leave it to chance/ }));
   });
   expect(screen.getByText(/no backlog game left to pick/)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Change answers' }));
-  expect(screen.getByRole('button', { name: 'Or leave it to chance' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Leave it to chance/ })).toBeInTheDocument();
 });

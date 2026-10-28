@@ -40,6 +40,7 @@ export function SuggestionModal({
 }: SuggestionModalProps) {
   const {
     step,
+    answers,
     suggestion,
     error,
     cooldownRemaining,
@@ -103,8 +104,18 @@ export function SuggestionModal({
   // Rendered only while open (see the home page), so each opening starts from
   // a fresh wizard and a late response can't land in a closed modal.
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel="Pick your next game">
-      {chance?.phase === 'rolling' && <SuggestionLoading covers={covers} roll />}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xl"
+      // Held at the top, so it grows downwards as the steps change height.
+      align="top"
+      ariaLabel="Pick your next game"
+    >
+      {chance?.phase === 'rolling' && (
+        // The first roll comes straight from the questions; another from its game.
+        <SuggestionLoading covers={covers} roll opening={rolls === 1} />
+      )}
 
       {chance?.phase === 'error' && (
         <SuggestionError
@@ -134,6 +145,8 @@ export function SuggestionModal({
       {!chance && isWizardStep && (
         <SuggestionWizard
           step={step}
+          answers={answers}
+          covers={covers}
           onSelectMood={selectMood}
           onSelectEnergy={selectEnergy}
           onSelectTime={selectTime}
@@ -143,7 +156,10 @@ export function SuggestionModal({
         />
       )}
 
-      {!chance && step === 'loading' && <SuggestionLoading covers={covers} />}
+      {!chance && step === 'loading' && (
+        // A reroll starts from its game's art; the first pick, from the questions.
+        <SuggestionLoading covers={covers} answers={answers} opening={!suggestion} />
+      )}
 
       {!chance && step === 'result' && error && (
         <SuggestionError error={error} onRetry={retry} onStartOver={reset} />
@@ -159,6 +175,7 @@ export function SuggestionModal({
           cooldownRemaining={cooldownRemaining}
           isLoading={isLoading}
           mode={mode}
+          answers={answers}
         />
       )}
     </Modal>

@@ -1,14 +1,32 @@
 'use client';
 
+import { useId } from 'react';
 import { ChevronLeft, Dices } from 'lucide-react';
 import { QuestionStep } from './QuestionStep';
-import { MOOD_QUESTION, ENERGY_QUESTION, TIME_QUESTION } from '@/lib/suggest/questions';
-import type { MoodType, EnergyLevel, TimeCommitment } from '@/lib/suggest/types';
+import { CoverShelf } from './CoverShelf';
+import {
+  MOOD_QUESTION,
+  ENERGY_QUESTION,
+  TIME_QUESTION,
+  answeredOptions,
+} from '@/lib/suggest/questions';
+import type {
+  MoodType,
+  EnergyLevel,
+  TimeCommitment,
+  SuggestionPreferences,
+} from '@/lib/suggest/types';
 
 type WizardStep = 'mood' | 'energy' | 'time';
 
+const QUESTION = { mood: MOOD_QUESTION, energy: ENERGY_QUESTION, time: TIME_QUESTION };
+
 interface SuggestionWizardProps {
   step: WizardStep;
+  /** Your answers so far, for the trail over the question. */
+  answers?: Partial<SuggestionPreferences>;
+  /** Backlog art for the wall behind the question. */
+  covers?: string[];
   onSelectMood: (mood: MoodType) => void;
   onSelectEnergy: (energy: EnergyLevel) => void;
   onSelectTime: (time: TimeCommitment) => void;
@@ -20,6 +38,8 @@ interface SuggestionWizardProps {
 
 export function SuggestionWizard({
   step,
+  answers = {},
+  covers = [],
   onSelectMood,
   onSelectEnergy,
   onSelectTime,
@@ -27,79 +47,122 @@ export function SuggestionWizard({
   showHistoryWarning = false,
   onLeaveToChance,
 }: SuggestionWizardProps) {
-  // Progress indicator
+  const headingId = useId();
   const stepNumber = step === 'mood' ? 1 : step === 'energy' ? 2 : 3;
-  const canGoBack = step !== 'mood';
+  // Only the questions before this one: going back keeps a later answer in
+  // `answers` until it's answered again.
+  const trail = answeredOptions({
+    mood: answers.mood,
+    energy: stepNumber > 2 ? answers.energy : undefined,
+  }).slice(0, stepNumber - 1);
 
   return (
-    <div className="flex flex-col items-center py-4">
-      {/* Header with back button and progress */}
-      <div className="flex items-center justify-center w-full mb-8 relative">
-        {/* Back button */}
-        {canGoBack && (
+    <div>
+      {/* The question over the backlog it picks from, bleeding to the dialog's edges. */}
+      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 mb-5 overflow-hidden rounded-t-2xl">
+        {covers.length > 0 && (
+          <>
+            <CoverShelf covers={covers} />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink-900 from-20% via-ink-900/70 to-ink-900/10" />
+          </>
+        )}
+
+        {step !== 'mood' && (
+          // Mirrors the dialog's close button across the top.
           <button
+            type="button"
             onClick={onBack}
-            className="absolute left-0 flex items-center gap-1 text-ink-500 hover:text-ink-300 transition-colors cursor-pointer"
+            className="absolute top-3 left-3 z-10 p-2 rounded-full bg-ink-950/60 text-ink-200 hover:bg-ink-950/85 hover:text-ink-50 transition-colors cursor-pointer"
+            aria-label="Back"
           >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="text-sm">Back</span>
+            <ChevronLeft className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
 
-        {/* Progress dots */}
-        <div className="flex items-center gap-2">
-          {[1, 2, 3].map((num) => (
-            <div
-              key={num}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                num === stepNumber ? 'bg-ink-100' : num < stepNumber ? 'bg-ink-500' : 'bg-ink-700'
-              }`}
-            />
-          ))}
+        <div className="relative px-4 sm:px-6 pt-24 sm:pt-32">
+          <div className="flex items-center gap-3 text-sm text-ink-300">
+            {/* Done in ember, like Home's backlog progress; this one light. */}
+            <div className="flex shrink-0 gap-1" aria-hidden="true">
+              {[1, 2, 3].map((num) => (
+                <span
+                  key={num}
+                  className={`h-1 w-6 rounded-full transition-colors duration-300 ${
+                    num < stepNumber
+                      ? 'bg-accent-500'
+                      : num === stepNumber
+                        ? 'bg-ink-100'
+                        : 'bg-ink-50/20'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="sr-only">Question {stepNumber} of 3</span>
+            {trail.length > 0 && (
+              <p className="truncate">
+                <span className="sr-only">Your answers: </span>
+                {trail.map((option) => option.short ?? option.label).join(' · ')}
+              </p>
+            )}
+          </div>
+          <h2
+            key={step}
+            id={headingId}
+            className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50 animate-result-in motion-reduce:animate-none"
+          >
+            {QUESTION[step].title}
+          </h2>
         </div>
       </div>
 
-      {/* Question content */}
       {step === 'mood' && (
         <QuestionStep
-          title={MOOD_QUESTION.title}
+          key="mood"
+          labelledBy={headingId}
           options={MOOD_QUESTION.options}
           onSelect={onSelectMood}
         />
       )}
-
       {step === 'energy' && (
         <QuestionStep
-          title={ENERGY_QUESTION.title}
+          key="energy"
+          labelledBy={headingId}
           options={ENERGY_QUESTION.options}
           onSelect={onSelectEnergy}
         />
       )}
-
       {step === 'time' && (
         <QuestionStep
-          title={TIME_QUESTION.title}
+          key="time"
+          labelledBy={headingId}
           options={TIME_QUESTION.options}
           onSelect={onSelectTime}
         />
       )}
 
-      {/* Instead of answering: a quiet way out, under the first question. */}
+      {/* Instead of answering: under the first question, the way out. */}
       {step === 'mood' && onLeaveToChance && (
         <button
           type="button"
           onClick={onLeaveToChance}
-          className="mt-5 flex items-center gap-2 py-2 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
+          style={{ animationDelay: '220ms' }}
+          className="group mt-2.5 flex w-full items-center gap-3 rounded-xl border border-dashed border-ink-700 px-4 py-3 text-left transition-colors hover:border-ink-500 hover:bg-ink-800/40 cursor-pointer animate-result-in motion-reduce:animate-none"
         >
-          <Dices className="w-4 h-4" aria-hidden="true" />
-          <span>Or leave it to chance</span>
+          <Dices
+            className="w-5 h-5 shrink-0 text-ink-300 transition-colors group-hover:text-accent-400"
+            aria-hidden="true"
+          />
+          <span className="min-w-0">
+            <span className="block font-medium text-ink-100">Leave it to chance</span>
+            <span className="block text-sm text-ink-400">
+              Skip the questions for a random backlog game
+            </span>
+          </span>
         </button>
       )}
 
-      {/* History warning — shown on all steps */}
       {showHistoryWarning && (
-        <p className="text-xs text-ink-500 text-center mt-6">
-          Suggestions improve as you finish, drop, and rate more games.
+        <p className="mt-5 text-xs text-ink-500 text-center">
+          Suggestions improve as you finish, drop, and rate more games
         </p>
       )}
     </div>

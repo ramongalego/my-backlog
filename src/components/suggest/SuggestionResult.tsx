@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { GameArt } from '@/components/games/GameArt';
-import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
+import type {
+  SuggestionPreferences,
+  SuggestionResult as SuggestionResultType,
+} from '@/lib/suggest/types';
+import { AnswerLine } from './AnswerLine';
 
 interface SuggestionResultProps {
   suggestion: SuggestionResultType;
@@ -17,6 +21,8 @@ interface SuggestionResultProps {
   mode?: 'play' | 'queue';
   /** Picked at random, not for your answers: no reasoning, and Roll again. */
   random?: boolean;
+  /** What it was picked for, over the reasoning. */
+  answers?: Partial<SuggestionPreferences>;
 }
 
 export function SuggestionResult({
@@ -27,6 +33,7 @@ export function SuggestionResult({
   isLoading,
   mode = 'play',
   random = false,
+  answers = {},
 }: SuggestionResultProps) {
   const { game, reasoning } = suggestion;
   const isOnCooldown = cooldownRemaining > 0;
@@ -34,8 +41,8 @@ export function SuggestionResult({
 
   return (
     <>
-      {/* Hero — bleeds to modal edges, same pattern as GameSummaryModal */}
-      <div className="relative -mx-6 -mt-6 h-44 overflow-hidden rounded-t-2xl">
+      {/* The art, whole, bleeding to the dialog's edges (where the backlog was flicking past). */}
+      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 aspect-[460/215] overflow-hidden rounded-t-2xl">
         {game.header_image ? (
           // Comes into focus where the backlog was flicking past.
           <div className="absolute inset-0 animate-reveal motion-reduce:animate-overlay-in">
@@ -47,8 +54,8 @@ export function SuggestionResult({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
-        <div className="absolute bottom-3 left-6 right-12">
-          <h2 className="text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
+        <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
             {game.name}
           </h2>
           {/* What kind of game it is, under its name; the tags below describe it. */}
@@ -59,15 +66,23 @@ export function SuggestionResult({
       </div>
 
       <div className="space-y-4 mt-5 animate-result-in [animation-delay:150ms] motion-reduce:animate-none">
-        {/* AI badge */}
-        <div className="flex items-center gap-2 text-sm">
-          {random ? (
+        {/* Why this game: your answers, or that it was left to chance. */}
+        {random ? (
+          <div className="flex items-center gap-2 text-sm">
             <Dices className="w-4 h-4 text-accent-400 shrink-0" aria-hidden="true" />
-          ) : (
+            <p className="text-ink-100 font-medium">Left to chance</p>
+          </div>
+        ) : answers.mood ? (
+          <AnswerLine answers={answers} />
+        ) : (
+          <div className="flex items-center gap-2 text-sm">
             <Sparkles className="w-4 h-4 text-accent-400 shrink-0" aria-hidden="true" />
-          )}
-          <p className="text-ink-100 font-medium">{random ? 'Left to chance' : 'Picked for you'}</p>
-        </div>
+            <p className="text-ink-100 font-medium">Picked for you</p>
+          </div>
+        )}
+
+        {/* Why it was picked for you, straight under what you asked for. */}
+        {reasoning && <p className="text-ink-200 leading-relaxed">{reasoning}</p>}
 
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
@@ -111,9 +126,6 @@ export function SuggestionResult({
             ))}
           </div>
         )}
-
-        {/* AI reasoning */}
-        {reasoning && <p className="text-sm text-ink-300 leading-relaxed">{reasoning}</p>}
 
         {/* Action buttons */}
         <div className="flex gap-3 pt-1">

@@ -53,6 +53,8 @@
   /* Pick My Game: the picked game's art comes into focus where the backlog
      was flicking past. */
   --animate-reveal: reveal 600ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  /* Pick My Game's art frame opening out from the questions' header. */
+  --animate-stage-open: stage-open 500ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 
   @keyframes rise-in {
     from {
@@ -74,6 +76,16 @@
   @keyframes grow-y {
     from {
       transform: scaleY(0);
+    }
+  }
+  /* From the questions' header height (--stage-from) to past the frame's
+     full height, which stops it there. */
+  @keyframes stage-open {
+    from {
+      max-height: var(--stage-from);
+    }
+    to {
+      max-height: 18rem;
     }
   }
   @keyframes reveal {

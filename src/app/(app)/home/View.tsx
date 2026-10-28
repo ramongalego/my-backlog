@@ -19,11 +19,12 @@ import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
 import { connectSteam } from '@/lib/steam/connect';
 import type { SuggestionResult } from '@/lib/suggest/types';
-import { Dices, Plus, Sparkles } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { BacklogProgress } from '@/components/home/BacklogProgress';
 import { HomeLoading } from '@/components/home/HomeLoading';
 import { RandomRoll } from '@/components/home/RandomRoll';
+import { PickNext, wallCovers } from '@/components/home/PickNext';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 import { steamLastPlayed } from '@/lib/games/consoles';
 
@@ -181,34 +182,12 @@ export default function HomeView() {
                 </div>
               </div>
             ) : (
-              <div className="max-w-xl">
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-50">
-                  What are you playing next?
-                </h1>
-                <p className="mt-2 text-ink-400">
-                  Answer a few quick questions and we&apos;ll pick something from your backlog, or
-                  leave it to chance
-                </p>
-                <div className="mt-6 flex flex-wrap items-center gap-2">
-                  <Button
-                    size="lg"
-                    className="cursor-pointer"
-                    onClick={() => setIsSuggestionModalOpen(true)}
-                  >
-                    <Sparkles className="w-5 h-5" aria-hidden="true" />
-                    <span>Pick My Game</span>
-                  </Button>
-                  <Button
-                    onClick={handleRandomPick}
-                    variant="secondary"
-                    size="lg"
-                    className="cursor-pointer"
-                    title="Pick a random game"
-                  >
-                    <Dices className="w-5 h-5" aria-hidden="true" />
-                    <span>Random</span>
-                  </Button>
-                </div>
+              <PickNext
+                covers={wallCovers(carouselRows.map((row) => row.games))}
+                backlogCount={backlogCount}
+                onPick={() => setIsSuggestionModalOpen(true)}
+                onRandom={handleRandomPick}
+              >
                 {!isSteamConnected && (
                   <p className="mt-4 text-sm text-ink-400">
                     Games on Steam too?{' '}
@@ -221,7 +200,7 @@ export default function HomeView() {
                     to bring in your library.
                   </p>
                 )}
-              </div>
+              </PickNext>
             )}
           </div>
         </section>
