@@ -52,7 +52,7 @@ export function ArtShuffle({
       aria-hidden="true"
     >
       {/* Loaded straight away, not when first shown, or it flicks through blanks. */}
-      <GameArt src={src} alt="" sizes={sizes} priority />
+      <GameArt src={src} alt="" sizes={sizes} preload />
     </div>
   ));
 }

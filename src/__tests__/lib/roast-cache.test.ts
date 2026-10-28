@@ -1,7 +1,8 @@
 /**
  * @jest-environment node
  */
-import { getCachedRoast, setCachedRoast, type RoastResponse } from '@/lib/roast/cache';
+import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
+import type { RoastResponse } from '@/types/roast';
 
 const mockRoast: RoastResponse = {
   roast: 'You have 500 games and played 3 of them.',

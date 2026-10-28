@@ -200,6 +200,7 @@ Reach for these before writing new markup. If a pattern repeats a second time, i
 - `Panel`: the raised surface. Padding `md` (default), `sm` or `none`. Use instead of `bg-ink-900 rounded-xl`.
 - `ToggleGroup`: pick-one controls. `chips` for filters and choices (selected is light `ink-100`, not orange), `segmented` for a small switch in a panel header. Supports counts.
 - `EmptyState`: icon, title and a sentence that teaches what will appear here and how.
+- `LoadError`: an EmptyState for a page whose data failed to load, with Try again. Never let a failed load fall through to the page's empty state, which would say the library is empty.
 - `SteamIcon`: Steam's logo, on every Connect Steam button (the one brand mark in the app; lucide has none). Steam is optional: Connect Steam is always the secondary action next to Add a game, never the primary.
 - `Input`, `fieldClass()`, `FIELD_LABEL`: every text field, textarea and search box. Focus brightens the border; it doesn't turn orange.
 - `Modal`, `Dropdown`. `Modal`'s close button is an X on a dark translucent disc (`bg-ink-950/60`), so it reads over the game art most dialogs open with as well as on the panel. `Modal`'s `bare` mode is the quick search (Add game): no panel, title or close button of its own; the content draws a borderless search field as the panel's top edge (`h-14`, accent caret, an `Esc` chip, "Cancel" on phones), with results below a hairline and a short hint under the panel.

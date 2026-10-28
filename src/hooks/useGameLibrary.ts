@@ -14,13 +14,21 @@ export function useGameLibrary() {
   const meta = useLibraryMeta(userId);
   const currentGame = useCurrentGame(userId);
 
-  const isLoading = !authResolved || (!!user && !meta.loaded && !sync.isSyncing);
+  // A failed first load is shown as such, rather than as a library with
+  // nothing in it (or a skeleton that never resolves).
+  const loadError = meta.loadError || currentGame.loadError;
+  const isLoading = !authResolved || (!!user && !meta.loaded && !loadError && !sync.isSyncing);
 
   return {
     auth: {
       user,
       profile,
       isLoading,
+    },
+    loadError,
+    retry: () => {
+      if (meta.loadError) meta.retry();
+      if (currentGame.loadError) currentGame.retry();
     },
     meta: {
       gameCount: meta.gameCount,

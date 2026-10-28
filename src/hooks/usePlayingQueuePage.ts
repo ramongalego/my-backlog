@@ -15,6 +15,8 @@ export function usePlayingQueuePage() {
     currentlyPlaying: nowPlaying.currentlyPlaying,
     queue: nowPlaying.queue,
     isLoading,
+    loadError: nowPlaying.loadError,
+    retry: nowPlaying.retry,
     isStatusLoading: nowPlaying.isStatusLoading,
     statusModal: nowPlaying.statusModal,
     gameSummary: nowPlaying.gameSummary,

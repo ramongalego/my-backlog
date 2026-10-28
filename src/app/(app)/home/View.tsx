@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
+import { LoadError } from '@/components/ui/LoadError';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { GameCarousel, MIN_CAROUSEL_GAMES } from '@/components/GameCarousel';
 import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
@@ -39,7 +40,7 @@ export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const router = useRouter();
 
-  const { auth, meta, sync, carousels, currentGame } = useGameLibrary();
+  const { auth, meta, sync, carousels, currentGame, loadError, retry } = useGameLibrary();
   const { user, profile, isLoading } = auth;
   const manualGames = useManualGameActions(user?.id ?? null);
   const { open: openAddGame } = useAddGame();
@@ -124,6 +125,17 @@ export default function HomeView() {
   // Signed-out visitors never get here (the proxy sends them to the landing page).
   if (isLoading || !user) {
     return <HomeLoading />;
+  }
+
+  // Without the counts or the game being played, the band can't tell which
+  // state you're in, so say what failed rather than guess.
+  if (loadError) {
+    return (
+      <main id="main-content" className={`${PAGE_CONTAINER} min-h-screen pt-14 sm:pt-16`}>
+        <h1 className="sr-only">Home</h1>
+        <LoadError what="your library" onRetry={retry} />
+      </main>
+    );
   }
 
   return (
@@ -292,7 +304,7 @@ export default function HomeView() {
                 // Hidden Gems are picked by what Steam's players think.
                 preferSteamRating={row.key === 'gems'}
                 minGames={row.minGames}
-                priority={i === 0}
+                preload={i === 0}
               />
             ))}
           </section>

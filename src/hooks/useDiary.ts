@@ -28,6 +28,9 @@ interface DiaryModal {
 interface UseDiaryReturn {
   entries: DiaryEntry[];
   loading: boolean;
+  /** The first load failed: show that, not an empty page. */
+  loadError: boolean;
+  retry: () => void;
   hasPlayingGame: boolean;
   detailModal: DiaryModal | null;
   handleOpenDetail: (gameId: number) => void;
@@ -51,7 +54,12 @@ export function useDiary(): UseDiaryReturn {
   const gamesList = usePatchGamesList(userId);
   const diaryKey = queryKeys.games.diary(userId ?? '');
 
-  const { data: entries = [], isPending } = useQuery({
+  const {
+    data: entries = [],
+    isPending,
+    isLoadingError,
+    refetch,
+  } = useQuery({
     queryKey: diaryKey,
     queryFn: () => loadDiaryEntries(createClient(), userId!),
     enabled: !!userId,
@@ -175,6 +183,8 @@ export function useDiary(): UseDiaryReturn {
   return {
     entries,
     loading: !!userId && isPending,
+    loadError: isLoadingError,
+    retry: () => void refetch(),
     hasPlayingGame: playingGame !== null,
     detailModal,
     handleOpenDetail,

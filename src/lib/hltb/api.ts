@@ -1,3 +1,4 @@
+import 'server-only';
 import { secondsToHours } from './time-utils';
 import { fetchWithTimeout, TIMEOUTS } from '@/lib/fetch-with-timeout';
 

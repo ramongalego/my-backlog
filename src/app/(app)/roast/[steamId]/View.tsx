@@ -7,7 +7,7 @@ import { RoastHeader, RoastShell } from '@/components/roast/RoastLayout';
 import { RoastResultSkeleton } from '@/components/roast/RoastSkeletons';
 import { RoastResult } from '@/components/roast/RoastResult';
 import { Button } from '@/components/ui/Button';
-import type { RoastResponse } from '@/lib/roast/cache';
+import type { RoastResponse } from '@/types/roast';
 import { queryKeys } from '@/lib/query-keys';
 
 /** The cached roast for a profile, or null when it hasn't been roasted yet. */

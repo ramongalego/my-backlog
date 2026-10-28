@@ -1,3 +1,4 @@
+import 'server-only';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 
 interface RateLimitEntry {

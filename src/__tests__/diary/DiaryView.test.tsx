@@ -50,11 +50,15 @@ const entry: DiaryEntry = {
 };
 
 let mockDetail: { game: DiaryEntry } | null = null;
+let mockLoadError = false;
+const mockRetry = jest.fn();
 const mockOpen = jest.fn();
 jest.mock('@/hooks/useDiary', () => ({
   useDiary: () => ({
-    entries: [entry],
+    entries: mockLoadError ? [] : [entry],
     loading: false,
+    loadError: mockLoadError,
+    retry: mockRetry,
     hasPlayingGame: false,
     detailModal: mockDetail && {
       appId: 1,
@@ -75,6 +79,7 @@ jest.mock('@/hooks/useDiary', () => ({
 
 beforeEach(() => {
   mockDetail = null;
+  mockLoadError = false;
   mockOpen.mockClear();
   mockModal.mockClear();
 });
@@ -111,4 +116,13 @@ it('gives the modal the game details too', () => {
       deckCompat: 3,
     }),
   );
+});
+
+it('shows a failed load as one, not as an empty diary', () => {
+  mockLoadError = true;
+  render(<DiaryView />);
+  expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load your diary");
+  expect(screen.queryByText('No finished games yet')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(mockRetry).toHaveBeenCalled();
 });

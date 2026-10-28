@@ -97,7 +97,12 @@ function toPlayingGame(item: QueueItem): GameWithImage {
 
 /** The user's queue. The single cached source for queue items and "queued" badges. */
 export function useQueue(userId: string | null) {
-  const { data: queue = [], isPending } = useQuery({
+  const {
+    data: queue = [],
+    isPending,
+    isLoadingError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.queue.list(userId ?? ''),
     // Straight from the database like every other query (and the same loader
     // the server prefetch uses), not through /api/queue, which added a hop.
@@ -109,6 +114,9 @@ export function useQueue(userId: string | null) {
     queue,
     queuedGameIds: new Set(queue.map((q) => q.game_id)),
     isLoading: !!userId && isPending,
+    // The first load failed: show that, not an empty queue.
+    loadError: isLoadingError,
+    retry: () => void refetch(),
   };
 }
 
@@ -165,13 +173,24 @@ export function useNowPlaying(userId: string | null) {
   const [statusModal, setStatusModal] = useState<{ action: CompletionStatus } | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
 
-  const { data: currentlyPlaying = null, isPending: playingPending } = useQuery({
+  const {
+    data: currentlyPlaying = null,
+    isPending: playingPending,
+    isLoadingError: playingError,
+    refetch: refetchPlaying,
+  } = useQuery({
     queryKey: playingKey,
     queryFn: () => loadCurrentlyPlaying(createClient(), userId!),
     enabled: !!userId,
     staleTime: 30 * 1000,
   });
-  const { queue, queuedGameIds, isLoading: queueLoading } = useQueue(userId);
+  const {
+    queue,
+    queuedGameIds,
+    isLoading: queueLoading,
+    loadError: queueError,
+    retry: retryQueue,
+  } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
 
   // Snapshot + optimistic write helpers shared by the mutations below. The
@@ -451,6 +470,12 @@ export function useNowPlaying(userId: string | null) {
     queue,
     queuedGameIds,
     isLoading: !!userId && (playingPending || queueLoading),
+    // Either first load failed: show that, not an empty queue or band.
+    loadError: playingError || queueError,
+    retry: () => {
+      if (playingError) void refetchPlaying();
+      if (queueError) retryQueue();
+    },
     isStatusLoading,
 
     statusModal,

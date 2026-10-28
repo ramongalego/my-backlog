@@ -425,7 +425,8 @@ export function LandingPage() {
                         src={game.image}
                         alt=""
                         fill
-                        priority
+                        // Only the row phones see: the rest would compete with it.
+                        preload={r === 0}
                         sizes="(max-width: 1024px) 30vw, 140px"
                         className="object-cover"
                       />

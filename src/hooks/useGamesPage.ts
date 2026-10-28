@@ -111,6 +111,9 @@ interface GamesPageStatusModal {
 interface UseGamesPageReturn {
   games: GameItem[];
   loading: boolean;
+  /** The first load failed: show that, not an empty page. */
+  loadError: boolean;
+  retry: () => void;
   filter: GameFilter;
   setFilter: (filter: GameFilter) => void;
   sort: GameSort;
@@ -145,7 +148,12 @@ export function useGamesPage(): UseGamesPageReturn {
   const gamesList = usePatchGamesList(userId);
 
   const gamesKey = queryKeys.games.list(userId ?? '');
-  const { data: games = [], isPending } = useQuery({
+  const {
+    data: games = [],
+    isPending,
+    isLoadingError,
+    refetch,
+  } = useQuery({
     queryKey: gamesKey,
     queryFn: () => loadGamesList(createClient(), userId!),
     enabled: !!userId,
@@ -335,6 +343,8 @@ export function useGamesPage(): UseGamesPageReturn {
   return {
     games,
     loading: !!userId && isPending,
+    loadError: isLoadingError,
+    retry: () => void refetch(),
     filter,
     setFilter: setFilterAndReset,
     sort,

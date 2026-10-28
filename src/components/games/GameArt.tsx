@@ -11,13 +11,13 @@ export function GameArt({
   src,
   alt,
   sizes,
-  priority,
+  preload,
   quality,
 }: {
   src: string;
   alt: string;
   sizes: string;
-  priority?: boolean;
+  preload?: boolean;
   quality?: number;
 }) {
   if (!isBoxArt(src)) {
@@ -27,7 +27,7 @@ export function GameArt({
         alt={alt}
         fill
         sizes={sizes}
-        priority={priority}
+        preload={preload}
         quality={quality}
         className="object-cover"
         draggable={false}
@@ -44,7 +44,7 @@ export function GameArt({
         // The same size as the art on top, so one download serves both and
         // the blur doesn't arrive after the art.
         sizes={sizes}
-        priority={priority}
+        preload={preload}
         quality={quality}
         className="object-cover scale-125 blur-xl brightness-75 saturate-150"
         draggable={false}
@@ -54,7 +54,7 @@ export function GameArt({
         alt={alt}
         fill
         sizes={sizes}
-        priority={priority}
+        preload={preload}
         quality={quality}
         className="object-contain"
         draggable={false}

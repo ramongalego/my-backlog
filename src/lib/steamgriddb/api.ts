@@ -1,6 +1,7 @@
 // SteamGridDB: community-made game art, for games added by hand that IGDB has
 // no official key art for (older games, many Nintendo ones). Server only: it
 // uses the app's API key.
+import 'server-only';
 import { getSteamGridDbKey } from '@/lib/env.server';
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 

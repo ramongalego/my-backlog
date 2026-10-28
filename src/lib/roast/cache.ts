@@ -1,19 +1,6 @@
+import 'server-only';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-
-export interface RoastResponse {
-  roast: string;
-  steamId: string;
-  profile: {
-    name: string;
-    avatar: string;
-    profileUrl: string;
-  };
-  stats: {
-    totalGames: number;
-    totalHours: number;
-    neverPlayed: number;
-  };
-}
+import type { RoastResponse } from '@/types/roast';
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — roasts don't go stale
 

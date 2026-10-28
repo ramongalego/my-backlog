@@ -6,7 +6,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { loadLibraryMeta } from '@/lib/data/loaders';
 
 export function useLibraryMeta(userId: string | null) {
-  const { data, isPending } = useQuery({
+  const { data, isPending, isLoadingError, refetch } = useQuery({
     queryKey: queryKeys.library.meta(userId ?? ''),
     queryFn: () => loadLibraryMeta(createClient(), userId!),
     enabled: !!userId,
@@ -18,5 +18,7 @@ export function useLibraryMeta(userId: string | null) {
     historyCount: data?.historyCount ?? 0,
     backlogCount: data?.backlogCount ?? 0,
     loaded: !isPending && !!data,
+    loadError: isLoadingError,
+    retry: () => void refetch(),
   };
 }

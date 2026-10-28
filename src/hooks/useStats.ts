@@ -310,7 +310,12 @@ export function isStarting(stats: Stats): boolean {
 export function useStats() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { data: games = [], isPending } = useQuery({
+  const {
+    data: games = [],
+    isPending,
+    isLoadingError,
+    refetch,
+  } = useQuery({
     // The Games page's list, shared, so the library is downloaded once.
     queryKey: queryKeys.games.list(userId ?? ''),
     queryFn: () => loadGamesList(createClient(), userId!),
@@ -331,5 +336,12 @@ export function useStats() {
 
   const hasPlayingGame = games.some((g) => g.status === 'playing');
 
-  return { stats, loading: !!userId && isPending, hasPlayingGame };
+  return {
+    stats,
+    loading: !!userId && isPending,
+    // The first load failed: show that, not an empty page.
+    loadError: isLoadingError,
+    retry: () => void refetch(),
+    hasPlayingGame,
+  };
 }

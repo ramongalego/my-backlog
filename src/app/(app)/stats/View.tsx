@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import type { PlayedALotGame, Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadError } from '@/components/ui/LoadError';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
@@ -74,7 +75,7 @@ function Hours({ stats }: { stats: Stats }) {
                   src={game.header_image}
                   alt=""
                   rounded="xl"
-                  priority={i === 0}
+                  preload={i === 0}
                   sizes={
                     i === 0 ? '(max-width: 1024px) 100vw, 640px' : '(max-width: 1024px) 50vw, 320px'
                   }
@@ -517,7 +518,7 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function StatsView() {
-  const { stats, loading, hasPlayingGame } = useStats();
+  const { stats, loading, loadError, retry, hasPlayingGame } = useStats();
   const { statusChanged } = useInvalidateQueries();
   const { user, profile } = useAuth();
   const isSteamConnected = profile?.steam_id != null;
@@ -604,6 +605,8 @@ export default function StatsView() {
 
       {loading ? (
         <StatsContentSkeleton />
+      ) : loadError ? (
+        <LoadError what="your stats" onRetry={retry} />
       ) : !stats ? (
         <EmptyState icon={Gamepad2} title="No stats yet" action={<StatsStartButtons {...start} />}>
           Add games to your library, or connect Steam, to see your stats here.

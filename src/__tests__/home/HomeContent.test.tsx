@@ -365,3 +365,16 @@ describe('HomeContent — a small backlog', () => {
     expect(screen.queryByText(/Picks get better/)).not.toBeInTheDocument();
   });
 });
+
+describe('Home when the library fails to load', () => {
+  it('says so and retries, rather than showing an empty library', () => {
+    const retry = jest.fn();
+    mockUseGameLibrary.mockReturnValue({ ...baseLibrary, loadError: true, retry });
+    render(<HomePage />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load your library");
+    expect(screen.queryByText('What are you playing next?')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalled();
+  });
+});

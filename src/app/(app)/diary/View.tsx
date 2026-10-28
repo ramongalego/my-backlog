@@ -10,6 +10,7 @@ import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/D
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadError } from '@/components/ui/LoadError';
 import { useDiary } from '@/hooks/useDiary';
 import { useUrlState } from '@/hooks/useUrlState';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
@@ -216,6 +217,8 @@ export default function DiaryView() {
   const {
     entries,
     loading,
+    loadError,
+    retry,
     hasPlayingGame,
     detailModal,
     handleOpenDetail,
@@ -308,9 +311,10 @@ export default function DiaryView() {
     >
       <PageHeader
         title="Diary"
-        description={!loading && summaryText}
+        description={!loading && !loadError && summaryText}
         actions={
-          !loading && (
+          !loading &&
+          !loadError && (
             <div className="flex items-center gap-6">
               {availableYears.length >= 2 && entries.length >= 5 && (
                 <Dropdown
@@ -331,6 +335,8 @@ export default function DiaryView() {
 
       {loading ? (
         <DiaryListSkeleton />
+      ) : loadError ? (
+        <LoadError what="your diary" onRetry={retry} />
       ) : entries.length === 0 ? (
         <EmptyState icon={Trophy} title="No finished games yet">
           When you finish a game, it lands here with the date, your rating and any notes

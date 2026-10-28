@@ -146,7 +146,7 @@ export function CurrentlyPlaying({
           src={game.header_image}
           alt=""
           rounded="xl"
-          priority
+          preload
           sizes="(max-width: 768px) 100vw, 512px"
           platform={consoleOf(game)}
           releaseDate={game.release_date}

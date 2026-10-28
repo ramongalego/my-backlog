@@ -3,6 +3,7 @@
 import { Archive, ArrowUpToLine, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadError } from '@/components/ui/LoadError';
 import { Panel } from '@/components/ui/Panel';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import {
@@ -199,7 +200,7 @@ interface QueueItemRowProps {
  */
 function SortableQueueItem(props: QueueItemRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: props.item.id,
+    id: props.item.game_id,
   });
   return (
     <QueueItemRow
@@ -353,6 +354,8 @@ export default function PlayingQueueView() {
     currentlyPlaying,
     queue,
     isLoading,
+    loadError,
+    retry,
     isStatusLoading,
     statusModal,
     gameSummary,
@@ -371,6 +374,7 @@ export default function PlayingQueueView() {
     manualDialogProps,
   } = usePlayingQueuePage();
 
+  // The game being dragged.
   const [activeId, setActiveId] = useState<number | null>(null);
   // The queued game whose details are open; read from the queue each render so
   // hours saved in the dialog show straight away.
@@ -391,8 +395,8 @@ export default function PlayingQueueView() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = queue.findIndex((q) => q.id === active.id);
-    const newIndex = queue.findIndex((q) => q.id === over.id);
+    const oldIndex = queue.findIndex((q) => q.game_id === active.id);
+    const newIndex = queue.findIndex((q) => q.game_id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
     const reordered = arrayMove(queue, oldIndex, newIndex);
@@ -420,7 +424,7 @@ export default function PlayingQueueView() {
     if (handleMoveToTop(gameId)) focusAfterMove.current = { gameId, fromKeyboard };
   }
 
-  const activeItem = activeId !== null ? queue.find((q) => q.id === activeId) : null;
+  const activeItem = activeId !== null ? queue.find((q) => q.game_id === activeId) : null;
   const isEmpty = !currentlyPlaying && queue.length === 0;
 
   return (
@@ -475,6 +479,8 @@ export default function PlayingQueueView() {
 
       {isLoading ? (
         <QueueContentSkeleton />
+      ) : loadError ? (
+        <LoadError what="your queue" onRetry={retry} />
       ) : isEmpty ? (
         <EmptyState icon={ListOrdered} title="Your queue is empty">
           Pick a game to play first, then queue up what&apos;s next from your library
@@ -508,8 +514,11 @@ export default function PlayingQueueView() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
+              {/* Rows go by game: a game queued a moment ago has a stand-in
+                  queue id until the server's arrives, and a changing id would
+                  remount its row, or lose the row being dragged. */}
               <SortableContext
-                items={queue.map((q) => q.id)}
+                items={queue.map((q) => q.game_id)}
                 strategy={verticalListSortingStrategy}
               >
                 {/* No scroll anchoring: with a row focused, the browser would
@@ -517,7 +526,7 @@ export default function PlayingQueueView() {
                 <div className="divide-y divide-ink-800/70 [overflow-anchor:none]">
                   {queue.map((item, index) => (
                     <SortableQueueItem
-                      key={item.id}
+                      key={item.game_id}
                       item={item}
                       index={index}
                       canPlay={!currentlyPlaying}
@@ -534,7 +543,7 @@ export default function PlayingQueueView() {
                 {activeItem && (
                   <QueueItemRow
                     item={activeItem}
-                    index={queue.findIndex((q) => q.id === activeId)}
+                    index={queue.findIndex((q) => q.game_id === activeId)}
                     canPlay={!currentlyPlaying}
                     isLoading={isStatusLoading}
                     onPick={handlePickFromQueue}

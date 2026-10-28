@@ -1,4 +1,5 @@
 // Server-only: createClient from '@/lib/supabase/server' depends on next/headers.
+import 'server-only';
 import {
   QueryClient,
   defaultShouldDehydrateQuery,

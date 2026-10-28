@@ -13,6 +13,7 @@ import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage, type GameFilter } from '@/hooks/useGamesPage';
 import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadError } from '@/components/ui/LoadError';
 import { Button } from '@/components/ui/Button';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +32,8 @@ const EMPTY_COPY: Record<GameFilter, string> = {
 export default function GamesView() {
   const {
     loading,
+    loadError,
+    retry,
     filter,
     setFilter,
     sort,
@@ -71,6 +74,16 @@ export default function GamesView() {
 
   if (loading) {
     return <GamesPageSkeleton />;
+  }
+
+  // Counts, filters and search would all describe an empty library.
+  if (loadError) {
+    return (
+      <Page>
+        <PageHeader title="My Games" />
+        <LoadError what="your games" onRetry={retry} />
+      </Page>
+    );
   }
 
   return (

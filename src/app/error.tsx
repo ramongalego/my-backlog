@@ -4,13 +4,7 @@ import { useEffect } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function ErrorPage({ error, retry }: { error: unknown; retry: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -22,7 +16,7 @@ export default function GlobalError({
       <p className="text-ink-400 mb-8 max-w-md">
         An unexpected error occurred. Try refreshing the page.
       </p>
-      <Button onClick={reset} variant="secondary">
+      <Button onClick={() => retry()} variant="secondary">
         Try again
       </Button>
     </div>

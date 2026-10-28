@@ -1,11 +1,6 @@
 import { HydrationBoundary } from '@tanstack/react-query';
 import { prefetchForUser } from '@/lib/data/prefetch';
-import {
-  loadCarouselPools,
-  loadCurrentlyPlaying,
-  loadLibraryMeta,
-  loadQueue,
-} from '@/lib/data/loaders';
+import { loadCarouselPools, loadCurrentlyPlaying, loadQueue } from '@/lib/data/loaders';
 import { queryKeys } from '@/lib/query-keys';
 import HomeView from './View';
 
@@ -15,9 +10,8 @@ export default async function HomePage() {
       queryKey: queryKeys.games.playing(userId),
       queryFn: () => loadCurrentlyPlaying(supabase, userId),
     },
-    // The counts decide which band Home shows (building a backlog, picking,
-    // playing); without them it would wait on its skeleton in the browser.
-    { queryKey: queryKeys.library.meta(userId), queryFn: () => loadLibraryMeta(supabase, userId) },
+    // The counts, which decide which band Home shows, come from the (app)
+    // layout's prefetch for the header.
     { queryKey: queryKeys.queue.list(userId), queryFn: () => loadQueue(supabase, userId) },
     {
       queryKey: queryKeys.carousels.byUser(userId),

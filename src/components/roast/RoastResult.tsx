@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Link2, Check } from 'lucide-react';
 import { Panel } from '@/components/ui/Panel';
-import type { RoastResponse } from '@/lib/roast/cache';
+import type { RoastResponse } from '@/types/roast';
 
 function TwitterIcon({ className }: { className?: string }) {
   return (

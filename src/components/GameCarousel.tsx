@@ -39,8 +39,8 @@ interface GameCarouselProps {
   preferSteamRating?: boolean;
   /** Fewer games than this and the row is left out (MIN_CAROUSEL_GAMES by default). */
   minGames?: number;
-  /** Mark this carousel as above the fold so the first images get priority loading. */
-  priority?: boolean;
+  /** Mark this carousel as above the fold so its first images are preloaded. */
+  preload?: boolean;
 }
 
 /** A row of picks needs a few games to choose between; fewer reads as a gap. */
@@ -110,7 +110,7 @@ export function GameCarousel({
   title,
   games,
   onOpenDetail,
-  priority = false,
+  preload = false,
   preferSteamRating,
   minGames = MIN_CAROUSEL_GAMES,
 }: GameCarouselProps) {
@@ -260,7 +260,7 @@ export function GameCarousel({
                       src={game.header_image}
                       alt=""
                       sizes={COVER_SIZES}
-                      priority={priority && indexInList >= 0 && indexInList < 4 ? true : undefined}
+                      preload={preload && indexInList >= 0 && indexInList < 4 ? true : undefined}
                       interactive
                       platform={consoleOf(game)}
                       releaseDate={game.release_date}

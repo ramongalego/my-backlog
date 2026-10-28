@@ -257,7 +257,7 @@ export function GameDetailModal({
       align={adding ? 'top' : 'center'}
     >
       {/* The title runs along the bottom, so the console sits top-left here. */}
-      <ArtHeader src={headerImage} title={gameName} loading={headerLoading} priority>
+      <ArtHeader src={headerImage} title={gameName} loading={headerLoading}>
         {(manual?.platform || upcomingRelease(releaseDate)) && (
           <>
             {manual?.platform && <ConsoleBadge platform={manual.platform} />}

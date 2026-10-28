@@ -9,7 +9,7 @@ import { RoastHeader, RoastShell } from '@/components/roast/RoastLayout';
 import { Button } from '@/components/ui/Button';
 import { fieldClass } from '@/components/ui/Input';
 import { RoastResult } from '@/components/roast/RoastResult';
-import type { RoastResponse } from '@/lib/roast/cache';
+import type { RoastResponse } from '@/types/roast';
 
 export default function RoastPage() {
   const queryClient = useQueryClient();

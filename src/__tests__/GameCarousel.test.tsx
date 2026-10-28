@@ -7,15 +7,15 @@ jest.mock('next/image', () => ({
   default: function MockImage({
     alt,
     fill,
-    priority,
+    preload,
     ...props
   }: {
     alt: string;
     fill?: boolean;
-    priority?: boolean;
+    preload?: boolean;
     [key: string]: unknown;
   }) {
-    void priority;
+    void preload;
     // eslint-disable-next-line @next/next/no-img-element
     return <img alt={alt} data-fill={fill ? 'true' : undefined} {...props} />;
   },

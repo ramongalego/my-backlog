@@ -15,7 +15,7 @@ export function ArtHeader({
   as: Heading = 'h2',
   bleed = true,
   loading = false,
-  priority = false,
+  preload = false,
   artClassName = '',
   children,
 }: {
@@ -27,7 +27,7 @@ export function ArtHeader({
   bleed?: boolean;
   /** The art is still being found: a pulse in its place. */
   loading?: boolean;
-  priority?: boolean;
+  preload?: boolean;
   /** On the art itself, e.g. the reveal when a pick lands. */
   artClassName?: string;
   /** Badges for the top-left corner (the close button has the top-right). */
@@ -47,7 +47,7 @@ export function ArtHeader({
             src={src}
             alt=""
             sizes="(max-width: 640px) 100vw, 544px"
-            priority={priority || undefined}
+            preload={preload || undefined}
           />
         </div>
       ) : (

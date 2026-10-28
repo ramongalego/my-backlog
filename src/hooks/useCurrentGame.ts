@@ -104,6 +104,8 @@ export function useCurrentGame(userId: string | null) {
     queue: nowPlaying.queue,
     queuedGameIds: nowPlaying.queuedGameIds,
     isStatusLoading: nowPlaying.isStatusLoading,
+    loadError: nowPlaying.loadError,
+    retry: nowPlaying.retry,
     statusModal: nowPlaying.statusModal,
     gameSummary: nowPlaying.gameSummary,
     carouselModal,

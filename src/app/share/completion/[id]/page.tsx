@@ -67,7 +67,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
               title={data.game_name}
               as="h1"
               bleed={false}
-              priority
+              preload
             />
             <div className="p-6">
               <CompletionSummary

@@ -1,6 +1,7 @@
 // Server-only environment variables.
 // Only import this file from API routes and server components — never from client code.
 
+import 'server-only';
 function required(key: string): string {
   const value = process.env[key];
   if (!value) {

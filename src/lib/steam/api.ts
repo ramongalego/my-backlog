@@ -1,3 +1,4 @@
+import 'server-only';
 import { z } from 'zod';
 import { fetchWithTimeout, TIMEOUTS } from '@/lib/fetch-with-timeout';
 

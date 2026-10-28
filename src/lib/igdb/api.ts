@@ -1,5 +1,6 @@
 // IGDB (Twitch's game database), for games added by hand. Server only: it
 // uses the app's Twitch credentials.
+import 'server-only';
 import { getIgdbCredentials } from '@/lib/env.server';
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
