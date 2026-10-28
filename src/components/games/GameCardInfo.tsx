@@ -202,7 +202,8 @@ export function GameMetaRow({
         <Playtime
           compact
           minutes={playtimeMinutes}
-          lastPlayedAt={lastPlayedAt}
+          // Only Steam's date is shown (see steamLastPlayed).
+          lastPlayedAt={platform ? null : lastPlayedAt}
           className={hidePlaytimeOnMobile ? 'max-sm:hidden' : ''}
         />
       ) : null}

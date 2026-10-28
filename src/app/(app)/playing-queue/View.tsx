@@ -37,6 +37,7 @@ import { todayIso } from '@/lib/diary/date-utils';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { QueueContentSkeleton } from './Skeleton';
 import { consoleOf } from '@/lib/games/manual';
+import { steamLastPlayed } from '@/lib/games/consoles';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
 interface NowPlayingRowProps {
@@ -77,7 +78,7 @@ function NowPlayingRow({
       <>
         <Playtime
           minutes={game.playtime_forever}
-          lastPlayedAt={game.last_played_at}
+          lastPlayedAt={steamLastPlayed(game)}
           className="text-ink-200"
         />
         {after}
@@ -140,7 +141,7 @@ function NowPlayingRow({
                 </div>
               </div>
             )}
-            <LastPlayed lastPlayedAt={game.last_played_at} className="mt-1.5 text-xs" />
+            <LastPlayed lastPlayedAt={steamLastPlayed(game)} className="mt-1.5 text-xs" />
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -457,7 +458,7 @@ export default function PlayingQueueView() {
               criticScore={detailItem.game.critic_score}
               criticCount={detailItem.game.critic_count}
               playtimeMinutes={detailItem.game.playtime_forever}
-              lastPlayedAt={detailItem.game.last_played_at}
+              lastPlayedAt={steamLastPlayed(detailItem.game)}
               deckCompat={detailItem.game.deck_compat}
               releaseDate={detailItem.game.release_date}
               disablePlaying={!!currentlyPlaying}

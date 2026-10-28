@@ -20,6 +20,20 @@ export function consoleOf(game: { source?: string; platform?: string | null }): 
 }
 
 /**
+ * The last-played date to show for a game: Steam's, for a game played on
+ * Steam. A console game's date is still stored (it ranks Pick Up Where You
+ * Left Off) but not shown: it only moves when hours are logged or play stops,
+ * so "Last played 7 days ago" could be wrong about a game played today.
+ */
+export function steamLastPlayed(game: {
+  source?: string;
+  platform?: string | null;
+  last_played_at?: string | null;
+}): string | null {
+  return consoleOf(game) ? null : (game.last_played_at ?? null);
+}
+
+/**
  * Whether to show the Steam Deck rating: only for games played on Steam. A
  * game on a console still shows its Steam reviews when Steam sells it, next to
  * its critic score, but how it runs on a Deck says nothing about it there.

@@ -4,6 +4,7 @@ import { Dices, Gamepad2, RotateCcw, Sparkles, ExternalLink } from 'lucide-react
 import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
 import { steamStoreUrl } from '@/lib/games/store-link';
+import { steamLastPlayed } from '@/lib/games/consoles';
 import { GameArt } from '@/components/games/GameArt';
 import type { SuggestionResult as SuggestionResultType } from '@/lib/suggest/types';
 
@@ -84,7 +85,7 @@ export function SuggestionResult({
             <Playtime
               compact
               minutes={game.playtime_forever}
-              lastPlayedAt={game.last_played_at}
+              lastPlayedAt={steamLastPlayed(game)}
               iconClassName="w-3.5 h-3.5"
             />
           ) : null}

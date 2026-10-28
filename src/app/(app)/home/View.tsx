@@ -25,6 +25,7 @@ import { BacklogProgress } from '@/components/home/BacklogProgress';
 import { HomeLoading } from '@/components/home/HomeLoading';
 import { RandomRoll } from '@/components/home/RandomRoll';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
+import { steamLastPlayed } from '@/lib/games/consoles';
 
 export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
@@ -320,7 +321,7 @@ export default function HomeView() {
           criticScore={carouselModal.game.critic_score}
           criticCount={carouselModal.game.critic_count}
           playtimeMinutes={carouselModal.game.playtime_forever}
-          lastPlayedAt={carouselModal.game.last_played_at}
+          lastPlayedAt={steamLastPlayed(carouselModal.game)}
           deckCompat={carouselModal.game.deck_compat}
           releaseDate={carouselModal.game.release_date}
           initialStatus="backlog"

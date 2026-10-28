@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
 import { STATUS_STYLE } from '@/lib/games/status-style';
+import { steamLastPlayed } from '@/lib/games/consoles';
 import { StatsContentSkeleton } from './Skeleton';
 
 type EditModalState = PlayedALotGame;
@@ -347,7 +348,7 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
                 <p className="mt-0.5 text-xs text-ink-400">
-                  <Playtime minutes={playtime_forever} lastPlayedAt={game.last_played_at} />
+                  <Playtime minutes={playtime_forever} lastPlayedAt={steamLastPlayed(game)} />
                   {main_story_hours ? ` · story is ${main_story_hours}h` : ''}
                 </p>
               </div>
@@ -434,7 +435,7 @@ export default function StatsView() {
             headerImage={editModal.header_image}
             mainStoryHours={editModal.main_story_hours}
             playtimeMinutes={editModal.playtime_forever}
-            lastPlayedAt={editModal.last_played_at}
+            lastPlayedAt={steamLastPlayed(editModal)}
             deckCompat={editModal.deck_compat}
             manual={manualGames.dialogProps(editModal)}
             initialStatus="backlog"

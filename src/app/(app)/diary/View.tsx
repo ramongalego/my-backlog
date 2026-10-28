@@ -16,6 +16,7 @@ import { DiaryListSkeleton } from './Skeleton';
 import type { DiaryEntry } from '@/hooks/useDiary';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
+import { steamLastPlayed } from '@/lib/games/consoles';
 import { useAuth } from '@/hooks/useAuth';
 import { useManualGameActions } from '@/hooks/useManualGame';
 import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
@@ -76,7 +77,7 @@ function HoursPlayed({ entry, size = 'sm' }: { entry: DiaryEntry; size?: 'sm' | 
       compact
       showLabel
       minutes={entry.playtime_forever}
-      lastPlayedAt={entry.last_played_at}
+      lastPlayedAt={steamLastPlayed(entry)}
       className="text-sm font-medium text-ink-200 tabular-nums"
       iconClassName={`${size === 'md' ? 'w-3.5 h-3.5' : 'w-3 h-3'} shrink-0 text-ink-400`}
     />
@@ -308,7 +309,7 @@ export default function DiaryView() {
             criticScore={detailModal.game.critic_score}
             criticCount={detailModal.game.critic_count}
             playtimeMinutes={detailModal.game.playtime_forever}
-            lastPlayedAt={detailModal.game.last_played_at}
+            lastPlayedAt={steamLastPlayed(detailModal.game)}
             deckCompat={detailModal.game.deck_compat}
             manual={manualGames.dialogProps(detailModal.game)}
             disablePlaying={hasPlayingGame}

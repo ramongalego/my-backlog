@@ -8,6 +8,7 @@ import { Playtime } from '@/components/games/GameCardInfo';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
+import { steamLastPlayed } from '@/lib/games/consoles';
 import { formatLastPlayed } from '@/lib/games/last-played';
 
 interface Game {
@@ -70,7 +71,7 @@ function Progress({
       <>
         <Playtime
           minutes={game.playtime_forever}
-          lastPlayedAt={game.last_played_at}
+          lastPlayedAt={steamLastPlayed(game)}
           className="text-ink-200"
         />
         {after}
@@ -187,7 +188,7 @@ export function CurrentlyPlaying({
         <div className="w-fit max-w-full">
           <div className="mt-5">
             <Progress game={game} onSaveHours={onSaveHours} />
-            <LastPlayed lastPlayedAt={game.last_played_at} className="mt-2 text-sm" />
+            <LastPlayed lastPlayedAt={steamLastPlayed(game)} className="mt-2 text-sm" />
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-4">
