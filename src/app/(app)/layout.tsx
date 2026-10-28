@@ -4,7 +4,7 @@ import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
 import { PlaytimeRefresher } from '@/components/PlaytimeRefresher';
 import { createClient } from '@/lib/supabase/server';
 import { queryKeys } from '@/lib/query-keys';
-import { loadLibraryMeta } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 import type { Profile } from '@/types/games';
 import Providers from '../providers';
 import { AddGameProvider } from '@/components/games/AddGameProvider';
@@ -33,10 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       // The header's game count. Prefetched here rather than by pages: a query
       // the header has already created can only be hydrated after mount, which
       // made the server render a loading state that the client then replaced.
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.library.meta(user.id),
-        queryFn: () => loadLibraryMeta(supabase, user.id),
-      }),
+      queryClient.prefetchQuery(queries.libraryMeta(user.id, supabase)),
     ]);
     profile = data;
   }

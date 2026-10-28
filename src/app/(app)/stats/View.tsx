@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Gamepad2 } from 'lucide-react';
 
-import { useMutation } from '@tanstack/react-query';
 import { CoverArt, CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
 import { Rating } from '@/components/games/Rating';
@@ -16,11 +15,8 @@ import { connectSteam } from '@/lib/steam/connect';
 import { useAuth } from '@/hooks/useAuth';
 import { growBar, useInView } from '@/hooks/useInView';
 import { useAddToQueue } from '@/hooks/useNowPlaying';
-import { updateGameStatus } from '@/lib/games/status';
-import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
-import { statusChangeFrom } from '@/lib/games/status-rules';
+import { useSetGameStatus } from '@/lib/mutations';
 import { useManualGameActions } from '@/hooks/useManualGame';
-import { toast } from 'sonner';
 import type { PlayedALotGame, Stats } from '@/hooks/useStats';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -519,7 +515,6 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
 
 export default function StatsView() {
   const { stats, loading, loadError, retry, hasPlayingGame } = useStats();
-  const { statusChanged } = useInvalidateQueries();
   const { user, profile } = useAuth();
   const isSteamConnected = profile?.steam_id != null;
   const { open: openAddGame } = useAddGame();
@@ -528,34 +523,12 @@ export default function StatsView() {
     onAddGame: () => openAddGame(),
     onConnectSteam: connectSteam,
   };
-  const gamesList = usePatchGamesList(user?.id ?? null);
   const manualGames = useManualGameActions(user?.id ?? null);
   const addGameToQueue = useAddToQueue(user?.id ?? null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
-  const statusMutation = useMutation({
-    mutationFn: async (vars: {
-      gameId: number;
-      status: string;
-      date: string;
-      notes: string;
-      rating: number | null;
-    }) => {
-      await updateGameStatus(vars.gameId, vars.status, {
-        finishedAt: vars.status === 'finished' ? vars.date : undefined,
-        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
-        notes: vars.notes,
-        rating: vars.rating,
-      });
-    },
-    // Stats reads the shared games list, so the change shows straight away.
-    onMutate: (vars) => ({ previous: gamesList.patch(statusChangeFrom(vars)) }),
-    onError: (_err, _vars, context) => {
-      gamesList.restore(context?.previous);
-      toast.error('Failed to update game. Please try again.');
-    },
-    onSettled: () => statusChanged(),
-  });
+  // Stats reads the shared games list, so the change shows straight away.
+  const statusMutation = useSetGameStatus(user?.id ?? null);
 
   const handleEdit = (game: PlayedALotGame) => setEditModal(game);
 

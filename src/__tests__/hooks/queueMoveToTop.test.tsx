@@ -22,6 +22,7 @@ jest.mock('sonner', () => ({
 jest.mock('@/lib/mutations', () => ({
   useInvalidateQueries: () => ({ statusChanged: jest.fn(), queue: jest.fn() }),
   usePatchGamesList: () => ({ patch: jest.fn(), restore: jest.fn() }),
+  useSetGameStatus: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 jest.mock('@/lib/games/queue', () => ({
   ...jest.requireActual('@/lib/games/queue'),

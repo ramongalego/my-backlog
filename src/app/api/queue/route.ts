@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { jsonError } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { jsonError, rateLimited } from '@/lib/api/response';
 import { loadQueue } from '@/lib/data/loaders';
 import {
   queueAddRequestSchema,
@@ -37,6 +38,9 @@ export async function POST(request: NextRequest) {
     return jsonError('Unauthorized', 401);
   }
 
+  const rateLimitResult = checkRateLimit(`queue-write:${user.id}`, RATE_LIMITS.queueWrite);
+  if (!rateLimitResult.success) return rateLimited(rateLimitResult);
+
   let body: unknown;
   try {
     body = await request.json();
@@ -50,14 +54,19 @@ export async function POST(request: NextRequest) {
   }
   const { gameId } = parsed.data;
 
-  // Get max position for the user's queue
-  const { data: maxRow } = await supabase
+  // Get max position for the user's queue. Two adds at once can read the same
+  // max and share a position (it isn't unique); the next reorder renumbers it.
+  const { data: maxRow, error: maxError } = await supabase
     .from('playing_queue')
     .select('position')
     .eq('user_id', user.id)
     .order('position', { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (maxError) {
+    console.error(maxError);
+    return jsonError('Failed to add to queue', 500);
+  }
 
   const nextPosition = maxRow ? maxRow.position + 1 : 0;
 
@@ -92,6 +101,9 @@ export async function PATCH(request: NextRequest) {
   if (!user) {
     return jsonError('Unauthorized', 401);
   }
+
+  const rateLimitResult = checkRateLimit(`queue-write:${user.id}`, RATE_LIMITS.queueWrite);
+  if (!rateLimitResult.success) return rateLimited(rateLimitResult);
 
   let body: unknown;
   try {
@@ -130,6 +142,9 @@ export async function DELETE(request: NextRequest) {
   if (!user) {
     return jsonError('Unauthorized', 401);
   }
+
+  const rateLimitResult = checkRateLimit(`queue-write:${user.id}`, RATE_LIMITS.queueWrite);
+  if (!rateLimitResult.success) return rateLimited(rateLimitResult);
 
   const { searchParams } = new URL(request.url);
   const gameIdParam = searchParams.get('gameId');

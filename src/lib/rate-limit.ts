@@ -177,6 +177,9 @@ export const RATE_LIMITS = {
   gameSearch: { limit: 60, windowMs: 60 * 1000 },
   // Adding games by hand: each one looks up IGDB and HowLongToBeat
   gameAdd: { limit: 30, windowMs: 60 * 1000 },
+  // Adding, removing and reordering the queue: every drag-reorder is a request,
+  // so this only stops scripts, never someone rearranging their queue.
+  queueWrite: { limit: 300, windowMs: 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Public share pages for finished games, per user
@@ -186,6 +189,9 @@ export const RATE_LIMITS = {
   // And 100 a day per user: plenty for picking and rerolling, while free
   // accounts can't be scripted into a big OpenAI bill.
   suggestionDaily: { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
+  // Recording a reroll (it lowers that game's odds next time). Each one comes
+  // with a suggestion request, which has its own, tighter limit above.
+  suggestionReroll: { limit: 60, windowMs: 60 * 1000 },
   // Global circuit breaker on AI suggestions, like roastGlobal: bounds the
   // daily OpenAI spend however many accounts are used.
   suggestionGlobal: { limit: 3000, windowMs: 24 * 60 * 60 * 1000 },

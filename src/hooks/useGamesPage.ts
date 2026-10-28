@@ -1,17 +1,13 @@
 'use client';
 
 import { useState, useDeferredValue } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
-import { loadGamesList, type GameItem } from '@/lib/data/loaders';
+import { useQuery } from '@tanstack/react-query';
+import type { GameItem } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { ratingOf } from '@/lib/games/rating';
 import { matchesSearch } from '@/lib/games/search';
-import { updateGameStatus } from '@/lib/games/status';
-import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
-import { statusChangeFrom } from '@/lib/games/status-rules';
-import { toast } from 'sonner';
+import { useSetGameStatus } from '@/lib/mutations';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
 import { useUrlState } from './useUrlState';
@@ -141,24 +137,15 @@ interface UseGamesPageReturn {
 const BATCH_SIZE = 60;
 
 export function useGamesPage(): UseGamesPageReturn {
-  const queryClient = useQueryClient();
-  const { statusChanged } = useInvalidateQueries();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const gamesList = usePatchGamesList(userId);
 
-  const gamesKey = queryKeys.games.list(userId ?? '');
   const {
     data: games = [],
     isPending,
     isLoadingError,
     refetch,
-  } = useQuery({
-    queryKey: gamesKey,
-    queryFn: () => loadGamesList(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-  });
+  } = useQuery(queries.gamesList(userId));
 
   const { queuedGameIds } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
@@ -175,32 +162,7 @@ export function useGamesPage(): UseGamesPageReturn {
   // Defer the search value to keep input responsive during filtering
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  const statusMutation = useMutation({
-    mutationFn: async (vars: {
-      gameId: number;
-      status: string;
-      date: string;
-      notes: string;
-      rating: number | null;
-    }) => {
-      await updateGameStatus(vars.gameId, vars.status, {
-        finishedAt: vars.status === 'finished' ? vars.date : undefined,
-        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
-        notes: vars.notes,
-        rating: vars.rating,
-      });
-    },
-    onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: gamesKey });
-      return { previous: gamesList.patch(statusChangeFrom(vars)) };
-    },
-    onError: (err, _vars, context) => {
-      console.error(err);
-      gamesList.restore(context?.previous);
-      toast.error('Could not save your changes. Please try again.');
-    },
-    onSettled: () => statusChanged(),
-  });
+  const statusMutation = useSetGameStatus(userId);
 
   const manualGames = useManualGameActions(userId);
 

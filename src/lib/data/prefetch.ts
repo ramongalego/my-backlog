@@ -5,20 +5,21 @@ import {
   defaultShouldDehydrateQuery,
   dehydrate,
   type DehydratedState,
+  type FetchQueryOptions,
 } from '@tanstack/react-query';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import type { queries } from './queries';
 
-interface PrefetchQuery {
-  queryKey: readonly unknown[];
-  queryFn: () => Promise<unknown>;
+/** One of the shared queries (lib/data/queries), so it matches what the hooks read. */
+type PrefetchQuery = ReturnType<(typeof queries)[keyof typeof queries]> & {
   /**
    * Don't hold the page for this one: the page renders straight away in its
    * loading state and the data streams into the same response when it's
    * ready. For queries that grow with the library, like the games list.
    */
   stream?: boolean;
-}
+};
 
 /**
  * Runs the given queries on the server for the signed-in user and returns the
@@ -46,13 +47,12 @@ export async function prefetchForUser(
   const userId = data?.claims?.sub;
 
   if (userId) {
-    const queries = build(supabase, userId);
-    for (const { stream, ...query } of queries) if (stream) void queryClient.prefetchQuery(query);
-    await Promise.all(
-      queries
-        .filter((q) => !q.stream)
-        .map(({ queryKey, queryFn }) => queryClient.prefetchQuery({ queryKey, queryFn })),
-    );
+    const list = build(supabase, userId);
+    // Each query has its own data type; prefetching only needs its options.
+    const prefetch = (query: PrefetchQuery) =>
+      queryClient.prefetchQuery(query as unknown as FetchQueryOptions);
+    for (const query of list) if (query.stream) void prefetch(query);
+    await Promise.all(list.filter((q) => !q.stream).map(prefetch));
   }
   return dehydrate(queryClient);
 }

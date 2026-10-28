@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Gamepad2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { AuthModal } from '@/components/auth/AuthModal';
+import dynamic from 'next/dynamic';
 import { UserMenu } from '@/components/UserMenu';
 import { AddGameButton } from '@/components/games/AddGameButton';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +13,9 @@ import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
 import { connectSteam } from '@/lib/steam/connect';
 import type { AuthMode } from '@/types/auth';
+
+// The auth forms pull in supabase-js; load them only when the modal opens.
+const AuthModal = dynamic(() => import('@/components/auth/AuthModal').then((m) => m.AuthModal));
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
 
@@ -183,11 +186,9 @@ export function Header() {
         )}
       </header>
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authMode}
-      />
+      {isAuthModalOpen && (
+        <AuthModal isOpen onClose={() => setIsAuthModalOpen(false)} initialMode={authMode} />
+      )}
     </>
   );
 }

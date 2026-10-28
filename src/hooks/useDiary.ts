@@ -1,15 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
-import { updateGameStatus } from '@/lib/games/status';
-import { loadCurrentlyPlaying, loadDiaryEntries, type DiaryEntry } from '@/lib/data/loaders';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { DiaryEntry } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
-import { statusChangeFrom } from '@/lib/games/status-rules';
+import { useInvalidateQueries, useSetGameStatus, type StatusEdit } from '@/lib/mutations';
 
 export type { DiaryEntry };
 
@@ -51,7 +48,6 @@ export function useDiary(): UseDiaryReturn {
   const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const gamesList = usePatchGamesList(userId);
   const diaryKey = queryKeys.games.diary(userId ?? '');
 
   const {
@@ -59,41 +55,21 @@ export function useDiary(): UseDiaryReturn {
     isPending,
     isLoadingError,
     refetch,
-  } = useQuery({
-    queryKey: diaryKey,
-    queryFn: () => loadDiaryEntries(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-  });
+  } = useQuery(queries.diary(userId));
 
   // Shares the home page's cache entry. Used to stop the edit modal from
   // silently replacing the current game.
-  const { data: playingGame = null } = useQuery({
-    queryKey: queryKeys.games.playing(userId ?? ''),
-    queryFn: () => loadCurrentlyPlaying(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 30 * 1000,
-  });
+  const { data: playingGame = null } = useQuery(queries.playing(userId));
 
-  const diaryMutation = useMutation({
-    mutationFn: async (vars: {
-      gameId: number;
-      status: string;
-      date: string;
-      notes: string;
-      rating: number | null;
+  const diaryMutation = useSetGameStatus<
+    StatusEdit & {
       /** Only the note changed: nothing outside the diary shows it. */
       notesOnly?: boolean;
-    }) => {
-      await updateGameStatus(vars.gameId, vars.status, {
-        finishedAt: vars.status === 'finished' ? vars.date : undefined,
-        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
-        notes: vars.notes,
-        rating: vars.rating,
-      });
-      return vars;
     },
-    onMutate: async (vars) => {
+    DiaryEntry[] | undefined
+  >(userId, {
+    // The diary is its own query: change it there too.
+    apply: async (vars) => {
       await queryClient.cancelQueries({ queryKey: diaryKey });
       const previous = queryClient.getQueryData<DiaryEntry[]>(diaryKey);
 
@@ -119,20 +95,12 @@ export function useDiary(): UseDiaryReturn {
         });
       }
 
-      // The Games page and Stats read the same change from the shared list.
-      const previousList = gamesList.patch(statusChangeFrom(vars));
-
-      return { previous, previousList };
+      return previous;
     },
-    onError: (err, _vars, context) => {
-      console.error(err);
-      if (context?.previous) {
-        queryClient.setQueryData(diaryKey, context.previous);
-      }
-      gamesList.restore(context?.previousList);
-      toast.error('Could not save your changes. Please try again.');
+    rollback: (previous) => {
+      if (previous) queryClient.setQueryData(diaryKey, previous);
     },
-    onSettled: (_data, _error, vars) => {
+    settle: (vars) => {
       if (!vars.notesOnly) return statusChanged();
       // A note doesn't affect carousels, the queue, counts or the playing game.
       queryClient.invalidateQueries({ queryKey: diaryKey });

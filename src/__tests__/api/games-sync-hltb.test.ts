@@ -157,3 +157,21 @@ it('uses a time someone else already found without asking HLTB', async () => {
 it('rejects oversized batches', async () => {
   expect((await call([1, 2, 3, 4, 5, 6])).status).toBe(400);
 });
+
+it('answers an unexpected failure before anything is saved with the error envelope', async () => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.mocked(getMainStoryHours).mockRejectedValue(new Error('boom'));
+
+  expect(await call([1, 2])).toEqual({ status: 500, body: { error: 'Failed to look up times' } });
+});
+
+it('still reports the times it saved when an unexpected failure comes later', async () => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.mocked(getMainStoryHours).mockResolvedValueOnce(9).mockRejectedValue(new Error('boom'));
+
+  const { status, body } = await call([1, 2, 3]);
+
+  expect(status).toBe(200);
+  expect(body).toMatchObject({ results: [{ appId: 1, hours: 9 }], pending: [2, 3] });
+  expect(userUpdates).toEqual([{ app_id: 1, main_story_hours: 9 }]);
+});

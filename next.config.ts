@@ -34,7 +34,8 @@ const nextConfig: NextConfig = {
     // Reuse visited signed-in pages from the client router cache instead of
     // re-requesting them (and waiting on their server prefetch) on every
     // navigation. Their data lives in React Query, which mutations already
-    // invalidate, so this matches the queries' 5-minute staleTime.
+    // invalidate and which refetches each query once it's stale (see
+    // lib/data/queries), so a reused page still shows current data.
     staleTimes: { dynamic: 300 },
   },
   images: {
@@ -67,7 +68,6 @@ const nextConfig: NextConfig = {
         { key: 'Content-Security-Policy', value: csp },
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'X-Frame-Options', value: 'DENY' },
-        { key: 'X-XSS-Protection', value: '1; mode=block' },
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       ],

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { jsonError } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { jsonError, rateLimited } from '@/lib/api/response';
 import { rerollRequestSchema } from '@/lib/validations/common';
 
 export async function POST(request: NextRequest) {
@@ -12,6 +13,12 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return jsonError('Unauthorized', 401);
   }
+
+  const rateLimitResult = checkRateLimit(
+    `suggestion-reroll:${user.id}`,
+    RATE_LIMITS.suggestionReroll,
+  );
+  if (!rateLimitResult.success) return rateLimited(rateLimitResult);
 
   let body: unknown;
   try {

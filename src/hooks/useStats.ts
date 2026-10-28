@@ -1,12 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
-import { loadGamesList, loadOpenEndedCategories, type GameItem } from '@/lib/data/loaders';
+import type { GameItem } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 import { useAuth } from './useAuth';
 import { useQueue } from './useNowPlaying';
 import { playedALot } from '@/lib/games/played-a-lot';
-import { queryKeys } from '@/lib/query-keys';
 
 export interface TagStat {
   tag: string;
@@ -317,20 +316,12 @@ export function useStats() {
     refetch,
   } = useQuery({
     // The Games page's list, shared, so the library is downloaded once.
-    queryKey: queryKeys.games.list(userId ?? ''),
-    queryFn: () => loadGamesList(createClient(), userId!),
+    ...queries.gamesList(userId),
     select: countedInStats,
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
   });
   const { queuedGameIds } = useQueue(userId);
   // Only "Played a lot" needs categories, and only for heavily played games.
-  const { data: categories = {} } = useQuery({
-    queryKey: queryKeys.games.openEndedCategories(userId ?? ''),
-    queryFn: () => loadOpenEndedCategories(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: categories = {} } = useQuery(queries.openEndedCategories(userId));
 
   const stats = computeStats(games, categories, queuedGameIds);
 

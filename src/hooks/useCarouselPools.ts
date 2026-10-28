@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-keys';
+import { queries } from '@/lib/data/queries';
 import type { CarouselPools } from '@/lib/data/loaders';
 import { useQueue } from './useNowPlaying';
 import {
@@ -63,21 +63,8 @@ export function backlogCovers(
   return covers.slice(0, SHUFFLE_COVERS);
 }
 
-async function fetchCarouselPools(): Promise<CarouselPools> {
-  const res = await fetch('/api/carousels');
-  if (!res.ok) throw new Error(`Failed to load carousels (${res.status})`);
-  return res.json();
-}
-
 export function useCarouselPools(userId: string | null) {
-  const { data = EMPTY_CAROUSEL_POOLS, isPending } = useQuery({
-    queryKey: userId ? queryKeys.carousels.byUser(userId) : queryKeys.carousels.all,
-    // Built on the server: refetching in the browser used to download the
-    // whole backlog just to keep a few dozen games.
-    queryFn: fetchCarouselPools,
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data = EMPTY_CAROUSEL_POOLS, isPending } = useQuery(queries.carousels(userId));
 
   // No game appears in two of the picks carousels. They claim games in this
   // order, which isn't their order on Home: a game you've started belongs in

@@ -4,10 +4,8 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
-import { updateGameStatus } from '@/lib/games/status';
 import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/games/random-pick';
-import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
-import { statusChangeFrom } from '@/lib/games/status-rules';
+import { useSetGameStatus } from '@/lib/mutations';
 import { useNowPlaying } from './useNowPlaying';
 import type { GameWithImage } from '@/types/games';
 import { prefersReducedMotion, scrollBehavior } from '@/lib/motion';
@@ -17,8 +15,7 @@ import { backlogCovers, type CarouselPools } from './useCarouselPools';
 /** Home page: the shared now-playing actions plus carousel detail and random pick. */
 export function useCurrentGame(userId: string | null) {
   const nowPlaying = useNowPlaying(userId);
-  const { statusChanged } = useInvalidateQueries();
-  const gamesList = usePatchGamesList(userId);
+  const setStatus = useSetGameStatus(userId);
   const queryClient = useQueryClient();
   const [carouselModal, setCarouselModal] = useState<{ game: GameWithImage } | null>(null);
   // While Random picks: the art flicking past. Then the game it picked, whose
@@ -46,22 +43,7 @@ export function useCurrentGame(userId: string | null) {
       return;
     }
 
-    const previous = gamesList.patch(
-      statusChangeFrom({ gameId: game.id, status, date, notes, rating }),
-    );
-    try {
-      await updateGameStatus(game.id, status, {
-        finishedAt: status === 'finished' ? date : undefined,
-        droppedAt: status === 'dropped' ? date : undefined,
-        notes,
-        rating,
-      });
-    } catch (err) {
-      console.error('Failed to update game status:', err);
-      gamesList.restore(previous);
-      toast.error('Failed to update game status');
-    }
-    statusChanged();
+    setStatus.mutate({ gameId: game.id, status, date, notes, rating });
   };
 
   const handleRandomPick = async () => {

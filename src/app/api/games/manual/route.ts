@@ -205,19 +205,21 @@ export async function POST(request: NextRequest) {
     }
   } else if (status === 'queue') {
     // A game you're moving may be queued already.
-    const { data: queued } = await supabase
-      .from('playing_queue')
-      .select('game_id')
-      .eq('user_id', user.id)
-      .eq('game_id', game.id)
-      .maybeSingle();
-    const { data: last } = await supabase
-      .from('playing_queue')
-      .select('position')
-      .eq('user_id', user.id)
-      .order('position', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [{ data: queued }, { data: last }] = await Promise.all([
+      supabase
+        .from('playing_queue')
+        .select('game_id')
+        .eq('user_id', user.id)
+        .eq('game_id', game.id)
+        .maybeSingle(),
+      supabase
+        .from('playing_queue')
+        .select('position')
+        .eq('user_id', user.id)
+        .order('position', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
     // Only backlog games are queued.
     const { error: backlogError } = existing
       ? await supabase.from('games').update(DEMOTED).eq('user_id', user.id).eq('id', game.id)

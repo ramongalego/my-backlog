@@ -515,3 +515,47 @@ describe('GameDetailModal review fields', () => {
     expect(screen.getByText(/will clear the rating and notes/i)).toBeInTheDocument();
   });
 });
+
+describe('GameDetailModal as a form', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('saves on Enter in a field', async () => {
+    render(<GameDetailModal {...reviewProps} initialDate="2024-06-15" />);
+
+    fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '7' } });
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/your rating/i).closest('form')!);
+    });
+
+    expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', '', 7);
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it('keeps the dialog open with the error when the save fails', async () => {
+    const onConfirm = jest.fn().mockRejectedValue(new Error('Could not reach the server'));
+    render(<GameDetailModal {...defaultProps} onConfirm={onConfirm} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not reach the server');
+    expect(defaultProps.onClose).not.toHaveBeenCalled();
+  });
+
+  it('lets the actions under it act without saving the dialog', () => {
+    const onDelete = jest.fn();
+    render(
+      <GameDetailModal
+        {...defaultProps}
+        manual={{ platform: 'Switch', onSaveHours: jest.fn(), onDelete }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from library' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+    expect(onDelete).toHaveBeenCalled();
+    expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+  });
+});

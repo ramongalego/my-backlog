@@ -1,17 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
-import { queryKeys } from '@/lib/query-keys';
-import { loadLibraryMeta } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 
 export function useLibraryMeta(userId: string | null) {
-  const { data, isPending, isLoadingError, refetch } = useQuery({
-    queryKey: queryKeys.library.meta(userId ?? ''),
-    queryFn: () => loadLibraryMeta(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data, isPending, isLoadingError, refetch } = useQuery(queries.libraryMeta(userId));
 
   return {
     gameCount: data?.gameCount ?? 0,

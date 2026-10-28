@@ -70,7 +70,13 @@ export async function POST(request: NextRequest) {
       try {
         hours = await getMainStoryHours(row?.name ?? game.name);
       } catch (err) {
-        if (!(err instanceof HLTBUnavailableError)) throw err;
+        if (!(err instanceof HLTBUnavailableError)) {
+          console.error(err);
+          // Nothing done yet: a plain failure, and the app tries again next
+          // visit. Otherwise report the games already done and hand back this
+          // one and the rest as pending, so each retry gets further or stops.
+          if (results.length === 0) return jsonError('Failed to look up times', 500);
+        }
         pending = (games ?? []).slice(i).map((g) => g.app_id);
         break;
       }

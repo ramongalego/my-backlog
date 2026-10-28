@@ -1,25 +1,21 @@
 'use client';
 
-import { Suspense, useState, useRef, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { CalendarDays, ListOrdered } from 'lucide-react';
+import { startTransition, useActionState, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { GAME_STATUSES, STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
-import { todayIso, toLocalIsoDate } from '@/lib/diary/date-utils';
-
-const DayPicker = dynamic(() => import('react-day-picker').then((mod) => mod.DayPicker), {
-  ssr: false,
-});
+import { GAME_STATUSES, type GameStatus } from '@/lib/games/status-style';
+import { todayIso } from '@/lib/diary/date-utils';
 import { GameMetaRow } from './GameCardInfo';
 import { ArtHeader } from './ArtHeader';
 import { ConsolePicker } from './ConsolePicker';
 import { ConsoleBadge } from './ConsoleBadge';
 import { ReleaseBadge } from './ReleaseBadge';
 import { upcomingRelease } from '@/lib/games/release-date';
-
-type InternalStatus = GameStatus | 'queue';
+import { HoursField } from './detail/HoursField';
+import { StatusPicker, type DetailStatus } from './detail/StatusPicker';
+import { CompletionDateField } from './detail/CompletionDateField';
+import { ReviewFields } from './detail/ReviewFields';
+import { ManualGameActions } from './detail/ManualGameActions';
 
 /** Where a new game goes when it's added. */
 export type AddStatus = 'backlog' | 'queue' | 'playing' | 'finished' | 'dropped';
@@ -98,23 +94,26 @@ interface GameDetailModalProps {
   };
 }
 
-// Converts "YYYY-MM-DD" → Date (local time, no timezone shift)
-function isoToDate(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
+/**
+ * What the last save attempt found. A field's error carries the value it was
+ * about, so it shows until that field is changed.
+ */
+interface SaveState {
+  rating?: { error: string; value: string };
+  hours?: { error: string; value: string };
+  /** The save itself failed (e.g. a game that couldn't be added). */
+  error?: string;
 }
 
-function formatDateLabel(iso: string): string {
-  return isoToDate(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+/** The save button's label: what saving will do, and that it's doing it. */
+function submitLabel(adding: GameDetailModalProps['adding'], platform: string, saving: boolean) {
+  const moving =
+    !!adding &&
+    (!!adding.fromSteam || (!!adding.inLibraryOn && !!platform && platform !== adding.inLibraryOn));
+  if (moving) return saving ? 'Moving…' : platform ? `Move to ${platform}` : 'Move from Steam';
+  if (adding && !adding.inLibraryOn) return saving ? 'Adding…' : 'Add to library';
+  return saving ? 'Saving…' : 'Save changes';
 }
-
-const STATUS_BUTTON =
-  'cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap';
-const STATUS_IDLE = 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50';
 
 export function GameDetailModal({
   isOpen,
@@ -141,81 +140,51 @@ export function GameDetailModal({
   manual,
   adding,
 }: GameDetailModalProps) {
-  const today = todayIso();
   const initialHours = playtimeMinutes ? String(Math.round((playtimeMinutes / 60) * 10) / 10) : '';
   const [hours, setHours] = useState(initialHours);
-  const [hoursError, setHoursError] = useState<string | null>(null);
   const [platform, setPlatform] = useState(adding?.defaultConsole ?? '');
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const [status, setStatus] = useState<InternalStatus>(initialStatus);
+  const [status, setStatus] = useState<DetailStatus>(initialStatus);
   const [hasDate, setHasDate] = useState(!!initialDate);
-  const [date, setDate] = useState(initialDate || today);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [date, setDate] = useState(initialDate || todayIso());
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
-  const [ratingError, setRatingError] = useState<string | null>(null);
-  const calendarRef = useRef<HTMLDivElement>(null);
 
   // The API only stores date, rating and notes for finished/dropped games.
   const showDateField = status === 'finished' || status === 'dropped';
   const hadReview = !!initialNotes || initialRating != null;
   const clearsReview = hadReview && (status === 'wont_play' || status === 'hidden');
-  const dateLabel = status === 'finished' ? 'Finished on' : 'Dropped on';
   const showHours = !!manual || !!adding;
+  const pickedConsole = platform.trim();
 
-  function handleStatusChange(next: InternalStatus) {
+  function handleStatusChange(next: DetailStatus) {
     setStatus(next);
-    if (next === 'finished' || next === 'dropped') {
-      setHasDate(true);
-    }
+    if (next === 'finished' || next === 'dropped') setHasDate(true);
   }
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
-        setCalendarOpen(false);
-      }
-    }
-    // Capture phase so this runs before the modal's own Escape handler, which
-    // skips events that were already handled.
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return;
-      e.preventDefault();
-      setCalendarOpen(false);
-    }
-    if (calendarOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape, true);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape, true);
-    };
-  }, [calendarOpen]);
-
-  const [saving, setSaving] = useState(false);
-
-  async function handleConfirm() {
+  const [saveState, save, saving] = useActionState(async (): Promise<SaveState> => {
     // Check every field before saving any of them, so a bad rating can't
     // leave the hours saved and the rest not.
     const parsedRating = showDateField && rating !== '' ? parseInt(rating, 10) : null;
     const ratingInvalid =
       parsedRating !== null && (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 10);
-    setRatingError(ratingInvalid ? 'Rating must be between 0 and 10' : null);
     const parsedHours = hours.trim() === '' ? 0 : Number(hours);
     const hoursInvalid = showHours && !(parsedHours >= 0);
-    setHoursError(hoursInvalid ? 'Hours played must be a number, like 12 or 3.5' : null);
-    if (ratingInvalid || hoursInvalid) return;
+    if (ratingInvalid || hoursInvalid) {
+      return {
+        rating: ratingInvalid
+          ? { error: 'Rating must be between 0 and 10', value: rating }
+          : undefined,
+        hours: hoursInvalid
+          ? { error: 'Hours played must be a number, like 12 or 3.5', value: hours }
+          : undefined,
+      };
+    }
 
-    setSaving(true);
-    setSaveError(null);
     try {
       if (adding) {
         await adding.onAdd({
           status: status as AddStatus,
-          platform: platform.trim(),
+          platform: pickedConsole,
           hours: hours.trim() === '' ? undefined : parsedHours,
           date: showDateField && hasDate ? date : '',
           notes,
@@ -230,18 +199,19 @@ export function GameDetailModal({
         }
       }
     } catch (err) {
-      setSaveError((err as Error).message);
-      setSaving(false);
-      return;
+      return { error: (err as Error).message };
     }
-    setSaving(false);
     onClose();
-  }
+    return {};
+  }, {});
+
+  const ratingError = saveState.rating?.value === rating ? saveState.rating.error : null;
+  const hoursError = saveState.hours?.value === hours ? saveState.hours.error : null;
 
   // When adding, the status buttons are the five places a new game can go;
   // otherwise every status, with Queue taking Playing's place while another
   // game is being played.
-  const statusOptions: InternalStatus[] = adding
+  const statusOptions: DetailStatus[] = adding
     ? ADD_STATUSES
     : GAME_STATUSES.flatMap((value) =>
         value === 'playing' && disablePlaying ? (onAddToQueue ? ['queue' as const] : []) : [value],
@@ -295,349 +265,123 @@ export function GameDetailModal({
       )}
 
       <div className="space-y-5 mt-4">
-        {adding?.fromSteam && (
-          <p className="text-sm text-ink-300">
-            {adding.movedTo
-              ? `It’s in your library on ${adding.movedTo}, from Steam. Adding it again moves it to the console you pick.`
-              : 'It’s in your Steam library. Adding it here moves that entry to the console you pick, so the game is only listed once.'}
-          </p>
-        )}
-        {adding?.inLibraryOn && (
-          <p className="text-sm text-ink-300">
-            {`It’s in your library on ${adding.inLibraryOn}. Pick another console to move it there, so the game is only listed once.`}
-          </p>
-        )}
-        {adding && (
-          <ConsolePicker
-            ordered={adding.consoles}
-            value={platform}
-            onChange={setPlatform}
-            autoFocus={!adding.defaultConsole}
-          />
-        )}
-
-        {showHours && (
-          <div>
-            <label className={FIELD_LABEL} htmlFor="detail-hours">
-              Hours played
-              {manual?.platform ? ` on ${manual.platform}` : ''}
-              {adding && <span className="text-ink-500 font-normal"> (optional)</span>}
-            </label>
-            <input
-              id="detail-hours"
-              type="number"
-              min={0}
-              step={0.5}
-              inputMode="decimal"
-              value={hours}
-              onChange={(e) => {
-                setHours(e.target.value);
-                setHoursError(null);
-              }}
-              placeholder="Not tracked"
-              aria-invalid={hoursError ? true : undefined}
-              aria-describedby={hoursError ? 'detail-hours-error' : undefined}
-              className={`${fieldClass(!!hoursError)} px-3 py-2 text-sm`}
-            />
-            {hoursError && (
-              <p id="detail-hours-error" className="text-rose-400 text-xs mt-1" role="alert">
-                {hoursError}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Status pills */}
-        <div>
-          <p className="text-sm font-medium text-ink-300 mb-2" id="status-label">
-            Status
-          </p>
-          <div
-            role="group"
-            aria-labelledby="status-label"
-            className={`grid gap-2 grid-cols-3 ${
-              statusOptions.length === 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-6'
-            }`}
-          >
-            {statusOptions.map((value) => {
-              const isActive = status === value;
-              if (value === 'queue') {
-                return (
-                  <button
-                    key="queue"
-                    type="button"
-                    onClick={() => handleStatusChange('queue')}
-                    aria-pressed={isActive}
-                    className={`${STATUS_BUTTON} ${isActive ? STATUS_STYLE.playing.solid : STATUS_IDLE}`}
-                  >
-                    <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Queue</span>
-                  </button>
-                );
-              }
-              const opt = STATUS_STYLE[value];
-              const Icon = opt.icon;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => handleStatusChange(value)}
-                  aria-pressed={isActive}
-                  className={`${STATUS_BUTTON} ${isActive ? opt.solid : STATUS_IDLE}`}
-                >
-                  <Icon className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>{opt.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          {replacesPlaying && (
-            <p className="mt-2 text-xs text-ink-400">
-              {replacesPlaying} goes back to your backlog.
+        {/* A form, so Enter in a field saves. Not a form action: React resets
+            a form after its action runs, and these fields are controlled. */}
+        <form
+          className="space-y-5"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (adding && !pickedConsole) return;
+            startTransition(save);
+          }}
+        >
+          {adding?.fromSteam && (
+            <p className="text-sm text-ink-300">
+              {adding.movedTo
+                ? `It’s in your library on ${adding.movedTo}, from Steam. Adding it again moves it to the console you pick.`
+                : 'It’s in your Steam library. Adding it here moves that entry to the console you pick, so the game is only listed once.'}
             </p>
           )}
-        </div>
-
-        {/* Date — only for finished/dropped */}
-        {showDateField && (
-          <div className="flex items-center gap-2.5">
-            <input
-              id="date-toggle"
-              type="checkbox"
-              checked={hasDate}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setHasDate(checked);
-                if (checked && !date) setDate(today);
-                setCalendarOpen(false);
-              }}
-              className="w-4 h-4 rounded accent-accent-500 cursor-pointer shrink-0"
+          {adding?.inLibraryOn && (
+            <p className="text-sm text-ink-300">
+              {`It’s in your library on ${adding.inLibraryOn}. Pick another console to move it there, so the game is only listed once.`}
+            </p>
+          )}
+          {adding && (
+            <ConsolePicker
+              ordered={adding.consoles}
+              value={platform}
+              onChange={setPlatform}
+              autoFocus={!adding.defaultConsole}
             />
-            <label
-              htmlFor="date-toggle"
-              className="text-sm text-ink-300 cursor-pointer select-none shrink-0"
+          )}
+
+          {showHours && (
+            <HoursField
+              value={hours}
+              onChange={setHours}
+              error={hoursError}
+              platform={manual?.platform}
+              optional={!!adding}
+            />
+          )}
+
+          <StatusPicker
+            options={statusOptions}
+            value={status}
+            onChange={handleStatusChange}
+            replacesPlaying={replacesPlaying}
+          />
+
+          {showDateField && (
+            <CompletionDateField
+              label={status === 'finished' ? 'Finished on' : 'Dropped on'}
+              hasDate={hasDate}
+              onHasDateChange={setHasDate}
+              date={date}
+              onDateChange={setDate}
+            />
+          )}
+
+          {clearsReview && (
+            <p className="text-xs text-amber-400">
+              Saving will clear the rating and notes for this game.
+            </p>
+          )}
+
+          {showDateField && (
+            <ReviewFields
+              rating={rating}
+              onRatingChange={setRating}
+              ratingError={ratingError}
+              notes={notes}
+              onNotesChange={setNotes}
+            />
+          )}
+
+          {saveState.error && !saving && (
+            <p className="text-sm text-rose-400" role="alert">
+              {saveState.error}
+            </p>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 cursor-pointer"
             >
-              {hasDate ? dateLabel : 'No date selected'}
-            </label>
-
-            {hasDate && (
-              <div className="relative" ref={calendarRef}>
-                <button
-                  type="button"
-                  data-testid="detail-date"
-                  onClick={() => setCalendarOpen((o) => !o)}
-                  aria-expanded={calendarOpen}
-                  className="cursor-pointer flex items-center gap-1.5 bg-ink-800 hover:bg-ink-700 rounded-lg px-2.5 py-1 text-sm text-ink-100 transition-colors"
-                >
-                  <CalendarDays className="w-3.5 h-3.5 text-ink-400" />
-                  <span>{formatDateLabel(date)}</span>
-                </button>
-
-                {calendarOpen && (
-                  <div className="absolute left-0 top-full mt-2 sm:left-full sm:top-1/2 sm:-translate-y-1/2 sm:mt-0 sm:ml-2 z-50 bg-ink-800 border border-ink-700 rounded-xl shadow-2xl px-4 py-2">
-                    <Suspense fallback={null}>
-                      <DayPicker
-                        mode="single"
-                        captionLayout="dropdown"
-                        startMonth={new Date(2000, 0)}
-                        endMonth={new Date()}
-                        selected={isoToDate(date)}
-                        defaultMonth={isoToDate(date)}
-                        onSelect={(day) => {
-                          if (day) {
-                            setDate(toLocalIsoDate(day));
-                            setCalendarOpen(false);
-                          }
-                        }}
-                      />
-                    </Suspense>
-                  </div>
-                )}
-              </div>
-            )}
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              isLoading={saving}
+              disabled={!!adding && !pickedConsole}
+              aria-describedby={adding && !pickedConsole ? 'needs-console' : undefined}
+              // With the console already known, Enter adds it straight away.
+              data-autofocus={adding?.defaultConsole ? true : undefined}
+              className="flex-1 cursor-pointer"
+            >
+              {submitLabel(adding, pickedConsole, saving)}
+            </Button>
           </div>
+          {adding && !pickedConsole && (
+            <p id="needs-console" className="-mt-3 text-xs text-ink-400 text-right">
+              Pick the console you play it on
+            </p>
+          )}
+        </form>
+
+        {manual && (
+          <ManualGameActions
+            onMoveToSteam={manual.onMoveToSteam}
+            onDelete={manual.onDelete}
+            onClose={onClose}
+          />
         )}
-
-        {clearsReview && (
-          <p className="text-xs text-amber-400">
-            Saving will clear the rating and notes for this game.
-          </p>
-        )}
-
-        {showDateField && (
-          <>
-            {/* Rating */}
-            <div>
-              <label className={FIELD_LABEL} htmlFor="detail-rating">
-                Your rating (0–10)
-              </label>
-              <input
-                id="detail-rating"
-                type="number"
-                min={0}
-                max={10}
-                value={rating}
-                onChange={(e) => {
-                  setRating(e.target.value);
-                  setRatingError(null);
-                }}
-                placeholder="Unrated"
-                aria-invalid={ratingError ? true : undefined}
-                aria-describedby={ratingError ? 'detail-rating-error' : undefined}
-                className={`${fieldClass(!!ratingError)} px-3 py-2 text-sm`}
-              />
-              {ratingError && (
-                <p id="detail-rating-error" className="text-rose-400 text-xs mt-1" role="alert">
-                  {ratingError}
-                </p>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-ink-300" htmlFor="detail-notes">
-                  Notes
-                </label>
-                {notes.length > 0 && (
-                  <span
-                    id="detail-notes-count"
-                    className={`text-xs tabular-nums ${notes.length >= 1000 ? 'text-rose-400' : 'text-ink-500'}`}
-                  >
-                    {notes.length}/1000
-                  </span>
-                )}
-              </div>
-              <textarea
-                id="detail-notes"
-                aria-describedby={notes.length > 0 ? 'detail-notes-count' : undefined}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any thoughts?"
-                rows={4}
-                maxLength={1000}
-                className={`${fieldClass()} px-3 py-2 text-sm resize-none`}
-              />
-            </div>
-          </>
-        )}
-
-        {saveError && (
-          <p className="text-sm text-rose-400" role="alert">
-            {saveError}
-          </p>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-1">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            disabled={saving}
-            className="flex-1 cursor-pointer"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            isLoading={saving}
-            disabled={!!adding && !platform.trim()}
-            aria-describedby={adding && !platform.trim() ? 'needs-console' : undefined}
-            // With the console already known, Enter adds it straight away.
-            data-autofocus={adding?.defaultConsole ? true : undefined}
-            className="flex-1 cursor-pointer"
-          >
-            {adding
-              ? adding.fromSteam
-                ? saving
-                  ? 'Moving…'
-                  : platform.trim()
-                    ? `Move to ${platform.trim()}`
-                    : 'Move from Steam'
-                : adding.inLibraryOn
-                  ? platform.trim() && platform.trim() !== adding.inLibraryOn
-                    ? saving
-                      ? 'Moving…'
-                      : `Move to ${platform.trim()}`
-                    : saving
-                      ? 'Saving…'
-                      : 'Save changes'
-                  : saving
-                    ? 'Adding…'
-                    : 'Add to library'
-              : saving
-                ? 'Saving…'
-                : 'Save changes'}
-          </Button>
-        </div>
-        {adding && !platform.trim() && (
-          <p id="needs-console" className="-mt-3 text-xs text-ink-400 text-right">
-            Pick the console you play it on
-          </p>
-        )}
-
-        {manual?.onMoveToSteam &&
-          (confirmingDelete ? (
-            // Outlined rather than filled, so its (filled) button stands out.
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink-700 px-3 py-2.5">
-              <p className="text-sm text-ink-200">
-                Play it on Steam again? Steam&rsquo;s hours replace the ones you entered.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
-                  Keep
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    onClose();
-                    manual.onMoveToSteam?.();
-                  }}
-                >
-                  Move to Steam
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              className="cursor-pointer mx-auto block text-sm text-ink-400 hover:text-ink-100 transition-colors"
-            >
-              Play on Steam instead
-            </button>
-          ))}
-
-        {manual?.onDelete &&
-          (confirmingDelete ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-ink-800 px-3 py-2.5">
-              <p className="text-sm text-ink-200">Remove it from your library?</p>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
-                  Keep
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => {
-                    onClose();
-                    manual.onDelete?.();
-                  }}
-                >
-                  Remove
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              className="cursor-pointer mx-auto block text-sm text-ink-400 hover:text-rose-400 transition-colors"
-            >
-              Remove from library
-            </button>
-          ))}
       </div>
     </Modal>
   );

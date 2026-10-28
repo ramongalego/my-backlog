@@ -5,9 +5,8 @@ import Image from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Gamepad2, Loader2, Search, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { loadCurrentlyPlaying, loadManualGames } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 import { queryKeys } from '@/lib/query-keys';
 import {
   addManualGame,
@@ -89,15 +88,8 @@ export function AddGameModal({
 
   // The consoles you've added games on (to suggest them first), plus the game
   // being played.
-  const { data: manualGames = [] } = useQuery({
-    queryKey: queryKeys.games.manual(userId),
-    queryFn: () => loadManualGames(createClient(), userId),
-  });
-  const { data: playing = null } = useQuery({
-    queryKey: queryKeys.games.playing(userId),
-    queryFn: () => loadCurrentlyPlaying(createClient(), userId),
-    staleTime: 30 * 1000,
-  });
+  const { data: manualGames = [] } = useQuery(queries.manualGames(userId));
+  const { data: playing = null } = useQuery(queries.playing(userId));
   const usedConsoles = [...new Set(manualGames.flatMap((g) => (g.platform ? [g.platform] : [])))];
 
   const text = query.trim();

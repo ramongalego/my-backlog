@@ -3,14 +3,19 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 import { celebrateGameFinished } from '@/lib/confetti';
 import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/games/queue';
-import { loadCurrentlyPlaying, loadQueue, type LibraryMeta } from '@/lib/data/loaders';
+import type { LibraryMeta } from '@/lib/data/loaders';
+import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/games/status';
 import { buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
-import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import {
+  useInvalidateQueries,
+  usePatchGamesList,
+  useSetGameStatus,
+  type StatusEdit,
+} from '@/lib/mutations';
 import { statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
 import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 import type { GameWithImage, QueueItem } from '@/types/games';
@@ -19,14 +24,6 @@ import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 // Every mutation here touches the queue and/or the playing game. Sharing a
 // scope makes React Query run them one at a time, so e.g. two quick reorders
 // can't reach the server out of order or roll back over each other.
-interface QueuedStatusChange {
-  gameId: number;
-  status: string;
-  date: string;
-  notes: string;
-  rating: number | null;
-}
-
 const QUEUE_SCOPE = { id: 'queue' };
 
 /** Minimal game data needed to show a game in the queue before the server responds. */
@@ -97,19 +94,7 @@ function toPlayingGame(item: QueueItem): GameWithImage {
 
 /** The user's queue. The single cached source for queue items and "queued" badges. */
 export function useQueue(userId: string | null) {
-  const {
-    data: queue = [],
-    isPending,
-    isLoadingError,
-    refetch,
-  } = useQuery({
-    queryKey: queryKeys.queue.list(userId ?? ''),
-    // Straight from the database like every other query (and the same loader
-    // the server prefetch uses), not through /api/queue, which added a hop.
-    queryFn: () => loadQueue(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 2 * 60 * 1000,
-  });
+  const { data: queue = [], isPending, isLoadingError, refetch } = useQuery(queries.queue(userId));
   return {
     queue,
     queuedGameIds: new Set(queue.map((q) => q.game_id)),
@@ -178,12 +163,7 @@ export function useNowPlaying(userId: string | null) {
     isPending: playingPending,
     isLoadingError: playingError,
     refetch: refetchPlaying,
-  } = useQuery({
-    queryKey: playingKey,
-    queryFn: () => loadCurrentlyPlaying(createClient(), userId!),
-    enabled: !!userId,
-    staleTime: 30 * 1000,
-  });
+  } = useQuery(queries.playing(userId));
   const {
     queue,
     queuedGameIds,
@@ -334,26 +314,14 @@ export function useNowPlaying(userId: string | null) {
 
   // A queued game's status set from its detail dialog. The queue only holds
   // backlog games, so any other status takes it off (the server does the same).
-  const queuedStatusMutation = useMutation({
+  const queuedStatusMutation = useSetGameStatus(userId, {
     scope: QUEUE_SCOPE,
-    mutationFn: (vars: QueuedStatusChange) =>
-      updateGameStatus(vars.gameId, vars.status, {
-        finishedAt: vars.status === 'finished' ? vars.date : undefined,
-        droppedAt: vars.status === 'dropped' ? vars.date : undefined,
-        notes: vars.notes,
-        rating: vars.rating,
-      }),
-    onMutate: async (vars) => {
-      const context = await snapshot(statusChangeFrom(vars));
+    apply: async (vars) => {
+      const context = await snapshot();
       if (vars.status !== 'backlog') dropFromQueue(vars.gameId);
       return context;
     },
-    onError: (err, _change, context) => {
-      console.error('Failed to update game status:', err);
-      rollback(context);
-      toast.error('Could not save your changes. Please try again.');
-    },
-    onSettled: () => statusChanged(),
+    rollback,
   });
 
   const removeMutation = useMutation({
@@ -521,7 +489,7 @@ export function useNowPlaying(userId: string | null) {
     addToQueue: addGameToQueue,
     removeFromQueue: (gameId: number) => removeMutation.mutate(gameId),
     /** A queued game's status from its detail dialog; playing starts it like Play does. */
-    setQueuedStatus: (vars: QueuedStatusChange) => {
+    setQueuedStatus: (vars: StatusEdit) => {
       const item = queue.find((q) => q.game_id === vars.gameId);
       if (vars.status === 'playing') {
         if (item) pickMutation.mutate(toPlayingGame(item));

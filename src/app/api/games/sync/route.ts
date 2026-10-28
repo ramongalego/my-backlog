@@ -84,7 +84,11 @@ export async function POST(request: NextRequest) {
     try {
       fresh = await fetchGameMetadata(appId, libraryName);
     } catch (err) {
-      if (!(err instanceof SteamUnavailableError)) throw err;
+      if (!(err instanceof SteamUnavailableError)) {
+        // Left unsynced, so the next visit tries it again.
+        console.error(err);
+        return jsonError('Failed to fetch game details', 500);
+      }
       // Steam is throttling us. Leave the game unsynced so the client retries
       // it, instead of recording it as a game with no store page.
       console.error(err.message);

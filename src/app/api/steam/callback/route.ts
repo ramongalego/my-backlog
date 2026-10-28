@@ -75,22 +75,19 @@ export async function GET(request: NextRequest) {
     return redirect('/?error=not_authenticated');
   }
 
-  let playerSummary, games;
+  let playerSummary, games, previous;
   try {
-    [playerSummary, games] = await Promise.all([
+    [playerSummary, games, previous] = await Promise.all([
       getPlayerSummary(steamId, apiKey),
       getOwnedGames(steamId, apiKey),
+      // Resolves with an error rather than throwing, like any Supabase query.
+      supabase.from('profiles').select('steam_id').eq('id', user.id).single(),
     ]);
   } catch (err) {
     console.error('Steam API request failed:', err);
     return redirect('/?error=steam_api_failed');
   }
-
-  const { data: previousProfile } = await supabase
-    .from('profiles')
-    .select('steam_id')
-    .eq('id', user.id)
-    .single();
+  const previousProfile = previous.data;
 
   // Users can't write their profile themselves: the Steam id is only ever set
   // here, from Steam's verified sign-in, for the signed-in user.
