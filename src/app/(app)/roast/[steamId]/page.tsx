@@ -35,8 +35,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SharedRoastPage({ params }: PageProps) {
   const { steamId } = await params;
   const queryClient = new QueryClient();
-  const roast = await loadRoast(steamId);
-  if (roast) queryClient.setQueryData(queryKeys.roast.byId(steamId), roast);
+  // Not roasted yet (null) is known here too, so the page offers to roast it
+  // straight away instead of asking again from the browser.
+  if (STEAM_ID_PATTERN.test(steamId)) {
+    queryClient.setQueryData(queryKeys.roast.byId(steamId), (await loadRoast(steamId)) ?? null);
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

@@ -96,30 +96,6 @@ export async function parseSteamInput(input: string, apiKey: string): Promise<st
   return null;
 }
 
-export interface SteamPlayerBans {
-  SteamId: string;
-  CommunityBanned: boolean;
-  VACBanned: boolean;
-  NumberOfVACBans: number;
-  DaysSinceLastBan: number;
-  NumberOfGameBans: number;
-}
-
-export async function getPlayerBans(
-  steamId: string,
-  apiKey: string,
-): Promise<SteamPlayerBans | null> {
-  const url = new URL('https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/');
-  url.searchParams.set('key', apiKey);
-  url.searchParams.set('steamids', steamId);
-
-  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  return data.players?.[0] ?? null;
-}
-
 export async function getSteamLevel(steamId: string, apiKey: string): Promise<number | null> {
   const url = new URL('https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/');
   url.searchParams.set('key', apiKey);

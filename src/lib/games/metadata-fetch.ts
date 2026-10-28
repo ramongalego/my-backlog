@@ -48,14 +48,27 @@ export async function fetchGameMetadata(
   nameHint?: string,
 ): Promise<FetchedMetadata | null> {
   const detailsRequest = getGameDetails(appId);
-  // HLTB searches by name; without the library's name, wait for Steam's.
-  const name = nameHint || (await detailsRequest)?.data?.name || '';
+  // HLTB searches by name. The library's name (the hint) lets that start
+  // alongside the details, but the result is only kept when the hint is
+  // Steam's own name for the game: everything here goes into the cache every
+  // user reads, and the hint comes from the request.
+  const hintedHours = nameHint ? lookUpHours(nameHint) : null;
+  const noHours = { hours: null, unavailable: false };
+  const hoursRequest = detailsRequest.then(
+    (details) => {
+      const steamName = details?.data?.name;
+      if (!steamName) return noHours;
+      return hintedHours && nameHint === steamName ? hintedHours : lookUpHours(steamName);
+    },
+    // A failed details request is reported by the await below.
+    () => noHours,
+  );
 
   // The enrichment lookups start alongside the details instead of after them
   // (they never throw). Their results are dropped for DLC, software and
   // anything else that turns out not to be a game.
   const enrichment = Promise.all([
-    lookUpHours(name),
+    hoursRequest,
     getStoreItemInfo(appId),
     getSteamDeckCompat(appId),
   ]);

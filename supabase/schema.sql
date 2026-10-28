@@ -65,7 +65,11 @@ create table games (
   unique (user_id, app_id),
   -- Referenced by playing_queue, so a queue row can only point at its own user's game.
   unique (user_id, id),
-  constraint games_steam_has_app_id check (source <> 'steam' or app_id is not null)
+  constraint games_steam_has_app_id check (source <> 'steam' or app_id is not null),
+  -- The same caps as the app's forms, since users can write their games directly.
+  constraint games_notes_length check (char_length(notes) <= 1000),
+  constraint games_platform_length check (char_length(platform) <= 60),
+  constraint games_name_length check (char_length(name) <= 500)
 );
 
 -- Shared metadata cache, keyed by Steam app id. Written only by the server.
@@ -160,12 +164,9 @@ alter table roast_cache enable row level security;
 
 create policy "Users can view own profile" on profiles
   for select to authenticated using ((select auth.uid()) = id);
-create policy "Users can insert own profile" on profiles
-  for insert to authenticated with check ((select auth.uid()) = id);
-create policy "Users can update own profile" on profiles
-  for update to authenticated
-  using ((select auth.uid()) = id)
-  with check ((select auth.uid()) = id);
+-- Profiles are written only by the server: the handle_new_user trigger, and
+-- the Steam sign-in, so a Steam id can't be claimed without signing in to it.
+revoke insert, update on profiles from anon, authenticated;
 
 create policy "Users can view own games" on games
   for select to authenticated using ((select auth.uid()) = user_id);
@@ -188,8 +189,8 @@ create policy "Users manage own queue" on playing_queue
 
 create policy "Shared completions are publicly readable" on shared_completions
   for select to public using (true);
-create policy "Users create their own shared completions" on shared_completions
-  for insert to authenticated with check (user_id = (select auth.uid()));
+-- Created only by /api/share/completion, with the server's key, after its checks.
+revoke insert on shared_completions from anon, authenticated;
 create policy "Users delete their own shared completions" on shared_completions
   for delete to authenticated using (user_id = (select auth.uid()));
 
@@ -200,8 +201,8 @@ grant select (
   games_finished, total_games, backlog_hours_removed, next_game, created_at
 ) on shared_completions to anon, authenticated;
 
-create policy "Users can insert their own tickets" on support_tickets
-  for insert to authenticated with check ((select auth.uid()) = user_id);
+-- Saved only by /api/support, with the server's key, after its limits.
+revoke insert on support_tickets from anon, authenticated;
 
 -- ─── Functions and triggers ─────────────────────────────────────────────────
 

@@ -3,7 +3,8 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
-import { checkRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { tryCreateServiceClient } from '@/lib/supabase/service';
 
 // header_image is re-fetched server-side by the OG route (next/og ImageResponse
 // requires a raw <img src>). Restrict it to Steam's CDNs and IGDB's image host
@@ -46,13 +47,6 @@ const shareSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const ip = ipRateLimitKey(getClientIp(request));
-  const rateLimitResult = checkRateLimit(`share:${ip}`, RATE_LIMITS.gameStatus);
-
-  if (!rateLimitResult.success) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -60,6 +54,12 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Share pages are public, on our domain: counted per user, across servers.
+  const rateLimitResult = await checkSharedRateLimit(`share:${user.id}`, RATE_LIMITS.share);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
   let body;
@@ -76,7 +76,14 @@ export async function POST(request: NextRequest) {
 
   const id = nanoid(21);
 
-  const { error } = await supabase.from('shared_completions').insert({
+  // Written with the server's key: users can't insert share pages themselves,
+  // so the checks above (and the generated id) can't be skipped.
+  const service = tryCreateServiceClient();
+  if (!service) {
+    console.error('SUPABASE_SECRET_KEY not configured; cannot save share pages');
+    return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
+  }
+  const { error } = await service.from('shared_completions').insert({
     id,
     user_id: user.id,
     game_name: parsed.data.gameName,

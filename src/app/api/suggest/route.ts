@@ -84,6 +84,15 @@ export async function POST(request: NextRequest) {
   if (!rateLimitResult.success) {
     return rateLimited(rateLimitResult);
   }
+  const dailyLimit = await checkSharedRateLimit(
+    `suggestion-daily:${user.id}`,
+    RATE_LIMITS.suggestionDaily,
+  );
+  if (!dailyLimit.success) {
+    return jsonError("You've used today's picks. Try again tomorrow, or use Random.", 429, {
+      'Retry-After': Math.ceil((dailyLimit.resetAt - Date.now()) / 1000).toString(),
+    });
+  }
 
   // Parse and validate request body
   let body: unknown;
@@ -188,6 +197,13 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('Failed to build prompt:', err);
     return jsonError('Failed to build suggestion request', 500);
+  }
+
+  // Counted only for requests that reach the model.
+  const globalLimit = await checkSharedRateLimit('suggestion:global', RATE_LIMITS.suggestionGlobal);
+  if (!globalLimit.success) {
+    console.error('Daily AI suggestion cap reached');
+    return jsonError('Pick My Game is busy right now. Try again later, or use Random.', 503);
   }
 
   const openai = new OpenAI({ apiKey: openaiApiKey });

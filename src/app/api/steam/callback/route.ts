@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { createSteamRelyingParty, extractSteamId, isSteamAssertion } from '@/lib/steam/auth';
 import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
 import { clearLibrary, syncOwnedGames } from '@/lib/steam/library';
@@ -91,7 +92,14 @@ export async function GET(request: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  const { error: profileError } = await supabase
+  // Users can't write their profile themselves: the Steam id is only ever set
+  // here, from Steam's verified sign-in, for the signed-in user.
+  const service = tryCreateServiceClient();
+  if (!service) {
+    console.error('SUPABASE_SECRET_KEY not configured; cannot link Steam');
+    return redirect('/?error=profile_update_failed');
+  }
+  const { error: profileError } = await service
     .from('profiles')
     .update({
       steam_id: steamId,

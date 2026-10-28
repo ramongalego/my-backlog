@@ -40,13 +40,15 @@ export async function POST(request: NextRequest) {
   }
   const { appIds } = parsed.data;
 
-  // Only the caller's own games, searched by the name in their library.
+  // Only the caller's own games. They're searched by Steam's name for the game
+  // (from the shared cache), not the name in the library, which its owner can
+  // change: the hours found go into the cache every user reads.
   const [{ data: games, error: gamesError }, { data: cached, error: cacheError }] =
     await Promise.all([
       supabase.from('games').select('app_id, name').eq('user_id', user.id).in('app_id', appIds),
       supabase
         .from('game_metadata')
-        .select('app_id, main_story_hours, hltb_attempts')
+        .select('app_id, name, main_story_hours, hltb_attempts')
         .in('app_id', appIds),
     ]);
   if (gamesError || cacheError) {
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Another user's sync may have found it in the meantime.
     if (hours === null) {
       try {
-        hours = await getMainStoryHours(game.name);
+        hours = await getMainStoryHours(row?.name ?? game.name);
       } catch (err) {
         if (!(err instanceof HLTBUnavailableError)) throw err;
         pending = (games ?? []).slice(i).map((g) => g.app_id);
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
 
       // A miss advances the shared backoff, so other users don't re-ask HLTB
       // for a game it doesn't have.
-      if (row && service) {
+      if (row?.name && service) {
         const { error } = await service
           .from('game_metadata')
           .update(

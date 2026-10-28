@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { checkSharedRateLimit } from '@/lib/rate-limit';
+import { tryCreateServiceClient } from '@/lib/supabase/service';
 
 const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
 
@@ -60,7 +61,14 @@ export async function POST(request: NextRequest) {
 
   const { type, message } = parsed.data;
 
-  const { error } = await supabase
+  // Written with the server's key: users can't insert tickets themselves, so
+  // the limits above can't be skipped by writing to the table directly.
+  const service = tryCreateServiceClient();
+  if (!service) {
+    console.error('SUPABASE_SECRET_KEY not configured; cannot save tickets');
+    return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
+  }
+  const { error } = await service
     .from('support_tickets')
     .insert({ user_id: user.id, type, message });
 

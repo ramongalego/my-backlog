@@ -178,8 +178,16 @@ export const RATE_LIMITS = {
   gameAdd: { limit: 30, windowMs: 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
+  // Public share pages for finished games, per user
+  share: { limit: 30, windowMs: 60 * 60 * 1000 },
   // 20 requests per minute for AI suggestions (accounts for rerolls)
   suggestion: { limit: 20, windowMs: 60 * 1000 },
+  // And 100 a day per user: plenty for picking and rerolling, while free
+  // accounts can't be scripted into a big OpenAI bill.
+  suggestionDaily: { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
+  // Global circuit breaker on AI suggestions, like roastGlobal: bounds the
+  // daily OpenAI spend however many accounts are used.
+  suggestionGlobal: { limit: 3000, windowMs: 24 * 60 * 60 * 1000 },
   // 60 profile lookups per hour per IP. Resolving a vanity name spends the
   // shared Steam API key quota, so it's limited before any Steam call.
   roastLookup: { limit: 60, windowMs: 60 * 60 * 1000 },

@@ -49,6 +49,21 @@ export async function POST(request: NextRequest) {
   }
   const { appId, name: libraryName } = parsed.data;
 
+  // Only games in the caller's library: syncing looks the game up on Steam and
+  // HowLongToBeat with the app's keys, and fills the cache every user reads.
+  const { data: owned, error: ownedError } = await supabase
+    .from('games')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('app_id', appId)
+    .limit(1)
+    .maybeSingle();
+  if (ownedError) {
+    console.error(ownedError);
+    return jsonError('Failed to read the game', 500);
+  }
+  if (!owned) return jsonError('Game not found', 404);
+
   // Check for existing fresh metadata in shared table
   const { data: existing } = await supabase
     .from('game_metadata')

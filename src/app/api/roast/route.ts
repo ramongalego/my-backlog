@@ -4,14 +4,13 @@ import {
   parseSteamInput,
   getPlayerSummary,
   getOwnedGames,
-  getPlayerBans,
   getSteamLevel,
   getWishlistCount,
 } from '@/lib/steam/api';
 import { getSteamTags } from '@/lib/steam/store-api';
 import { getSteamApiKey, getOpenAIApiKey } from '@/lib/env.server';
 import { checkSharedRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
-import { buildRoastPrompt } from '@/lib/roast/prompt';
+import { buildRoastMessages, cleanRoast } from '@/lib/roast/prompt';
 import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
 import { getBlacklistMessage } from '@/lib/roast/blacklist';
 import { roastRequestSchema } from '@/lib/validations/roast';
@@ -79,16 +78,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Fetch Steam data — all in parallel
+  // Not bans: a roast is about how someone plays, and it can be shared.
   let profile;
   let games;
-  let bans;
   let steamLevel;
   let wishlistCount;
   try {
-    [profile, games, bans, steamLevel, wishlistCount] = await Promise.all([
+    [profile, games, steamLevel, wishlistCount] = await Promise.all([
       getPlayerSummary(steamId, steamApiKey),
       getOwnedGames(steamId, steamApiKey),
-      getPlayerBans(steamId, steamApiKey),
       getSteamLevel(steamId, steamApiKey),
       getWishlistCount(steamId),
     ]);
@@ -131,23 +129,30 @@ export async function POST(request: NextRequest) {
   }
 
   // Build prompt and call OpenAI
-  const prompt = buildRoastPrompt(profile, games, topTags, {
-    bans,
-    steamLevel,
-    wishlistCount,
-  });
+  const messages = buildRoastMessages(profile, games, topTags, { steamLevel, wishlistCount });
   const openai = new OpenAI({ apiKey: openaiApiKey });
 
   try {
     const completion = await openai.chat.completions.create({
       // Same model as Pick My Game; reasoning off, since a roast is pure writing.
       model: 'gpt-6-luna',
-      messages: [{ role: 'user', content: prompt }],
+      messages,
       reasoning_effort: 'none',
       max_completion_tokens: 500,
     });
 
-    const roast = completion.choices[0]?.message?.content ?? '';
+    // A roast is public, on our domain, for anyone to share: no links in it,
+    // and nothing the moderation check flags is ever cached or shown.
+    const roast = cleanRoast(completion.choices[0]?.message?.content ?? '');
+    if (!roast) return jsonError('AI service temporarily unavailable', 503);
+    const moderation = await openai.moderations.create({
+      model: 'omni-moderation-latest',
+      input: roast,
+    });
+    if (moderation.results.some((result) => result.flagged)) {
+      console.error(`Roast for ${steamId} flagged by moderation; not shown`);
+      return jsonError("We couldn't write a roast for this profile. Try another one.", 422);
+    }
 
     const response = {
       roast,

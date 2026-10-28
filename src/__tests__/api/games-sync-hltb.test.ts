@@ -16,7 +16,12 @@ const userGames = [
   { app_id: 2, name: 'Hades' },
   { app_id: 3, name: 'Portal 2' },
 ];
-let cacheRows: { app_id: number; main_story_hours: number | null; hltb_attempts: number }[];
+let cacheRows: {
+  app_id: number;
+  name: string | null;
+  main_story_hours: number | null;
+  hltb_attempts: number;
+}[];
 const userUpdates: Record<string, unknown>[] = [];
 const cacheUpdates: Record<string, unknown>[] = [];
 
@@ -68,6 +73,7 @@ beforeEach(() => {
   cacheUpdates.length = 0;
   cacheRows = userGames.map((g) => ({
     app_id: g.app_id,
+    name: g.name,
     main_story_hours: null,
     hltb_attempts: 0,
   }));
@@ -96,6 +102,28 @@ it('looks up each game and saves the times it finds', async () => {
   // A real miss advances the shared backoff; found times reset it.
   expect(cacheUpdates).toContainEqual({ app_id: 2, hltb_attempts: 1 });
   expect(cacheUpdates).toContainEqual({ app_id: 1, main_story_hours: 9, hltb_attempts: 0 });
+});
+
+it("searches by Steam's name, so renaming a game in your library can't set the shared time", async () => {
+  // The library row says one game; Steam's name for the app is another.
+  cacheRows[0].name = 'Celeste (Steam)';
+  jest.mocked(getMainStoryHours).mockResolvedValue(9);
+
+  await call([1]);
+
+  expect(getMainStoryHours).toHaveBeenCalledWith('Celeste (Steam)');
+  expect(getMainStoryHours).not.toHaveBeenCalledWith('Celeste');
+});
+
+it("doesn't write the shared cache without Steam's name to search by", async () => {
+  cacheRows[0].name = null;
+  jest.mocked(getMainStoryHours).mockResolvedValue(9);
+
+  await call([1]);
+
+  expect(cacheUpdates).toEqual([]);
+  // The caller's own row still gets the time.
+  expect(userUpdates).toEqual([{ app_id: 1, main_story_hours: 9 }]);
 });
 
 it('hands back the rest, with how long to wait, once HLTB starts refusing', async () => {

@@ -75,3 +75,24 @@ it('marks the time as pending when HLTB is rate limiting', async () => {
   const metadata = await fetchGameMetadata(1, 'Library Name');
   expect(metadata).toMatchObject({ main_story_hours: null, hltbUnavailable: true, deck_compat: 3 });
 });
+
+it("keeps a time only for Steam's own name, whatever name the request sent", async () => {
+  jest.mocked(store.getGameDetails).mockResolvedValue(details('game'));
+  jest
+    .mocked(getMainStoryHours)
+    .mockImplementation(async (name) => (name === 'Steam Name' ? 12 : 300));
+
+  // A request naming a 300-hour game for this app id: the cache gets the
+  // time for Steam's name for it.
+  const metadata = await fetchGameMetadata(1, 'Some 300 Hour Game');
+  expect(getMainStoryHours).toHaveBeenCalledWith('Steam Name');
+  expect(metadata?.main_story_hours).toBe(12);
+});
+
+it('uses the early search when the name matches Steam, without searching twice', async () => {
+  jest.mocked(getMainStoryHours).mockClear();
+  jest.mocked(store.getGameDetails).mockResolvedValue(details('game'));
+
+  await fetchGameMetadata(1, 'Steam Name');
+  expect(getMainStoryHours).toHaveBeenCalledTimes(1);
+});
