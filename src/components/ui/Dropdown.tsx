@@ -17,6 +17,8 @@ interface DropdownProps<T extends string> {
   align?: 'left' | 'right' | 'responsive';
   /** What the choice is for, e.g. "Sort by". Screen readers hear it with the current value. */
   'aria-label'?: string;
+  /** Inside a sentence: the value reads as underlined text in the sentence's own type. */
+  inline?: boolean;
 }
 
 const ALIGN_CLASS = {
@@ -37,6 +39,7 @@ export function Dropdown<T extends string>({
   icon,
   align = 'right',
   'aria-label': ariaLabel,
+  inline = false,
 }: DropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -94,7 +97,7 @@ export function Dropdown<T extends string>({
   };
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={inline ? 'relative inline-block' : 'relative'} ref={ref}>
       <button
         ref={triggerRef}
         type="button"
@@ -105,7 +108,11 @@ export function Dropdown<T extends string>({
             openList();
           }
         }}
-        className="flex items-center gap-2 h-10 text-sm font-medium text-ink-300 hover:text-ink-50 transition-colors cursor-pointer"
+        className={
+          inline
+            ? 'group cursor-pointer text-ink-100 hover:text-ink-50 transition-colors'
+            : 'flex items-center gap-2 h-10 text-sm font-medium text-ink-300 hover:text-ink-50 transition-colors cursor-pointer'
+        }
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
@@ -113,7 +120,25 @@ export function Dropdown<T extends string>({
         aria-label={ariaLabel ? `${ariaLabel}: ${selected?.label}` : undefined}
       >
         {icon && <span aria-hidden="true">{icon}</span>}
-        <span>{selected?.label}</span>
+        {inline ? (
+          // Every label stacked in one cell, only the chosen one showing, so
+          // the sentence keeps its width (and where it wraps on phones)
+          // whichever is picked. From `sm` the sentence fits on its line,
+          // so the others drop out rather than leave a gap.
+          <span className="inline-grid">
+            {options.map((option) => (
+              <span
+                key={option.value}
+                className={`[grid-area:1/1] underline decoration-ink-500 underline-offset-4 group-hover:decoration-ink-300 transition-colors ${option.value === value ? '' : 'invisible sm:hidden'}`}
+                aria-hidden={option.value === value ? undefined : true}
+              >
+                {option.label}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span>{selected?.label}</span>
+        )}
       </button>
       {open && (
         <ul

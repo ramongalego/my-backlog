@@ -24,6 +24,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
+import { Dropdown, type DropdownOption } from '@/components/ui/Dropdown';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { StatsContentSkeleton } from './Skeleton';
@@ -93,8 +94,18 @@ function Hours({ stats }: { stats: Stats }) {
   );
 }
 
-// Clearing the backlog in this many years, for the hours-a-week figure.
-const CLEAR_IN_YEARS = 5;
+// How soon you'd like the backlog cleared, for the hours-a-week figure, in
+// months. Five years to start.
+type ClearIn = '60' | '48' | '36' | '24' | '12' | '6';
+const CLEAR_IN: DropdownOption<ClearIn>[] = [
+  { value: '60', label: '5 years' },
+  { value: '48', label: '4 years' },
+  { value: '36', label: '3 years' },
+  { value: '24', label: '2 years' },
+  { value: '12', label: '1 year' },
+  { value: '6', label: '6 months' },
+];
+const WEEKS_A_MONTH = 52 / 12;
 
 /**
  * How long the backlog would take at your recent finishing rate, what it would
@@ -102,7 +113,11 @@ const CLEAR_IN_YEARS = 5;
  */
 function BacklogPace({ stats }: { stats: Stats }) {
   const { backlog, finishedLastYear, estimatedBacklogHours } = stats;
-  const perWeek = Math.max(1, Math.round(estimatedBacklogHours / (CLEAR_IN_YEARS * 52)));
+  const [clearIn, setClearIn] = useState<ClearIn>('60');
+  const perWeek = Math.max(
+    1,
+    Math.round(estimatedBacklogHours / (Number(clearIn) * WEEKS_A_MONTH)),
+  );
   return (
     <Panel>
       <SectionTitle>Backlog pace</SectionTitle>
@@ -119,10 +134,22 @@ function BacklogPace({ stats }: { stats: Stats }) {
         </p>
       )}
       {estimatedBacklogHours > 0 && (
-        <p className="mt-2 text-ink-400 max-w-xl">
-          That&apos;s ~{plural(estimatedBacklogHours, 'hour')} of story. Clearing it in{' '}
-          {CLEAR_IN_YEARS} years takes about {plural(perWeek, 'hour')} a week.
-        </p>
+        // A div, not a p: the choice of time opens a list. The choice starts its
+        // own line, so picking a longer one doesn't push the text onto another.
+        <div className="mt-2 text-ink-400 max-w-xl">
+          That&apos;s ~{plural(estimatedBacklogHours, 'hour')} of story.{' '}
+          <br className="hidden sm:inline" />
+          Clearing it in{' '}
+          <Dropdown
+            inline
+            align="left"
+            value={clearIn}
+            options={CLEAR_IN}
+            onChange={setClearIn}
+            aria-label="Clear it in"
+          />{' '}
+          takes about <span className="tabular-nums">{plural(perWeek, 'hour')}</span> a week.
+        </div>
       )}
       <LibraryBreakdown stats={stats} />
     </Panel>
