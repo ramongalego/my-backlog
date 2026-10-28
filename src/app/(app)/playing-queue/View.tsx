@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
+import { Archive, ArrowUpToLine, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Panel } from '@/components/ui/Panel';
@@ -24,7 +24,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
@@ -185,6 +185,8 @@ interface QueueItemRowProps {
   onPick: (gameId: number) => void;
   onRemove: (gameId: number) => void;
   onOpen: (gameId: number) => void;
+  /** `fromKeyboard`: pressed with Enter or Space rather than clicked. */
+  onMoveToTop: (gameId: number, fromKeyboard: boolean) => void;
 }
 
 /**
@@ -217,6 +219,7 @@ function QueueItemRow({
   onPick,
   onRemove,
   onOpen,
+  onMoveToTop,
   isOverlay,
   rowRef,
   style,
@@ -301,8 +304,26 @@ function QueueItemRow({
               <span className="hidden sm:inline">Play</span>
             </Button>
           )}
+          {/* The first game is already at the top: same-size space instead, so
+              the icons line up down the list. */}
+          {index > 0 ? (
+            <Tooltip content={<TooltipText title="Move to top" />}>
+              <button
+                type="button"
+                // A click from the keyboard has no pointer, so detail is 0.
+                onClick={(e) => onMoveToTop(item.game_id, e.detail === 0)}
+                aria-label={`Move ${item.game.name} to the top`}
+                className="cursor-pointer p-1.5 text-ink-500 hover:text-ink-200 transition-colors rounded"
+              >
+                <ArrowUpToLine className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </Tooltip>
+          ) : (
+            <span className="w-7 h-7 shrink-0" aria-hidden="true" />
+          )}
           <button
             {...handleProps}
+            data-queue-handle={item.game_id}
             className="cursor-grab active:cursor-grabbing p-1.5 text-ink-500 hover:text-ink-200 transition-colors rounded"
             aria-label={`Reorder ${item.game.name}`}
           >
@@ -344,6 +365,7 @@ export default function PlayingQueueView() {
     handleRemoveFromQueue,
     handlePickFromQueue,
     handleReorder,
+    handleMoveToTop,
     handleSetQueuedStatus,
     manualDialogProps,
   } = usePlayingQueuePage();
@@ -374,6 +396,27 @@ export default function PlayingQueueView() {
 
     const reordered = arrayMove(queue, oldIndex, newIndex);
     handleReorder(reordered.map((q) => q.game_id));
+  }
+
+  // The button goes with the game to the top, where the first game has none,
+  // so focus follows the game there instead of dropping to the page: once the
+  // list has re-rendered, since until then the game is still where it was.
+  // From the keyboard the page scrolls along with it, so the focus stays in
+  // sight; with a mouse it stays put, to move the next game up.
+  const focusAfterMove = useRef<{ gameId: number; fromKeyboard: boolean } | null>(null);
+  useEffect(() => {
+    const pending = focusAfterMove.current;
+    if (!pending) return;
+    // The move is the first queue change after the click; only that one counts.
+    focusAfterMove.current = null;
+    if (queue[0]?.game_id !== pending.gameId) return;
+    document
+      .querySelector<HTMLElement>(`[data-queue-handle="${pending.gameId}"]`)
+      ?.focus({ preventScroll: !pending.fromKeyboard });
+  }, [queue]);
+
+  function moveToTop(gameId: number, fromKeyboard: boolean) {
+    if (handleMoveToTop(gameId)) focusAfterMove.current = { gameId, fromKeyboard };
   }
 
   const activeItem = activeId !== null ? queue.find((q) => q.id === activeId) : null;
@@ -468,7 +511,9 @@ export default function PlayingQueueView() {
                 items={queue.map((q) => q.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="divide-y divide-ink-800/70">
+                {/* No scroll anchoring: with a row focused, the browser would
+                    scroll after it when it moves to the top. */}
+                <div className="divide-y divide-ink-800/70 [overflow-anchor:none]">
                   {queue.map((item, index) => (
                     <SortableQueueItem
                       key={item.id}
@@ -479,6 +524,7 @@ export default function PlayingQueueView() {
                       onPick={handlePickFromQueue}
                       onRemove={handleRemoveFromQueue}
                       onOpen={setDetailGameId}
+                      onMoveToTop={moveToTop}
                     />
                   ))}
                 </div>
@@ -493,6 +539,7 @@ export default function PlayingQueueView() {
                     onPick={handlePickFromQueue}
                     onRemove={handleRemoveFromQueue}
                     onOpen={setDetailGameId}
+                    onMoveToTop={moveToTop}
                     isOverlay
                   />
                 )}

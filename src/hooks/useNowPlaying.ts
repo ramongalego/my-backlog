@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -390,28 +390,48 @@ export function useNowPlaying(userId: string | null) {
     onSettled: () => invalidateQueue(),
   });
 
+  // The new order shows at once (see `reorder` below); the mutation only
+  // saves it. Queue mutations run one at a time, so a mutation's own
+  // onMutate can run well after a click, and a second quick reorder would
+  // be worked out from the order before the first.
+  const pendingReorders = useRef(0);
   const reorderMutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: reorderQueue,
-    onMutate: async (gameIds: number[]) => {
-      const context = await snapshot();
-      queryClient.setQueryData<QueueItem[]>(queueKey, (old) => {
-        if (!old) return old;
-        const byId = new Map(old.map((q) => [q.game_id, q]));
-        // Unknown id means the cache and the drag state diverged; skip the
-        // optimistic pass and let the refetch catch up.
-        if (!gameIds.every((id) => byId.has(id))) return old;
-        return gameIds.map((id, i) => ({ ...byId.get(id)!, position: i }));
-      });
-      return context;
-    },
-    onError: (err, _gameIds, context) => {
+    mutationFn: ({ gameIds }: { gameIds: number[]; previous: QueueItem[] | undefined }) =>
+      reorderQueue(gameIds),
+    onError: (err, { previous }) => {
       console.error(err);
-      rollback(context);
+      // Back to the order just before this one.
+      if (previous) queryClient.setQueryData(queueKey, previous);
       toast.error('Failed to reorder queue');
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queueKey }),
+    onSettled: () => {
+      // Only once the last pending reorder is saved: a refetch between two
+      // quick ones would bring back the order before the second for a moment.
+      pendingReorders.current -= 1;
+      if (pendingReorders.current > 0) return;
+      return queryClient.invalidateQueries({ queryKey: queueKey });
+    },
   });
+
+  /** Shows the queue in this order straight away, then saves it. */
+  const reorder = (gameIds: number[]) => {
+    const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
+    if (!previous) return;
+    const byId = new Map(previous.map((q) => [q.game_id, q]));
+    // Unknown id means the cache and the drag state diverged; let the
+    // refetch catch up instead.
+    if (!gameIds.every((id) => byId.has(id))) return;
+    // A refetch still running from an earlier reorder would land on top of
+    // this one with the order from before it.
+    void queryClient.cancelQueries({ queryKey: queueKey });
+    queryClient.setQueryData<QueueItem[]>(
+      queueKey,
+      gameIds.map((id, i) => ({ ...byId.get(id)!, position: i })),
+    );
+    pendingReorders.current += 1;
+    reorderMutation.mutate({ gameIds, previous });
+  };
 
   const isStatusLoading =
     pickMutation.isPending ||
@@ -477,6 +497,36 @@ export function useNowPlaying(userId: string | null) {
         queuedStatusMutation.mutate(vars);
       }
     },
-    reorder: (gameIds: number[]) => reorderMutation.mutate(gameIds),
+    reorder,
+    /**
+     * Moves a queued game to the front of the queue, with Undo. Works from the
+     * cached queue as it is now, so quick moves in a row each build on the
+     * last. False when there's nothing to move (already first, or gone).
+     */
+    moveToTop: (gameId: number): boolean => {
+      const current = queryClient.getQueryData<QueueItem[]>(queueKey) ?? [];
+      const ids = current.map((q) => q.game_id);
+      const from = ids.indexOf(gameId);
+      if (from <= 0) return false;
+      const name = current[from].game.name;
+      reorder([gameId, ...ids.filter((id) => id !== gameId)]);
+      toast(`Moved ${name} to the top`, {
+        action: {
+          label: 'Undo',
+          // Back to where it was, in the queue as it is by then: other games
+          // moved, added or removed since stay as they are.
+          onClick: () => {
+            const now = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? []).map(
+              (q) => q.game_id,
+            );
+            if (!now.includes(gameId)) return;
+            const rest = now.filter((id) => id !== gameId);
+            rest.splice(Math.min(from, rest.length), 0, gameId);
+            if (rest.some((id, i) => id !== now[i])) reorder(rest);
+          },
+        },
+      });
+      return true;
+    },
   };
 }
