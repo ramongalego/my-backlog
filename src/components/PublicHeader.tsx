@@ -26,10 +26,15 @@ export function PublicHeader() {
             <span className="text-lg font-semibold tracking-tight text-ink-50">MyBacklog</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => setAuthMode('login')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-haspopup="dialog"
+              onClick={() => setAuthMode('login')}
+            >
               Sign In
             </Button>
-            <Button size="sm" onClick={() => setAuthMode('signup')}>
+            <Button size="sm" aria-haspopup="dialog" onClick={() => setAuthMode('signup')}>
               Get Started
             </Button>
           </div>

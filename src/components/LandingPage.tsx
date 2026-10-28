@@ -293,8 +293,14 @@ function useCountUp(to: number, active: boolean, durationMs = 900) {
   return value;
 }
 
+/** The count is for the eye; screen readers get the real number, never a passing one. */
 function CountUpPercent({ to, active }: { to: number; active: boolean }) {
-  return <>{useCountUp(to, active)}%</>;
+  return (
+    <>
+      <span aria-hidden="true">{useCountUp(to, active)}%</span>
+      <span className="sr-only">{to}%</span>
+    </>
+  );
 }
 
 function SectionCopy({ title, children }: { title: string; children: React.ReactNode }) {
@@ -353,7 +359,7 @@ export function LandingPage() {
   };
 
   const primaryCta = (
-    <Button size="lg" onClick={() => openModal('signup')}>
+    <Button size="lg" aria-haspopup="dialog" onClick={() => openModal('signup')}>
       Get Started
     </Button>
   );
@@ -387,6 +393,7 @@ export function LandingPage() {
               <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
                 {primaryCta}
                 <button
+                  aria-haspopup="dialog"
                   onClick={() => openModal('login')}
                   className="text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
                 >
@@ -493,10 +500,15 @@ export function LandingPage() {
                 className={riseIn(pickerInView, 3).className}
                 style={riseIn(pickerInView, 3).style}
               >
+                {/* Screen readers hear each new pick from this, which stays put: the
+                    card below is replaced on every pick, and a region that's just been
+                    added often isn't read out. */}
+                <p className="sr-only" aria-live="polite">
+                  {`Picked ${pickedGame.title}: about ${pickedGame.hours} hours to beat, critic score ${pickedGame.critic}`}
+                </p>
                 <div
                   key={pickedGame.title}
                   className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
-                  aria-live="polite"
                 >
                   <Image
                     src={pickedGame.image}
@@ -524,6 +536,7 @@ export function LandingPage() {
                   <Button
                     size="sm"
                     className="shrink-0 cursor-pointer"
+                    aria-haspopup="dialog"
                     onClick={() => openModal('signup')}
                   >
                     Play this
@@ -537,7 +550,13 @@ export function LandingPage() {
         {/* ── Library ── */}
         <section className="border-t border-ink-900">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-24 items-center">
-            <Panel padding="none" className="overflow-hidden order-last lg:order-first">
+            <Panel
+              padding="none"
+              className="overflow-hidden order-last lg:order-first"
+              // A sample, not the visitor's data: said so for screen readers.
+              role="figure"
+              aria-label="Example of your library"
+            >
               <div className="px-5 py-4 border-b border-ink-800 flex items-center justify-between">
                 <span className="text-sm font-medium text-ink-200">My Library</span>
                 <span className="text-sm text-ink-400">457 games</span>
@@ -595,7 +614,12 @@ export function LandingPage() {
               </p>
             </SectionCopy>
 
-            <Panel padding="none" className="divide-y divide-ink-800">
+            <Panel
+              padding="none"
+              className="divide-y divide-ink-800"
+              role="figure"
+              aria-label="Example of your queue, diary and stats"
+            >
               <div className="px-5 py-4">
                 <p className="text-sm font-medium text-ink-200 mb-3">Up next</p>
                 <ol ref={queueRowsRef} className="space-y-2.5">

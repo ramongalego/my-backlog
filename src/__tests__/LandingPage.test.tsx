@@ -32,6 +32,23 @@ describe('LandingPage', () => {
     expect(await screen.findByTestId('auth-modal')).toBeInTheDocument();
   });
 
+  it('announces each new pick from a region that stays put', () => {
+    render(<LandingPage />);
+    const announcement = screen.getByText(/^Picked Hollow Knight/);
+    expect(announcement).toHaveAttribute('aria-live', 'polite');
+
+    fireEvent.click(screen.getByRole('button', { name: 'One session' }));
+    // The same element, with the new pick.
+    expect(announcement).toHaveTextContent(/^Picked Hades: about 23 hours to beat/);
+  });
+
+  it('gives screen readers the breakdown as it is, not mid-count', () => {
+    render(<LandingPage />);
+    expect(
+      screen.getByRole('figure', { name: 'Example of your queue, diary and stats' }),
+    ).toHaveTextContent('73%');
+  });
+
   it('closes auth modal when close is triggered', async () => {
     render(<LandingPage />);
 
