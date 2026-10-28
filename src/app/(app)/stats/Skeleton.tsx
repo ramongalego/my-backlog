@@ -65,17 +65,19 @@ export function StatsContentSkeleton() {
 
       {/* Favourites: art beside the ratings. */}
       <PanelSkeleton className={PANEL}>
-        <SectionTitleSkeleton />
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4">
-            {Array.from({ length: 8 }, (_, i) => (
-              <div key={i}>
-                <Skeleton className="aspect-[460/215] w-full rounded-lg" />
-                <Skeleton className="h-5 w-3/4 mt-1.5" />
-              </div>
-            ))}
+          <div>
+            <SectionTitleSkeleton />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i}>
+                  <Skeleton className="aspect-[460/215] w-full rounded-lg" />
+                  <Skeleton className="h-5 w-3/4 mt-1.5" />
+                </div>
+              ))}
+            </div>
           </div>
-          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-36 w-full lg:self-center" />
         </div>
       </PanelSkeleton>
 

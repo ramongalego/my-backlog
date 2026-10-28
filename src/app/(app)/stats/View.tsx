@@ -306,31 +306,39 @@ function Favourites({ stats }: { stats: Stats }) {
 
   return (
     <Panel>
-      <SectionTitle>Your favourites</SectionTitle>
+      {/* The heading sits in the games' column, so the ratings beside them
+          centre on the whole panel, not just on the art. */}
       <div
         className={`grid gap-8 ${favourites.length > 0 && showBars ? 'lg:grid-cols-[minmax(0,1fr)_18rem]' : ''}`}
       >
-        {favourites.length > 0 && (
-          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4 content-start">
-            {favourites.map((game) => (
-              <li key={game.id} className="min-w-0">
-                <CoverArt
-                  src={game.header_image}
-                  alt=""
-                  sizes="(max-width: 640px) 50vw, 220px"
-                  className="w-full"
-                >
-                  {game.rating != null && (
-                    <Rating rating={game.rating} onArt className="absolute bottom-1.5 right-1.5" />
-                  )}
-                </CoverArt>
-                <p className="mt-1.5 text-sm text-ink-200 truncate">{game.name}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div>
+          <SectionTitle>Your favourites</SectionTitle>
+          {favourites.length > 0 && (
+            <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4 content-start">
+              {favourites.map((game) => (
+                <li key={game.id} className="min-w-0">
+                  <CoverArt
+                    src={game.header_image}
+                    alt=""
+                    sizes="(max-width: 640px) 50vw, 220px"
+                    className="w-full"
+                  >
+                    {game.rating != null && (
+                      <Rating
+                        rating={game.rating}
+                        onArt
+                        className="absolute bottom-1.5 right-1.5"
+                      />
+                    )}
+                  </CoverArt>
+                  <p className="mt-1.5 text-sm text-ink-200 truncate">{game.name}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         {showBars && (
-          <div>
+          <div className="lg:self-center">
             <p className="mb-4 text-sm text-ink-400">
               You average <span className="font-semibold text-ink-100">{avgRating}/10</span> across{' '}
               {plural(ratedCount, 'rated game')}
