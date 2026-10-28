@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Gamepad2 } from 'lucide-react';
 
 import { useMutation } from '@tanstack/react-query';
-import { CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
+import { CoverArt, CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { useStats } from '@/hooks/useStats';
@@ -34,49 +34,110 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <SectionLabel className="mb-4">{children}</SectionLabel>;
 }
 
+const count = (n: number) => n.toLocaleString('en-US');
+const plural = (n: number, word: string) => `${count(n)} ${word}${n === 1 ? '' : 's'}`;
+
 function formatYears(years: number): string {
   if (years < 1) return 'under a year';
   const rounded = years < 10 ? Math.round(years * 10) / 10 : Math.round(years);
   return `~${rounded} year${rounded === 1 ? '' : 's'}`;
 }
 
-// How long the current backlog would take at the user's recent finishing rate.
+/** The figures in a sentence stand out from the words around them. */
+function Figure({ children }: { children: React.ReactNode }) {
+  return <span className="text-ink-50">{children}</span>;
+}
+
+/** A sentence that leads a section, carrying its numbers. */
+function Lead({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="max-w-3xl text-xl sm:text-2xl font-semibold tracking-tight text-balance text-ink-300">
+      {children}
+    </p>
+  );
+}
+
+/** Where the hours went: the total, then the games that took most of them. */
+function Hours({ stats }: { stats: Stats }) {
+  const { totalPlaytimeHours: hours, totalPlaytimeDays: days, mostPlayed } = stats;
+  if (hours === 0) return null;
+  return (
+    <section aria-label="Hours played">
+      <Lead>
+        You&apos;ve played for <Figure>{plural(hours, 'hour')}</Figure>
+        {days >= 2 && (
+          <>
+            , about <Figure>{Math.round(days)} days</Figure> of your life
+          </>
+        )}
+        .{mostPlayed.length > 0 && ' Most of them went here.'}
+      </Lead>
+      {mostPlayed.length > 0 && (
+        <ol className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5">
+          {mostPlayed.map((game, i) => {
+            const share = Math.round((game.hours / hours) * 100);
+            return (
+              <li key={game.id} className={i === 0 ? 'col-span-2 lg:row-span-2' : 'min-w-0'}>
+                <CoverArt
+                  src={game.header_image}
+                  alt=""
+                  rounded="xl"
+                  priority={i === 0}
+                  sizes={
+                    i === 0 ? '(max-width: 1024px) 100vw, 640px' : '(max-width: 1024px) 50vw, 320px'
+                  }
+                  className="w-full"
+                />
+                <p
+                  className={`mt-2 font-medium text-ink-100 truncate ${i === 0 ? 'text-lg' : 'text-sm'}`}
+                >
+                  {game.name}
+                </p>
+                <p className="text-sm text-ink-400 tabular-nums">
+                  {count(game.hours)}h{share > 0 && ` · ${share}% of your hours`}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+// Clearing the backlog in this many years, for the hours-a-week figure.
+const CLEAR_IN_YEARS = 5;
+
+/**
+ * How long the backlog would take at your recent finishing rate, what it would
+ * take to clear it sooner, and the library it sits in.
+ */
 function BacklogPace({ stats }: { stats: Stats }) {
-  const { backlog, finishedLastYear } = stats;
+  const { backlog, finishedLastYear, estimatedBacklogHours } = stats;
+  const perWeek = Math.max(1, Math.round(estimatedBacklogHours / (CLEAR_IN_YEARS * 52)));
   return (
     <Panel>
       <SectionTitle>Backlog pace</SectionTitle>
       {finishedLastYear > 0 ? (
-        <>
-          <p className="text-3xl font-semibold tracking-tight text-ink-50">
-            {formatYears(backlog / finishedLastYear)}
-          </p>
-          <p className="mt-2 text-sm text-ink-400 max-w-sm">
-            to clear {backlog} backlog games at your current pace of {finishedLastYear} finished in
-            the last 12 months.
-          </p>
-        </>
+        <Lead>
+          At {plural(finishedLastYear, 'game')} finished in the last year, your{' '}
+          {plural(backlog, 'backlog game')} take{' '}
+          <Figure>{formatYears(backlog / finishedLastYear)}</Figure> to clear.
+        </Lead>
       ) : (
-        <p className="text-sm text-ink-400 max-w-sm">
+        <p className="text-ink-300 max-w-xl">
           You haven&apos;t finished a game in the last 12 months. Finish one to see how long your
           backlog would take at your pace.
         </p>
       )}
+      {estimatedBacklogHours > 0 && (
+        <p className="mt-2 text-ink-400 max-w-xl">
+          That&apos;s ~{plural(estimatedBacklogHours, 'hour')} of story. Clearing it in{' '}
+          {CLEAR_IN_YEARS} years takes about {plural(perWeek, 'hour')} a week.
+        </p>
+      )}
+      <LibraryBreakdown stats={stats} />
     </Panel>
-  );
-}
-
-function Summary({ items }: { items: { label: string; value: string | number; sub?: string }[] }) {
-  return (
-    <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px overflow-hidden rounded-xl bg-ink-800">
-      {items.map(({ label, value, sub }) => (
-        <div key={label} className="bg-ink-900 px-5 py-4 flex flex-col">
-          <dt className="text-sm text-ink-400">{label}</dt>
-          <dd className="order-first text-2xl font-semibold tracking-tight text-ink-50">{value}</dd>
-          {sub && <dd className="mt-0.5 text-xs text-ink-500">{sub}</dd>}
-        </div>
-      ))}
-    </dl>
   );
 }
 
@@ -105,11 +166,10 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
   const grow = growBar('x', inView, 0);
 
   return (
-    <Panel>
-      <SectionTitle>Library breakdown</SectionTitle>
+    <div className="mt-6">
       <div
         ref={ref}
-        className={`flex h-2.5 rounded-full overflow-hidden gap-px mb-5 ${grow.className}`}
+        className={`flex h-2.5 rounded-full overflow-hidden gap-px mb-4 ${grow.className}`}
         style={grow.style}
       >
         {segments.map((s) => (
@@ -130,7 +190,7 @@ function LibraryBreakdown({ stats }: { stats: Stats }) {
           </div>
         ))}
       </div>
-    </Panel>
+    </div>
   );
 }
 
@@ -183,6 +243,8 @@ function YearChart({ stats }: { stats: Stats }) {
 
   const data = view === 'finished' ? stats.finishedByYear : stats.gamesByReleaseYear;
   const max = data.length > 0 ? Math.max(...data.map((y) => y.count)) : 1;
+  // Finished games without a date can't sit in a year; say so, so the bars add up.
+  const undated = stats.finished - stats.finishedByYear.reduce((sum, y) => sum + y.count, 0);
   const { ref, inView } = useInView<HTMLDivElement>();
 
   const empty =
@@ -228,24 +290,68 @@ function YearChart({ stats }: { stats: Stats }) {
               <span
                 className={`text-xs mt-1 tabular-nums ${data.length <= 14 || i % 2 === 0 ? 'text-ink-400' : 'invisible'}`}
               >
-                {year}
+                {/* Short on phones, where four digits a bar run together. */}
+                <span className="sm:hidden" aria-hidden="true">
+                  &rsquo;{year.slice(2)}
+                </span>
+                <span className="max-sm:sr-only">{year}</span>
               </span>
             </div>
           ))}
         </div>
       )}
+      {view === 'finished' && undated > 0 && data.length > 0 && (
+        <p className="mt-4 text-xs text-ink-500">
+          {plural(undated, 'finished game')} without a finish date{' '}
+          {undated === 1 ? "isn't" : "aren't"} counted here.
+        </p>
+      )}
     </Panel>
   );
 }
 
-function RatingHistogram({ stats }: { stats: Stats }) {
-  const totalRated = stats.ratingDistribution.reduce((sum, b) => sum + b.count, 0);
-  if (totalRated < 3) return null;
+/** Your best-rated games as art, beside how your ratings spread. */
+function Favourites({ stats }: { stats: Stats }) {
+  const { favourites, ratedCount, avgRating } = stats;
+  const showBars = ratedCount >= 3;
+  if (favourites.length === 0 && !showBars) return null;
 
   return (
     <Panel>
-      <SectionTitle>Rating distribution</SectionTitle>
-      <RatingBars bars={stats.ratingDistribution} />
+      <SectionTitle>Your favourites</SectionTitle>
+      <div
+        className={`grid gap-8 ${favourites.length > 0 && showBars ? 'lg:grid-cols-[minmax(0,1fr)_18rem]' : ''}`}
+      >
+        {favourites.length > 0 && (
+          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4 content-start">
+            {favourites.map((game) => (
+              <li key={game.id} className="min-w-0">
+                <CoverArt
+                  src={game.header_image}
+                  alt=""
+                  sizes="(max-width: 640px) 50vw, 220px"
+                  className="w-full"
+                >
+                  <span className="absolute top-1.5 right-1.5 rounded-md bg-ink-950/80 px-1.5 text-xs font-semibold leading-5 tabular-nums text-amber-300">
+                    {game.rating}
+                    <span className="sr-only"> out of 10</span>
+                  </span>
+                </CoverArt>
+                <p className="mt-1.5 text-sm text-ink-200 truncate">{game.name}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        {showBars && (
+          <div>
+            <p className="mb-4 text-sm text-ink-400">
+              You average <span className="font-semibold text-ink-100">{avgRating}/10</span> across{' '}
+              {plural(ratedCount, 'rated game')}
+            </p>
+            <RatingBars bars={stats.ratingDistribution} />
+          </div>
+        )}
+      </div>
     </Panel>
   );
 }
@@ -277,14 +383,26 @@ function RatingBars({ bars }: { bars: Stats['ratingDistribution'] }) {
   );
 }
 
+// "turn-based strategy games", but "JRPG games" and "2D games".
+const tagNoun = (tag: string) => (/^[A-Z0-9-]+$/.test(tag) ? tag : tag.toLowerCase());
+
 function TagCompletion({ stats }: { stats: Stats }) {
-  if (stats.tagCompletion.length === 0) return null;
+  const { tagCompletion, finishContrast } = stats;
+  if (tagCompletion.length === 0) return null;
 
   return (
     <Panel>
-      <SectionTitle>Completion rate by tag</SectionTitle>
-      <p className="text-sm text-ink-400 mb-5 -mt-2">Tags with 3+ games in your library</p>
-      <TagCompletionGrid tags={stats.tagCompletion} />
+      <SectionTitle>What you finish</SectionTitle>
+      {finishContrast ? (
+        <p className="-mt-1 mb-6 max-w-2xl text-ink-300">
+          You finish <Figure>{finishContrast.high.pct}%</Figure> of the{' '}
+          {tagNoun(finishContrast.high.tag)} games you own, but only{' '}
+          <Figure>{finishContrast.low.pct}%</Figure> of the {tagNoun(finishContrast.low.tag)} ones.
+        </p>
+      ) : (
+        <p className="text-sm text-ink-400 mb-5 -mt-2">Tags with 3+ games in your library</p>
+      )}
+      <TagCompletionGrid tags={tagCompletion} />
     </Panel>
   );
 }
@@ -458,56 +576,23 @@ export default function StatsView() {
         </EmptyState>
       ) : (
         <div className="space-y-6">
-          <Summary
-            items={[
-              { label: 'Games', value: stats.total, sub: "except hidden or won't play" },
-              {
-                label: 'Finished',
-                value: stats.finished,
-                sub: `${stats.finishedPct}% of library`,
-              },
-              {
-                label: 'Hours played',
-                value: `${stats.totalPlaytimeHours.toLocaleString()}h`,
-                sub: 'across all games',
-              },
-              { label: 'Days played', value: `${stats.totalPlaytimeDays}d`, sub: 'of your life' },
-              {
-                label: 'Backlog hours',
-                value: `~${stats.estimatedBacklogHours.toLocaleString()}h`,
-                sub: 'estimated to beat',
-              },
-              {
-                label: 'Avg rating',
-                value: stats.avgRating !== null ? `${stats.avgRating}/10` : '—',
-                sub:
-                  stats.ratedCount > 0
-                    ? `from ${stats.ratedCount} rated game${stats.ratedCount === 1 ? '' : 's'}`
-                    : 'no ratings yet',
-              },
-            ]}
-          />
-
-          {/* Library breakdown */}
-          <LibraryBreakdown stats={stats} />
-
-          {/* Tags + Year chart */}
+          {/* Your games first: where the hours went, then what's left and
+              what you loved, then the patterns. */}
+          <div className="pb-4">
+            <Hours stats={stats} />
+          </div>
+          <BacklogPace stats={stats} />
+          <Favourites stats={stats} />
+          <TagCompletion stats={stats} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TopTags stats={stats} />
             <YearChart stats={stats} />
           </div>
-
-          {/* Tag completion */}
-          <TagCompletion stats={stats} />
-
-          {/* Rating distribution */}
-          <RatingHistogram stats={stats} />
-
-          {/* Played a lot but still backlog + backlog pace */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {stats.playedALot.length > 0 && <PlayedALot stats={stats} onEdit={handleEdit} />}
-            <BacklogPace stats={stats} />
-          </div>
+          {stats.playedALot.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PlayedALot stats={stats} onEdit={handleEdit} />
+            </div>
+          )}
         </div>
       )}
     </Page>

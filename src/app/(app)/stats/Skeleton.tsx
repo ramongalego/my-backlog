@@ -35,23 +35,61 @@ function BarListSkeleton({ rows }: { rows: number }) {
 export function StatsContentSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px overflow-hidden rounded-xl bg-ink-800">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="bg-ink-900 px-5 py-4">
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="h-5 w-24 mt-0.5" />
-            <Skeleton className="h-4 w-20 mt-0.5" />
-          </div>
-        ))}
+      {/* Hours: the sentence, then the most played art (one large, four small). */}
+      <div className="pb-4">
+        <Skeleton className="h-8 w-full max-w-2xl" />
+        <Skeleton className="h-8 w-56 mt-1" />
+        <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className={i === 0 ? 'col-span-2 lg:row-span-2' : ''}>
+              <Skeleton className="aspect-[460/215] w-full rounded-xl" />
+              <Skeleton className={`mt-2 w-2/3 ${i === 0 ? 'h-7' : 'h-5'}`} />
+              <Skeleton className="h-5 w-1/2" />
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* Backlog pace: the sentence, the hours line, then the breakdown. */}
       <PanelSkeleton className={PANEL}>
         <SectionTitleSkeleton />
-        <Skeleton className="h-2.5 w-full rounded-full mb-5" />
+        <Skeleton className="h-8 w-full max-w-xl" />
+        <Skeleton className="h-6 w-full max-w-md mt-2" />
+        <Skeleton className="h-2.5 w-full rounded-full mt-6 mb-4" />
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-5 w-24" />
+        </div>
+      </PanelSkeleton>
+
+      {/* Favourites: art beside the ratings. */}
+      <PanelSkeleton className={PANEL}>
+        <SectionTitleSkeleton />
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div key={i}>
+                <Skeleton className="aspect-[460/215] w-full rounded-lg" />
+                <Skeleton className="h-5 w-3/4 mt-1.5" />
+              </div>
+            ))}
+          </div>
+          <Skeleton className="h-36 w-full" />
+        </div>
+      </PanelSkeleton>
+
+      <PanelSkeleton className={PANEL}>
+        <SectionTitleSkeleton />
+        <Skeleton className="h-6 w-full max-w-xl mb-6 -mt-1" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i}>
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-1 w-full mt-2 rounded-full" />
+              <Skeleton className="h-4 w-20 mt-1.5" />
+            </div>
+          ))}
         </div>
       </PanelSkeleton>
 
@@ -69,20 +107,6 @@ export function StatsContentSkeleton() {
           </div>
         </PanelSkeleton>
       </div>
-
-      <PanelSkeleton className={PANEL}>
-        <SectionTitleSkeleton />
-        <Skeleton className="h-4 w-52 mb-5 -mt-2" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
-          {Array.from({ length: 8 }, (_, i) => (
-            <div key={i}>
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-1 w-full mt-2 rounded-full" />
-              <Skeleton className="h-4 w-20 mt-1.5" />
-            </div>
-          ))}
-        </div>
-      </PanelSkeleton>
     </div>
   );
 }
