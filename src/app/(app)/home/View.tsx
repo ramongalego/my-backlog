@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
@@ -14,6 +13,7 @@ import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { CoverThumb } from '@/components/games/CoverArt';
+import { SuggestionModal } from '@/components/suggest';
 import { SyncProgress } from '@/components/SyncProgress';
 import { CarouselsLoadingState, StatusLoadingState } from '@/components/home/HomeLoadingStates';
 import { useGameLibrary } from '@/hooks/useGameLibrary';
@@ -32,11 +32,6 @@ import { steamLastPlayed } from '@/lib/games/consoles';
 
 // Below this many backlog games, the picker band says picks get better with more.
 const SMALL_BACKLOG = 10;
-
-// The pick wizard: only loaded once it opens.
-const SuggestionModal = dynamic(() =>
-  import('@/components/suggest').then((m) => m.SuggestionModal),
-);
 
 const INLINE_LINK =
   'cursor-pointer font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors';

@@ -5,11 +5,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useInvalidateQueries } from '@/lib/mutations';
-import dynamic from 'next/dynamic';
+import { AddGameModal } from './AddGameModal';
 import type { AddStatus } from './GameStatusModal';
-
-// Search, the details dialog and the date picker: only loaded once it opens.
-const AddGameModal = dynamic(() => import('./AddGameModal').then((m) => m.AddGameModal));
 
 const AddGameContext = createContext<{ open: (query?: string) => void } | null>(null);
 

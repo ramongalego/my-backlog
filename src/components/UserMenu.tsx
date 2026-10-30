@@ -5,12 +5,9 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { RefreshCw, LogOut, Bug } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
-import dynamic from 'next/dynamic';
+import { SupportModal } from '@/components/SupportModal';
 import { refreshKeys } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
-
-// Only loaded once it opens.
-const SupportModal = dynamic(() => import('@/components/SupportModal').then((m) => m.SupportModal));
 
 interface UserMenuProps {
   user: User;
@@ -219,7 +216,7 @@ export function UserMenu({
           </button>
         </div>
       )}
-      {isReportOpen && <SupportModal open onClose={() => setIsReportOpen(false)} />}
+      <SupportModal open={isReportOpen} onClose={() => setIsReportOpen(false)} />
     </div>
   );
 }
