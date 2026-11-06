@@ -1,0 +1,27 @@
+name: HowLongToBeat check
+
+# HowLongToBeat changes its site now and then, which breaks the lookup that
+# fills in "time to beat". This looks a few games up every day the way the app
+# does; when it fails, GitHub emails you about the failed run.
+on:
+  schedule:
+    - cron: '0 8 * * *' # daily, 08:00 UTC
+  workflow_dispatch: # run it by hand from the Actions tab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Look games up on HowLongToBeat
+        run: npm run check:hltb

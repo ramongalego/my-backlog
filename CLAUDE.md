@@ -10,6 +10,7 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
 - `npm test`: Jest (not Vitest)
 - `npm run lint`, `npx tsc --noEmit`, `npx prettier --check "src/**/*.{ts,tsx,css}"`
 - `npm run build`
+- `npm run check:hltb`: looks a few games up on HowLongToBeat for real, to see the lookup still works (HLTB changes its site now and then). A GitHub Action runs it daily and emails on failure.
 
 ## Where things live
 
