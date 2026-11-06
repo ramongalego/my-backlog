@@ -17,7 +17,8 @@ export function AnswerLine({
       className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-400 ${className}`}
     >
       {options.map((option) => (
-        <li key={String(option.value)} className="flex items-center gap-1.5">
+        // By label: values repeat across questions (energy and time both have "medium").
+        <li key={option.label} className="flex items-center gap-1.5">
           <option.icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           <span>{option.short ?? option.label}</span>
         </li>

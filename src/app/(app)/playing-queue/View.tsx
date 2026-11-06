@@ -24,8 +24,10 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
+  type UniqueIdentifier,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -404,6 +406,24 @@ export default function PlayingQueueView() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  // What a screen reader hears while moving a game from the keyboard: its
+  // name and place in the queue, instead of dnd-kit's "Draggable item 156 was
+  // moved over droppable area 1640". A game dropped on another's row takes
+  // that row's place.
+  const nameOf = (id: UniqueIdentifier) =>
+    queue.find((q) => q.game_id === id)?.game.name ?? 'The game';
+  const placeOf = (id: UniqueIdentifier) =>
+    `number ${queue.findIndex((q) => q.game_id === id) + 1} of ${queue.length}`;
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${nameOf(active.id)}, ${placeOf(active.id)}.`,
+    onDragOver: ({ active, over }) =>
+      over ? `${nameOf(active.id)} moved to ${placeOf(over.id)}.` : undefined,
+    onDragEnd: ({ active, over }) =>
+      `${nameOf(active.id)} dropped at ${placeOf(over?.id ?? active.id)}.`,
+    onDragCancel: ({ active }) =>
+      `Move cancelled. ${nameOf(active.id)} stays at ${placeOf(active.id)}.`,
+  };
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as number);
   }
@@ -551,6 +571,7 @@ export default function PlayingQueueView() {
               id="queue-dnd"
               sensors={sensors}
               collisionDetection={closestCenter}
+              accessibility={{ announcements }}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >

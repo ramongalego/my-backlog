@@ -45,6 +45,10 @@ function fakeSupabase(tables: { games: Row[]; playing_queue: Row[] }) {
           filters.push((r) => r[col] === val);
           return builder;
         },
+        in: (col: string, vals: unknown[]) => {
+          filters.push((r) => vals.includes(r[col]));
+          return builder;
+        },
         neq: (col: string, val: unknown) => {
           filters.push((r) => r[col] !== val);
           return builder;
@@ -165,6 +169,34 @@ describe('promoteNextFromQueue', () => {
 
     expect(promoted).toMatchObject({ id: 2, app_id: 1002, status: 'playing' });
     expect(tables.playing_queue.map((q) => q.game_id)).toEqual([3]);
+  });
+
+  it("skips games that aren't out yet, leaving them queued", async () => {
+    const nextYear = new Date().getFullYear() + 1;
+    const { client, tables } = fakeSupabase({
+      games: [
+        { ...game(2, 'backlog'), release_date: `Jan 28, ${nextYear}` },
+        { ...game(3, 'backlog'), release_date: 'Coming soon' },
+        { ...game(4, 'backlog'), release_date: 'Sep 28, 2010' },
+      ],
+      playing_queue: [
+        { user_id: 'u', game_id: 2, position: 0 },
+        { user_id: 'u', game_id: 3, position: 1 },
+        { user_id: 'u', game_id: 4, position: 2 },
+      ],
+    });
+
+    expect(await promoteNextFromQueue(client, 'u')).toMatchObject({ id: 4, status: 'playing' });
+    expect(tables.playing_queue.map((q) => q.game_id)).toEqual([2, 3]);
+  });
+
+  it('returns null when nothing queued is out yet', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [{ ...game(2, 'backlog'), release_date: 'To be announced' }],
+      playing_queue: [{ user_id: 'u', game_id: 2, position: 0 }],
+    });
+    await expect(promoteNextFromQueue(client, 'u')).resolves.toBeNull();
+    expect(tables.playing_queue).toHaveLength(1);
   });
 
   it('returns null when the queue is empty', async () => {

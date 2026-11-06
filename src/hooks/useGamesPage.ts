@@ -6,7 +6,7 @@ import type { GameItem } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { ratingOf } from '@/lib/games/rating';
-import { matchesSearch } from '@/lib/games/search';
+import { matchesSearch, nameMatchesSearch } from '@/lib/games/search';
 import { useSetGameStatus } from '@/lib/mutations';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
@@ -244,7 +244,15 @@ export function useGamesPage(): UseGamesPageReturn {
       return true;
     });
 
-    return filtered.sort((a, b) => compareGames(a, b, sort));
+    // A search lists games named for it first, then those only tagged with
+    // it, each in the chosen order.
+    if (!deferredSearchQuery) return filtered.sort((a, b) => compareGames(a, b, sort));
+    const named = new Set(
+      filtered.filter((g) => nameMatchesSearch(g, deferredSearchQuery)).map((g) => g.id),
+    );
+    return filtered.sort(
+      (a, b) => Number(named.has(b.id)) - Number(named.has(a.id)) || compareGames(a, b, sort),
+    );
   })();
 
   const visibleGames = filteredGames.slice(0, visibleCount);

@@ -8,6 +8,7 @@ import { getOpenAIApiKey } from '@/lib/env.server';
 import { buildSuggestionPrompt, parseAIResponse, REASONING_STYLE } from '@/lib/suggest/prompt';
 import { pickShortlist, scoreCandidates, type HistoryGame } from '@/lib/suggest/shortlist';
 import { withoutLaterEntries } from '@/lib/games/series-order';
+import { isReleased } from '@/lib/games/release-date';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
 
@@ -154,8 +155,11 @@ export async function POST(request: NextRequest) {
   const excluded = new Set([...excludeGameIds, ...queuedGames.map((q) => q.game_id)]);
   // A sequel waits while the game before it is still in the backlog. This runs
   // on the whole backlog, so a queued or skipped first game still holds it back.
+  // A game that isn't out yet can't be played tonight.
   const ranked = scoreCandidates(
-    withoutLaterEntries(backlogGames).filter((g) => !excluded.has(g.id)),
+    withoutLaterEntries(backlogGames).filter(
+      (g) => !excluded.has(g.id) && isReleased(g.release_date),
+    ),
     history,
     preferences,
   );

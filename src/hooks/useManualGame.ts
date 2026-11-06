@@ -6,13 +6,11 @@ import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/lib/mutations';
 import { consoleOf, deleteManualGame, playOnSteam, updateHoursPlayed } from '@/lib/games/manual';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';
+import { UNDO_MS } from '@/lib/undo';
 import { useLibraryRefresh } from './useLibraryRefresh';
 import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 import type { DiaryEntry, GameItem } from '@/lib/data/loaders';
 import type { GameWithImage, QueueItem } from '@/types/games';
-
-// How long Undo is offered before a removal is sent.
-const UNDO_MS = 6000;
 
 // Games removed but not deleted yet, while their Undo is on offer. Several can
 // be pending at once (removing a few in a row), and each one's delete refreshes

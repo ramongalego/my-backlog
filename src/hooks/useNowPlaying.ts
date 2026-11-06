@@ -10,6 +10,8 @@ import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/games/status';
 import { buildCompletionSummary } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
+import { UNDO_MS } from '@/lib/undo';
+import { nextPlayable } from '@/lib/games/release-date';
 import {
   useInvalidateQueries,
   usePatchGamesList,
@@ -267,6 +269,7 @@ export function useNowPlaying(userId: string | null) {
   // also takes it off the queue).
   const offerUndo = (game: GameWithImage, where: 'queue' | 'backlog') =>
     toast(`Moved ${game.name} to your ${where}`, {
+      duration: UNDO_MS,
       action: { label: 'Undo', onClick: () => pickMutation.mutate(game) },
     });
 
@@ -344,6 +347,7 @@ export function useNowPlaying(userId: string | null) {
       if (index === -1) return;
       const item = context!.previousQueue![index];
       toast(`Moved ${item.game.name} to your backlog`, {
+        duration: UNDO_MS,
         action: { label: 'Undo', onClick: () => restoreMutation.mutate({ item, index }) },
       });
     },
@@ -459,14 +463,15 @@ export function useNowPlaying(userId: string | null) {
       if (!game) return;
       setStatusModal(null);
       // Finishing goes straight to the summary, from what's already known: one
-      // more finished game, and the first in the queue starts next. The
+      // more finished game, and the first queued game that's out starts next. The
       // server's answer fills in the exact figures when it arrives.
       if (status === 'finished') {
         const meta = queryClient.getQueryData<LibraryMeta>(queryKeys.library.meta(userId ?? ''));
+        const next = nextPlayable(queue);
         setGameSummary(
           buildCompletionSummary({
             finishedGame: game,
-            promoted: queue[0] ? toPlayingGame(queue[0]) : null,
+            promoted: next ? toPlayingGame(next) : null,
             counts: meta
               ? { gamesFinished: meta.finishedCount + 1, totalGames: meta.gameCount }
               : { gamesFinished: 0, totalGames: 0 },
@@ -511,6 +516,7 @@ export function useNowPlaying(userId: string | null) {
       const name = current[from].game.name;
       reorder([gameId, ...ids.filter((id) => id !== gameId)]);
       toast(`Moved ${name} to the top`, {
+        duration: UNDO_MS,
         action: {
           label: 'Undo',
           // Back to where it was, in the queue as it is by then: other games

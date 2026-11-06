@@ -70,3 +70,23 @@ export function upcomingRelease(
     detail: `Releases ${full} (${days === 1 ? 'tomorrow' : `in ${days} days`})`,
   };
 }
+
+/**
+ * Whether a game is out, so it can be started for you: by Pick My Game,
+ * Random, or as the next in the queue when you finish one. A game with no date
+ * at all counts as out.
+ */
+export function isReleased(text: string | null | undefined, now = Date.now()): boolean {
+  return upcomingRelease(text, now) === null;
+}
+
+/**
+ * The queued game that starts next: the first one that's out. Games not out
+ * yet keep their places and are skipped until they are.
+ */
+export function nextPlayable<T extends { game: { release_date?: string | null } }>(
+  queue: readonly T[],
+  now = Date.now(),
+): T | undefined {
+  return queue.find((q) => isReleased(q.game.release_date, now));
+}

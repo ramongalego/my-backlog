@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { RANDOM_PICK_MAX_PLAYTIME_MINUTES } from './filtering';
+import { isReleased } from './release-date';
+import { fetchAllRows } from '@/lib/supabase/paginate';
 import type { SuggestionResult } from '@/lib/suggest/types';
 
 /**
@@ -15,11 +17,12 @@ const RANDOM_GAME_SELECT =
   'id, app_id, source, platform, name, header_image, main_story_hours, genres, tags, steam_review_score, steam_review_count, critic_score, critic_count, playtime_forever, last_played_at';
 
 /**
- * A random game to play from the backlog: single-player, with a known length
- * and barely started. Never the game you're playing (it isn't backlog) or a
- * queued one (already decided on, as Pick My Game leaves them out). Counts
- * the eligible games, then fetches only the one at a random position, instead
- * of downloading them all to choose one.
+ * A random game to play from the backlog: single-player, out already, with a
+ * known length and barely started. Never the game you're playing (it isn't
+ * backlog) or a queued one (already decided on, as Pick My Game leaves them
+ * out). Lists the eligible games' ids and release dates (dates are display
+ * text, so "out" can't be asked of the database), then fetches only the one
+ * picked, instead of downloading them all to choose one.
  */
 export async function findRandomBacklogGame(
   supabase: SupabaseClient,
@@ -32,10 +35,10 @@ export async function findRandomBacklogGame(
     if (queue.error) throw queue.error;
     const queued: number[] = (queue.data ?? []).map((q: { game_id: number }) => q.game_id);
 
-    const eligible = (columns: string, options?: { count: 'exact'; head: true }) => {
+    const eligible = (columns: string) => {
       const query = supabase
         .from('games')
-        .select(columns, options)
+        .select(columns)
         .eq('user_id', userId)
         .eq('type', 'game')
         .not('main_story_hours', 'is', null)
@@ -45,12 +48,17 @@ export async function findRandomBacklogGame(
       return queued.length ? query.not('id', 'in', `(${queued.join(',')})`) : query;
     };
 
-    const counted = await eligible('id', { count: 'exact', head: true });
-    if (counted.error) throw counted.error;
-    if (!counted.count) return { error: 'none' };
+    const candidates = await fetchAllRows((from, to) =>
+      eligible('id, release_date')
+        .order('id')
+        .range(from, to)
+        .overrideTypes<{ id: number; release_date: string | null }[], { merge: false }>(),
+    );
+    const out = candidates.filter((g) => isReleased(g.release_date));
+    if (out.length === 0) return { error: 'none' };
 
-    const index = Math.floor(Math.random() * counted.count);
-    const { data, error } = await eligible(RANDOM_GAME_SELECT).order('id').range(index, index);
+    const pickedId = out[Math.floor(Math.random() * out.length)].id;
+    const { data, error } = await eligible(RANDOM_GAME_SELECT).eq('id', pickedId);
     if (error) throw error;
     const game = (data as unknown as RandomGame[] | null)?.[0];
     // The library changed between the two requests; asking again is enough.

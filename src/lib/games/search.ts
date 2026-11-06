@@ -14,3 +14,13 @@ export function matchesSearch(game: { name: string; tags?: string[] | null }, qu
     searchable(game.name).includes(q) || (game.tags ?? []).some((t) => searchable(t).includes(q))
   );
 }
+
+/**
+ * Whether the search text is in the game's name, not just one of its tags:
+ * those come first, so "metroid" lists the Metroid games before every other
+ * Metroidvania.
+ */
+export function nameMatchesSearch(game: { name: string }, query: string) {
+  const q = searchable(query.trim());
+  return !!q && searchable(game.name).includes(q);
+}

@@ -95,7 +95,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={5}
-            placeholder="Describe your issue or feedback..."
+            placeholder="Describe your issue or feedback…"
             className={`${fieldClass(!!error)} block px-3 py-2 text-sm resize-none`}
           />
           {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
@@ -107,7 +107,7 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
             Cancel
           </Button>
           <Button size="sm" onClick={handleSubmit} isLoading={pending} className="cursor-pointer">
-            {pending ? 'Sending...' : 'Send'}
+            {pending ? 'Sending…' : 'Send'}
           </Button>
         </div>
       </div>

@@ -23,7 +23,7 @@ function BarListSkeleton({ rows }: { rows: number }) {
       <div className="space-y-3">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="flex items-center gap-3">
-            <Skeleton className="h-5 w-20 sm:w-32 shrink-0" />
+            <Skeleton className="h-5 w-32 shrink-0" />
             <Skeleton className="h-1.5 flex-1 rounded-full" />
             <Skeleton className="h-4 w-6 shrink-0" />
           </div>

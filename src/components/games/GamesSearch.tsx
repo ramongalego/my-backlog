@@ -16,7 +16,7 @@ export function GamesSearch({ value, onSearchChange }: GamesSearchProps) {
         type="text"
         value={value}
         onChange={(e) => onSearchChange(e.target.value)}
-        placeholder="Search by name or tag..."
+        placeholder="Search by name or tag…"
         aria-label="Search games by name or tag"
         className={`${fieldClass()} h-10 pl-9 pr-8 text-sm`}
       />

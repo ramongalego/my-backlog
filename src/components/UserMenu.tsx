@@ -186,7 +186,7 @@ export function UserMenu({
               />
               <span>
                 {isRefreshing
-                  ? 'Refreshing...'
+                  ? 'Refreshing…'
                   : isRefreshDisabled
                     ? `Available in${cooldownLabel ? ` ${cooldownLabel}` : ''}`
                     : 'Refresh library'}

@@ -177,7 +177,7 @@ describe('GameDetailModal', () => {
       );
 
       fireEvent.click(screen.getByLabelText(/finished on/i)); // uncheck
-      fireEvent.click(screen.getByLabelText(/no date selected/i)); // re-check
+      fireEvent.click(screen.getByLabelText(/add the date/i)); // re-check
 
       expect(screen.getByTestId('detail-date')).toBeInTheDocument();
     });

@@ -145,7 +145,7 @@ export default function RoastPage() {
             <div className="w-16 h-16 border-4 border-ink-700 border-t-accent-400 rounded-full animate-spin" />
             <Flame className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-accent-400" />
           </div>
-          <p className="mt-6 text-ink-400">Analyzing your shameful library...</p>
+          <p className="mt-6 text-ink-400">Analyzing your shameful library…</p>
         </div>
       )}
 

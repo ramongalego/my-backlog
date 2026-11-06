@@ -7,6 +7,7 @@ import { useAuth } from './useAuth';
 import { useQueue } from './useNowPlaying';
 import { playedALot } from '@/lib/games/played-a-lot';
 import { playedHours } from '@/lib/games/playtime';
+import { upcomingRelease } from '@/lib/games/release-date';
 
 export interface TagStat {
   tag: string;
@@ -227,9 +228,10 @@ export function computeStats(
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([year, count]) => ({ year, count }));
 
-  // Games by release year
+  // Games by release year: only games that are out, not ones coming next year.
   const releaseYearCounts = new Map<string, number>();
   for (const game of games) {
+    if (upcomingRelease(game.release_date)) continue;
     const year = parseYear(game.release_date);
     if (year) releaseYearCounts.set(year, (releaseYearCounts.get(year) ?? 0) + 1);
   }

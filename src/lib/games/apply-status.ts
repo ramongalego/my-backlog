@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEMOTED, statusUpdate, withLastPlayed, type StatusChange } from './status-rules';
 import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
+import { isReleased } from './release-date';
 import type { GameWithImage } from '@/types/games';
 
 export type { StatusChange };
@@ -74,26 +75,39 @@ export async function applyStatusChange(
 }
 
 /**
- * Starts the first game in the queue, if there is one, and returns it with
- * everything the playing card shows. Throws if the queue had a game but it
- * couldn't be started.
+ * Starts the first game in the queue that's out, if there is one, and returns
+ * it with everything the playing card shows. Games not out yet stay queued, in
+ * their places. Throws if the queue had a game but it couldn't be started.
  */
 export async function promoteNextFromQueue(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<GameWithImage | null> {
-  const { data: topItem, error: queueError } = await supabase
+  const { data: queue, error: queueError } = await supabase
     .from('playing_queue')
     .select('game_id')
     .eq('user_id', userId)
-    .order('position', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order('position', { ascending: true });
   if (queueError) throw queueError;
-  if (!topItem) return null;
+  const ids = ((queue ?? []) as { game_id: number }[]).map((q) => q.game_id);
+  if (ids.length === 0) return null;
+
+  const { data: dates, error: datesError } = await supabase
+    .from('games')
+    .select('id, release_date')
+    .eq('user_id', userId)
+    .in('id', ids);
+  if (datesError) throw datesError;
+  const upcoming = new Set(
+    ((dates ?? []) as { id: number; release_date: string | null }[])
+      .filter((g) => !isReleased(g.release_date))
+      .map((g) => g.id),
+  );
+  const nextId = ids.find((id) => !upcoming.has(id));
+  if (nextId === undefined) return null;
 
   const started = await applyStatusChange(supabase, userId, {
-    gameId: topItem.game_id,
+    gameId: nextId,
     status: 'playing',
   });
   if (!started.ok) throw new Error(`Failed to start the next queued game: ${started.error}`);
@@ -102,7 +116,7 @@ export async function promoteNextFromQueue(
     .from('games')
     .select(PLAYING_GAME_SELECT)
     .eq('user_id', userId)
-    .eq('id', topItem.game_id)
+    .eq('id', nextId)
     .maybeSingle<GameWithImage>();
   if (error) throw error;
   return game ?? null;

@@ -29,6 +29,7 @@ import { RandomRoll } from '@/components/home/RandomRoll';
 import { PickNext, wallCovers } from '@/components/home/PickNext';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 import { steamLastPlayed } from '@/lib/games/consoles';
+import { nextPlayable, upcomingRelease } from '@/lib/games/release-date';
 
 // Below this many backlog games, the picker band says picks get better with more.
 const SMALL_BACKLOG = 10;
@@ -125,6 +126,11 @@ export default function HomeView() {
   const nothingToPick = pickable <= 0;
   // Picking for the queue needs a few games to choose between, like the band.
   const tooFewToPick = pickable < MIN_GAMES_TO_PICK;
+  // The queued game that starts next: the first that's out. With only games
+  // not out yet in the queue, the first of those, to say when it is.
+  const playNext = nextPlayable(queue);
+  const upNext = playNext ?? queue[0];
+  const upNextRelease = playNext ? null : upcomingRelease(upNext?.game.release_date);
 
   // Signed-out visitors never get here (the proxy sends them to the landing page).
   if (isLoading || !user) {
@@ -239,26 +245,30 @@ export default function HomeView() {
         {/* Up next: the game that takes over when you finish this one, and
             picking another for the queue. The hinge between the band (now)
             and the shelf (later). With nothing playing, the queued game is
-            there to start. */}
+            there to start, if it's out. */}
         {!isSyncing && !rollCovers && (currentlyPlaying || queue.length > 0) && (
           <div
             className={`${PAGE_CONTAINER} mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4`}
           >
-            {queue.length > 0 ? (
+            {upNext ? (
               <Link
                 href="/playing-queue"
                 className="group flex min-w-0 items-center gap-3 sm:gap-4 rounded-lg"
               >
                 <CoverThumb
-                  src={queue[0].game.header_image}
+                  src={upNext.game.header_image}
                   alt=""
                   className="w-20 sm:w-28 group-hover:brightness-110 transition-[filter]"
                 />
                 <span className="min-w-0">
                   <span className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
-                    {queue[0].game.name}
+                    {upNext.game.name}
                   </span>
-                  <span className="block text-sm text-ink-400">Next in your queue</span>
+                  <span className="block text-sm text-ink-400">
+                    {upNextRelease
+                      ? `Next in your queue · ${upNextRelease.label}`
+                      : 'Next in your queue'}
+                  </span>
                 </span>
               </Link>
             ) : (
@@ -279,15 +289,18 @@ export default function HomeView() {
               </p>
             )}
             {!currentlyPlaying ? (
-              <Button
-                variant="secondary"
-                className="cursor-pointer"
-                onClick={handlePlayNext}
-                aria-label={`Play ${queue[0].game.name}`}
-              >
-                <Play className="w-4 h-4" aria-hidden="true" />
-                <span>Play</span>
-              </Button>
+              // Nothing to start until a queued game is out: picking is in the band.
+              playNext && (
+                <Button
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={handlePlayNext}
+                  aria-label={`Play ${playNext.game.name}`}
+                >
+                  <Play className="w-4 h-4" aria-hidden="true" />
+                  <span>Play</span>
+                </Button>
+              )
             ) : tooFewToPick ? (
               // Every backlog game is playing or queued, or too few are left
               // to choose between: add more instead.

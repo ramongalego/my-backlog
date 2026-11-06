@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 export interface ToggleOption<T extends string> {
   value: T;
@@ -47,8 +47,23 @@ export function ToggleGroup<T extends string>({
     ? 'inline-flex gap-0.5 rounded-lg bg-ink-800 p-0.5'
     : `flex gap-1.5 ${wrap ? 'flex-wrap' : 'overflow-x-auto scrollbar-none'}`;
 
+  // A row that scrolls sideways keeps the chosen chip in sight: on a phone,
+  // opening /games?filter=dropped would otherwise show it cut off at the edge.
+  // Only the row scrolls, never the page.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const scrolls = !segmented && !wrap;
+  useEffect(() => {
+    const row = rowRef.current;
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!scrolls || !row || !chip) return;
+    const rowBox = row.getBoundingClientRect();
+    const chipBox = chip.getBoundingClientRect();
+    if (chipBox.left < rowBox.left) row.scrollLeft += chipBox.left - rowBox.left;
+    else if (chipBox.right > rowBox.right) row.scrollLeft += chipBox.right - rowBox.right;
+  }, [scrolls, value]);
+
   return (
-    <div role="group" aria-label={label} className={`${container} ${className}`}>
+    <div ref={rowRef} role="group" aria-label={label} className={`${container} ${className}`}>
       {options.map((option) => {
         const selected = option.value === value;
         const tone = segmented

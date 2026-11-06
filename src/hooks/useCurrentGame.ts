@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/games/random-pick';
+import { nextPlayable } from '@/lib/games/release-date';
 import { useSetGameStatus } from '@/lib/mutations';
 import { useNowPlaying } from './useNowPlaying';
 import type { GameWithImage } from '@/types/games';
@@ -28,9 +29,9 @@ export function useCurrentGame(userId: string | null) {
     await nowPlaying.pick(game);
   };
 
-  /** Starts the first queued game, when nothing is being played. */
+  /** Starts the first queued game that's out, when nothing is being played. */
   const handlePlayNext = () => {
-    const next = nowPlaying.queue[0];
+    const next = nextPlayable(nowPlaying.queue);
     if (!next) return;
     window.scrollTo({ top: 0, behavior: scrollBehavior() });
     nowPlaying.pickFromQueue(next.game_id);

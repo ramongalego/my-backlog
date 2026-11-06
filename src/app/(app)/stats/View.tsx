@@ -252,7 +252,7 @@ function TopTagBars({ tags, max }: { tags: Stats['topTags']; max: number }) {
     <div ref={ref} className="space-y-3">
       {tags.map(({ tag, count }, i) => (
         <div key={tag} className="flex items-center gap-3">
-          <span className="text-sm text-ink-300 w-20 sm:w-32 truncate shrink-0">{tag}</span>
+          <span className="text-sm text-ink-300 w-32 truncate shrink-0">{tag}</span>
           <div className="flex-1 h-1.5 bg-ink-800 rounded-full overflow-hidden">
             <div
               className={`h-full bg-ink-400 rounded-full ${growBar('x', inView, i).className}`}

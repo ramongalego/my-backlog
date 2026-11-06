@@ -1,4 +1,4 @@
-import { upcomingRelease } from '@/lib/games/release-date';
+import { isReleased, nextPlayable, upcomingRelease } from '@/lib/games/release-date';
 
 // Oct 27, 2026, mid-afternoon, local time.
 const NOW = new Date(2026, 9, 27, 15, 0).getTime();
@@ -44,5 +44,32 @@ describe('upcomingRelease', () => {
   it('has nothing to say without a date', () => {
     expect(upcomingRelease(null, NOW)).toBeNull();
     expect(upcomingRelease('', NOW)).toBeNull();
+  });
+});
+
+describe('isReleased', () => {
+  it("is false for a date still to come or none announced, true once it's out or unknown", () => {
+    expect(isReleased('Nov 10, 2026', NOW)).toBe(false);
+    expect(isReleased('Coming soon', NOW)).toBe(false);
+    expect(isReleased('2027', NOW)).toBe(false);
+    expect(isReleased('Oct 1, 2026', NOW)).toBe(true);
+    expect(isReleased('Sep 28, 2010', NOW)).toBe(true);
+    expect(isReleased(null, NOW)).toBe(true);
+  });
+});
+
+describe('nextPlayable', () => {
+  const queued = (name: string, release_date: string | null) => ({ name, game: { release_date } });
+
+  it("skips queued games that aren't out yet", () => {
+    const queue = [
+      queued('Metroid Ravenous', 'Jan 28, 2027'),
+      queued('Eternal Anima', 'To be announced'),
+      queued('Metroid Dread', 'Oct 8, 2021'),
+      queued('Metroid Fusion', null),
+    ];
+    expect(nextPlayable(queue, NOW)?.name).toBe('Metroid Dread');
+    expect(nextPlayable(queue.slice(0, 2), NOW)).toBeUndefined();
+    expect(nextPlayable([], NOW)).toBeUndefined();
   });
 });

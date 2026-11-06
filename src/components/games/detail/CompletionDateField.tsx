@@ -90,7 +90,8 @@ export function CompletionDateField({
         htmlFor="date-toggle"
         className="text-sm text-ink-300 cursor-pointer select-none shrink-0"
       >
-        {hasDate ? label : 'No date selected'}
+        {/* Unticked, it says what ticking does; ticked, it reads into the date. */}
+        {hasDate ? label : 'Add the date'}
       </label>
 
       {hasDate && (

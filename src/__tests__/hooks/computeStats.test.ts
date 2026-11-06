@@ -87,3 +87,21 @@ describe('finishContrast', () => {
     expect(stats([...tagged('A', 10, 5), ...tagged('B', 10, 4)]).finishContrast).toBeNull();
   });
 });
+
+describe('gamesByReleaseYear', () => {
+  it("counts games by the year they came out, leaving out ones that aren't out yet", () => {
+    const nextYear = new Date().getFullYear() + 1;
+    const games = [
+      game({ release_date: 'Sep 28, 2010' }),
+      game({ release_date: '28 Sep, 2010' }),
+      game({ release_date: 'Mar 3, 2017' }),
+      game({ release_date: `Jan 28, ${nextYear}` }),
+      game({ release_date: String(nextYear) }),
+      game({ release_date: 'To be announced' }),
+    ];
+    expect(stats(games).gamesByReleaseYear).toEqual([
+      { year: '2010', count: 2 },
+      { year: '2017', count: 1 },
+    ]);
+  });
+});
