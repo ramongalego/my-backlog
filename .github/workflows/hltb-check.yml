@@ -3,15 +3,21 @@ name: HowLongToBeat check
 # HowLongToBeat changes its site now and then, which breaks the lookup that
 # fills in "time to beat". This looks a few games up every day the way the app
 # does; when it fails, GitHub emails you about the failed run.
+#
+# Nothing waits for this run at a set time (unlike the old Vercel cron +
+# Pulsemon ping, where a late cron counted as a missed check), so GitHub
+# starting scheduled runs late doesn't matter. What can go wrong is HLTB itself
+# being slow or briefly refusing requests, so a failed check is tried again
+# twice, 5 minutes apart, and the run only fails if all three attempts do.
 on:
   schedule:
-    - cron: '0 8 * * *' # daily, 08:00 UTC
+    - cron: '0 8 * * *' # daily, around 08:00 UTC (GitHub often starts it later)
   workflow_dispatch: # run it by hand from the Actions tab
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -24,4 +30,18 @@ jobs:
         run: npm ci
 
       - name: Look games up on HowLongToBeat
-        run: npm run check:hltb
+        run: |
+          for attempt in 1 2 3; do
+            echo "::group::Attempt $attempt of 3"
+            if npm run check:hltb; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::Attempt $attempt failed; trying again in 5 minutes."
+              sleep 300
+            fi
+          done
+          echo "::error::HowLongToBeat lookups failed 3 times in a row. Open the attempts above for the [HLTB] messages."
+          exit 1

@@ -36,5 +36,7 @@ it.each(GAMES)(
     expect(hours).toBeGreaterThanOrEqual(min);
     expect(hours).toBeLessThanOrEqual(max);
   },
-  30_000,
+  // Generous: finding the search endpoint can mean fetching several of HLTB's
+  // scripts, each allowed 10s, before the searches themselves.
+  120_000,
 );
