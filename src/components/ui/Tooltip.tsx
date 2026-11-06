@@ -13,6 +13,8 @@ const EDGE_GAP = 8;
  *
  * Triggers are focusable by tap (tabIndex -1) but not tab stops: a grid of
  * game cards would otherwise add three stops per card for supplementary text.
+ * On a touchscreen the tap is how you read it, so it stays with the tooltip
+ * rather than also reaching what's around it, like a card that opens.
  *
  * The bubble renders at the page level with fixed positioning, so containers
  * that clip their contents (game cards use content-visibility, carousels
@@ -31,6 +33,7 @@ export function Tooltip({
   const triggerRef = useRef<HTMLSpanElement>(null);
   const bubbleRef = useRef<HTMLSpanElement>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const pointerType = useRef('mouse');
 
   const show = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
@@ -71,6 +74,18 @@ export function Tooltip({
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
+      onPointerDown={(e) => {
+        pointerType.current = e.pointerType;
+      }}
+      onClick={(e) => {
+        if (pointerType.current !== 'touch' && pointerType.current !== 'pen') return;
+        // A button inside the trigger (the queue's Move to top) still works.
+        const inner = (e.target as Element).closest('button, a');
+        if (inner && triggerRef.current?.contains(inner)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        show();
+      }}
       className={`inline-flex items-center gap-1 rounded-sm cursor-default focus:outline-none ${className}`}
     >
       {children}

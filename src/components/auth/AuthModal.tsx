@@ -7,6 +7,7 @@ import { LoginForm } from './LoginForm';
 import { SignUpForm } from './SignUpForm';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import type { AuthMode } from '@/types/auth';
+import { reloadAtTop } from '@/lib/reload';
 
 interface AuthModalContentProps {
   initialMode: AuthMode;
@@ -64,7 +65,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
 
   const handleLoginSuccess = () => {
     setIsSigningIn(true);
-    window.location.reload();
+    reloadAtTop();
   };
 
   return (

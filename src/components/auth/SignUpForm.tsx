@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AuthMessage } from '@/components/auth/AuthMessage';
+import { reloadAtTop } from '@/lib/reload';
 
 interface SignUpFormProps {
   onSwitchToLogin?: () => void;
@@ -72,7 +73,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
       }
 
       if (data.session) {
-        window.location.reload();
+        reloadAtTop();
         return;
       }
 

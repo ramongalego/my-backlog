@@ -8,6 +8,7 @@ import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/SupportModal';
 import { refreshKeys } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
+import { reloadAtTop } from '@/lib/reload';
 
 interface UserMenuProps {
   user: User;
@@ -19,6 +20,8 @@ interface UserMenuProps {
   isRefreshDisabled?: boolean;
   /** Shown instead of Refresh Library until a Steam account is linked. */
   onConnectSteam?: () => void;
+  /** The menu opened: anything else open in the header should close. */
+  onOpen?: () => void;
 }
 
 export function UserMenu({
@@ -28,6 +31,7 @@ export function UserMenu({
   gameCount,
   onRefresh,
   onConnectSteam,
+  onOpen,
   isRefreshing,
   isRefreshDisabled,
 }: UserMenuProps) {
@@ -86,7 +90,7 @@ export function UserMenu({
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    window.location.reload();
+    reloadAtTop();
   };
 
   const handleMenuKeyDown = (e: React.KeyboardEvent) => {
@@ -124,7 +128,10 @@ export function UserMenu({
     <div className="relative" ref={menuRef} onKeyDown={handleMenuKeyDown}>
       <button
         ref={triggerRef}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) onOpen?.();
+          setOpen(!open);
+        }}
         className="cursor-pointer block rounded overflow-hidden hover:ring-2 hover:ring-ink-600 transition-all"
         aria-label="Open user menu"
         aria-haspopup="menu"
@@ -165,7 +172,11 @@ export function UserMenu({
           {onRefresh && (
             <button
               role="menuitem"
-              onClick={onRefresh}
+              // The refresh reports back in a toast, so the menu can go.
+              onClick={() => {
+                closeMenu(true);
+                onRefresh();
+              }}
               disabled={isRefreshing || isRefreshDisabled}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >

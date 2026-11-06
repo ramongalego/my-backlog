@@ -33,7 +33,7 @@ function hltbRetryDue(row: CachedMetadata, now: number): boolean {
 
 /** Whether a shared-cache row can be used as-is instead of re-fetching upstream. */
 export function isCacheUsable(row: CachedMetadata | null, now = Date.now()): boolean {
-  if (!row || !isMetadataFresh(row.synced_at)) return false;
+  if (!row || !isMetadataFresh(row.synced_at, now)) return false;
   if (row.type !== 'game') return true;
   if (row.main_story_hours === null) return !hltbRetryDue(row, now);
   if (!isRecentRelease(row.release_date, now)) return true;
@@ -48,7 +48,7 @@ export function isCacheUsable(row: CachedMetadata | null, now = Date.now()): boo
 export function needsOnlyHltb(row: CachedMetadata | null, now = Date.now()): boolean {
   return (
     !!row &&
-    isMetadataFresh(row.synced_at) &&
+    isMetadataFresh(row.synced_at, now) &&
     row.type === 'game' &&
     row.main_story_hours === null &&
     hltbRetryDue(row, now)

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Gamepad2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { toast } from 'sonner';
 import { UserMenu } from '@/components/UserMenu';
 import { AddGameButton } from '@/components/games/AddGameButton';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,7 +47,10 @@ export function Header() {
 
   const handleRefreshLibrary = async () => {
     setIsRefreshing(true);
+    // The menu closes when it starts, so say it's working until the result's toast.
+    const progress = toast.loading('Refreshing your library…');
     const result = await refresh({ manual: true });
+    toast.dismiss(progress);
     if (result.success) {
       setIsRefreshDisabled(true);
     }
@@ -133,6 +137,8 @@ export function Header() {
                   onConnectSteam={profile?.steam_id ? undefined : connectSteam}
                   isRefreshing={isRefreshing}
                   isRefreshDisabled={isRefreshDisabled}
+                  // One menu at a time: the profile menu would open over the nav.
+                  onOpen={closeMobileMenu}
                 />
               </>
             ) : (
