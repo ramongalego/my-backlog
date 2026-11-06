@@ -208,15 +208,30 @@ export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): s
   return shot && (shot.width ?? 0) >= MIN_SCREENSHOT_WIDTH ? shot.image_id : null;
 }
 
+/** A name as typed or listed, without case, marks or punctuation, to compare. */
+function searchName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[™®©]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
 export async function searchGames(text: string): Promise<GameSearchResult[]> {
   const games = await query<IgdbGame>(
     'games',
     `search ${quoted(text)}; fields name, game_type, first_release_date, platforms.name, cover.image_id, ${EXTERNAL_FIELDS}; where game_type = ${GAME_TYPES} & version_parent = null; limit 20;`,
   );
-  const ordered = [
-    ...games.filter((g) => g.game_type !== BUNDLE),
-    ...games.filter((g) => g.game_type === BUNDLE),
-  ].slice(0, SEARCH_LIMIT);
+  // IGDB's relevance puts "Portal Maze 2" above "Portal 2" for "portal 2", so
+  // a game named exactly what was typed comes first; bundles go last.
+  const wanted = searchName(text);
+  const rank = (g: IgdbGame) =>
+    g.game_type === BUNDLE ? 2 : searchName(g.name) === wanted ? 0 : 1;
+  const ordered = games
+    .map((game, i) => ({ game, i }))
+    .sort((a, b) => rank(a.game) - rank(b.game) || a.i - b.i)
+    .map(({ game }) => game)
+    .slice(0, SEARCH_LIMIT);
   return ordered.map((g) => ({
     igdbId: g.id,
     name: g.name,

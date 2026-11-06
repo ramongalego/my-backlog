@@ -1,6 +1,16 @@
 'use client';
 
-import { Archive, ArrowUpToLine, ListOrdered, X, Play, Check, GripVertical } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  Archive,
+  ArrowUpToLine,
+  ListOrdered,
+  X,
+  Play,
+  Plus,
+  Check,
+  GripVertical,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadError } from '@/components/ui/LoadError';
@@ -34,12 +44,16 @@ import { GameMetaRow, Playtime } from '@/components/games/GameCardInfo';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { usePlayingQueuePage } from '@/hooks/usePlayingQueuePage';
+import { useLibraryMeta } from '@/hooks/useLibraryMeta';
+import { useAuth } from '@/hooks/useAuth';
+import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { QueueContentSkeleton } from './Skeleton';
 import { consoleOf } from '@/lib/games/manual';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import type { GameWithImage, QueueItem } from '@/types/games';
+import { playedHours } from '@/lib/games/playtime';
 
 interface NowPlayingRowProps {
   game: GameWithImage;
@@ -63,7 +77,7 @@ function NowPlayingRow({
 }: NowPlayingRowProps) {
   const platform = consoleOf(game);
   const mainStoryHours = game.main_story_hours ?? 0;
-  const playedHours = Math.round(game.playtime_forever / 60);
+  const hoursPlayed = playedHours(game.playtime_forever);
   // Hours played against the time to beat from 0h on, like the card on Home;
   // no rating or Deck rating, which help choose a game and this one's chosen.
   const hours = (after?: ReactNode) =>
@@ -117,7 +131,7 @@ function NowPlayingRow({
           <div className="mt-2">
             {!mainStoryHours ? (
               <div className="text-xs">{hours()}</div>
-            ) : playedHours >= mainStoryHours ? (
+            ) : hoursPlayed >= mainStoryHours ? (
               <div className="flex flex-wrap items-center gap-x-1 text-xs">
                 {hours(
                   <span className="text-ink-400">· past the ~{mainStoryHours}h estimate</span>,
@@ -137,7 +151,7 @@ function NowPlayingRow({
                   <div
                     // New hours (logged, or from Steam) ease the bar to its new length.
                     className="h-full bg-accent-500 rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
-                    style={{ width: `${(playedHours / mainStoryHours) * 100}%` }}
+                    style={{ width: `${(hoursPlayed / mainStoryHours) * 100}%` }}
                   />
                 </div>
               </div>
@@ -373,6 +387,10 @@ export default function PlayingQueueView() {
     handleSetQueuedStatus,
     manualDialogProps,
   } = usePlayingQueuePage();
+  const router = useRouter();
+  const { open: openAddGame } = useAddGame();
+  const libraryMeta = useLibraryMeta(useAuth().user?.id ?? null);
+  const libraryEmpty = libraryMeta.loaded && libraryMeta.gameCount === 0;
 
   // The game being dragged.
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -482,8 +500,30 @@ export default function PlayingQueueView() {
       ) : loadError ? (
         <LoadError what="your queue" onRetry={retry} />
       ) : isEmpty ? (
-        <EmptyState icon={ListOrdered} title="Your queue is empty">
-          Pick a game to play first, then queue up what&apos;s next from your library
+        // An empty library has nothing to pick yet: add a game first.
+        <EmptyState
+          icon={ListOrdered}
+          title="Your queue is empty"
+          action={
+            libraryEmpty ? (
+              <Button className="cursor-pointer" onClick={() => openAddGame()}>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                <span>Add a game</span>
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => router.push('/home')}
+              >
+                Go to Home
+              </Button>
+            )
+          }
+        >
+          {libraryEmpty
+            ? 'Add the games you own, then start one and queue up what’s next.'
+            : 'Pick a game to play on Home, then queue up what’s next from your library.'}
         </EmptyState>
       ) : (
         <div>

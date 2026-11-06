@@ -28,22 +28,24 @@ export function homeShape(queryClient: QueryClient): HomeShape {
   );
   const steamConnected = !!session?.profile?.steam_id;
 
+  const queue = cached<QueueItem[]>(queryClient, [...queryKeys.queue.all, 'list']);
   if (playing) {
-    const queue = cached<QueueItem[]>(queryClient, [...queryKeys.queue.all, 'list']);
     return { ...PLAYING_SHAPE, queued: queue ? queue.length > 0 : true, steamConnected };
   }
+  // With nothing playing, a queued game still shows under the band, to start.
+  const queued = !!queue?.length;
 
   const meta = cached<LibraryMeta>(queryClient, [...queryKeys.library.all, 'meta']);
   if (meta && meta.backlogCount < MIN_GAMES_TO_PICK) {
     // Recently Added shows from the first game; nothing else does yet.
     return {
       band: 'building',
-      queued: false,
+      queued,
       steamConnected,
       carouselRows: meta.gameCount ? 1 : 0,
     };
   }
-  return { band: 'picker', queued: false, steamConnected, carouselRows: 2 };
+  return { band: 'picker', queued, steamConnected, carouselRows: 2 };
 }
 
 /** Home's skeleton, in the shape the page is about to have. */

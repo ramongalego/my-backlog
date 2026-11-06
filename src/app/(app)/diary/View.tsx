@@ -15,6 +15,8 @@ import { useDiary } from '@/hooks/useDiary';
 import { useUrlState } from '@/hooks/useUrlState';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { DiaryListSkeleton } from './Skeleton';
+import { EmptyStateSkeleton } from '@/components/layout/Skeleton';
+import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
 import type { DiaryEntry } from '@/hooks/useDiary';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
@@ -226,6 +228,7 @@ export default function DiaryView() {
     handleConfirmDetail,
     handleSaveNotes,
   } = useDiary();
+  const libraryMeta = useCachedLibraryMeta();
   const { user } = useAuth();
   const manualGames = useManualGameActions(user?.id ?? null);
 
@@ -272,7 +275,8 @@ export default function DiaryView() {
   }
 
   const summaryText = (() => {
-    if (filteredEntries.length === 0) return "You haven't finished any games yet";
+    // Counted like the Games page, so an empty diary reads "0 games finished"
+    // rather than repeating the empty state below it.
     const count = `${filteredEntries.length} game${filteredEntries.length === 1 ? '' : 's'} finished`;
     if (selectedYear !== 'all') return `${count} in ${selectedYear}`;
     const thisYearCount = entries.filter((e) =>
@@ -334,12 +338,16 @@ export default function DiaryView() {
       />
 
       {loading ? (
-        <DiaryListSkeleton />
+        libraryMeta?.finishedCount === 0 ? (
+          <EmptyStateSkeleton action={false} />
+        ) : (
+          <DiaryListSkeleton />
+        )
       ) : loadError ? (
         <LoadError what="your diary" onRetry={retry} />
       ) : entries.length === 0 ? (
         <EmptyState icon={Trophy} title="No finished games yet">
-          When you finish a game, it lands here with the date, your rating and any notes
+          When you finish a game, it lands here with the date, your rating and any notes.
         </EmptyState>
       ) : (
         <div>

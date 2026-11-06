@@ -5,6 +5,7 @@ import { formatLastPlayed } from '@/lib/games/last-played';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { MIN_CRITIC_REVIEWS } from '@/lib/games/rating';
 import { SteamDeckBadge } from './SteamDeckBadge';
+import { playedHours } from '@/lib/games/playtime';
 
 /**
  * How a game rates, as one item in a meta row with a thumbs-up: its critic
@@ -119,7 +120,7 @@ export function Playtime({
   iconClassName?: string;
   className?: string;
 }) {
-  const hours = Math.round(minutes / 60);
+  const hours = playedHours(minutes);
   const lastPlayed = formatLastPlayed(lastPlayedAt);
   return (
     <Tooltip

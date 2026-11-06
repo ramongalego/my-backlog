@@ -94,8 +94,9 @@ export async function playOnSteam(gameId: number): Promise<void> {
   );
 }
 
-export async function deleteManualGame(gameId: number): Promise<void> {
-  await check(await fetch(`/api/games/manual/${gameId}`, { method: 'DELETE' }));
+/** `keepalive` lets the request finish after the page is gone (see useManualGame). */
+export async function deleteManualGame(gameId: number, keepalive = false): Promise<void> {
+  await check(await fetch(`/api/games/manual/${gameId}`, { method: 'DELETE', keepalive }));
 }
 
 // IGDB's platform names, shortened to how people say them.

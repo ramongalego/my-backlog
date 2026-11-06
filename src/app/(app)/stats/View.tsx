@@ -28,6 +28,8 @@ import { Dropdown, type DropdownOption } from '@/components/ui/Dropdown';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { StatsContentSkeleton } from './Skeleton';
+import { EmptyStateSkeleton } from '@/components/layout/Skeleton';
+import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
 
 type EditModalState = PlayedALotGame;
 
@@ -95,7 +97,7 @@ function Hours({ stats }: { stats: Stats }) {
 }
 
 // How soon you'd like the backlog cleared, for the hours-a-week figure, in
-// months. Five years to start.
+// months.
 type ClearIn = '60' | '48' | '36' | '24' | '12' | '6';
 const CLEAR_IN: DropdownOption<ClearIn>[] = [
   { value: '60', label: '5 years' },
@@ -108,12 +110,23 @@ const CLEAR_IN: DropdownOption<ClearIn>[] = [
 const WEEKS_A_MONTH = 52 / 12;
 
 /**
+ * The choice to start on: the longest that's still sooner than your pace, since
+ * clearing it later than you already would says nothing. Five years without a pace.
+ */
+function defaultClearIn(yearsAtPace: number | null): ClearIn {
+  if (yearsAtPace === null) return '60';
+  return CLEAR_IN.find((option) => Number(option.value) < yearsAtPace * 12)?.value ?? '6';
+}
+
+/**
  * How long the backlog would take at your recent finishing rate, what it would
  * take to clear it sooner, and the library it sits in.
  */
 function BacklogPace({ stats }: { stats: Stats }) {
   const { backlog, finishedLastYear, estimatedBacklogHours } = stats;
-  const [clearIn, setClearIn] = useState<ClearIn>('60');
+  const [clearIn, setClearIn] = useState<ClearIn>(() =>
+    defaultClearIn(finishedLastYear > 0 ? backlog / finishedLastYear : null),
+  );
   const perWeek = Math.max(
     1,
     Math.round(estimatedBacklogHours / (Number(clearIn) * WEEKS_A_MONTH)),
@@ -124,7 +137,7 @@ function BacklogPace({ stats }: { stats: Stats }) {
       {finishedLastYear > 0 ? (
         <Lead>
           At {plural(finishedLastYear, 'game')} finished in the last year, your{' '}
-          {plural(backlog, 'backlog game')} take{' '}
+          {plural(backlog, 'backlog game')} {backlog === 1 ? 'takes' : 'take'}{' '}
           <Figure>{formatYears(backlog / finishedLastYear)}</Figure> to clear.
         </Lead>
       ) : (
@@ -515,6 +528,7 @@ function PlayedALot({ stats, onEdit }: { stats: Stats; onEdit: (game: PlayedALot
 
 export default function StatsView() {
   const { stats, loading, loadError, retry, hasPlayingGame } = useStats();
+  const libraryMeta = useCachedLibraryMeta();
   const { user, profile } = useAuth();
   const isSteamConnected = profile?.steam_id != null;
   const { open: openAddGame } = useAddGame();
@@ -577,7 +591,11 @@ export default function StatsView() {
       />
 
       {loading ? (
-        <StatsContentSkeleton />
+        libraryMeta?.gameCount === 0 ? (
+          <EmptyStateSkeleton />
+        ) : (
+          <StatsContentSkeleton />
+        )
       ) : loadError ? (
         <LoadError what="your stats" onRetry={retry} />
       ) : !stats ? (

@@ -18,7 +18,7 @@ interface UserMenuProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   isRefreshDisabled?: boolean;
-  /** Shown instead of Refresh Library until a Steam account is linked. */
+  /** Shown instead of Refresh library until a Steam account is linked. */
   onConnectSteam?: () => void;
   /** The menu opened: anything else open in the header should close. */
   onOpen?: () => void;
@@ -189,7 +189,7 @@ export function UserMenu({
                   ? 'Refreshing...'
                   : isRefreshDisabled
                     ? `Available in${cooldownLabel ? ` ${cooldownLabel}` : ''}`
-                    : 'Refresh Library'}
+                    : 'Refresh library'}
               </span>
             </button>
           )}
@@ -223,7 +223,7 @@ export function UserMenu({
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-400 hover:bg-ink-800 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" aria-hidden="true" />
-            <span>Sign Out</span>
+            <span>Sign out</span>
           </button>
         </div>
       )}

@@ -1,5 +1,10 @@
 import { COVER_ASPECT } from '@/components/games/CoverArt';
-import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
+import {
+  EmptyStateSkeleton,
+  PageHeaderSkeleton,
+  PageSkeleton,
+  Skeleton,
+} from '@/components/layout/Skeleton';
 import { Panel } from '@/components/ui/Panel';
 
 /**
@@ -79,11 +84,18 @@ export function QueueContentSkeleton({ playing = true }: { playing?: boolean }) 
   );
 }
 
-export function QueuePageSkeleton({ playing = true }: { playing?: boolean }) {
+/** `empty`: nothing playing and nothing queued, as known from an earlier page. */
+export function QueuePageSkeleton({
+  playing = true,
+  empty = false,
+}: {
+  playing?: boolean;
+  empty?: boolean;
+}) {
   return (
     <PageSkeleton>
       <PageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-80 max-w-full" />
-      <QueueContentSkeleton playing={playing} />
+      {empty ? <EmptyStateSkeleton /> : <QueueContentSkeleton playing={playing} />}
     </PageSkeleton>
   );
 }

@@ -8,6 +8,7 @@ import { GameCard } from '@/components/games/GameCard';
 import { GameDetailModal } from '@/components/games/GameStatusModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
 import { GamesPageSkeleton } from '@/components/games/GamesPageSkeleton';
+import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
 import { useGamesPage, type GameFilter } from '@/hooks/useGamesPage';
@@ -54,6 +55,7 @@ export default function GamesView() {
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
   const isSteamConnected = !!useAuth().profile?.steam_id;
+  const libraryMeta = useCachedLibraryMeta();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +75,7 @@ export default function GamesView() {
   }, [hasMore, loadMore]);
 
   if (loading) {
-    return <GamesPageSkeleton />;
+    return <GamesPageSkeleton empty={libraryMeta?.gameCount === 0} />;
   }
 
   // Counts, filters and search would all describe an empty library.
@@ -154,21 +156,23 @@ export default function GamesView() {
         searchQuery.trim().length > 0 ? (
           <EmptyState
             icon={Gamepad2}
-            title="No games match your search."
+            title="No games match your search"
             action={
               // The moment you notice a game is missing is when you search for it.
               <Button variant="secondary" onClick={() => openAddGame(searchQuery.trim())}>
                 <Plus className="w-4 h-4" aria-hidden="true" />
-                Add “{searchQuery.trim()}” from another console
+                {/* Without Steam, every game is added by hand. */}
+                Add “{searchQuery.trim()}”{isSteamConnected && ' from another console'}
               </Button>
             }
           >
-            Try a different name or tag, or switch filters. Not on Steam? Add it by hand.
+            Try a different name or tag, or switch filters.
+            {isSteamConnected && ' Not on Steam? Add it by hand.'}
           </EmptyState>
         ) : (
           <EmptyState
             icon={Gamepad2}
-            title="Nothing here yet."
+            title="Nothing here yet"
             action={
               filter === 'all' && (
                 <div className="flex flex-wrap justify-center gap-2">

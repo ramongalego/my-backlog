@@ -1,6 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
 import DiaryView from '@/app/(app)/diary/View';
 import type { DiaryEntry } from '@/lib/data/loaders';
+
+// The page reads the library's cached counts for its loading state.
+const render = (ui: ReactElement) =>
+  rtlRender(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
 
 // Manual-game edits are covered by their own tests.
 jest.mock('@/hooks/useManualGame', () => ({

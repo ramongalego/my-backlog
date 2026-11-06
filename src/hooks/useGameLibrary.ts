@@ -59,6 +59,7 @@ export function useGameLibrary() {
       gameSummary: currentGame.gameSummary,
       carouselModal: currentGame.carouselModal,
       handlePickGame: currentGame.handlePickGame,
+      handlePlayNext: currentGame.handlePlayNext,
       handleFinishGame: currentGame.handleFinishGame,
       handleDropGame: currentGame.handleDropGame,
       handleQueueGame: currentGame.handleQueueGame,

@@ -15,7 +15,10 @@ import {
 export interface HomeShape {
   /** A game being played, picking one, or building a backlog first. */
   band: 'playing' | 'picker' | 'building';
-  /** Playing: whether a game is queued after it (the Up next strip's thumbnail). */
+  /**
+   * A game is queued: the Up next strip's thumbnail. Without a game being
+   * played, the strip only shows when one is queued.
+   */
   queued: boolean;
   /** Not on Steam: the band's line about connecting it. */
   steamConnected: boolean;
@@ -56,7 +59,7 @@ export function LoadingState({ shape = PLAYING_SHAPE }: { shape?: HomeShape }) {
             )}
           </div>
         </section>
-        {shape.band === 'playing' && <UpNextLoadingState queued={shape.queued} />}
+        {(shape.band === 'playing' || shape.queued) && <UpNextLoadingState queued={shape.queued} />}
         {shape.carouselRows > 0 && <CarouselsLoadingState rows={shape.carouselRows} />}
       </div>
     </div>

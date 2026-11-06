@@ -6,6 +6,7 @@ import { queries } from '@/lib/data/queries';
 import { useAuth } from './useAuth';
 import { useQueue } from './useNowPlaying';
 import { playedALot } from '@/lib/games/played-a-lot';
+import { playedHours } from '@/lib/games/playtime';
 
 export interface TagStat {
   tag: string;
@@ -91,7 +92,7 @@ const statGame = (g: GameItem): StatGame => ({
   id: g.id,
   name: g.name,
   header_image: g.header_image,
-  hours: Math.round(g.playtime_forever / 60),
+  hours: playedHours(g.playtime_forever),
   rating: g.rating,
 });
 

@@ -74,7 +74,7 @@ export default function RoastPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter Steam URL, Username, or Profile ID"
+              placeholder="Steam profile URL or username"
               aria-label="Steam profile URL or username"
               className={`${fieldClass()} h-12 px-4 pr-10`}
             />

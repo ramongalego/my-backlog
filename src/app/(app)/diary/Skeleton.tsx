@@ -1,5 +1,10 @@
 import { COVER_ASPECT } from '@/components/games/CoverArt';
-import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
+import {
+  EmptyStateSkeleton,
+  PageHeaderSkeleton,
+  PageSkeleton,
+  Skeleton,
+} from '@/components/layout/Skeleton';
 
 /** Mirrors DiaryRow: a full-width cover on phones; day, cover, title, hours played and rating on desktop. */
 function DiaryRowSkeleton() {
@@ -45,11 +50,12 @@ export function DiaryListSkeleton() {
   );
 }
 
-export function DiaryPageSkeleton() {
+/** `empty`: nothing finished yet, so no list to hold. */
+export function DiaryPageSkeleton({ empty = false }: { empty?: boolean }) {
   return (
     <PageSkeleton>
       <PageHeaderSkeleton titleWidth="w-24" descriptionWidth="w-48" />
-      <DiaryListSkeleton />
+      {empty ? <EmptyStateSkeleton action={false} /> : <DiaryListSkeleton />}
     </PageSkeleton>
   );
 }

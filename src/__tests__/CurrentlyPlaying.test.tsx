@@ -175,8 +175,9 @@ describe('CurrentlyPlaying', () => {
           onSaveHours={onSaveHours}
         />,
       );
+      // Under 10 hours, to a tenth: an hour and a half shows as one.
       expect(screen.getByRole('button', { name: /Edit hours played on PS5/ })).toHaveTextContent(
-        '2h played',
+        '1.5h played',
       );
     });
 
@@ -211,7 +212,7 @@ describe('CurrentlyPlaying', () => {
 
     it("keeps a Steam game's hours read-only", () => {
       render(<CurrentlyPlaying game={createGame(150)} {...defaultCallbacks} />);
-      expect(screen.getAllByText('3h played').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('2.5h played').length).toBeGreaterThan(0);
       expect(screen.queryByRole('button', { name: /Edit hours played/ })).not.toBeInTheDocument();
     });
   });

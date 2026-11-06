@@ -1,4 +1,5 @@
 import {
+  EmptyStateSkeleton,
   PageHeaderSkeleton,
   PageSkeleton,
   PanelSkeleton,
@@ -113,11 +114,12 @@ export function StatsContentSkeleton() {
   );
 }
 
-export function StatsPageSkeleton() {
+/** `empty`: no games yet, so none of the sections to hold. */
+export function StatsPageSkeleton({ empty = false }: { empty?: boolean }) {
   return (
     <PageSkeleton>
       <PageHeaderSkeleton titleWidth="w-24" descriptionWidth="w-80 max-w-full" />
-      <StatsContentSkeleton />
+      {empty ? <EmptyStateSkeleton /> : <StatsContentSkeleton />}
     </PageSkeleton>
   );
 }

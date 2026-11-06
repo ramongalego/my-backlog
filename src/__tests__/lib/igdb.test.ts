@@ -226,6 +226,29 @@ describe('searchGames', () => {
     expect(results.map((r) => r.name)).toEqual(['Castlevania', 'Castlevania Dominus Collection']);
   });
 
+  it('puts a game named exactly what was typed first, keeping the rest in order', async () => {
+    games = [
+      mkGame({ id: 1, name: 'Portal Maze 2' }),
+      mkGame({ id: 2, name: 'Portal 2' }),
+      mkGame({ id: 3, name: 'Mystery of the Crystal Portal 2' }),
+    ];
+    const results = await searchGames('portal 2');
+    expect(results.map((r) => r.name)).toEqual([
+      'Portal 2',
+      'Portal Maze 2',
+      'Mystery of the Crystal Portal 2',
+    ]);
+  });
+
+  it('matches names without case, marks or punctuation', async () => {
+    games = [
+      mkGame({ id: 1, name: 'Tales of Arise DLC' }),
+      mkGame({ id: 2, name: 'Tales of Arise™' }),
+    ];
+    const results = await searchGames('tales of arise');
+    expect(results[0].name).toBe('Tales of Arise™');
+  });
+
   it('reuses the access token between requests', async () => {
     games = [];
     await searchGames('a game');

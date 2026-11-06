@@ -13,14 +13,20 @@ interface StartProps {
 
 /** The two ways to give Stats something to show: add games, or bring in Steam. */
 export function StatsStartButtons({ isSteamConnected, onAddGame, onConnectSteam }: StartProps) {
+  // Stacked at one width on phones, where the two don't fit side by side.
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="lg" className="cursor-pointer" onClick={onAddGame}>
+    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+      <Button size="lg" className="w-full sm:w-auto cursor-pointer" onClick={onAddGame}>
         <Plus className="w-5 h-5" aria-hidden="true" />
         <span>Add a game</span>
       </Button>
       {!isSteamConnected && (
-        <Button variant="secondary" size="lg" className="cursor-pointer" onClick={onConnectSteam}>
+        <Button
+          variant="secondary"
+          size="lg"
+          className="w-full sm:w-auto cursor-pointer"
+          onClick={onConnectSteam}
+        >
           <SteamIcon className="w-5 h-5" />
           <span>Connect Steam</span>
         </Button>

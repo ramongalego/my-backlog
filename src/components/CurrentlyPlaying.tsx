@@ -10,6 +10,7 @@ import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/manual';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { formatLastPlayed } from '@/lib/games/last-played';
+import { playedHours } from '@/lib/games/playtime';
 
 interface Game {
   id: number;
@@ -55,7 +56,7 @@ function Progress({
   onSaveHours?: (hours: number) => void | Promise<void>;
 }) {
   const mainStoryHours = game.main_story_hours ?? 0;
-  const playedHours = Math.round(game.playtime_forever / 60);
+  const hoursPlayed = playedHours(game.playtime_forever);
   const platform = consoleOf(game);
   // What follows the hours is hidden while they're being edited.
   const hours = (after?: ReactNode) =>
@@ -81,7 +82,7 @@ function Progress({
   // Without a time to beat there's nothing to measure against: just the hours.
   if (!mainStoryHours) return <div className="text-sm">{hours()}</div>;
 
-  if (playedHours >= mainStoryHours) {
+  if (hoursPlayed >= mainStoryHours) {
     return (
       <div className="flex flex-wrap items-center gap-x-1 text-sm">
         {hours(<span className="text-ink-400">· past the ~{mainStoryHours}h estimate</span>)}
@@ -98,10 +99,10 @@ function Progress({
         <div
           // New hours (logged, or from Steam) ease the bar to its new length.
           className="h-full bg-accent-500 rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
-          style={{ width: `${Math.min((playedHours / mainStoryHours) * 100, 100)}%` }}
+          style={{ width: `${Math.min((hoursPlayed / mainStoryHours) * 100, 100)}%` }}
           role="progressbar"
           aria-label="Progress toward the time to beat"
-          aria-valuenow={playedHours}
+          aria-valuenow={hoursPlayed}
           aria-valuemin={0}
           aria-valuemax={mainStoryHours}
         />

@@ -1,5 +1,10 @@
 import { COVER_ASPECT } from '@/components/games/CoverArt';
-import { PageHeaderSkeleton, PageSkeleton, Skeleton } from '@/components/layout/Skeleton';
+import {
+  EmptyStateSkeleton,
+  PageHeaderSkeleton,
+  PageSkeleton,
+  Skeleton,
+} from '@/components/layout/Skeleton';
 
 const FILTER_PILL_WIDTHS = ['w-14', 'w-24', 'w-24', 'w-24', 'w-28', 'w-20'];
 
@@ -20,7 +25,8 @@ export function GameGridSkeleton({ count = 12 }: { count?: number }) {
   );
 }
 
-export function GamesPageSkeleton() {
+/** `empty`: the library is known to be empty, so no grid of cards to hold. */
+export function GamesPageSkeleton({ empty = false }: { empty?: boolean }) {
   return (
     <PageSkeleton>
       <PageHeaderSkeleton
@@ -39,7 +45,7 @@ export function GamesPageSkeleton() {
           <Skeleton className="h-5 w-32" />
         </div>
       </PageHeaderSkeleton>
-      <GameGridSkeleton />
+      {empty ? <EmptyStateSkeleton /> : <GameGridSkeleton />}
     </PageSkeleton>
   );
 }

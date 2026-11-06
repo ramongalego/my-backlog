@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Play, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { LoadError } from '@/components/ui/LoadError';
@@ -82,6 +82,7 @@ export default function HomeView() {
     gameSummary,
     carouselModal,
     handlePickGame,
+    handlePlayNext,
     handleFinishGame,
     handleDropGame,
     handleQueueGame,
@@ -120,7 +121,10 @@ export default function HomeView() {
   const isBuildingBacklog = backlogCount < MIN_GAMES_TO_PICK && !isSyncing && !currentlyPlaying;
   // Both picks leave queued games out, so once every backlog game is queued
   // there's nothing left to pick, and a pick would only come back empty.
-  const nothingToPick = backlogCount - queuedGameIds.size <= 0;
+  const pickable = backlogCount - queuedGameIds.size;
+  const nothingToPick = pickable <= 0;
+  // Picking for the queue needs a few games to choose between, like the band.
+  const tooFewToPick = pickable < MIN_GAMES_TO_PICK;
 
   // Signed-out visitors never get here (the proxy sends them to the landing page).
   if (isLoading || !user) {
@@ -234,8 +238,9 @@ export default function HomeView() {
 
         {/* Up next: the game that takes over when you finish this one, and
             picking another for the queue. The hinge between the band (now)
-            and the shelf (later). */}
-        {!isSyncing && currentlyPlaying && (
+            and the shelf (later). With nothing playing, the queued game is
+            there to start. */}
+        {!isSyncing && !rollCovers && (currentlyPlaying || queue.length > 0) && (
           <div
             className={`${PAGE_CONTAINER} mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4`}
           >
@@ -268,11 +273,24 @@ export default function HomeView() {
                 is empty.{' '}
                 {nothingToPick
                   ? 'Add a game to have one ready for after this.'
-                  : 'The game you pick goes there, to play after this one.'}
+                  : tooFewToPick
+                    ? 'Queue a game from your library to play after this one, or add more to pick from.'
+                    : 'The game you pick goes there, to play after this one.'}
               </p>
             )}
-            {nothingToPick ? (
-              // Every backlog game is playing or queued: nothing left to pick.
+            {!currentlyPlaying ? (
+              <Button
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={handlePlayNext}
+                aria-label={`Play ${queue[0].game.name}`}
+              >
+                <Play className="w-4 h-4" aria-hidden="true" />
+                <span>Play</span>
+              </Button>
+            ) : tooFewToPick ? (
+              // Every backlog game is playing or queued, or too few are left
+              // to choose between: add more instead.
               <Button variant="secondary" className="cursor-pointer" onClick={() => openAddGame()}>
                 <Plus className="w-4 h-4" aria-hidden="true" />
                 <span>Add a game</span>

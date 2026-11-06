@@ -4,6 +4,7 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { fieldClass } from '@/components/ui/Input';
+import { playedHours } from '@/lib/games/playtime';
 
 /**
  * Hours played for a game on a console, edited where it's shown: the playing
@@ -27,7 +28,7 @@ export function HoursPlayedEdit({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [invalid, setInvalid] = useState(false);
-  const hours = Math.round(minutes / 60);
+  const hours = playedHours(minutes);
 
   const open = () => {
     // Tenths, as in the detail dialog, so 2.5h isn't rounded away by an edit.

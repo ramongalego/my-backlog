@@ -11,7 +11,7 @@ it('closes as soon as a refresh starts', () => {
   render(<UserMenu user={user} steamUsername="Player" steamAvatar={null} onRefresh={onRefresh} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Refresh Library' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Refresh library' }));
 
   expect(onRefresh).toHaveBeenCalled();
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();

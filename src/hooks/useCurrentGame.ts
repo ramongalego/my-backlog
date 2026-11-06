@@ -28,6 +28,14 @@ export function useCurrentGame(userId: string | null) {
     await nowPlaying.pick(game);
   };
 
+  /** Starts the first queued game, when nothing is being played. */
+  const handlePlayNext = () => {
+    const next = nowPlaying.queue[0];
+    if (!next) return;
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
+    nowPlaying.pickFromQueue(next.game_id);
+  };
+
   const handleConfirmCarouselDetail = async (
     status: string,
     date: string,
@@ -92,6 +100,7 @@ export function useCurrentGame(userId: string | null) {
     gameSummary: nowPlaying.gameSummary,
     carouselModal,
     handlePickGame,
+    handlePlayNext,
     handleFinishGame: nowPlaying.openFinish,
     handleDropGame: nowPlaying.openDrop,
     handleQueueGame: nowPlaying.addToQueue,

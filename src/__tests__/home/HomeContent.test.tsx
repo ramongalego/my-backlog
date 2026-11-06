@@ -378,3 +378,39 @@ describe('Home when the library fails to load', () => {
     expect(retry).toHaveBeenCalled();
   });
 });
+
+describe('HomeContent — the queue', () => {
+  const queued = {
+    id: 10,
+    game_id: 2,
+    position: 0,
+    game: { id: 2, app_id: 2, name: 'Outer Wilds', header_image: null, playtime_forever: 0 },
+  };
+
+  it('offers the next queued game to start when nothing is playing', () => {
+    const handlePlayNext = jest.fn();
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      meta: { ...baseLibrary.meta, queuedGameIds: new Set([2]) },
+      currentGame: { ...baseLibrary.currentGame, queue: [queued], handlePlayNext },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByText('Next in your queue')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Play Outer Wilds' }));
+    expect(handlePlayNext).toHaveBeenCalled();
+  });
+
+  it('offers Add a game, not a pick, when too few games are left to pick for the queue', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      meta: { ...baseLibrary.meta, gameCount: 3, backlogCount: 2 },
+      currentGame: { ...baseLibrary.currentGame, currentlyPlaying: mockGame },
+    });
+    render(<HomePage />);
+
+    expect(screen.queryByRole('button', { name: 'Pick My Next Game' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a game' })).toBeInTheDocument();
+    expect(screen.getByText(/Queue a game from your library/)).toBeInTheDocument();
+  });
+});

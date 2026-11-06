@@ -26,6 +26,17 @@ let refreshWhenSettled = false;
 // offer loaded the library from the server with them still in it, and the
 // games list isn't refetched after an edit, so they're taken off it again.
 const deletedIds = new Set<number>();
+// The deletes still waiting on their toast. The toast pauses while the page is
+// in the background and is gone with the page, so a removal would quietly come
+// back after a reload or on leaving: these are sent as the page goes instead.
+const unsentDeletes = new Map<number, (keepalive: boolean) => void>();
+if (typeof window !== 'undefined') {
+  const flush = () => unsentDeletes.forEach((send) => send(true));
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+}
 
 /**
  * The list with one item put back where it was in an earlier copy of it:
@@ -176,11 +187,12 @@ export function useManualGameActions(userId: string | null) {
     };
 
     let settled = false;
-    const send = async () => {
+    const send = async (keepalive = false) => {
       if (settled) return;
       settled = true;
+      unsentDeletes.delete(gameId);
       try {
-        await deleteManualGame(gameId);
+        await deleteManualGame(gameId, keepalive);
         pendingRemovals.delete(gameId);
         deletedIds.add(gameId);
         refreshWhenSettled = true;
@@ -198,13 +210,15 @@ export function useManualGameActions(userId: string | null) {
         label: 'Undo',
         onClick: () => {
           settled = true;
+          unsentDeletes.delete(gameId);
           putBack();
           settleRemovals();
         },
       },
-      onAutoClose: send,
-      onDismiss: send,
+      onAutoClose: () => send(),
+      onDismiss: () => send(),
     });
+    unsentDeletes.set(gameId, send);
   };
 
   /** Moves a Steam game back from a console, then brings back its Steam playtime. */

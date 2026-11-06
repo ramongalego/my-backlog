@@ -60,7 +60,7 @@ it('takes removed games off at once, and refreshes only after the last delete is
   // The first delete goes through while the second is still on offer: a
   // refresh now would bring the second one back from the server.
   await act(() => toastOptions(0).onAutoClose());
-  expect(deleteManualGame).toHaveBeenCalledWith(1);
+  expect(deleteManualGame).toHaveBeenCalledWith(1, false);
   expect(statusChanged).not.toHaveBeenCalled();
 
   await act(() => toastOptions(1).onAutoClose());
@@ -76,13 +76,13 @@ it("undoing one removal brings back that game only, not another that's pending",
 
   act(() => toastOptions(0).action.onClick());
   expect(diary()).toEqual(['Old game', 'Kept']);
-  expect(deleteManualGame).not.toHaveBeenCalledWith(1);
+  expect(deleteManualGame).not.toHaveBeenCalledWith(1, false);
 
   // Undoing doesn't send the delete; the other still goes through.
   await act(() => toastOptions(0).onAutoClose());
   await act(() => toastOptions(1).onAutoClose());
   expect(deleteManualGame).toHaveBeenCalledTimes(1);
-  expect(deleteManualGame).toHaveBeenCalledWith(2);
+  expect(deleteManualGame).toHaveBeenCalledWith(2, false);
   expect(statusChanged).toHaveBeenCalledTimes(1);
 });
 
@@ -115,4 +115,29 @@ it('takes a deleted game off a games list loaded while its Undo was on offer', a
   expect(queryClient.getQueryData<{ name: string }[]>(listKey)?.map((g) => g.name)).toEqual([
     'Kept',
   ]);
+});
+
+it('sends a pending removal as the page goes, rather than losing it with the toast', async () => {
+  const { result, toastOptions } = setup();
+  act(() => result.current.remove(1, 'Old game'));
+  expect(deleteManualGame).not.toHaveBeenCalled();
+
+  await act(async () => {
+    window.dispatchEvent(new Event('pagehide'));
+  });
+  // Kept alive past the page, and only once: the toast closing later sends nothing.
+  expect(deleteManualGame).toHaveBeenCalledWith(1, true);
+  await act(() => toastOptions(0).onAutoClose());
+  expect(deleteManualGame).toHaveBeenCalledTimes(1);
+});
+
+it("doesn't send a removal that was undone when the page goes", async () => {
+  const { result, toastOptions } = setup();
+  act(() => result.current.remove(1, 'Old game'));
+  act(() => toastOptions(0).action.onClick());
+
+  await act(async () => {
+    window.dispatchEvent(new Event('pagehide'));
+  });
+  expect(deleteManualGame).not.toHaveBeenCalled();
 });

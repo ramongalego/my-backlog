@@ -122,8 +122,9 @@ export function BuildBacklog({
               list, not here: say so, or it looks like adding it didn't work. */}
           {historyCount > 0 && <> · finished and dropped don&apos;t count</>}
         </p>
-        <div className="mt-6 flex flex-wrap items-center gap-2">
-          <Button size="lg" className="cursor-pointer" onClick={onAddGame}>
+        {/* Stacked at one width on phones, where the two don't fit side by side. */}
+        <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+          <Button size="lg" className="w-full sm:w-auto cursor-pointer" onClick={onAddGame}>
             <Plus className="w-5 h-5" aria-hidden="true" />
             <span>Add a game</span>
           </Button>
@@ -131,7 +132,7 @@ export function BuildBacklog({
             <Button
               variant="secondary"
               size="lg"
-              className="cursor-pointer"
+              className="w-full sm:w-auto cursor-pointer"
               onClick={onConnectSteam}
             >
               <SteamIcon className="w-5 h-5" />

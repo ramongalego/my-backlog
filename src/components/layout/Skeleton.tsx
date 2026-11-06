@@ -69,3 +69,18 @@ export function PanelSkeleton({
 }) {
   return <div className={`${PANEL_SURFACE} ${className}`}>{children}</div>;
 }
+
+/**
+ * Mirrors <EmptyState>, for a page already known to have nothing to show (an
+ * empty library), so its skeleton doesn't draw content that never arrives.
+ */
+export function EmptyStateSkeleton({ action = true }: { action?: boolean }) {
+  return (
+    <div className="py-16 flex flex-col items-center">
+      <Skeleton className="w-8 h-8 mb-4 rounded-md" />
+      <Skeleton className="h-5 w-40" />
+      <Skeleton className="h-4 w-72 max-w-full mt-2" />
+      {action && <Skeleton className="h-10 w-36 mt-6 rounded-lg" />}
+    </div>
+  );
+}
