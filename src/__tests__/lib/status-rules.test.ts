@@ -85,6 +85,23 @@ describe('applyStatusToList', () => {
     expect(next[2].last_played_at).toBeNull();
   });
 
+  it("doesn't count a console game stopped within minutes of starting as played", () => {
+    const onConsole = { source: 'manual', platform: 'Switch', last_played_at: null };
+    const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000).toISOString();
+    const [justStarted] = applyStatusToList(
+      [row(1, 'playing', { ...onConsole, started_at: minutesAgo(1) })],
+      { gameId: 1, status: 'backlog' },
+      now,
+    );
+    expect(justStarted.last_played_at).toBeNull();
+    const [played] = applyStatusToList(
+      [row(1, 'playing', { ...onConsole, started_at: minutesAgo(30) })],
+      { gameId: 1, status: 'backlog' },
+      now,
+    );
+    expect(played.last_played_at).toBe(now.toISOString());
+  });
+
   it('dates a console game finished to its finish date, and leaves one with no date alone', () => {
     const onConsole = { source: 'manual', platform: 'Switch', last_played_at: null };
     const [dated] = applyStatusToList(

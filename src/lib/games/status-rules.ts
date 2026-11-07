@@ -67,15 +67,28 @@ export function statusChangeFrom(vars: {
 export const DEMOTED: GameUpdate = { status: 'backlog', started_at: null };
 
 /**
+ * What switching to another game does to the one being played: back to the
+ * backlog (and the top of the queue), keeping its start date for when it's
+ * picked up again.
+ */
+export const PAUSED: GameUpdate = { status: 'backlog' };
+
+/**
  * The update, plus a last-played date for a game played on a console, which
  * doesn't report one: so it ranks among recently played games (Pick Up Where
  * You Left Off) and shows when you last played it, like Steam games do.
  * Finishing or dropping it dates it to the day you entered (none without
- * one, as for a game finished long ago); stopping it any other way, to now.
- * Steam reports its own games' dates.
+ * one, as for a game finished long ago); stopping it any other way, to now,
+ * unless it was only started a few minutes ago (started by mistake, or a
+ * switch undone): that wasn't playing it. Steam reports its own games' dates.
  */
 export function withLastPlayed(
-  game: { status: string | null; source?: string; platform?: string | null },
+  game: {
+    status: string | null;
+    source?: string;
+    platform?: string | null;
+    started_at?: string | null;
+  },
   update: GameUpdate,
   now = new Date(),
 ): GameUpdate {
@@ -84,10 +97,14 @@ export function withLastPlayed(
     const endedOn = update.status === 'finished' ? update.finished_at : update.dropped_at;
     return endedOn ? { ...update, last_played_at: endedOn } : update;
   }
-  return game.status === 'playing' && update.status !== 'playing'
-    ? { ...update, last_played_at: now.toISOString() }
-    : update;
+  if (game.status !== 'playing' || update.status === 'playing') return update;
+  const startedAt = game.started_at ? Date.parse(game.started_at) : NaN;
+  if (now.getTime() - startedAt < NOT_REALLY_PLAYED_MS) return update;
+  return { ...update, last_played_at: now.toISOString() };
 }
+
+/** Stopped this soon after starting, a game doesn't count as played. */
+const NOT_REALLY_PLAYED_MS = 5 * 60 * 1000;
 
 /** Copies the update's fields that the cached row has, so rows keep their shape. */
 function patch<T extends object>(row: T, update: GameUpdate): T {

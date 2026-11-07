@@ -45,6 +45,7 @@ export type QueueableGame = Pick<
       | 'release_date'
       | 'source'
       | 'platform'
+      | 'started_at'
     >
   >;
 
@@ -69,6 +70,7 @@ function toQueueItem(game: QueueableGame, position: number): QueueItem {
       // The console tag and Steam details depend on these.
       source: game.source,
       platform: game.platform,
+      started_at: game.started_at ?? null,
     },
   };
 }
@@ -81,7 +83,8 @@ function toPlayingGame(item: QueueItem): GameWithImage {
     header_image: item.game.header_image,
     main_story_hours: item.game.main_story_hours,
     playtime_forever: item.game.playtime_forever,
-    started_at: null,
+    // A paused game carries on from when it was first started.
+    started_at: item.game.started_at ?? null,
     steam_review_score: item.game.steam_review_score,
     steam_review_count: item.game.steam_review_count ?? null,
     critic_score: item.game.critic_score ?? null,
@@ -137,6 +140,16 @@ export function useAddToQueue(userId: string | null) {
 }
 
 type CompletionStatus = 'finished' | 'dropped';
+
+interface SwitchInput {
+  /** The queued game to play. */
+  item: QueueItem;
+  /** The game being played, which is paused at the top of the queue. */
+  playing: GameWithImage;
+  /** Undoing a switch: the queue's order to go back to, and the start date
+   * the game switched to had before (null unless it was paused itself). */
+  undo?: { order: number[]; previousStartedAt: string | null };
+}
 
 interface CompleteInput {
   game: GameWithImage;
@@ -315,6 +328,82 @@ export function useNowPlaying(userId: string | null) {
     onSettled: () => statusChanged(),
   });
 
+  // Playing a queued game while another is playing: the queued game starts and
+  // the one being played is paused at the top of the queue (start date kept),
+  // in one request. Undo switches back and puts the queue back in its order.
+  const switchMutation = useMutation({
+    scope: QUEUE_SCOPE,
+    mutationFn: async ({ item, playing, undo }: SwitchInput) => {
+      await updateGameStatus(item.game_id, 'playing', { pausePlaying: true });
+      if (!undo) return;
+      // The game switched to a moment ago wasn't really started: clear its
+      // start date unless it had one already (paused itself).
+      if (!undo.previousStartedAt) await updateGameStatus(playing.id, 'backlog');
+      await reorderQueue(undo.order);
+    },
+    onMutate: async ({ item, playing, undo }) => {
+      const context = await snapshot({ gameId: item.game_id, status: 'playing' });
+      queryClient.setQueryData(playingKey, toPlayingGame(item));
+      queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) => {
+        const paused = toQueueItem(
+          { ...playing, started_at: undo ? undo.previousStartedAt : playing.started_at },
+          0,
+        );
+        const rest = old.filter((q) => q.game_id !== item.game_id && q.game_id !== playing.id);
+        const next = [paused, ...rest];
+        const ordered = undo
+          ? undo.order.flatMap((id) => next.filter((q) => q.game_id === id))
+          : next;
+        return ordered.map((q, i) => ({ ...q, position: i }));
+      });
+      queryClient.setQueriesData<CarouselPools>(
+        { queryKey: queryKeys.carousels.all },
+        (pools) => pools && removeGameFromPools(pools, item.game_id),
+      );
+      return context;
+    },
+    onError: (err, _vars, context) => {
+      console.error('Failed to switch games:', err);
+      rollback(context);
+      toast.error("Couldn't switch games. Please try again.");
+    },
+    onSuccess: (_data, { item, playing, undo }, context) => {
+      if (undo) return;
+      const order = (context?.previousQueue ?? []).map((q) => q.game_id);
+      const previousStartedAt = item.game.started_at ?? null;
+      toast(`Now playing ${item.game.name}. ${playing.name} is first in your queue.`, {
+        duration: UNDO_MS,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            // Only while nothing else has changed the playing game since.
+            const now = queryClient.getQueryData<GameWithImage | null>(playingKey);
+            const queued = queryClient
+              .getQueryData<QueueItem[]>(queueKey)
+              ?.find((q) => q.game_id === playing.id);
+            if (now?.id !== item.game_id || !queued) return;
+            // The queue as it was, with anything added since at the end and
+            // anything removed since left out.
+            const ids = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? [])
+              .map((q) => q.game_id)
+              .filter((id) => id !== playing.id);
+            const after = [item.game_id, ...ids];
+            const restored = [
+              ...order.filter((id) => after.includes(id)),
+              ...after.filter((id) => !order.includes(id)),
+            ];
+            switchMutation.mutate({
+              item: queued,
+              playing: now,
+              undo: { order: restored, previousStartedAt },
+            });
+          },
+        },
+      });
+    },
+    onSettled: () => statusChanged(),
+  });
+
   // A queued game's status set from its detail dialog. The queue only holds
   // backlog games, so any other status takes it off (the server does the same).
   const queuedStatusMutation = useSetGameStatus(userId, {
@@ -432,6 +521,7 @@ export function useNowPlaying(userId: string | null) {
 
   const isStatusLoading =
     pickMutation.isPending ||
+    switchMutation.isPending ||
     completeMutation.isPending ||
     moveToQueueMutation.isPending ||
     moveToBacklogMutation.isPending ||
@@ -485,9 +575,12 @@ export function useNowPlaying(userId: string | null) {
     },
 
     pick: (game: GameWithImage) => pickMutation.mutateAsync(game).catch(() => undefined),
+    /** Starts a queued game; with another one playing, switches to it (with Undo). */
     pickFromQueue: (gameId: number) => {
       const item = queue.find((q) => q.game_id === gameId);
-      if (item) pickMutation.mutate(toPlayingGame(item));
+      if (!item) return;
+      if (currentlyPlaying) switchMutation.mutate({ item, playing: currentlyPlaying });
+      else pickMutation.mutate(toPlayingGame(item));
     },
     moveToQueue: () => currentlyPlaying && moveToQueueMutation.mutate(currentlyPlaying),
     moveToBacklog: () => currentlyPlaying && moveToBacklogMutation.mutate(currentlyPlaying),

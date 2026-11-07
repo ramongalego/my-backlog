@@ -9,6 +9,8 @@ export async function updateGameStatus(
     droppedAt?: string;
     notes?: string;
     rating?: number | null;
+    /** Pause the game being played (top of the queue) instead of moving it to the backlog. */
+    pausePlaying?: boolean;
   },
 ): Promise<void> {
   const res = await fetch('/api/games/status', {
@@ -21,6 +23,7 @@ export async function updateGameStatus(
       ...(opts?.droppedAt ? { droppedAt: opts.droppedAt } : {}),
       notes: opts?.notes,
       rating: opts?.rating,
+      ...(opts?.pausePlaying ? { pausePlaying: true } : {}),
     }),
   });
 

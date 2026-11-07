@@ -2,7 +2,9 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useNowPlaying } from '@/hooks/useNowPlaying';
-import { completeGame } from '@/lib/games/status';
+import { toast } from 'sonner';
+import { completeGame, updateGameStatus } from '@/lib/games/status';
+import { reorderQueue } from '@/lib/games/queue';
 import { queryKeys } from '@/lib/query-keys';
 
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
@@ -18,6 +20,11 @@ jest.mock('@/lib/mutations', () => ({
 jest.mock('@/lib/games/status', () => ({
   ...jest.requireActual('@/lib/games/status'),
   completeGame: jest.fn(),
+  updateGameStatus: jest.fn(),
+}));
+jest.mock('@/lib/games/queue', () => ({
+  ...jest.requireActual('@/lib/games/queue'),
+  reorderQueue: jest.fn(),
 }));
 
 const playing = {
@@ -42,10 +49,17 @@ const queued = {
   },
 };
 
-function setup() {
+const queuedDread = {
+  id: 11,
+  game_id: 3,
+  position: 1,
+  game: { ...queued.game, name: 'Metroid Dread' },
+};
+
+function setup({ queue = [queued] as unknown[], nowPlaying = playing as unknown } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-  queryClient.setQueryData(queryKeys.games.playing('u'), playing);
-  queryClient.setQueryData(queryKeys.queue.list('u'), [queued]);
+  queryClient.setQueryData(queryKeys.games.playing('u'), nowPlaying);
+  queryClient.setQueryData(queryKeys.queue.list('u'), queue);
   queryClient.setQueryData(queryKeys.library.meta('u'), {
     gameCount: 192,
     historyCount: 50,
@@ -55,10 +69,15 @@ function setup() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return renderHook(() => useNowPlaying('u'), { wrapper });
+  return { ...renderHook(() => useNowPlaying('u'), { wrapper }), queryClient };
 }
 
-beforeEach(() => jest.mocked(completeGame).mockReset());
+beforeEach(() => {
+  jest.mocked(completeGame).mockReset();
+  jest.mocked(updateGameStatus).mockReset().mockResolvedValue(undefined);
+  jest.mocked(reorderQueue).mockReset().mockResolvedValue(undefined);
+  jest.mocked(toast).mockClear();
+});
 
 it('opens the summary as soon as a game is saved as finished, before the server answers', async () => {
   let answer!: (value: Awaited<ReturnType<typeof completeGame>>) => void;
@@ -116,4 +135,72 @@ it("doesn't reopen a summary that was closed before the server answered", async 
   );
 
   expect(result.current.gameSummary).toBeNull();
+});
+
+describe('switching games from the queue', () => {
+  const ids = (items: { game_id: number }[] | undefined) => items?.map((q) => q.game_id);
+
+  it('starts the queued game and pauses the playing one at the top of the queue', async () => {
+    const { result, queryClient } = setup({ queue: [queued, queuedDread] });
+
+    act(() => result.current.pickFromQueue(3));
+
+    // Shown before the server answers.
+    await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(3));
+    expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([1, 2]);
+    await waitFor(() =>
+      expect(updateGameStatus).toHaveBeenCalledWith(3, 'playing', { pausePlaying: true }),
+    );
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        'Now playing Metroid Dread. SteamWorld Dig is first in your queue.',
+        expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) }),
+      ),
+    );
+  });
+
+  it('undoes a switch: back to the old game and the queue in its old order', async () => {
+    const { result, queryClient } = setup({ queue: [queued, queuedDread] });
+    act(() => result.current.pickFromQueue(3));
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+
+    const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
+      string,
+      { action: { onClick: () => void } },
+    ];
+    act(() => options.action.onClick());
+
+    await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
+    expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([2, 3]);
+    await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([2, 3]));
+    expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', { pausePlaying: true });
+    // Metroid Dread was only playing for a moment: its start date is cleared.
+    expect(updateGameStatus).toHaveBeenCalledWith(3, 'backlog');
+    // No second Undo for the undo.
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  it('after a switch, finishing the game goes back to the paused one', async () => {
+    jest.mocked(completeGame).mockReturnValue(new Promise(() => {}));
+    const { result } = setup({ queue: [queued, queuedDread] });
+    act(() => result.current.pickFromQueue(3));
+    await waitFor(() => expect(updateGameStatus).toHaveBeenCalled());
+
+    act(() => result.current.confirmStatusChange('finished', '2026-11-07', '', 9));
+
+    expect(result.current.gameSummary).toMatchObject({
+      gameName: 'Metroid Dread',
+      nextGame: 'SteamWorld Dig',
+    });
+  });
+
+  it('with nothing playing, Play just starts the game', async () => {
+    const { result, queryClient } = setup({ queue: [queued, queuedDread], nowPlaying: null });
+
+    act(() => result.current.pickFromQueue(3));
+
+    await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(3));
+    expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([2]);
+    await waitFor(() => expect(updateGameStatus).toHaveBeenCalledWith(3, 'playing'));
+  });
 });

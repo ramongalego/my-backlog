@@ -41,6 +41,11 @@ function fakeSupabase(tables: { games: Row[]; playing_queue: Row[] }) {
           op = { kind: 'delete' };
           return builder;
         },
+        insert: (rows: Row[]) => {
+          tables[table].push(...rows);
+          log.push(`insert ${table}`);
+          return Promise.resolve({ data: null, error: null });
+        },
         eq: (col: string, val: unknown) => {
           filters.push((r) => r[col] === val);
           return builder;
@@ -155,6 +160,84 @@ describe('applyStatusChange', () => {
   });
 });
 
+describe('switching games (pausePlaying)', () => {
+  const queueOrder = (rows: Row[]) =>
+    [...rows].sort((a, b) => Number(a.position) - Number(b.position)).map((q) => q.game_id);
+
+  it('pauses the playing game at the top of the queue, keeping its start date', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [
+        { ...game(1, 'playing'), started_at: '2026-10-30T19:24:07Z' },
+        game(2, 'backlog'),
+        game(3, 'backlog'),
+      ],
+      playing_queue: [
+        { user_id: 'u', game_id: 2, position: 0 },
+        { user_id: 'u', game_id: 3, position: 1 },
+      ],
+    });
+
+    const result = await applyStatusChange(client, 'u', {
+      gameId: 3,
+      status: 'playing',
+      pausePlaying: true,
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(tables.games[0]).toMatchObject({
+      status: 'backlog',
+      started_at: '2026-10-30T19:24:07Z',
+    });
+    expect(tables.games[2].status).toBe('playing');
+    expect(queueOrder(tables.playing_queue)).toEqual([1, 2]);
+  });
+
+  it('resumes a paused game with its old start date', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [
+        { ...game(1, 'backlog'), started_at: '2026-10-30T19:24:07Z' },
+        { ...game(2, 'playing'), started_at: '2026-11-07T10:00:00Z' },
+      ],
+      playing_queue: [{ user_id: 'u', game_id: 1, position: -1 }],
+    });
+
+    await applyStatusChange(client, 'u', { gameId: 1, status: 'playing', pausePlaying: true });
+
+    expect(tables.games[0]).toMatchObject({
+      status: 'playing',
+      started_at: '2026-10-30T19:24:07Z',
+    });
+    expect(tables.games[1]).toMatchObject({
+      status: 'backlog',
+      started_at: '2026-11-07T10:00:00Z',
+    });
+    expect(queueOrder(tables.playing_queue)).toEqual([2]);
+  });
+
+  it('starts afresh a game with a start date that is no longer queued', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [{ ...game(1, 'backlog'), started_at: '2026-10-30T19:24:07Z' }],
+      playing_queue: [],
+    });
+
+    await applyStatusChange(client, 'u', { gameId: 1, status: 'playing' });
+
+    expect(tables.games[0].started_at).not.toBe('2026-10-30T19:24:07Z');
+  });
+
+  it('without pausePlaying, sends the playing game to the backlog as before', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [{ ...game(1, 'playing'), started_at: '2026-10-30T19:24:07Z' }, game(2, 'backlog')],
+      playing_queue: [],
+    });
+
+    await applyStatusChange(client, 'u', { gameId: 2, status: 'playing' });
+
+    expect(tables.games[0]).toMatchObject({ status: 'backlog', started_at: null });
+    expect(tables.playing_queue).toEqual([]);
+  });
+});
+
 describe('promoteNextFromQueue', () => {
   it('starts the first game in the queue and returns it', async () => {
     const { client, tables } = fakeSupabase({
@@ -188,6 +271,33 @@ describe('promoteNextFromQueue', () => {
 
     expect(await promoteNextFromQueue(client, 'u')).toMatchObject({ id: 4, status: 'playing' });
     expect(tables.playing_queue.map((q) => q.game_id)).toEqual([2, 3]);
+  });
+
+  it('after a switch, finishing goes back to the paused game with its start date', async () => {
+    const { client, tables } = fakeSupabase({
+      games: [
+        { ...game(1, 'playing'), started_at: '2026-10-30T19:24:07Z' },
+        game(2, 'backlog'),
+        game(3, 'backlog'),
+      ],
+      playing_queue: [
+        { user_id: 'u', game_id: 2, position: 0 },
+        { user_id: 'u', game_id: 3, position: 1 },
+      ],
+    });
+
+    // Switch to game 3, then finish it.
+    await applyStatusChange(client, 'u', { gameId: 3, status: 'playing', pausePlaying: true });
+    await applyStatusChange(client, 'u', { gameId: 3, status: 'finished' });
+    const promoted = await promoteNextFromQueue(client, 'u');
+
+    expect(promoted).toMatchObject({
+      id: 1,
+      status: 'playing',
+      started_at: '2026-10-30T19:24:07Z',
+    });
+    expect(tables.games[2].status).toBe('finished');
+    expect(tables.playing_queue.map((q) => q.game_id)).toEqual([2]);
   });
 
   it('returns null when nothing queued is out yet', async () => {

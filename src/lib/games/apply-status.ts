@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEMOTED, statusUpdate, withLastPlayed, type StatusChange } from './status-rules';
+import { DEMOTED, PAUSED, statusUpdate, withLastPlayed, type StatusChange } from './status-rules';
 import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
 import { isReleased } from './release-date';
 import type { GameWithImage } from '@/types/games';
@@ -11,14 +11,16 @@ export type StatusChangeResult = { ok: true } | { ok: false; status: 404 | 500; 
 /**
  * Sets a game's status for a user, server side: the status route and the
  * finish/drop route both use it so the rules live in one place. Only one game
- * can be playing, and the queue only holds backlog games.
+ * can be playing, and the queue only holds backlog games. With `pausePlaying`,
+ * the game that was playing goes to the top of the queue instead, and keeps
+ * its start date: a paused game picked up again from the queue resumes.
  */
 export async function applyStatusChange(
   supabase: SupabaseClient,
   userId: string,
   change: StatusChange,
 ): Promise<StatusChangeResult> {
-  const { gameId, status } = change;
+  const { gameId, status, pausePlaying = false } = change;
   const failed = (err: unknown): StatusChangeResult => {
     console.error(err);
     return { ok: false, status: 500, error: 'Failed to update game status' };
@@ -28,18 +30,35 @@ export async function applyStatusChange(
   // so a bad gameId can't demote the current game and then update nothing.
   const { data: target, error: targetError } = await supabase
     .from('games')
-    .select('id, status, source, platform')
+    .select('id, status, source, platform, started_at')
     .eq('user_id', userId)
     .eq('id', gameId)
     .maybeSingle();
   if (targetError) return failed(targetError);
   if (!target) return { ok: false, status: 404, error: 'Game not found' };
 
-  // Only one game can be playing: move any other one back to the backlog.
+  // A game paused for another one keeps its start date while it waits in the
+  // queue, and picking it up again carries on from there. (Taking it off the
+  // queue for the backlog ends that: started again later, it starts afresh.)
+  let resuming = false;
+  if (status === 'playing' && target.status === 'backlog' && target.started_at) {
+    const { data: queued, error: queuedError } = await supabase
+      .from('playing_queue')
+      .select('game_id')
+      .eq('user_id', userId)
+      .eq('game_id', gameId)
+      .maybeSingle();
+    if (queuedError) return failed(queuedError);
+    resuming = !!queued;
+  }
+
+  // Only one game can be playing: move any other one back to the backlog, or
+  // pause it at the top of the queue.
+  const paused: number[] = [];
   if (status === 'playing') {
     const { data: others, error: playingError } = await supabase
       .from('games')
-      .select('id, status, source, platform')
+      .select('id, status, source, platform, started_at')
       .eq('user_id', userId)
       .eq('status', 'playing')
       .neq('id', gameId);
@@ -47,16 +66,19 @@ export async function applyStatusChange(
     for (const other of others ?? []) {
       const { error: demoteError } = await supabase
         .from('games')
-        .update(withLastPlayed(other, DEMOTED))
+        .update(withLastPlayed(other, pausePlaying ? PAUSED : DEMOTED))
         .eq('user_id', userId)
         .eq('id', other.id);
       if (demoteError) return failed(demoteError);
+      if (pausePlaying) paused.push(other.id);
     }
   }
 
+  const update = statusUpdate(change);
+  if (resuming) delete update.started_at;
   const { error } = await supabase
     .from('games')
-    .update(withLastPlayed(target, statusUpdate(change)))
+    .update(withLastPlayed(target, update))
     .eq('user_id', userId)
     .eq('id', gameId);
   if (error) return failed(error);
@@ -69,6 +91,23 @@ export async function applyStatusChange(
       .eq('user_id', userId)
       .eq('game_id', gameId);
     if (dequeueError) console.error(dequeueError);
+  }
+
+  // The paused game goes first in the queue, ahead of what's there now.
+  if (paused.length) {
+    const { data: first, error: firstError } = await supabase
+      .from('playing_queue')
+      .select('position')
+      .eq('user_id', userId)
+      .order('position', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (firstError) return failed(firstError);
+    const top = (first?.position ?? 1) - 1;
+    const { error: queueError } = await supabase
+      .from('playing_queue')
+      .insert(paused.map((id, i) => ({ user_id: userId, game_id: id, position: top - i })));
+    if (queueError) return failed(queueError);
   }
 
   return { ok: true };

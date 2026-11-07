@@ -56,6 +56,7 @@ import { consoleOf } from '@/lib/games/manual';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import { playedHours } from '@/lib/games/playtime';
+import { isReleased } from '@/lib/games/release-date';
 
 interface NowPlayingRowProps {
   game: GameWithImage;
@@ -198,7 +199,8 @@ function NowPlayingRow({
 interface QueueItemRowProps {
   item: QueueItem;
   index: number;
-  canPlay: boolean;
+  /** The game being played, which Play on this row would switch from; null if none. */
+  playingName: string | null;
   isLoading: boolean;
   onPick: (gameId: number) => void;
   onRemove: (gameId: number) => void;
@@ -232,7 +234,7 @@ function SortableQueueItem(props: QueueItemRowProps) {
 function QueueItemRow({
   item,
   index,
-  canPlay,
+  playingName,
   isLoading,
   onPick,
   onRemove,
@@ -310,17 +312,39 @@ function QueueItemRow({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {canPlay && (
-            <Button
-              size="sm"
-              onClick={() => onPick(item.game_id)}
-              disabled={isLoading}
-              aria-label={`Play ${item.game.name}`}
-              className="cursor-pointer px-2.5 sm:px-3"
+          {/* Every game that's out can be played from here. With nothing
+              playing it's the page's main action; with a game playing it
+              switches to this one (the other waits at the top of the queue),
+              so it's a quieter button and says what it does. */}
+          {isReleased(item.game.release_date) && (
+            <Tooltip
+              content={
+                playingName ? (
+                  <TooltipText
+                    title={`Play instead of ${playingName}`}
+                    detail={`${playingName} goes to the top of your queue.`}
+                  />
+                ) : (
+                  <TooltipText title="Play" />
+                )
+              }
             >
-              <Play className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Play</span>
-            </Button>
+              <Button
+                size="sm"
+                variant={playingName ? 'secondary' : 'primary'}
+                onClick={() => onPick(item.game_id)}
+                disabled={isLoading}
+                aria-label={
+                  playingName
+                    ? `Play ${item.game.name} instead of ${playingName}`
+                    : `Play ${item.game.name}`
+                }
+                className="cursor-pointer px-2.5 sm:px-3"
+              >
+                <Play className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Play</span>
+              </Button>
+            </Tooltip>
           )}
           {/* The first game is already at the top: same-size space instead, so
               the icons line up down the list. */}
@@ -590,7 +614,7 @@ export default function PlayingQueueView() {
                       key={item.game_id}
                       item={item}
                       index={index}
-                      canPlay={!currentlyPlaying}
+                      playingName={currentlyPlaying?.name ?? null}
                       isLoading={isStatusLoading}
                       onPick={handlePickFromQueue}
                       onRemove={handleRemoveFromQueue}
@@ -605,7 +629,7 @@ export default function PlayingQueueView() {
                   <QueueItemRow
                     item={activeItem}
                     index={queue.findIndex((q) => q.game_id === activeId)}
-                    canPlay={!currentlyPlaying}
+                    playingName={currentlyPlaying?.name ?? null}
                     isLoading={isStatusLoading}
                     onPick={handlePickFromQueue}
                     onRemove={handleRemoveFromQueue}

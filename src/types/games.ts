@@ -59,5 +59,7 @@ export interface QueueItem {
     deck_compat?: number | null;
     last_played_at?: string | null;
     release_date?: string | null;
+    /** Set while the game is paused: switched away from, waiting to be picked up again. */
+    started_at?: string | null;
   };
 }

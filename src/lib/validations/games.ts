@@ -21,6 +21,9 @@ export const gameStatusSchema = z.object({
     .optional()
     .nullable(),
   rating: z.number().int().min(0).max(10).optional().nullable(),
+  // Starting a game while another is playing: the other one is paused (top of
+  // the queue, start date kept) instead of going back to the backlog.
+  pausePlaying: z.boolean().optional(),
 });
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;

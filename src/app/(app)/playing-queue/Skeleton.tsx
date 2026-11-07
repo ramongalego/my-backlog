@@ -9,15 +9,9 @@ import { Panel } from '@/components/ui/Panel';
 
 /**
  * Mirrors QueueItemRow: a card with the cover on top on phones, a row on
- * desktop. `canPlay`: nothing is playing, so each row has a Play button.
+ * desktop, with Play, Move to top, the drag handle and Move to backlog.
  */
-export function QueueListSkeleton({
-  rows = 3,
-  canPlay = false,
-}: {
-  rows?: number;
-  canPlay?: boolean;
-}) {
+export function QueueListSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="divide-y divide-ink-800/70">
       {Array.from({ length: rows }, (_, i) => (
@@ -34,7 +28,8 @@ export function QueueListSkeleton({
               <Skeleton className="h-4 w-1/2 sm:w-40" />
             </div>
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {canPlay && <Skeleton className="w-9 sm:w-16 h-8 rounded-lg" />}
+              <Skeleton className="w-9 sm:w-16 h-8 rounded-lg" />
+              <Skeleton className="w-7 h-7" />
               <Skeleton className="w-7 h-7" />
               <Skeleton className="w-7 h-7" />
             </div>
@@ -70,7 +65,7 @@ function NowPlayingSkeleton() {
 /**
  * The queue's content while it loads. `playing`: a game is being played (the
  * usual case, and the guess when it isn't known), so its panel comes first,
- * then "Up Next" and rows without Play buttons.
+ * then "Up Next" and the rows.
  */
 export function QueueContentSkeleton({ playing = true }: { playing?: boolean }) {
   return playing ? (
@@ -80,7 +75,7 @@ export function QueueContentSkeleton({ playing = true }: { playing?: boolean }) 
       <QueueListSkeleton />
     </div>
   ) : (
-    <QueueListSkeleton canPlay />
+    <QueueListSkeleton />
   );
 }
 

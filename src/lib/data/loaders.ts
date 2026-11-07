@@ -179,7 +179,7 @@ export async function loadCurrentlyPlaying(
 }
 
 const QUEUE_GAME_COLUMNS =
-  'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at, release_date';
+  'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at, release_date, started_at';
 
 export async function loadQueue(supabase: SupabaseClient, userId: string): Promise<QueueItem[]> {
   // The queue references its games, so one query returns each row with its game.
