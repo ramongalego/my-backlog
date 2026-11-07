@@ -2,12 +2,12 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { reloadPage } from '@/lib/reload';
 import { useAuth } from './useAuth';
 
 // Playtime is one Steam call for the whole library, so it can be checked often.
-export const LIBRARY_REFRESH_STALE_MS = 15 * 60 * 1000;
+const LIBRARY_REFRESH_STALE_MS = 15 * 60 * 1000;
 // Review scores cost a call per 50 games and barely move, so once a day.
 const REVIEWS_REFRESH_STALE_MS = 24 * 60 * 60 * 1000;
 

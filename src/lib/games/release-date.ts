@@ -22,7 +22,7 @@ const NO_DATE_YET = /^(to be announced|coming soon|tba|tbd)$/i;
 // A release known only by year or quarter: "2027", "Q2 2027".
 const VAGUE_DATE = /^(?:Q[1-4] )?(\d{4})$/i;
 
-export interface UpcomingRelease {
+interface UpcomingRelease {
   /** For the tag on the art: "Out Nov 5", in the last week "Out in 3 days", "Coming soon". */
   label: string;
   /** For its tooltip: "Releases Nov 5, 2026 (in 9 days)". */

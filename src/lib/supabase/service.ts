@@ -1,7 +1,7 @@
 import 'server-only';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_URL } from '@/lib/env';
-import { getSupabaseSecretKey } from '@/lib/env.server';
+import { getSupabaseSecretKey } from '@/lib/server/env';
 
 let serviceClient: SupabaseClient | null = null;
 
@@ -10,7 +10,7 @@ let serviceClient: SupabaseClient | null = null;
  * to directly (shared caches, rate-limit counters). Bypasses RLS, so only use
  * it from trusted server code, never with user-supplied filters.
  */
-export function createServiceClient(): SupabaseClient {
+function createServiceClient(): SupabaseClient {
   serviceClient ??= createSupabaseClient(SUPABASE_URL, getSupabaseSecretKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   });

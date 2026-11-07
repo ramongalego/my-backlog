@@ -1,7 +1,7 @@
 -- Snapshot of the full public schema, for reference and for recreating the
 -- database. The base tables were created in the Supabase dashboard before
 -- migrations were tracked, so migrations/ only holds later changes. This file
--- reflects the state after every migration up to 20261031 has been applied.
+-- reflects the state after every migration up to 20261105 has been applied.
 -- Keep it in sync when adding migrations.
 
 -- ─── Tables ─────────────────────────────────────────────────────────────────

@@ -90,7 +90,7 @@ export async function loadOpenEndedCategories(
   return Object.fromEntries(rows.map((r) => [r.id, r.categories]));
 }
 
-export interface ManualGame {
+interface ManualGame {
   id: number;
   igdb_id: number | null;
   platform: string | null;

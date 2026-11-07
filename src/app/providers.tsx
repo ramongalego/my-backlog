@@ -2,7 +2,7 @@
 
 import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { SyncProvider } from '@/components/SyncProvider';
+import { SyncProvider } from '@/components/sync/SyncProvider';
 import { AuthStateListener } from '@/hooks/useAuth';
 
 function makeQueryClient() {

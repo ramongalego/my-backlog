@@ -5,7 +5,7 @@ import {
   fetchGameMetadata,
   type FetchedMetadata,
   type GameMetadata,
-} from '@/lib/games/metadata-fetch';
+} from '@/lib/server/metadata-fetch';
 import {
   METADATA_COLUMNS,
   isCacheUsable,
@@ -13,8 +13,8 @@ import {
   toGameRowUpdate,
   type CachedMetadata,
 } from '@/lib/games/metadata-cache';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { syncSingleRequestSchema } from '@/lib/validations/common';
 import { SteamUnavailableError } from '@/lib/steam/store-api';
 

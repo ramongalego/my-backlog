@@ -5,9 +5,9 @@ import { Gamepad2, Plus } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 
 import { GameCard } from '@/components/games/GameCard';
-import { GameDetailModal } from '@/components/games/GameStatusModal';
+import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
-import { GamesPageSkeleton } from '@/components/games/GamesPageSkeleton';
+import { GamesPageSkeleton } from './Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
@@ -18,7 +18,7 @@ import { LoadError } from '@/components/ui/LoadError';
 import { Button } from '@/components/ui/Button';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { useAuth } from '@/hooks/useAuth';
-import { connectSteam } from '@/lib/steam/connect';
+import { connectSteam } from '@/lib/client/steam-connect';
 
 const EMPTY_COPY: Record<GameFilter, string> = {
   all: 'Add the games you own, on any console, or connect Steam to bring in your whole library.',

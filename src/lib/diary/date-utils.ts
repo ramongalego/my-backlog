@@ -3,17 +3,6 @@ export function getMonthKey(isoDate: string): string {
   return isoDate.slice(0, 7);
 }
 
-export function formatMonthLabel(isoDate: string): { month: string; year: string } {
-  // Parse directly from the string to avoid timezone / NaN issues
-  const year = isoDate.slice(0, 4);
-  const month = parseInt(isoDate.slice(5, 7), 10) - 1; // 0-indexed
-  const d = new Date(Number(year), month, 1);
-  return {
-    month: d.toLocaleString('en-US', { month: 'short' }).toUpperCase(),
-    year,
-  };
-}
-
 export function formatDay(isoDate: string): string {
   // Slice the day digits directly — already zero-padded in ISO format
   return isoDate.slice(8, 10);
@@ -31,4 +20,19 @@ export function toLocalIsoDate(d: Date): string {
 /** Today's date as "YYYY-MM-DD" in local time (toISOString() would give the UTC date). */
 export function todayIso(): string {
   return toLocalIsoDate(new Date());
+}
+
+/** "20 Aug" from an ISO date, for the date chip on phones. */
+export function shortDate(isoDate: string): string {
+  const d = new Date(
+    Number(isoDate.slice(0, 4)),
+    Number(isoDate.slice(5, 7)) - 1,
+    Number(isoDate.slice(8, 10)),
+  );
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+export function monthName(isoDate: string): string {
+  const d = new Date(Number(isoDate.slice(0, 4)), Number(isoDate.slice(5, 7)) - 1, 1);
+  return d.toLocaleString('en-US', { month: 'long' });
 }

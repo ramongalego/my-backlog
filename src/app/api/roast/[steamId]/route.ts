@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCachedRoast } from '@/lib/roast/cache';
+import { getCachedRoast } from '@/lib/server/roast-cache';
 
 // Steam IDs are 17-digit decimal numbers. Validate before hitting the cache so
 // arbitrary path segments can't pollute the cache key space.

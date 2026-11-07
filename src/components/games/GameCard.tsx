@@ -7,7 +7,7 @@ import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { StatusBadge } from './StatusBadge';
-import { consoleOf } from '@/lib/games/manual';
+import { consoleOf } from '@/lib/games/consoles';
 import { upcomingRelease } from '@/lib/games/release-date';
 
 interface GameCardProps {

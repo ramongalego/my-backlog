@@ -60,13 +60,3 @@ export interface SuggestionResult {
   };
   reasoning: string;
 }
-
-export interface SuggestionAPIResponse {
-  success: true;
-  data: SuggestionResult;
-}
-
-export interface SuggestionAPIError {
-  success: false;
-  error: string;
-}

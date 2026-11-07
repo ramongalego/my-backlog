@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { checkSharedRateLimit } from '@/lib/rate-limit';
+import { checkSharedRateLimit } from '@/lib/server/rate-limit';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 
 const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());

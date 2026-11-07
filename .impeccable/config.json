@@ -1,7 +1,7 @@
 {
   "detector": {
     "ignoreFiles": [
-      "src/__tests__/**",
+      "src/**/*.test.{ts,tsx}",
       "src/app/opengraph-image.tsx",
       "src/app/api/og/**"
     ]

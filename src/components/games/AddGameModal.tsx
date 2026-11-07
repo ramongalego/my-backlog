@@ -12,10 +12,10 @@ import {
   addManualGame,
   getGameDetails,
   searchGames,
-  shortPlatformName,
   type GameSearchResult,
-} from '@/lib/games/manual';
-import { GameDetailModal, type AddStatus } from './GameStatusModal';
+} from '@/lib/client/manual-games';
+import { shortPlatformName } from '@/lib/games/consoles';
+import { GameDetailModal, type AddStatus } from './GameDetailModal';
 import { defaultConsole, orderConsoles } from './ConsolePicker';
 import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
 

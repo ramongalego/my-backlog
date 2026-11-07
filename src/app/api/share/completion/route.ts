@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
-import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 
 // header_image is re-fetched server-side by the OG route (next/og ImageResponse

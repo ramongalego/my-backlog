@@ -14,7 +14,7 @@ import { SuggestionError } from './SuggestionError';
 import type { SuggestionResult as Suggestion } from '@/lib/suggest/types';
 import type { QueueItem } from '@/types/games';
 import { createClient } from '@/lib/supabase/client';
-import { findRandomBacklogGame, RANDOM_ROLL_MS, type RandomGame } from '@/lib/games/random-pick';
+import { findRandomBacklogGame, RANDOM_ROLL_MS, type RandomGame } from '@/lib/client/random-pick';
 import { prefersReducedMotion } from '@/lib/motion';
 
 /** Leaving it to chance: rolling, then the game it landed on (or why it couldn't). */

@@ -7,12 +7,12 @@ import { queries } from '@/lib/data/queries';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { ratingOf } from '@/lib/games/rating';
 import { matchesSearch, nameMatchesSearch } from '@/lib/games/search';
-import { useSetGameStatus } from '@/lib/mutations';
+import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useAuth } from './useAuth';
-import { useAddToQueue, useQueue } from './useNowPlaying';
+import { useAddToQueue, useQueue } from '@/hooks/useQueue';
 import { useSwitchGame } from './useSwitchGame';
 import { useUrlState } from './useUrlState';
-import { useManualGameActions } from './useManualGame';
+import { useManualGameActions } from './useManualGameActions';
 
 export type { GameItem };
 

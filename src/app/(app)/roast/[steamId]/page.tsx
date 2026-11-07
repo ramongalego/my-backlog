@@ -2,7 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
-import { getCachedRoast } from '@/lib/roast/cache';
+import { getCachedRoast } from '@/lib/server/roast-cache';
 import { queryKeys } from '@/lib/query-keys';
 import SharedRoastView from './View';
 

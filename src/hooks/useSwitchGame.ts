@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { queries } from '@/lib/data/queries';
-import { removeFromQueue, reorderQueue } from '@/lib/games/queue';
+import { removeFromQueue, reorderQueue } from '@/lib/client/queue';
 import {
   QUEUE_SCOPE,
   fromQueueItem,
@@ -12,9 +12,9 @@ import {
   type QueueableGame,
 } from '@/lib/games/queue-items';
 import { statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
-import { updateGameStatus } from '@/lib/games/status';
+import { updateGameStatus } from '@/lib/client/game-status';
 import type { GameStatus } from '@/lib/games/status-style';
-import { useInvalidateQueries, usePatchGamesList } from '@/lib/mutations';
+import { useInvalidateQueries, usePatchGamesList } from '@/hooks/useGameMutations';
 import { queryKeys } from '@/lib/query-keys';
 import { UNDO_MS } from '@/lib/undo';
 import type { GameWithImage, QueueItem } from '@/types/games';
@@ -25,7 +25,7 @@ import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
  * status, and for a finished or dropped game what goes with it. Whether it
  * was queued (and where) comes from the queue as it was.
  */
-export interface SwitchedFrom {
+interface SwitchedFrom {
   status: GameStatus;
   /** Finished or dropped on ("YYYY-MM-DD", or "" for no date). */
   date?: string;

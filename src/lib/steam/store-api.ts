@@ -1,3 +1,4 @@
+import 'server-only';
 import { fetchWithTimeout, TIMEOUTS } from '@/lib/fetch-with-timeout';
 
 export interface SteamGameDetails {
@@ -140,7 +141,7 @@ interface StoreItemAssets {
   header_2x?: string;
 }
 
-export interface StoreItemInfo {
+interface StoreItemInfo {
   /** Tag names, most voted first. */
   tags: string[] | null;
   /**

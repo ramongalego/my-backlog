@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 
-export interface ToggleOption<T extends string> {
+interface ToggleOption<T extends string> {
   value: T;
   label: ReactNode;
   /** Shown after the label in a quieter tone, e.g. how many items a filter matches. */

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { gameIdSchema } from '@/lib/validations/common';
 import { updateManualGameSchema } from '@/lib/validations/games';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';

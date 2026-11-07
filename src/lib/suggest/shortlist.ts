@@ -59,7 +59,7 @@ export interface ScoredCandidate<T extends CandidateGame = CandidateGame> {
 }
 
 // The time ranges the wizard offers, in main-story hours.
-export const TIME_RANGES: Record<TimeCommitment, { min: number; max: number }> = {
+const TIME_RANGES: Record<TimeCommitment, { min: number; max: number }> = {
   short: { min: 0, max: 5 },
   medium: { min: 5, max: 15 },
   long: { min: 15, max: Infinity },
@@ -323,7 +323,7 @@ const WEIGHTS = {
   reroll: 2.5,
 };
 
-export const SHORTLIST_SIZE = 20;
+const SHORTLIST_SIZE = 20;
 // The best matches always make the list; the rest are drawn from the next
 // few dozen so repeat visits don't see the same twenty games.
 const ALWAYS_INCLUDE = 6;

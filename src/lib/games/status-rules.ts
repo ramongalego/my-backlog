@@ -3,7 +3,7 @@ import { consoleOf } from './consoles';
 
 export type StatusChange = GameStatusBody;
 
-export interface GameUpdate {
+interface GameUpdate {
   status: string;
   started_at?: string | null;
   finished_at?: string | null;

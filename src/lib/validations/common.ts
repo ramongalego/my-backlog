@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const appIdSchema = z.number().int().positive();
+const appIdSchema = z.number().int().positive();
 
 /** A game's row id (games.id). */
 export const gameIdSchema = z.number().int().positive();

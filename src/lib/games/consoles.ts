@@ -33,16 +33,33 @@ export function steamLastPlayed(game: {
   return consoleOf(game) ? null : (game.last_played_at ?? null);
 }
 
-/**
- * Whether to show the Steam Deck rating: only for games played on Steam. A
- * game on a console still shows its Steam reviews when Steam sells it, next to
- * its critic score, but how it runs on a Deck says nothing about it there.
- */
-export function showsDeckRating(game: { source?: string; platform?: string | null }): boolean {
-  return consoleOf(game) === null;
-}
+// IGDB's platform names, shortened to how people say them.
+const SHORT_PLATFORM_NAMES: Record<string, string> = {
+  'Nintendo Switch 2': 'Switch 2',
+  'Nintendo Switch': 'Switch',
+  'PlayStation 5': 'PS5',
+  'PlayStation 4': 'PS4',
+  'PlayStation 3': 'PS3',
+  'PlayStation Vita': 'PS Vita',
+  'Xbox Series X|S': 'Xbox Series X|S',
+  'PC (Microsoft Windows)': 'PC',
+  'Nintendo 3DS': '3DS',
+  'New Nintendo 3DS': 'New 3DS',
+  'Nintendo DS': 'DS',
+  'Wii U': 'Wii U',
+  'Nintendo 64': 'N64',
+  'Super Nintendo Entertainment System': 'SNES',
+  'Nintendo Entertainment System': 'NES',
+  'Game Boy Advance': 'GBA',
+  'Nintendo GameCube': 'GameCube',
+  'Family Computer': 'Famicom',
+  'Family Computer Disk System': 'Famicom Disk System',
+  'PlayStation 2': 'PS2',
+  PlayStation: 'PS1',
+  'PlayStation Portable': 'PSP',
+  'Sega Mega Drive/Genesis': 'Mega Drive',
+};
 
-/** A Steam game played on a console: its hours are yours to enter, and it can go back to Steam. */
-export function isMovedSteamGame(game: { source?: string; platform?: string | null }): boolean {
-  return game.source === 'steam' && playsOnConsole(game.platform);
+export function shortPlatformName(name: string): string {
+  return SHORT_PLATFORM_NAMES[name] ?? name;
 }

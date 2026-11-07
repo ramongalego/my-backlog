@@ -8,13 +8,18 @@ import {
   getWishlistCount,
 } from '@/lib/steam/api';
 import { getSteamTags } from '@/lib/steam/store-api';
-import { getSteamApiKey, getOpenAIApiKey } from '@/lib/env.server';
-import { checkSharedRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
+import { getSteamApiKey, getOpenAIApiKey } from '@/lib/server/env';
+import {
+  checkSharedRateLimit,
+  getClientIp,
+  ipRateLimitKey,
+  RATE_LIMITS,
+} from '@/lib/server/rate-limit';
 import { buildRoastMessages, cleanRoast } from '@/lib/roast/prompt';
-import { getCachedRoast, setCachedRoast } from '@/lib/roast/cache';
+import { getCachedRoast, setCachedRoast } from '@/lib/server/roast-cache';
 import { getBlacklistMessage } from '@/lib/roast/blacklist';
 import { roastRequestSchema } from '@/lib/validations/roast';
-import { jsonError } from '@/lib/api/response';
+import { jsonError } from '@/lib/server/api-response';
 
 export async function POST(request: NextRequest) {
   // Check API keys

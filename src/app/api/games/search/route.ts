@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { gameSearchSchema } from '@/lib/validations/games';
 import { gameIdSchema } from '@/lib/validations/common';
 import { searchGames } from '@/lib/igdb/api';
-import { getAddableGameDetails } from '@/lib/games/manual-details';
+import { getAddableGameDetails } from '@/lib/server/manual-details';
 
 /**
  * IGDB for the Add game dialog: `?q=` searches, `?id=` returns one game's

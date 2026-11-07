@@ -9,7 +9,7 @@ const PADDING = {
   md: 'p-5 sm:p-6',
 };
 
-export type PanelPadding = keyof typeof PADDING;
+type PanelPadding = keyof typeof PADDING;
 
 export const PANEL_SURFACE = 'bg-ink-900 rounded-xl';
 

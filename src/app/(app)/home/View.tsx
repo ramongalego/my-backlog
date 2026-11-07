@@ -1,79 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Play, Plus } from 'lucide-react';
 
-import { Button } from '@/components/ui/Button';
 import { LoadError } from '@/components/ui/LoadError';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
-import { GameCarousel, MIN_CAROUSEL_GAMES } from '@/components/GameCarousel';
-import { CurrentlyPlaying } from '@/components/CurrentlyPlaying';
-import { GameDetailModal } from '@/components/games/GameStatusModal';
+import { GameCarousel } from '@/components/home/GameCarousel';
+import { CurrentlyPlaying } from '@/components/home/CurrentlyPlaying';
+import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
-import { CoverThumb } from '@/components/games/CoverArt';
-import { SuggestionModal } from '@/components/suggest';
-import { SyncProgress } from '@/components/SyncProgress';
-import { CarouselsLoadingState, StatusLoadingState } from '@/components/home/HomeLoadingStates';
-import { useGameLibrary } from '@/hooks/useGameLibrary';
-import { useManualGameActions } from '@/hooks/useManualGame';
+import { SuggestionModal } from '@/components/suggest/SuggestionModal';
+import { SyncProgress } from '@/components/sync/SyncProgress';
+import { CarouselsLoadingState, HomeLoading, StatusLoadingState } from './Skeleton';
+import { useHomePage } from '@/hooks/useHomePage';
+import { useManualGameActions } from '@/hooks/useManualGameActions';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
-import { connectSteam } from '@/lib/steam/connect';
+import { connectSteam } from '@/lib/client/steam-connect';
 import type { SuggestionResult } from '@/lib/suggest/types';
-import { PickIcon } from '@/components/suggest/PickIcon';
 import { BuildBacklog } from '@/components/home/BuildBacklog';
-import { HomeLoading } from '@/components/home/HomeLoading';
 import { RandomRoll } from '@/components/home/RandomRoll';
 import { PickNext, wallCovers } from '@/components/home/PickNext';
+import { PickNextHint } from '@/components/home/PickNextHint';
+import { UpNext } from '@/components/home/UpNext';
+import { homeCarouselRows } from '@/components/home/carousel-rows';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 import { steamLastPlayed } from '@/lib/games/consoles';
-import { nextPlayable, upcomingRelease } from '@/lib/games/release-date';
-
-// Below this many backlog games, the picker band says picks get better with more.
-const SMALL_BACKLOG = 10;
-
-const INLINE_LINK =
-  'cursor-pointer font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors';
 
 export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const router = useRouter();
 
-  const { auth, meta, sync, carousels, currentGame, loadError, retry } = useGameLibrary();
+  const { auth, meta, sync, carousels, currentGame, loadError, retry } = useHomePage();
   const { user, profile, isLoading } = auth;
   const manualGames = useManualGameActions(user?.id ?? null);
   const { open: openAddGame } = useAddGame();
   const { gameCount, historyCount, backlogCount, queuedGameIds } = meta;
   const { isSyncing, progress: syncProgress, games: syncingGames } = sync;
-  const {
-    pickUp,
-    moreLike,
-    shortGames,
-    weekendGames,
-    highlyRatedGames,
-    hiddenGems,
-    recentlyAdded,
-  } = carousels;
-  // Related rows sit together: games you've started, short games, highly
-  // rated ones, then what's new. Empty carousels are left out. More Like sits
-  // lower but still claims its games first (see useCarouselPools).
-  const carouselRows = [
-    { key: 'pick-up', title: 'Pick Up Where You Left Off', games: pickUp },
-    { key: 'short', title: 'Top-Rated Games Under 5 Hours', games: shortGames },
-    { key: 'weekend', title: 'Finish It in a Weekend', games: weekendGames },
-    { key: 'rated', title: 'Highly Rated, Never Played', games: highlyRatedGames },
-    {
-      key: 'more-like',
-      title: moreLike ? `More Like ${moreLike.basedOn}` : '',
-      games: moreLike?.games ?? [],
-    },
-    { key: 'gems', title: 'Hidden Gems', games: hiddenGems },
-    // A plain list of what's new, so it shows from the first game: while the
-    // backlog is being built, it's the games added so far.
-    { key: 'recent', title: 'Recently Added', games: recentlyAdded, minGames: 1 },
-  ].filter((row) => row.games.length >= (row.minGames ?? MIN_CAROUSEL_GAMES));
+  const carouselRows = homeCarouselRows(carousels);
   const carouselsLoading = carousels.loading;
   const {
     currentlyPlaying,
@@ -129,11 +93,6 @@ export default function HomeView() {
   const nothingToPick = pickable <= 0;
   // Picking for the queue needs a few games to choose between, like the band.
   const tooFewToPick = pickable < MIN_GAMES_TO_PICK;
-  // The queued game that starts next: the first that's out. With only games
-  // not out yet in the queue, the first of those, to say when it is.
-  const playNext = nextPlayable(queue);
-  const upNext = playNext ?? queue[0];
-  const upNextRelease = playNext ? null : upcomingRelease(upNext?.game.release_date);
 
   // Signed-out visitors never get here (the proxy sends them to the landing page).
   if (isLoading || !user) {
@@ -183,7 +142,7 @@ export default function HomeView() {
             ) : isBuildingBacklog ? (
               <BuildBacklog
                 // Recently Added lists them newest first, from the first game.
-                covers={wallCovers([recentlyAdded])}
+                covers={wallCovers([carousels.recentlyAdded])}
                 count={backlogCount}
                 historyCount={historyCount}
                 steamEmpty={gameCount === 0 && isSteamConnected}
@@ -210,118 +169,29 @@ export default function HomeView() {
                     : undefined
                 }
               >
-                {nothingToPick ? null : backlogCount < SMALL_BACKLOG ? (
-                  // Three games is enough to pick between, not enough to pick
-                  // well: say the picks improve with more, and how to get there.
-                  <p className="mt-4 text-sm text-ink-400">
-                    Picks get better the more games you have.{' '}
-                    <button onClick={() => openAddGame()} className={INLINE_LINK}>
-                      Add a few more
-                    </button>
-                    {!isSteamConnected && (
-                      <>
-                        , or{' '}
-                        <button onClick={connectSteam} className={INLINE_LINK}>
-                          connect Steam
-                        </button>{' '}
-                        to bring in your whole library
-                      </>
-                    )}
-                    .
-                  </p>
-                ) : (
-                  !isSteamConnected && (
-                    <p className="mt-4 text-sm text-ink-400">
-                      Games on Steam too?{' '}
-                      <button onClick={connectSteam} className={INLINE_LINK}>
-                        Connect Steam
-                      </button>{' '}
-                      to bring in your library.
-                    </p>
-                  )
+                {!nothingToPick && (
+                  <PickNextHint
+                    backlogCount={backlogCount}
+                    isSteamConnected={isSteamConnected}
+                    onAddGame={() => openAddGame()}
+                    onConnectSteam={connectSteam}
+                  />
                 )}
               </PickNext>
             )}
           </div>
         </section>
 
-        {/* Up next: the game that takes over when you finish this one, and
-            picking another for the queue. The hinge between the band (now)
-            and the shelf (later). With nothing playing, the queued game is
-            there to start, if it's out. */}
         {!isSyncing && !rollCovers && (currentlyPlaying || queue.length > 0) && (
-          <div
-            className={`${PAGE_CONTAINER} mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4`}
-          >
-            {upNext ? (
-              <Link
-                href="/playing-queue"
-                className="group flex min-w-0 items-center gap-3 sm:gap-4 rounded-lg"
-              >
-                <CoverThumb
-                  src={upNext.game.header_image}
-                  alt=""
-                  className="w-20 sm:w-28 group-hover:brightness-110 transition-[filter]"
-                />
-                <span className="min-w-0">
-                  <span className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
-                    {upNext.game.name}
-                  </span>
-                  <span className="block text-sm text-ink-400">
-                    {upNextRelease
-                      ? `Next in your queue · ${upNextRelease.label}`
-                      : 'Next in your queue'}
-                  </span>
-                </span>
-              </Link>
-            ) : (
-              <p className="text-sm text-ink-400">
-                Your{' '}
-                <Link
-                  href="/playing-queue"
-                  className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors"
-                >
-                  queue
-                </Link>{' '}
-                is empty.{' '}
-                {nothingToPick
-                  ? 'Add a game to have one ready for after this.'
-                  : tooFewToPick
-                    ? 'Queue a game from your library to play after this one, or add more to pick from.'
-                    : 'The game you pick goes there, to play after this one.'}
-              </p>
-            )}
-            {!currentlyPlaying ? (
-              // Nothing to start until a queued game is out: picking is in the band.
-              playNext && (
-                <Button
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={handlePlayNext}
-                  aria-label={`Play ${playNext.game.name}`}
-                >
-                  <Play className="w-4 h-4" aria-hidden="true" />
-                  <span>Play</span>
-                </Button>
-              )
-            ) : tooFewToPick ? (
-              // Every backlog game is playing or queued, or too few are left
-              // to choose between: add more instead.
-              <Button variant="secondary" className="cursor-pointer" onClick={() => openAddGame()}>
-                <Plus className="w-4 h-4" aria-hidden="true" />
-                <span>Add a game</span>
-              </Button>
-            ) : (
-              <Button
-                variant="secondary"
-                className="group cursor-pointer"
-                onClick={() => setIsSuggestionModalOpen(true)}
-              >
-                <PickIcon />
-                <span>Pick My Next Game</span>
-              </Button>
-            )}
-          </div>
+          <UpNext
+            queue={queue}
+            isPlaying={!!currentlyPlaying}
+            nothingToPick={nothingToPick}
+            tooFewToPick={tooFewToPick}
+            onPlayNext={handlePlayNext}
+            onAddGame={() => openAddGame()}
+            onPickNext={() => setIsSuggestionModalOpen(true)}
+          />
         )}
 
         {/* Game carousels */}

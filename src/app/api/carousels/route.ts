@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { jsonError } from '@/lib/api/response';
+import { jsonError } from '@/lib/server/api-response';
 import { loadCarouselPools } from '@/lib/data/loaders';
 
 /**

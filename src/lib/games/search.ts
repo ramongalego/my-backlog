@@ -2,7 +2,7 @@
  * Text as search compares it: lower case and without accents, so "pokemon"
  * finds Pokémon and "okami" finds Ōkami.
  */
-export function searchable(text: string): string {
+function searchable(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 

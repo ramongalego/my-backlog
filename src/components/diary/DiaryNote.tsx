@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { fieldClass } from '@/components/ui/Input';
 
-export const NOTE_MAX_LENGTH = 1000;
+const NOTE_MAX_LENGTH = 1000;
 
 /**
  * Reveals a secondary control on row hover or keyboard focus, and always on

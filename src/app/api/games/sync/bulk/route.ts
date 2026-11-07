@@ -8,8 +8,8 @@ import {
   type CachedMetadata,
 } from '@/lib/games/metadata-cache';
 import { chunk } from '@/lib/supabase/paginate';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { syncBulkRequestSchema, MAX_BULK_APP_IDS } from '@/lib/validations/common';
 
 // Keeps each `.in()` URL short and each response under PostgREST's row cap.

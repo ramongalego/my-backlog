@@ -1,7 +1,7 @@
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
-import { Header } from '@/components/Header';
-import { LibrarySyncGuard } from '@/components/LibrarySyncGuard';
-import { PlaytimeRefresher } from '@/components/PlaytimeRefresher';
+import { Header } from '@/components/layout/Header';
+import { LibrarySyncGuard } from '@/components/sync/LibrarySyncGuard';
+import { PlaytimeRefresher } from '@/components/sync/PlaytimeRefresher';
 import { createClient } from '@/lib/supabase/server';
 import { queryKeys } from '@/lib/query-keys';
 import { queries } from '@/lib/data/queries';

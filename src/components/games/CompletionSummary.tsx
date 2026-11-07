@@ -3,7 +3,7 @@ import { Figure, Lead } from '@/components/ui/Lead';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { Rating } from './Rating';
 
-export interface Completion {
+interface Completion {
   playtimeMinutes: number;
   mainStoryHours: number | null;
   rating: number | null;

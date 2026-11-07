@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { addManualGameSchema } from '@/lib/validations/games';
-import { getAddableGameDetails } from '@/lib/games/manual-details';
+import { getAddableGameDetails } from '@/lib/server/manual-details';
 import { getMainStoryHours } from '@/lib/hltb/api';
-import { applyStatusChange } from '@/lib/games/apply-status';
+import { applyStatusChange } from '@/lib/server/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';
 

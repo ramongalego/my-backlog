@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames } from '@/lib/steam/api';
-import { syncOwnedGames, type LibrarySyncResult } from '@/lib/steam/library';
-import { refreshReviewScores } from '@/lib/steam/reviews';
-import { refreshCriticScores } from '@/lib/games/critic-scores';
-import { recheckMissingHours } from '@/lib/games/manual-hours';
+import { syncOwnedGames, type LibrarySyncResult } from '@/lib/server/steam-library';
+import { refreshReviewScores } from '@/lib/server/steam-reviews';
+import { refreshCriticScores } from '@/lib/server/critic-scores';
+import { recheckMissingHours } from '@/lib/server/manual-hours';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
-import { getSteamApiKey } from '@/lib/env.server';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
+import { getSteamApiKey } from '@/lib/server/env';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

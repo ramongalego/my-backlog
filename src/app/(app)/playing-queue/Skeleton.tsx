@@ -11,7 +11,7 @@ import { Panel } from '@/components/ui/Panel';
  * Mirrors QueueItemRow: a card with the cover on top on phones, a row on
  * desktop, with Play, Move to top, the drag handle and Move to backlog.
  */
-export function QueueListSkeleton({ rows = 3 }: { rows?: number }) {
+function QueueListSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="divide-y divide-ink-800/70">
       {Array.from({ length: rows }, (_, i) => (

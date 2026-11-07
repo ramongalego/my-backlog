@@ -55,7 +55,7 @@ export async function getOwnedGames(steamId: string, apiKey: string): Promise<St
   return games;
 }
 
-export async function resolveVanityURL(vanityName: string, apiKey: string): Promise<string | null> {
+async function resolveVanityURL(vanityName: string, apiKey: string): Promise<string | null> {
   const url = new URL('https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/');
   url.searchParams.set('key', apiKey);
   url.searchParams.set('vanityurl', vanityName);
@@ -107,18 +107,6 @@ export async function getSteamLevel(steamId: string, apiKey: string): Promise<nu
 
   const data = await response.json();
   return data.response?.player_level ?? null;
-}
-
-export async function getFriendCount(steamId: string, apiKey: string): Promise<number | null> {
-  const url = new URL('https://api.steampowered.com/ISteamUser/GetFriendList/v1/');
-  url.searchParams.set('key', apiKey);
-  url.searchParams.set('steamid', steamId);
-
-  const response = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.STEAM_API);
-  if (!response.ok) return null; // Private friend list
-
-  const data = await response.json();
-  return data.friendslist?.friends?.length ?? null;
 }
 
 export async function getWishlistCount(steamId: string): Promise<number | null> {

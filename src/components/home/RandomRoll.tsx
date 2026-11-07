@@ -1,7 +1,7 @@
 import { Dices } from 'lucide-react';
 import { ArtShuffle } from '@/components/games/ArtShuffle';
 import { COVER_ASPECT } from '@/components/games/CoverArt';
-import { RANDOM_ROLL_MS } from '@/lib/games/random-pick';
+import { RANDOM_ROLL_MS } from '@/lib/client/random-pick';
 
 /**
  * Home's band while Random picks a game: the backlog flicks past where the

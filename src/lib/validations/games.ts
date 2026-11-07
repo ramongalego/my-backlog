@@ -46,8 +46,6 @@ export const addManualGameSchema = z.object({
   rating: gameStatusSchema.shape.rating,
 });
 
-export type AddManualGameBody = z.infer<typeof addManualGameSchema>;
-
 // Either the hours played on the console, or moving a Steam game back to Steam.
 export const updateManualGameSchema = z.union([
   z.object({ hoursPlayed }),

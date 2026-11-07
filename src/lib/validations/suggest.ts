@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-export const MAX_EXCLUDE_GAME_IDS = 200;
-export const MAX_PREVIOUS_REASONINGS = 5;
-export const MAX_REASONING_LENGTH = 500;
+const MAX_EXCLUDE_GAME_IDS = 200;
+const MAX_PREVIOUS_REASONINGS = 5;
+const MAX_REASONING_LENGTH = 500;
 
 export const suggestRequestSchema = z.object({
   mood: z.enum(['adrenaline', 'relaxed', 'engaged', 'emotional']),
@@ -19,5 +19,3 @@ export const suggestRequestSchema = z.object({
     .optional()
     .default([]),
 });
-
-export type SuggestRequestBody = z.infer<typeof suggestRequestSchema>;

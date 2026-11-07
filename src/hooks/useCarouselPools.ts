@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queries } from '@/lib/data/queries';
 import type { CarouselPools } from '@/lib/data/loaders';
-import { useQueue } from './useNowPlaying';
+import { useQueue } from '@/hooks/useQueue';
 import {
   EMPTY_CAROUSEL_POOLS,
   MORE_LIKE_MIN_GAMES,

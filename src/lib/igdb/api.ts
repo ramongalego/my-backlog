@@ -1,7 +1,7 @@
 // IGDB (Twitch's game database), for games added by hand. Server only: it
 // uses the app's Twitch credentials.
 import 'server-only';
-import { getIgdbCredentials } from '@/lib/env.server';
+import { getIgdbCredentials } from '@/lib/server/env';
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
@@ -141,7 +141,7 @@ function steamAppIds(
   ];
 }
 
-export interface GameSearchResult {
+interface GameSearchResult {
   igdbId: number;
   name: string;
   year: number | null;
@@ -150,12 +150,12 @@ export interface GameSearchResult {
   steamAppIds: number[];
 }
 
-export function coverUrl(imageId: string) {
+function coverUrl(imageId: string) {
   return `${IMAGE_URL}/t_cover_big/${imageId}.jpg`;
 }
 
 /** Wide art (artwork or screenshot) at full HD; next/image resizes it for each use. */
-export function artworkUrl(imageId: string) {
+function artworkUrl(imageId: string) {
   return `${IMAGE_URL}/t_1080p/${imageId}.jpg`;
 }
 

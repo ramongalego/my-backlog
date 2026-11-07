@@ -24,7 +24,7 @@ export interface QuestionOption<T> {
   short?: string;
 }
 
-export interface Question<T> {
+interface Question<T> {
   id: string;
   title: string;
   options: QuestionOption<T>[];
@@ -116,8 +116,6 @@ export const TIME_QUESTION: Question<TimeCommitment> = {
     },
   ],
 };
-
-export const QUESTIONS = [MOOD_QUESTION, ENERGY_QUESTION, TIME_QUESTION] as const;
 
 /** Your answers so far, in order, as they read in the trail. */
 export function answeredOptions(answers: {

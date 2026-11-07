@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { chunk } from '@/lib/supabase/paginate';
 import { MAX_BULK_APP_IDS, MAX_HLTB_APP_IDS } from '@/lib/validations/common';
 import type { Game, SyncProgress } from '@/types/games';

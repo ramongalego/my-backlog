@@ -23,6 +23,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Unused files, exports and dependencies
+        run: npm run check:unused
+
       - name: Typecheck
         run: npx tsc --noEmit
 

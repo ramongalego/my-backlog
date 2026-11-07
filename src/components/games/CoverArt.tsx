@@ -89,7 +89,7 @@ export function CoverEditHint() {
 }
 
 /** Small cover for list rows (queue, diary, stats): 64px wide on phones, 112px from `sm`. */
-export const THUMB_WIDTH = 'w-16 sm:w-28';
+const THUMB_WIDTH = 'w-16 sm:w-28';
 
 export function CoverThumb({
   src,

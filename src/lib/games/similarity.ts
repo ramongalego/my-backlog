@@ -1,7 +1,7 @@
 // Tag and name matching shared by Pick My Game and the Home carousels.
 
 // Tags that say nothing about how a game plays.
-export const GENERIC_TAGS = new Set([
+const GENERIC_TAGS = new Set([
   'Singleplayer',
   'Multiplayer',
   'Great Soundtrack',
@@ -21,7 +21,7 @@ export const GENERIC_TAGS = new Set([
 ]);
 
 // Games that list single-player but are built around playing with others.
-export const MULTIPLAYER_FOCUS = new Set([
+const MULTIPLAYER_FOCUS = new Set([
   'PvE',
   'Multiplayer',
   'Massively Multiplayer',
@@ -40,7 +40,7 @@ export const MULTIPLAYER_FOCUS = new Set([
 ]);
 
 /** Steam orders tags by votes, so earlier tags describe a game better. */
-export function tagWeight(index: number) {
+function tagWeight(index: number) {
   return 1 / (1 + index * 0.15);
 }
 
@@ -92,11 +92,11 @@ export function seriesKey(name: string) {
 }
 
 /** The franchise part of a series key: "castlevania: lords of shadow" → "castlevania". */
-export function franchiseKey(key: string) {
+function franchiseKey(key: string) {
   return key.split(/\s*(?::|\s-\s)\s*/)[0];
 }
 
-export function startsWithWords(text: string, prefix: string) {
+function startsWithWords(text: string, prefix: string) {
   return prefix.length >= 5 && (text === prefix || text.startsWith(`${prefix} `));
 }
 

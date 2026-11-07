@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LandingPage } from '@/components/LandingPage';
+import { LandingPage } from '@/components/landing/LandingPage';
 
 export const metadata: Metadata = {
   // absolute: this page sits under the root layout's '%s · MyBacklog' template.

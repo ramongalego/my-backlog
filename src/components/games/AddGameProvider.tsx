@@ -4,9 +4,9 @@ import { createContext, use, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useInvalidateQueries } from '@/lib/mutations';
+import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { AddGameModal } from './AddGameModal';
-import type { AddStatus } from './GameStatusModal';
+import type { AddStatus } from './GameDetailModal';
 
 const AddGameContext = createContext<{ open: (query?: string) => void } | null>(null);
 

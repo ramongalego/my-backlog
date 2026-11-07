@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import { Schibsted_Grotesk } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
-import { Footer } from '@/components/Footer';
-import { UrlErrorToast } from '@/components/UrlErrorToast';
+import { Footer } from '@/components/layout/Footer';
+import { UrlErrorToast } from '@/components/layout/UrlErrorToast';
 import { getBaseUrl } from '@/lib/url';
 import './globals.css';
 

@@ -86,12 +86,12 @@ function formatGame(g: SteamGame): string {
   return `${g.name} (${time})`;
 }
 
-export interface TagCount {
+interface TagCount {
   tag: string;
   count: number;
 }
 
-export interface ProfileExtras {
+interface ProfileExtras {
   steamLevel: number | null;
   wishlistCount: number | null;
 }

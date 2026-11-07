@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // Local design tooling, not part of the app (untracked).
+    '.claude/**',
+    'public/impeccable-detect.js',
   ]),
 ]);
 

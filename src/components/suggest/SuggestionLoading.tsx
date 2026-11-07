@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Dices, Sparkles } from 'lucide-react';
 import { ArtShuffle } from '@/components/games/ArtShuffle';
 import { prefersReducedMotion } from '@/lib/motion';
-import { RANDOM_ROLL_MS } from '@/lib/games/random-pick';
+import { RANDOM_ROLL_MS } from '@/lib/client/random-pick';
 import type { SuggestionPreferences } from '@/lib/suggest/types';
 import { AnswerLine } from './AnswerLine';
 

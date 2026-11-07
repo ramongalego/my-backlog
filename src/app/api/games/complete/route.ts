@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { jsonError, rateLimited } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { gameStatusSchema } from '@/lib/validations/games';
-import { applyStatusChange, promoteNextFromQueue } from '@/lib/games/apply-status';
-import { fetchCompletionCounts } from '@/lib/games/completion';
+import { applyStatusChange, promoteNextFromQueue } from '@/lib/server/apply-status';
+import { fetchCompletionCounts } from '@/lib/server/completion-counts';
 
 const completeSchema = gameStatusSchema.extend({
   status: gameStatusSchema.shape.status.extract(['finished', 'dropped']),

@@ -1,4 +1,4 @@
-import { HomeLoading } from '@/components/home/HomeLoading';
+import { HomeLoading } from './Skeleton';
 
 export default function Loading() {
   return <HomeLoading />;

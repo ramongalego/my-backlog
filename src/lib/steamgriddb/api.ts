@@ -2,7 +2,7 @@
 // no official key art for (older games, many Nintendo ones). Server only: it
 // uses the app's API key.
 import 'server-only';
-import { getSteamGridDbKey } from '@/lib/env.server';
+import { getSteamGridDbKey } from '@/lib/server/env';
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 const API_URL = 'https://www.steamgriddb.com/api/v2';

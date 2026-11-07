@@ -1,6 +1,6 @@
 import { parseReleaseDate } from './release-date';
 import { isMetadataFresh } from './scoring';
-import type { GameMetadata } from './metadata-fetch';
+import type { GameMetadata } from '@/lib/server/metadata-fetch';
 
 export const METADATA_COLUMNS =
   'app_id, platform, type, name, genres, categories, description, release_date, header_image, steam_review_score, steam_review_count, steam_review_weighted, main_story_hours, deck_compat, tags, synced_at, hltb_attempts';

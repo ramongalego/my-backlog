@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { createSteamRelyingParty, extractSteamId, isSteamAssertion } from '@/lib/steam/auth';
 import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
-import { clearLibrary, syncOwnedGames } from '@/lib/steam/library';
-import { getSteamApiKey } from '@/lib/env.server';
-import { constantTimeCompare } from '@/lib/crypto/compare';
+import { clearLibrary, syncOwnedGames } from '@/lib/server/steam-library';
+import { getSteamApiKey } from '@/lib/server/env';
+import { constantTimeCompare } from '@/lib/server/constant-time-compare';
 
 type Assertion = { authenticated: boolean; claimedIdentifier?: string } | undefined;
 

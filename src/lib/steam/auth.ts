@@ -1,3 +1,4 @@
+import 'server-only';
 import { RelyingParty } from 'openid';
 
 const STEAM_OPENID_URL = 'https://steamcommunity.com/openid';
