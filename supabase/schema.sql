@@ -1,7 +1,7 @@
 -- Snapshot of the full public schema, for reference and for recreating the
 -- database. The base tables were created in the Supabase dashboard before
 -- migrations were tracked, so migrations/ only holds later changes. This file
--- reflects the state after every migration up to 20261105 has been applied.
+-- reflects the state after every migration up to 20261107 has been applied.
 -- Keep it in sync when adding migrations.
 
 -- ─── Tables ─────────────────────────────────────────────────────────────────
@@ -135,10 +135,16 @@ create table rate_limits (
   reset_at timestamptz not null
 );
 
-create table roast_cache (
-  steam_id text primary key,
-  response jsonb not null,
-  expires_at timestamptz not null
+-- The last profile and roast written for each player (Stats). Written only by
+-- /api/insights with the server's key; a player can read their own.
+create table player_insights (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  tone text not null check (tone = any (array['profile', 'roast'])),
+  headline text not null,
+  paragraphs jsonb not null,
+  signature text not null,
+  generated_at timestamptz not null default now(),
+  primary key (user_id, tone)
 );
 
 -- ─── Indexes ────────────────────────────────────────────────────────────────
@@ -149,7 +155,6 @@ create unique index games_one_playing_per_user on games (user_id) where status =
 -- One manual entry per game and platform.
 create unique index games_manual_unique on games (user_id, igdb_id, platform) where source = 'manual';
 create index playing_queue_user_position on playing_queue (user_id, position);
-create index roast_cache_expires_at on roast_cache (expires_at);
 
 -- ─── Row-level security ─────────────────────────────────────────────────────
 
@@ -160,7 +165,7 @@ alter table playing_queue enable row level security;
 alter table shared_completions enable row level security;
 alter table support_tickets enable row level security;
 alter table rate_limits enable row level security;
-alter table roast_cache enable row level security;
+alter table player_insights enable row level security;
 
 create policy "Users can view own profile" on profiles
   for select to authenticated using ((select auth.uid()) = id);
@@ -200,6 +205,10 @@ grant select (
   id, game_name, header_image, playtime_minutes, main_story_hours, rating,
   games_finished, total_games, backlog_hours_removed, next_game, created_at
 ) on shared_completions to anon, authenticated;
+
+create policy "Users can view own insights" on player_insights
+  for select to authenticated using ((select auth.uid()) = user_id);
+revoke insert, update, delete on player_insights from anon, authenticated;
 
 -- Saved only by /api/support, with the server's key, after its limits.
 revoke insert on support_tickets from anon, authenticated;

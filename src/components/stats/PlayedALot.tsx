@@ -2,7 +2,7 @@
 
 import { CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
-import type { PlayedALotGame, Stats } from '@/hooks/useStatsPage';
+import type { PlayedALotGame, Stats } from '@/lib/stats/compute';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { steamLastPlayed } from '@/lib/games/consoles';

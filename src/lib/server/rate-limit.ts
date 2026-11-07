@@ -192,15 +192,12 @@ export const RATE_LIMITS = {
   // Recording a reroll (it lowers that game's odds next time). Each one comes
   // with a suggestion request, which has its own, tighter limit above.
   suggestionReroll: { limit: 60, windowMs: 60 * 1000 },
-  // Global circuit breaker on AI suggestions, like roastGlobal: bounds the
+  // Global circuit breaker on AI suggestions: bounds the
   // daily OpenAI spend however many accounts are used.
   suggestionGlobal: { limit: 3000, windowMs: 24 * 60 * 60 * 1000 },
-  // 60 profile lookups per hour per IP. Resolving a vanity name spends the
-  // shared Steam API key quota, so it's limited before any Steam call.
-  roastLookup: { limit: 60, windowMs: 60 * 60 * 1000 },
-  // 10 roasts per hour per IP (public, uses OpenAI)
-  roast: { limit: 10, windowMs: 60 * 60 * 1000 },
-  // Global circuit breaker: cap fresh roast generations across all users per day.
-  // Bounds worst-case OpenAI spend if the per-IP limit is distributed across many IPs.
-  roastGlobal: { limit: 500, windowMs: 24 * 60 * 60 * 1000 },
+  // Writing the player profile or its roast on Stats (OpenAI). Each one is
+  // saved and only written again when the library changes, so this is plenty.
+  insights: { limit: 10, windowMs: 24 * 60 * 60 * 1000 },
+  // Global circuit breaker on player profiles, like suggestionGlobal.
+  insightsGlobal: { limit: 1000, windowMs: 24 * 60 * 60 * 1000 },
 } as const;

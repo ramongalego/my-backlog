@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
-import { isStarting, useStatsPage } from '@/hooks/useStatsPage';
+import { useStatsPage } from '@/hooks/useStatsPage';
+import { isStarting } from '@/lib/stats/compute';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { StatsStart, StatsStartButtons } from '@/components/stats/StatsStart';
 import { connectSteam } from '@/lib/client/steam-connect';
@@ -12,7 +13,7 @@ import { useAddToQueue } from '@/hooks/useQueue';
 import { useSwitchGame } from '@/hooks/useSwitchGame';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useManualGameActions } from '@/hooks/useManualGameActions';
-import type { PlayedALotGame } from '@/hooks/useStatsPage';
+import type { PlayedALotGame } from '@/lib/stats/compute';
 import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadError } from '@/components/ui/LoadError';
@@ -27,11 +28,12 @@ import { YearChart } from '@/components/stats/YearChart';
 import { Favourites } from '@/components/stats/Favourites';
 import { TagCompletion } from '@/components/stats/TagCompletion';
 import { PlayedALot } from '@/components/stats/PlayedALot';
+import { PlayerProfile } from '@/components/stats/PlayerProfile';
 
 type EditModalState = PlayedALotGame;
 
 export default function StatsView() {
-  const { stats, loading, loadError, retry, hasPlayingGame } = useStatsPage();
+  const { stats, loading, loadError, retry, hasPlayingGame, profileReady } = useStatsPage();
   const libraryMeta = useCachedLibraryMeta();
   const { user, profile } = useAuth();
   const isSteamConnected = profile?.steam_id != null;
@@ -114,7 +116,8 @@ export default function StatsView() {
       ) : (
         <div className="space-y-6">
           {/* Your games first: where the hours went, then what's left and
-              what you loved, then the patterns. */}
+              what you loved, then the patterns, and last what they say
+              about you. */}
           <div className="pb-4">
             <Hours stats={stats} />
           </div>
@@ -130,6 +133,7 @@ export default function StatsView() {
               <PlayedALot stats={stats} onEdit={handleEdit} />
             </div>
           )}
+          {profileReady && user && <PlayerProfile userId={user.id} />}
         </div>
       )}
     </Page>

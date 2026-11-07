@@ -1,4 +1,4 @@
-import { computeStats } from '@/hooks/useStatsPage';
+import { computeStats } from '@/lib/stats/compute';
 import type { GameItem } from '@/lib/data/loaders';
 
 let nextId = 1;

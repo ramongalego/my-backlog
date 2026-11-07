@@ -1,7 +1,7 @@
 'use client';
 
 import { growBar, useInView } from '@/hooks/useInView';
-import type { Stats } from '@/hooks/useStatsPage';
+import type { Stats } from '@/lib/stats/compute';
 import { Panel } from '@/components/ui/Panel';
 import { SectionTitle } from '@/components/stats/SectionTitle';
 

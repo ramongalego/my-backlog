@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { growBar, useInView } from '@/hooks/useInView';
-import type { Stats } from '@/hooks/useStatsPage';
+import type { Stats } from '@/lib/stats/compute';
 import { SectionLabel } from '@/components/layout/Page';
 import { Panel } from '@/components/ui/Panel';
 import { ToggleGroup } from '@/components/ui/ToggleGroup';

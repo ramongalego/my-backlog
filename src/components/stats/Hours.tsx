@@ -2,7 +2,7 @@
 
 import { CoverArt } from '@/components/games/CoverArt';
 import { Figure, Lead } from '@/components/ui/Lead';
-import type { Stats } from '@/hooks/useStatsPage';
+import type { Stats } from '@/lib/stats/compute';
 import { count, plural } from '@/components/stats/format';
 
 /** Where the hours went: the total, then the games that took most of them. */

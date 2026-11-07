@@ -214,10 +214,6 @@ export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | n
   }
 }
 
-export async function getSteamTags(appId: number): Promise<string[] | null> {
-  return (await getStoreItemInfo(appId))?.tags ?? null;
-}
-
 const ITEMS_BATCH_SIZE = 50;
 const ITEMS_CONCURRENCY = 4;
 

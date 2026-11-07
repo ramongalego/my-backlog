@@ -3,7 +3,7 @@
 import { CoverArt } from '@/components/games/CoverArt';
 import { Rating } from '@/components/games/Rating';
 import { growBar, useInView } from '@/hooks/useInView';
-import type { Stats } from '@/hooks/useStatsPage';
+import type { Stats } from '@/lib/stats/compute';
 import { Panel } from '@/components/ui/Panel';
 import { plural } from '@/components/stats/format';
 import { SectionTitle } from '@/components/stats/SectionTitle';

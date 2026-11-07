@@ -1,13 +1,13 @@
 # MyBacklog
 
-A full-stack web app that helps players stop scrolling their library and actually finish a game. It imports your Steam library (and games you add from any console), enriches every game with HowLongToBeat times, critic and Steam review scores, and picks what to play tonight from your mood, energy and free time. Around that: a drag-and-drop playing queue, a diary of finished games, stats on where your hours went, shareable completion cards rendered as Open Graph images, and a public "Steam roast".
+A full-stack web app that helps players stop scrolling their library and actually finish a game. It imports your Steam library (and games you add from any console), enriches every game with HowLongToBeat times, critic and Steam review scores, and picks what to play tonight from your mood, energy and free time. Around that: a drag-and-drop playing queue, a diary of finished games, stats on where your hours went, a written profile of you as a player (or a roast of you), and shareable completion cards rendered as Open Graph images.
 
 ## Features
 
 - **Pick My Game**: three questions (mood, energy, time), then a pick from your own backlog with a short reason, or leave it to chance.
 - **Playing queue**: drag to reorder (pointer or keyboard), move to top, and switch what you're playing from anywhere in one tap, with Undo.
 - **Library**: Steam games synced with playtime, plus games from any console via IGDB; search, filters, sort, and a detail dialog for every game.
-- **Diary and stats**: finished games with date, rating and notes; hours played, backlog pace, favourites and what you tend to finish.
+- **Diary and stats**: finished games with date, rating and notes; hours played, backlog pace, favourites and what you tend to finish. Once the library says enough, Stats can write what it says about you as a player, or roast you with the same facts.
 - **Sharing**: a public page and Open Graph image for each finished game.
 
 ## Tech stack
@@ -70,7 +70,7 @@ src/
 │   └── api/                   Route handlers, each with its route.test.ts beside it
 ├── components/
 │   ├── <page>/                One page's pieces, one component per file
-│   │                          (home, queue, diary, stats, landing, suggest, roast)
+│   │                          (home, queue, diary, stats, landing, suggest)
 │   ├── games/                 Shared game UI: art, cards, the game detail dialog
 │   ├── layout/ ui/            The app's frame, and buttons, panels, menus, tooltips
 │   └── sync/                  Steam library sync and its progress
@@ -166,6 +166,8 @@ The HowLongToBeat lookup has to find the site's current search endpoint, which c
 
 The model (OpenAI `gpt-6-luna`) was chosen after comparing seven models on the same prompts.
 
+The player profile on Stats (`/api/insights`) works the same way: the facts (finish rate, hours, tags finished and dropped, ratings) are worked out in code from the library on the server, sent to the model as data, and come back as a structured headline and paragraphs. Each profile is saved with a signature of the facts it used, so it is only written again when the library changes in a way it talks about.
+
 ### Client state
 
 Query keys are hierarchical, so a change invalidates exactly what it touches. Mutations that share the queue run one at a time (a TanStack Query mutation scope), so quick successive reorders can't reach the server out of order. Every Undo restores the previous state precisely, including a game's place in the queue.
@@ -180,7 +182,7 @@ Query keys are hierarchical, so a change invalidates exactly what it touches. Mu
 
 ### Rate limiting
 
-Every endpoint that writes data or calls an outside service has a per-user (or per-IP) fixed-window limit. The expensive ones (AI suggestions, roasts, Steam refreshes, share pages, support tickets) are counted in Postgres, so the limit holds across serverless instances. A global daily cap on AI suggestions and roasts bounds the worst-case OpenAI spend.
+Every endpoint that writes data or calls an outside service has a per-user (or per-IP) fixed-window limit. The expensive ones (AI suggestions, player profiles, Steam refreshes, share pages, support tickets) are counted in Postgres, so the limit holds across serverless instances. A global daily cap on AI suggestions and player profiles bounds the worst-case OpenAI spend.
 
 ### Performance and accessibility
 

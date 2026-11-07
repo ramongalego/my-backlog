@@ -61,6 +61,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // The public Steam roast became the player profile on Stats: old roast
+  // links go to the landing page (or Home, once signed in) instead of a 404.
+  redirects: async () => [
+    { source: '/roast', destination: '/', permanent: true },
+    { source: '/roast/:path*', destination: '/', permanent: true },
+  ],
   headers: async () => [
     {
       source: '/(.*)',

@@ -11,6 +11,10 @@ export const queryKeys = {
     manual: (userId: string) => [...queryKeys.games.all, 'manual', userId] as const,
     openEndedCategories: (userId: string) =>
       [...queryKeys.games.all, 'open-ended-categories', userId] as const,
+    // Under games, so any change to the library asks the server again (which
+    // only rewrites it when something it talks about changed).
+    insight: (userId: string, tone: string) =>
+      [...queryKeys.games.all, 'insight', userId, tone] as const,
   },
   queue: {
     all: ['queue'] as const,
@@ -22,9 +26,6 @@ export const queryKeys = {
   },
   igdb: {
     game: (igdbId: number) => ['igdb', 'game', igdbId] as const,
-  },
-  roast: {
-    byId: (steamId: string) => ['roast', steamId] as const,
   },
   carousels: {
     all: ['carousels'] as const,

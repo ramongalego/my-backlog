@@ -11,11 +11,8 @@ import { withoutLaterEntries } from '@/lib/games/series-order';
 import { isReleased } from '@/lib/games/release-date';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
+import { AI_MODEL } from '@/lib/server/ai-model';
 
-// Compared against gpt-4o-mini and five others on the same prompts: it follows
-// the writing rules far more closely and costs about a third less. Its
-// reasoning is off: the shortlist is already scored, so it only has to write.
-const MODEL = 'gpt-6-luna';
 const MAX_ATTEMPTS = 2;
 // How much of your history the prompt lists by name.
 const MAX_FINISHED_IN_PROMPT = 25;
@@ -221,7 +218,7 @@ export async function POST(request: NextRequest) {
     let aiResponse: string;
     try {
       const completion = await openai.chat.completions.create({
-        model: MODEL,
+        model: AI_MODEL,
         messages: [
           { role: 'system', content: REASONING_STYLE },
           { role: 'user', content: prompt },

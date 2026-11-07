@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Figure, Lead } from '@/components/ui/Lead';
-import type { Stats } from '@/hooks/useStatsPage';
+import type { Stats } from '@/lib/stats/compute';
 import { Panel } from '@/components/ui/Panel';
 import { Dropdown, type DropdownOption } from '@/components/ui/Dropdown';
 import { formatYears, plural } from '@/components/stats/format';

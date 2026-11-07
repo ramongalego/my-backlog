@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { StatsStart } from '@/components/stats/StatsStart';
-import { computeStats, isStarting } from '@/hooks/useStatsPage';
+import { computeStats, isStarting } from '@/lib/stats/compute';
 import type { GameItem } from '@/lib/data/loaders';
 
 const game = (overrides: Partial<GameItem> = {}): GameItem =>

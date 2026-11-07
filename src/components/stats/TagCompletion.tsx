@@ -2,7 +2,7 @@
 
 import { Figure } from '@/components/ui/Lead';
 import { growBar, useInView } from '@/hooks/useInView';
-import type { Stats } from '@/hooks/useStatsPage';
+import type { Stats } from '@/lib/stats/compute';
 import { Panel } from '@/components/ui/Panel';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { SectionTitle } from '@/components/stats/SectionTitle';
