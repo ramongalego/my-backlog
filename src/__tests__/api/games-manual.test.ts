@@ -105,7 +105,7 @@ beforeEach(() => {
   manualRow = null;
   alreadyQueued = false;
   jest.mocked(getGameDetails).mockResolvedValue(details);
-  jest.mocked(applyStatusChange).mockResolvedValue({ ok: true });
+  jest.mocked(applyStatusChange).mockResolvedValue({ ok: true, paused: [] });
 });
 
 it('adds the game with its IGDB details, console and hours', async () => {
@@ -250,7 +250,7 @@ describe('a game you own on Steam', () => {
     expect(applyStatusChange).toHaveBeenCalledWith(
       expect.anything(),
       expect.any(String),
-      expect.objectContaining({ gameId: 7, status: 'playing' }),
+      expect.objectContaining({ gameId: 7, status: 'playing', pausePlaying: true }),
     );
   });
 

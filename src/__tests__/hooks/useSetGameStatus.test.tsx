@@ -37,7 +37,9 @@ beforeEach(() => jest.clearAllMocks());
 
 it('shows the change in the games list at once, then refreshes what it touches', async () => {
   let answer!: () => void;
-  jest.mocked(updateGameStatus).mockReturnValue(new Promise<void>((r) => (answer = r)));
+  jest
+    .mocked(updateGameStatus)
+    .mockReturnValue(new Promise((r) => (answer = () => r({ paused: [] }))));
   const { result, list, invalidate, cancel } = setup();
 
   act(() => result.current.mutate(edit));
@@ -72,7 +74,7 @@ it('puts everything back and says so if the save fails', async () => {
 });
 
 it('lets the caller refresh less, for a change only some queries show', async () => {
-  jest.mocked(updateGameStatus).mockResolvedValue();
+  jest.mocked(updateGameStatus).mockResolvedValue({ paused: [] });
   const settle = jest.fn();
   const { result, invalidate } = setup({ settle });
 

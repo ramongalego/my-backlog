@@ -29,7 +29,7 @@ const post = async (body: unknown) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.mocked(applyStatusChange).mockResolvedValue({ ok: true });
+  jest.mocked(applyStatusChange).mockResolvedValue({ ok: true, paused: [] });
   jest.mocked(fetchCompletionCounts).mockResolvedValue({ gamesFinished: 7, totalGames: 120 });
   jest.mocked(promoteNextFromQueue).mockResolvedValue(null);
   jest.spyOn(console, 'error').mockImplementation(() => {});

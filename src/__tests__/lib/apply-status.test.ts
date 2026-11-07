@@ -98,7 +98,7 @@ describe('applyStatusChange', () => {
       rating: 9,
     });
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, paused: [] });
     expect(tables.games[0]).toMatchObject({
       status: 'finished',
       finished_at: '2026-10-25',
@@ -183,7 +183,7 @@ describe('switching games (pausePlaying)', () => {
       pausePlaying: true,
     });
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, paused: [{ id: 1, name: 'Game 1' }] });
     expect(tables.games[0]).toMatchObject({
       status: 'backlog',
       started_at: '2026-10-30T19:24:07Z',

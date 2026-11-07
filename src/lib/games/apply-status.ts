@@ -6,7 +6,15 @@ import type { GameWithImage } from '@/types/games';
 
 export type { StatusChange };
 
-export type StatusChangeResult = { ok: true } | { ok: false; status: 404 | 500; error: string };
+/** A game paused for another one (`pausePlaying`): reported so the browser
+ * can say which, from what the server found playing, not its own guess. */
+export interface PausedGame {
+  id: number;
+  name: string;
+}
+
+export type StatusChangeResult =
+  { ok: true; paused: PausedGame[] } | { ok: false; status: 404 | 500; error: string };
 
 /**
  * Sets a game's status for a user, server side: the status route and the
@@ -54,11 +62,11 @@ export async function applyStatusChange(
 
   // Only one game can be playing: move any other one back to the backlog, or
   // pause it at the top of the queue.
-  const paused: number[] = [];
+  const paused: PausedGame[] = [];
   if (status === 'playing') {
     const { data: others, error: playingError } = await supabase
       .from('games')
-      .select('id, status, source, platform, started_at')
+      .select('id, name, status, source, platform, started_at')
       .eq('user_id', userId)
       .eq('status', 'playing')
       .neq('id', gameId);
@@ -70,7 +78,7 @@ export async function applyStatusChange(
         .eq('user_id', userId)
         .eq('id', other.id);
       if (demoteError) return failed(demoteError);
-      if (pausePlaying) paused.push(other.id);
+      if (pausePlaying) paused.push({ id: other.id, name: other.name });
     }
   }
 
@@ -106,11 +114,11 @@ export async function applyStatusChange(
     const top = (first?.position ?? 1) - 1;
     const { error: queueError } = await supabase
       .from('playing_queue')
-      .insert(paused.map((id, i) => ({ user_id: userId, game_id: id, position: top - i })));
+      .insert(paused.map(({ id }, i) => ({ user_id: userId, game_id: id, position: top - i })));
     if (queueError) return failed(queueError);
   }
 
-  return { ok: true };
+  return { ok: true, paused };
 }
 
 /**

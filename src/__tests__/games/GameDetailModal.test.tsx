@@ -486,6 +486,88 @@ describe('GameDetailModal', () => {
     });
   });
 
+  describe('playing instead of the game being played', () => {
+    const onAddToQueue = jest.fn();
+    const onPlayInstead = jest.fn();
+    const switchProps = {
+      ...defaultProps,
+      disablePlaying: true,
+      onAddToQueue,
+      onPlayInstead,
+      playingName: 'Zelda',
+    };
+    const statusLabels = () =>
+      Array.from(
+        screen.getByRole('group', { name: 'Status' }).querySelectorAll('button'),
+        (b) => b.textContent,
+      );
+
+    beforeEach(() => {
+      onAddToQueue.mockClear();
+      onPlayInstead.mockClear();
+    });
+
+    it('offers Queue and Playing side by side, four to a row', () => {
+      render(<GameDetailModal {...switchProps} />);
+
+      expect(statusLabels()).toEqual([
+        'Backlog',
+        'Queue',
+        'Playing',
+        'Finished',
+        'Dropped',
+        "Won't Play",
+        'Hidden',
+      ]);
+      expect(screen.getByRole('group', { name: 'Status' })).toHaveClass('grid-cols-4');
+    });
+
+    it('says the game being played goes to the top of the queue', () => {
+      render(<GameDetailModal {...switchProps} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
+
+      expect(screen.getByText('Zelda goes to the top of your queue.')).toBeInTheDocument();
+    });
+
+    it('switches on save, instead of saving a status', async () => {
+      render(<GameDetailModal {...switchProps} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      });
+
+      expect(onPlayInstead).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(onAddToQueue).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('works for a finished game too (a replay), without Queue', () => {
+      render(
+        <GameDetailModal {...switchProps} initialStatus="finished" onAddToQueue={undefined} />,
+      );
+
+      expect(statusLabels()).toEqual([
+        'Backlog',
+        'Playing',
+        'Finished',
+        'Dropped',
+        "Won't Play",
+        'Hidden',
+      ]);
+    });
+
+    it("doesn't offer Playing for a game that isn't out yet", () => {
+      const nextYear = new Date().getFullYear() + 1;
+      render(<GameDetailModal {...switchProps} releaseDate={`Jan 28, ${nextYear}`} />);
+
+      expect(statusLabels()).not.toContain('Playing');
+      expect(statusLabels()).toContain('Queue');
+    });
+  });
+
   describe('onClose callback', () => {
     it('should call onClose when Cancel is clicked', () => {
       render(<GameDetailModal {...defaultProps} />);

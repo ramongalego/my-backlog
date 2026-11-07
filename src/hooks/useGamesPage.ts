@@ -10,6 +10,7 @@ import { matchesSearch, nameMatchesSearch } from '@/lib/games/search';
 import { useSetGameStatus } from '@/lib/mutations';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue } from './useNowPlaying';
+import { useSwitchGame } from './useSwitchGame';
 import { useUrlState } from './useUrlState';
 import { useManualGameActions } from './useManualGame';
 
@@ -122,6 +123,10 @@ interface UseGamesPageReturn {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   statusModal: GamesPageStatusModal | null;
+  /** Plays the open game instead of the one being played. */
+  handlePlayInstead: () => Promise<void>;
+  /** The game being played, which that would pause. */
+  playingName: string | null;
   handleConfirmDetail: (
     status: string,
     date: string,
@@ -149,6 +154,7 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const { queuedGameIds } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
+  const switchGame = useSwitchGame(userId);
 
   // Filter, sort and search live in the URL so they survive navigating away
   // and back. Search keeps local state too so typing stays instant.
@@ -211,6 +217,20 @@ export function useGamesPage(): UseGamesPageReturn {
   };
 
   const handleCloseStatusModal = () => setStatusModal(null);
+
+  // The dialog's Playing while another game is playing: play this one
+  // instead. Undo puts it back as it was (queued, backlog, finished...).
+  const handlePlayInstead = async () => {
+    if (!statusModal) return;
+    const game = games.find((g) => g.id === statusModal.gameId);
+    if (!game) return;
+    await switchGame.switchTo(game, {
+      status: statusModal.initialStatus,
+      date: statusModal.initialDate ?? '',
+      notes: statusModal.initialNotes,
+      rating: statusModal.initialRating,
+    });
+  };
 
   const handleAddToQueue = async (gameId: number) => {
     const game = games.find((g) => g.id === gameId);
@@ -328,6 +348,8 @@ export function useGamesPage(): UseGamesPageReturn {
     setSearchQuery: setSearchQueryAndReset,
     statusModal,
     handleConfirmDetail,
+    handlePlayInstead,
+    playingName: switchGame.playing?.name ?? null,
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,

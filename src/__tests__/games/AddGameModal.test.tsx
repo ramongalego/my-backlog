@@ -147,12 +147,12 @@ it('marks a game already in your library, and adding it again moves it instead',
   expect(screen.getByRole('button', { name: 'Move to Wii' })).toBeInTheDocument();
 });
 
-it('says when starting it moves the current game back to the backlog', async () => {
+it('says when starting it pauses the current game at the top of the queue', async () => {
   setup({ playing: { name: 'Celeste' } });
   await search('fire emblem');
   fireEvent.click(screen.getByRole('option', { name: /Fortune's Weave/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
-  expect(screen.getByText('Celeste goes back to your backlog.')).toBeInTheDocument();
+  expect(screen.getByText('Celeste goes to the top of your queue.')).toBeInTheDocument();
 });
 
 it("keeps the form and shows the server's message when the game can't be added", async () => {

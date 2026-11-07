@@ -48,6 +48,8 @@ export default function GamesView() {
     setSearchQuery,
     statusModal,
     handleConfirmDetail,
+    handlePlayInstead,
+    playingName,
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
@@ -112,6 +114,8 @@ export default function GamesView() {
             deckCompat={statusModal.deckCompat}
             releaseDate={statusModal.releaseDate}
             disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
+            onPlayInstead={handlePlayInstead}
+            playingName={playingName}
             onAddToQueue={
               hasPlayingGame && statusModal.initialStatus === 'backlog'
                 ? () => handleAddToQueue(statusModal.gameId)

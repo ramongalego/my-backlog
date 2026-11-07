@@ -55,6 +55,18 @@ export function useCurrentGame(userId: string | null) {
     setStatus.mutate({ gameId: game.id, status, date, notes, rating });
   };
 
+  /**
+   * The game dialog's Playing while another game is playing: play this one
+   * instead (the other waits at the top of the queue), shown in the band.
+   */
+  const handlePlayInstead = async () => {
+    if (!carouselModal) return;
+    const { game } = carouselModal;
+    setCarouselModal(null);
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
+    await nowPlaying.switchTo(game);
+  };
+
   const handleRandomPick = async () => {
     if (!userId || nowPlaying.isStatusLoading || rollCovers) return;
 
@@ -107,6 +119,7 @@ export function useCurrentGame(userId: string | null) {
     handleQueueGame: nowPlaying.addToQueue,
     handleOpenCarouselDetail: (game: GameWithImage) => setCarouselModal({ game }),
     handleConfirmCarouselDetail,
+    handlePlayInstead,
     handleCloseCarouselModal: () => setCarouselModal(null),
     handleConfirmStatusChange: nowPlaying.confirmStatusChange,
     handleCloseStatusModal: nowPlaying.closeStatusModal,

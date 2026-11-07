@@ -15,6 +15,7 @@ import { connectSteam } from '@/lib/steam/connect';
 import { useAuth } from '@/hooks/useAuth';
 import { growBar, useInView } from '@/hooks/useInView';
 import { useAddToQueue } from '@/hooks/useNowPlaying';
+import { useSwitchGame } from '@/hooks/useSwitchGame';
 import { useSetGameStatus } from '@/lib/mutations';
 import { useManualGameActions } from '@/hooks/useManualGame';
 import type { PlayedALotGame, Stats } from '@/hooks/useStats';
@@ -539,6 +540,7 @@ export default function StatsView() {
   };
   const manualGames = useManualGameActions(user?.id ?? null);
   const addGameToQueue = useAddToQueue(user?.id ?? null);
+  const switchGame = useSwitchGame(user?.id ?? null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
   // Stats reads the shared games list, so the change shows straight away.
@@ -581,6 +583,8 @@ export default function StatsView() {
             initialStatus="backlog"
             disablePlaying={hasPlayingGame}
             onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}
+            onPlayInstead={() => switchGame.switchTo(editModal)}
+            playingName={switchGame.playing?.name ?? null}
           />
         )
       }

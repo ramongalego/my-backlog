@@ -18,7 +18,7 @@ export function StatusPicker({
   options: DetailStatus[];
   value: DetailStatus;
   onChange: (status: DetailStatus) => void;
-  /** Starting this game sends the one being played back to the backlog: say so. */
+  /** Starting this game pauses the one being played at the top of the queue: say so. */
   replacesPlaying: string | null;
 }) {
   return (
@@ -29,7 +29,13 @@ export function StatusPicker({
       <div
         role="group"
         aria-labelledby="status-label"
-        className={`grid gap-2 grid-cols-3 ${options.length === 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-6'}`}
+        // Seven (Queue and Playing both, while another game plays) go four to
+        // a row at every width: they don't fit across the dialog.
+        className={`grid gap-2 ${
+          options.length > 6
+            ? 'grid-cols-4'
+            : `grid-cols-3 ${options.length === 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-6'}`
+        }`}
       >
         {options.map((option) => {
           const isActive = value === option;
@@ -55,7 +61,9 @@ export function StatusPicker({
         })}
       </div>
       {replacesPlaying && (
-        <p className="mt-2 text-xs text-ink-400">{replacesPlaying} goes back to your backlog.</p>
+        <p className="mt-2 text-xs text-ink-400">
+          {replacesPlaying} goes to the top of your queue.
+        </p>
       )}
     </div>
   );

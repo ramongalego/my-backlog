@@ -89,6 +89,7 @@ export default function HomeView() {
     handleQueueGame,
     handleOpenCarouselDetail,
     handleConfirmCarouselDetail,
+    handlePlayInstead,
     handleCloseCarouselModal,
     handleCancelGame,
     handleMoveCurrentToQueue,
@@ -375,6 +376,8 @@ export default function HomeView() {
           initialStatus="backlog"
           manual={manualGames.dialogProps(carouselModal.game)}
           disablePlaying={!!currentlyPlaying}
+          onPlayInstead={handlePlayInstead}
+          playingName={currentlyPlaying?.name ?? null}
           onAddToQueue={
             currentlyPlaying && !queuedGameIds.has(carouselModal.game.id)
               ? () => handleQueueGame(carouselModal.game)

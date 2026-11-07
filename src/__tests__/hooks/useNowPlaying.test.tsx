@@ -49,6 +49,8 @@ const queued = {
   },
 };
 
+const steamWorldPaused = { id: 1, name: 'SteamWorld Dig' };
+const metroidPaused = { id: 3, name: 'Metroid Dread' };
 const queuedDread = {
   id: 11,
   game_id: 3,
@@ -74,7 +76,13 @@ function setup({ queue = [queued] as unknown[], nowPlaying = playing as unknown 
 
 beforeEach(() => {
   jest.mocked(completeGame).mockReset();
-  jest.mocked(updateGameStatus).mockReset().mockResolvedValue(undefined);
+  // The server reports the game it paused: whichever game was playing.
+  jest
+    .mocked(updateGameStatus)
+    .mockReset()
+    .mockImplementation(async (id, _status, opts) => ({
+      paused: opts?.pausePlaying ? [id === 1 ? metroidPaused : steamWorldPaused] : [],
+    }));
   jest.mocked(reorderQueue).mockReset().mockResolvedValue(undefined);
   jest.mocked(toast).mockClear();
 });

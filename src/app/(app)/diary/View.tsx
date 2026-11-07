@@ -226,6 +226,8 @@ export default function DiaryView() {
     handleOpenDetail,
     handleCloseDetail,
     handleConfirmDetail,
+    handlePlayInstead,
+    playingName,
     handleSaveNotes,
   } = useDiary();
   const libraryMeta = useCachedLibraryMeta();
@@ -309,6 +311,8 @@ export default function DiaryView() {
             deckCompat={detailModal.game.deck_compat}
             manual={manualGames.dialogProps(detailModal.game)}
             disablePlaying={hasPlayingGame}
+            onPlayInstead={handlePlayInstead}
+            playingName={playingName}
           />
         )
       }

@@ -528,6 +528,11 @@ export default function PlayingQueueView() {
               deckCompat={detailItem.game.deck_compat}
               releaseDate={detailItem.game.release_date}
               disablePlaying={!!currentlyPlaying}
+              onPlayInstead={() => {
+                setDetailGameId(null);
+                handlePickFromQueue(detailItem.game_id);
+              }}
+              playingName={currentlyPlaying?.name ?? null}
               manual={manualDialogProps({ ...detailItem.game, id: detailItem.game_id })}
             />
           )}

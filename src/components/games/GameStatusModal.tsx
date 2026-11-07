@@ -10,7 +10,7 @@ import { ArtHeader } from './ArtHeader';
 import { ConsolePicker } from './ConsolePicker';
 import { ConsoleBadge } from './ConsoleBadge';
 import { ReleaseBadge } from './ReleaseBadge';
-import { upcomingRelease } from '@/lib/games/release-date';
+import { isReleased, upcomingRelease } from '@/lib/games/release-date';
 import { HoursField } from './detail/HoursField';
 import { StatusPicker, type DetailStatus } from './detail/StatusPicker';
 import { CompletionDateField } from './detail/CompletionDateField';
@@ -50,8 +50,14 @@ interface GameDetailModalProps {
   initialDate?: string | null;
   initialNotes?: string | null;
   initialRating?: number | null;
+  /** Another game is being played: Playing becomes Queue and, with
+   * `onPlayInstead`, switching to this game. */
   disablePlaying?: boolean;
   onAddToQueue?: () => void;
+  /** Plays this game instead of the one being played (`playingName`), which
+   * goes to the top of the queue. Offered as Playing beside Queue. */
+  onPlayInstead?: () => void | Promise<void>;
+  playingName?: string | null;
   mainStoryHours?: number | null;
   steamReviewScore?: number | null;
   steamReviewCount?: number | null;
@@ -128,6 +134,8 @@ export function GameDetailModal({
   initialRating,
   disablePlaying = false,
   onAddToQueue,
+  onPlayInstead,
+  playingName = null,
   mainStoryHours,
   steamReviewScore,
   steamReviewCount,
@@ -155,6 +163,8 @@ export function GameDetailModal({
   const clearsReview = hadReview && (status === 'wont_play' || status === 'hidden');
   const showHours = !!manual || !!adding;
   const pickedConsole = platform.trim();
+  // Another game is being played and this one can be played instead.
+  const switching = disablePlaying && !!onPlayInstead;
 
   function handleStatusChange(next: DetailStatus) {
     setStatus(next);
@@ -194,6 +204,8 @@ export function GameDetailModal({
         if (manual && hours !== initialHours) await manual.onSaveHours(parsedHours);
         if (status === 'queue') {
           onAddToQueue?.();
+        } else if (status === 'playing' && switching) {
+          await onPlayInstead?.();
         } else {
           await onConfirm?.(status, hasDate ? date : '', notes, parsedRating);
         }
@@ -209,14 +221,21 @@ export function GameDetailModal({
   const hoursError = saveState.hours?.value === hours ? saveState.hours.error : null;
 
   // When adding, the status buttons are the five places a new game can go;
-  // otherwise every status, with Queue taking Playing's place while another
-  // game is being played.
-  const statusOptions: DetailStatus[] = adding
-    ? ADD_STATUSES
-    : GAME_STATUSES.flatMap((value) =>
-        value === 'playing' && disablePlaying ? (onAddToQueue ? ['queue' as const] : []) : [value],
-      );
-  const replacesPlaying = !!adding?.playingName && status === 'playing' ? adding.playingName : null;
+  // otherwise every status. While another game is being played, Playing
+  // switches to this one (`switching`), and Queue sits beside it. A game that isn't out yet
+  // can't be started (unless it's the one playing).
+  const canStart = isReleased(releaseDate) || initialStatus === 'playing';
+  const statusOptions: DetailStatus[] = (
+    adding
+      ? ADD_STATUSES
+      : GAME_STATUSES.flatMap((value): DetailStatus[] =>
+          value === 'playing' && disablePlaying
+            ? [...(onAddToQueue ? ['queue' as const] : []), ...(switching ? [value] : [])]
+            : [value],
+        )
+  ).filter((value) => value !== 'playing' || canStart);
+  const replacesPlaying =
+    status !== 'playing' ? null : adding ? adding.playingName : switching ? playingName : null;
 
   return (
     <Modal

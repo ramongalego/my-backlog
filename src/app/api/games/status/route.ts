@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   const result = await applyStatusChange(supabase, user.id, parsed.data);
   if (!result.ok) return jsonError(result.error, result.status);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, paused: result.paused });
 }
 
 export async function GET() {

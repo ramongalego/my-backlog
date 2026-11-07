@@ -12,7 +12,7 @@ export async function updateGameStatus(
     /** Pause the game being played (top of the queue) instead of moving it to the backlog. */
     pausePlaying?: boolean;
   },
-): Promise<void> {
+): Promise<{ paused: { id: number; name: string }[] }> {
   const res = await fetch('/api/games/status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -37,6 +37,8 @@ export async function updateGameStatus(
     }
     throw new Error(`updateGameStatus failed (${res.status})${detail}`);
   }
+  const body = await res.json().catch(() => null);
+  return { paused: body?.paused ?? [] };
 }
 
 export interface CompleteGameResult {

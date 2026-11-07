@@ -189,11 +189,13 @@ export async function POST(request: NextRequest) {
     (status === 'playing' && statusChanged) ||
     (status === 'backlog' && existing && statusChanged)
   ) {
-    // The same rules as any status change: starting it moves another playing
-    // game back to the backlog; finishing or dropping records date and review.
+    // The same rules as any status change: starting it pauses another playing
+    // game at the top of the queue (as switching does everywhere); finishing
+    // or dropping records date and review.
     const applied = await applyStatusChange(supabase, user.id, {
       gameId: game.id,
       status,
+      ...(status === 'playing' ? { pausePlaying: true } : {}),
       ...(status === 'finished' ? { finishedAt: date } : {}),
       ...(status === 'dropped' ? { droppedAt: date } : {}),
       notes,

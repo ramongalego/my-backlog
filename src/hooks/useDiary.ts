@@ -6,6 +6,7 @@ import type { DiaryEntry } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
 import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
+import { useSwitchGame } from './useSwitchGame';
 import { useInvalidateQueries, useSetGameStatus, type StatusEdit } from '@/lib/mutations';
 
 export type { DiaryEntry };
@@ -30,6 +31,10 @@ interface UseDiaryReturn {
   retry: () => void;
   hasPlayingGame: boolean;
   detailModal: DiaryModal | null;
+  /** Plays the open game instead of the one being played (a replay). */
+  handlePlayInstead: () => Promise<void>;
+  /** The game being played, which that would pause. */
+  playingName: string | null;
   handleOpenDetail: (gameId: number) => void;
   handleCloseDetail: () => void;
   handleConfirmDetail: (
@@ -125,6 +130,22 @@ export function useDiary(): UseDiaryReturn {
 
   const handleCloseDetail = () => setDetailModal(null);
 
+  // The dialog's Playing while another game is playing: replay this one
+  // instead. Undo puts it back as finished, with its date, rating and notes.
+  const switchGame = useSwitchGame(userId);
+  const handlePlayInstead = async () => {
+    if (!detailModal) return;
+    await switchGame.switchTo(
+      { ...detailModal.game, id: detailModal.gameId },
+      {
+        status: detailModal.initialStatus,
+        date: detailModal.initialDate ?? '',
+        notes: detailModal.initialNotes,
+        rating: detailModal.initialRating,
+      },
+    );
+  };
+
   const handleConfirmDetail = async (
     status: string,
     date: string,
@@ -155,6 +176,8 @@ export function useDiary(): UseDiaryReturn {
     retry: () => void refetch(),
     hasPlayingGame: playingGame !== null,
     detailModal,
+    handlePlayInstead,
+    playingName: switchGame.playing?.name ?? null,
     handleOpenDetail,
     handleCloseDetail,
     handleConfirmDetail,
