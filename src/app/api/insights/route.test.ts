@@ -4,7 +4,8 @@
 import type { NextRequest } from 'next/server';
 import type { GameItem } from '@/lib/data/loaders';
 import { POST } from '@/app/api/insights/route';
-import { factsSignature, playerFacts } from '@/lib/profile/facts';
+import { playerFacts } from '@/lib/profile/facts';
+import { buildInsightMessages, insightSignature } from '@/lib/profile/prompt';
 
 let user: { id: string } | null = { id: 'user-1' };
 let games: GameItem[] = [];
@@ -88,18 +89,18 @@ it('refuses a library that says too little, without calling the model', async ()
   expect(create).not.toHaveBeenCalled();
 });
 
-it('writes one, sends the facts as data, and saves it with their signature', async () => {
+it('writes one from the library facts and saves it with their signature', async () => {
   const res = await ask({ tone: 'roast' });
   expect(res.status).toBe(200);
   expect(await res.json()).toMatchObject(written);
 
   const { messages } = create.mock.calls[0][0];
-  expect(JSON.parse(messages[1].content)).toEqual(playerFacts(games));
+  expect(messages).toEqual(buildInsightMessages(playerFacts(games)!, 'roast'));
   expect(saveInsight).toHaveBeenCalledWith(
     'user-1',
     'roast',
     written,
-    factsSignature(playerFacts(games)!),
+    insightSignature(playerFacts(games)!),
   );
 });
 
@@ -107,7 +108,7 @@ it("returns the saved one when the library hasn't changed, without calling the m
   saved = {
     headline: 'Saved',
     paragraphs: ['Earlier.'],
-    signature: factsSignature(playerFacts(games)!),
+    signature: insightSignature(playerFacts(games)!),
     generatedAt: '2026-11-01T00:00:00.000Z',
   };
   const res = await ask({ tone: 'profile' });

@@ -5,6 +5,7 @@ let nextId = 1;
 const game = (overrides: Partial<GameItem> = {}): GameItem =>
   ({
     id: nextId++,
+    source: 'steam',
     name: `Game ${nextId}`,
     status: 'backlog',
     playtime_forever: 0,
@@ -84,6 +85,73 @@ describe('playerFacts', () => {
     expect(facts.ratings.lowest).toEqual([{ name: 'Elden Ring', rating: 5 }]);
     expect(facts.wontPlay).toBe(1);
     expect(facts.mostPlayed[0]).toEqual({ name: 'Elden Ring', hours: 120 });
+  });
+});
+
+describe('a library added by hand, without Steam', () => {
+  const manual = (overrides: Partial<GameItem>) =>
+    game({ source: 'manual', platform: 'Switch 2', ...overrides });
+  const games = [
+    ...Array.from({ length: 4 }, (_, i) =>
+      manual({ name: 'Finished ' + i, status: 'finished', rating: 8 }),
+    ),
+    manual({ name: 'Dropped, no hours', status: 'dropped' }),
+    manual({ name: 'Dropped quickly', status: 'dropped', playtime_forever: 45 }),
+    manual({ name: 'Waiting' }),
+  ];
+
+  it('has enough for a profile from finished and rated games alone', () => {
+    expect(hasEnoughForProfile(games)).toBe(true);
+  });
+
+  it('leaves out what it cannot know, rather than reading missing hours as zero', () => {
+    const facts = playerFacts(games)!;
+    expect(facts.steam).toBeNull();
+    expect(facts.backlog.neverStarted).toBeNull();
+    expect(facts.droppedEarly).toBe(1);
+    expect(facts.finished).toBe(4);
+    expect(facts.platforms).toEqual([{ platform: 'Switch 2', games: 7 }]);
+  });
+
+  it('has no total hours when none were recorded', () => {
+    const facts = playerFacts(games.map((g) => ({ ...g, playtime_forever: 0 })))!;
+    expect(facts.totalHours).toBeNull();
+    expect(facts.topGameSharePct).toBeNull();
+  });
+});
+
+describe('what they love', () => {
+  const facts = playerFacts([
+    game({ rating: 9, tags: ['JRPG', 'Turn-Based'], release_date: 'Sep 28, 1998' }),
+    game({ rating: 8, tags: ['JRPG'], release_date: '2003' }),
+    game({ rating: 10, tags: ['JRPG'], release_date: 'Mar 1, 1997' }),
+    game({ rating: 4, tags: ['Shooter'], release_date: '2020' }),
+    game({ rating: 7, tags: ['Shooter'], release_date: 'To be announced' }),
+  ])!;
+
+  it('counts the tags and decades of the games rated 8 or more', () => {
+    expect(facts.loved.tags).toEqual([
+      { tag: 'JRPG', games: 3 },
+      { tag: 'Turn-Based', games: 1 },
+    ]);
+    expect(facts.loved.decades).toEqual([
+      { decade: '1990s', games: 2 },
+      { decade: '2000s', games: 1 },
+    ]);
+  });
+});
+
+describe('disagreeing with critics', () => {
+  it('names the games rated 2 or more points away from the critics, biggest gap first', () => {
+    const facts = playerFacts([
+      game({ name: 'Underrated', rating: 9, critic_score: 62 }),
+      game({ name: 'Slightly', rating: 9, critic_score: 75 }),
+      game({ name: 'Overrated', rating: 5, critic_score: 91 }),
+      game({ name: 'Agreed', rating: 8, critic_score: 80 }),
+      game({ name: 'No score', rating: 2 }),
+    ])!;
+    expect(facts.critics.ratedAbove).toEqual([{ name: 'Underrated', yours: 9, critics: 62 }]);
+    expect(facts.critics.ratedBelow).toEqual([{ name: 'Overrated', yours: 5, critics: 91 }]);
   });
 });
 

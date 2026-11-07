@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { loadGamesList } from '@/lib/data/loaders';
-import { factsSignature, hasEnoughForProfile, playerFacts } from '@/lib/profile/facts';
+import { hasEnoughForProfile, playerFacts } from '@/lib/profile/facts';
 import {
   INSIGHT_RESPONSE_FORMAT,
   buildInsightMessages,
+  insightSignature,
   parseInsight,
   type Insight,
 } from '@/lib/profile/prompt';
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
   const facts = hasEnoughForProfile(games) ? playerFacts(games) : null;
   if (!facts) return jsonError('Not enough in your library yet', 422);
 
-  const signature = factsSignature(facts);
+  const signature = insightSignature(facts);
   const saved = await getSavedInsight(user.id, tone);
   if (saved?.signature === signature) return respond(saved);
 
