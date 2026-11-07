@@ -8,8 +8,8 @@ export const ENERGIES: Energy[] = ['High', 'Medium', 'Low'];
 export const TIMES: Time[] = ['One session', 'A few nights', 'Long haul'];
 // What each answer means, as the app's own question says it.
 export const TIME_HINTS: Record<Time, string> = {
-  'One session': 'Under 5 hours to beat, or built around short runs',
-  'A few nights': '5 to 15 hours to beat',
+  'One session': 'Under 6 hours to beat, or built around short runs',
+  'A few nights': '6 to 15 hours to beat',
   'Long haul': '15 hours or more',
 };
 

@@ -68,8 +68,7 @@ export function useCarouselPools(userId: string | null) {
 
   // No game appears in two of the picks carousels. They claim games in this
   // order, which isn't their order on Home: a game you've started belongs in
-  // Pick Up Where You Left Off, and More Like ... needs its matches before the
-  // general picks take them, or it would rarely have enough to show.
+  // Pick Up Where You Left Off, before the general picks.
   // Queued games are already decided, so they aren't suggested again (Recently
   // Added still lists them). Filtering here, from the queue the page already
   // has, means adding or removing one updates the carousels instantly.
@@ -81,8 +80,12 @@ export function useCarouselPools(userId: string | null) {
     return games;
   };
 
+  // More Like ... lists every game like the one you loved, even ones another
+  // row also shows, and takes none away from them.
+  const moreLikeGames = (data.moreLike?.games ?? [])
+    .filter((g) => !queuedGameIds.has(g.id))
+    .slice(0, CAROUSEL_SIZE);
   const pickUp = take(data.pickUpPool);
-  const moreLikeGames = data.moreLike ? take(data.moreLike.games) : [];
   const shortGames = take(data.shortGamesPool);
   const weekendGames = take(data.weekendGamesPool);
   const highlyRatedGames = take(data.highlyRatedGamesPool);
@@ -95,7 +98,7 @@ export function useCarouselPools(userId: string | null) {
   return {
     pickUp,
     moreLike:
-      // Only worth a row if enough are left after the started games.
+      // Only worth a row if enough are left after the queued games.
       data.moreLike && moreLikeGames.length >= MORE_LIKE_MIN_GAMES
         ? { basedOn: data.moreLike.basedOn, games: moreLikeGames }
         : null,

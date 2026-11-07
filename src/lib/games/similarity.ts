@@ -44,11 +44,35 @@ function tagWeight(index: number) {
   return 1 / (1 + index * 0.15);
 }
 
-export function topTags(tags: string[] | null, limit = 12): Map<string, number> {
+// Even a tag on every game counts for a little.
+const RARITY_FLOOR = 0.1;
+
+/**
+ * How much each tag says among a set of games. A tag on most of them says
+ * little (RPG, in a library of JRPGs), a rare one says a lot (Metroidvania),
+ * so two games match on what sets them apart rather than on broad genres.
+ */
+export function tagRarity(games: { tags: string[] | null }[]): (tag: string) => number {
+  const counts = new Map<string, number>();
+  for (const game of games) {
+    for (const tag of new Set(game.tags ?? [])) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  return (tag) => Math.log((games.length + 1) / ((counts.get(tag) ?? 0) + 1)) + RARITY_FLOOR;
+}
+
+/**
+ * A game's tags, weighted by position (Steam lists the most voted first) and,
+ * when given, by how much each one says (tagRarity).
+ */
+export function topTags(
+  tags: string[] | null,
+  limit = 12,
+  rarity: (tag: string) => number = () => 1,
+): Map<string, number> {
   const out = new Map<string, number>();
   for (const tag of tags ?? []) {
     if (GENERIC_TAGS.has(tag)) continue;
-    out.set(tag, tagWeight(out.size));
+    out.set(tag, tagWeight(out.size) * rarity(tag));
     if (out.size >= limit) break;
   }
   return out;

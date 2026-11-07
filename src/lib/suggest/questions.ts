@@ -97,14 +97,14 @@ export const TIME_QUESTION: Question<TimeCommitment> = {
       value: 'short',
       icon: Timer,
       label: 'One session',
-      hint: 'Under 5h',
+      hint: 'Under 6h',
       description: 'Quick wins, roguelikes, short games',
     },
     {
       value: 'medium',
       icon: CalendarDays,
       label: 'A few nights',
-      hint: '5–15h',
+      hint: '6–15h',
       description: 'A long weekend or a few evenings',
     },
     {

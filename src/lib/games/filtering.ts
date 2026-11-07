@@ -8,8 +8,9 @@ export interface GameForFiltering {
 }
 
 export const SHORT_GAME_MIN_HOURS = 1;
-export const SHORT_GAME_MAX_HOURS = 5;
-export const WEEKEND_GAME_MIN_HOURS = 5;
+// A short game is one you can finish in one sitting.
+export const SHORT_GAME_MAX_HOURS = 6;
+export const WEEKEND_GAME_MIN_HOURS = 6;
 export const WEEKEND_GAME_MAX_HOURS = 12;
 export const MAX_PLAYTIME_MINUTES = 240;
 // Random pick uses a stricter "barely touched" playtime bound than the pools.

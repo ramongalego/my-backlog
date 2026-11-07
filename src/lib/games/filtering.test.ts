@@ -43,15 +43,15 @@ describe('isRandomPickEligible', () => {
 describe('constants', () => {
   it('should have correct short game boundaries', () => {
     expect(SHORT_GAME_MIN_HOURS).toBe(1);
-    expect(SHORT_GAME_MAX_HOURS).toBe(5);
+    expect(SHORT_GAME_MAX_HOURS).toBe(6);
   });
 
   it('should have correct weekend game boundaries', () => {
-    expect(WEEKEND_GAME_MIN_HOURS).toBe(5);
+    expect(WEEKEND_GAME_MIN_HOURS).toBe(6);
     expect(WEEKEND_GAME_MAX_HOURS).toBe(12);
   });
 
-  it('should have short and weekend games connect at 5 hours', () => {
+  it('should have short and weekend games connect at 6 hours', () => {
     expect(SHORT_GAME_MAX_HOURS).toBe(WEEKEND_GAME_MIN_HOURS);
   });
 

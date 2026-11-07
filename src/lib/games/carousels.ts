@@ -5,7 +5,14 @@ import {
   WEEKEND_GAME_MAX_HOURS,
   MAX_PLAYTIME_MINUTES,
 } from './filtering';
-import { editionKey, multiplayerFocus, seriesMatch, similarity, topTags } from './similarity';
+import {
+  editionKey,
+  multiplayerFocus,
+  seriesMatch,
+  similarity,
+  tagRarity,
+  topTags,
+} from './similarity';
 import { ratingOf } from './rating';
 
 /** A backlog game with what the carousels sort and filter on. */
@@ -74,10 +81,13 @@ const byGemRank = (a: CarouselGame, b: CarouselGame) =>
 // More Like ...: how close a backlog game must be to the loved game, and how
 // many it needs before the carousel is worth showing.
 const MORE_LIKE_MIN_RATING = 8;
-const MORE_LIKE_MIN_SIMILARITY = 0.25;
+// Lower than it looks: rarity weighting (tagRarity) keeps broad genres from
+// adding up, so real matches score lower than they would on raw tags.
+const MORE_LIKE_MIN_SIMILARITY = 0.18;
 const MORE_LIKE_MIN_SCORE = 75;
 export const MORE_LIKE_MIN_GAMES = 3;
-const SAME_SERIES_BONUS = 0.5;
+// Same series gets all of it, same franchise half (seriesMatch).
+const SERIES_BONUS = 0.5;
 
 // Two or more of the top tags about playing with others: listed as
 // single-player, but built around multiplayer (ARK, Vermintide, Pummel Party).
@@ -135,7 +145,8 @@ function oneEditionEach(games: CarouselGame[]) {
 
 /**
  * The best-loved game (highest rated, then most recently finished) with enough
- * well-reviewed backlog games that play like it. Same-series games rank first.
+ * well-reviewed backlog games that play like it. Games from the same series or
+ * franchise get a head start.
  */
 function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['moreLike'] {
   const seeds = [...loved]
@@ -146,14 +157,20 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
   // Well enough liked to recommend, by the same rating the rows rank by.
   const worthPlaying = games.filter((g) => (ratingOf(g) ?? 0) >= MORE_LIKE_MIN_SCORE);
 
+  // Tags are weighed by how rare they are in this backlog, so a Metroidvania
+  // isn't matched to JRPGs just because both are tagged RPG and Adventure.
+  const rarity = tagRarity(games);
+  const candidates = worthPlaying.map((game) => ({
+    game,
+    tags: topTags(game.tags, undefined, rarity),
+  }));
+
   for (const seed of seeds) {
-    const seedTags = topTags(seed.tags);
-    const matches = worthPlaying
-      .map((game) => ({
+    const seedTags = topTags(seed.tags, undefined, rarity);
+    const matches = candidates
+      .map(({ game, tags }) => ({
         game,
-        score:
-          similarity(topTags(game.tags), seedTags) +
-          (seriesMatch(game.name, seed.name) === 1 ? SAME_SERIES_BONUS : 0),
+        score: similarity(tags, seedTags) + SERIES_BONUS * seriesMatch(game.name, seed.name),
       }))
       .filter((m) => m.score >= MORE_LIKE_MIN_SIMILARITY)
       .sort((a, b) => b.score - a.score || byRating(a.game, b.game));

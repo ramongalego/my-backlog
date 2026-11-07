@@ -16,8 +16,8 @@ const ENERGY_DESCRIPTIONS = {
 };
 
 const TIME_DESCRIPTIONS = {
-  short: 'under 5 hours to complete, or a game played in short runs (roguelikes count)',
-  medium: '5-15 hours total, a few evenings',
+  short: 'under 6 hours to complete, or a game played in short runs (roguelikes count)',
+  medium: '6-15 hours total, a few evenings',
   long: '15+ hours, a deep commitment',
 };
 

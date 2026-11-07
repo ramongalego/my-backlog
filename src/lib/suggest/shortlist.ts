@@ -1,5 +1,6 @@
 import { isSoftware } from '@/lib/games/software';
 import { ratingOf } from '@/lib/games/rating';
+import { SHORT_GAME_MAX_HOURS } from '@/lib/games/filtering';
 import {
   multiplayerFocus,
   seriesKey,
@@ -58,10 +59,11 @@ export interface ScoredCandidate<T extends CandidateGame = CandidateGame> {
   outsideTimeRange: boolean;
 }
 
-// The time ranges the wizard offers, in main-story hours.
+// The time ranges the wizard offers, in main-story hours. One session is the
+// same line as Home's Finish It in One Sitting.
 const TIME_RANGES: Record<TimeCommitment, { min: number; max: number }> = {
-  short: { min: 0, max: 5 },
-  medium: { min: 5, max: 15 },
+  short: { min: 0, max: SHORT_GAME_MAX_HOURS },
+  medium: { min: SHORT_GAME_MAX_HOURS, max: 15 },
   long: { min: 15, max: Infinity },
 };
 

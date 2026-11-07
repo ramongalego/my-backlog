@@ -75,15 +75,16 @@ describe('every carousel', () => {
 });
 
 describe('length carousels', () => {
-  it('sort into under 5 hours and a weekend', () => {
+  it('sort into one sitting (up to 6 hours) and a weekend (6 to 12)', () => {
     const pools = build([
       game({ name: 'Two hours', main_story_hours: 2 }),
-      game({ name: 'Five hours', main_story_hours: 5 }),
-      game({ name: 'Nine hours', main_story_hours: 9 }),
+      game({ name: 'Six hours', main_story_hours: 6 }),
+      game({ name: 'Six and a half', main_story_hours: 6.5 }),
+      game({ name: 'Twelve hours', main_story_hours: 12 }),
       game({ name: 'Forty hours', main_story_hours: 40 }),
     ]);
-    expect(names(pools.shortGamesPool).sort()).toEqual(['Five hours', 'Two hours']);
-    expect(names(pools.weekendGamesPool)).toEqual(['Nine hours']);
+    expect(names(pools.shortGamesPool).sort()).toEqual(['Six hours', 'Two hours']);
+    expect(names(pools.weekendGamesPool).sort()).toEqual(['Six and a half', 'Twelve hours']);
   });
 
   it('skip fighting games, whose time is only the story mode', () => {
@@ -182,6 +183,41 @@ describe('More Like ...', () => {
       'Dragon Quest XI',
       'Tales of Arise',
     ]);
+  });
+
+  it('matches on what sets a game apart, not on genres most of the backlog shares', () => {
+    const broad = ['RPG', 'Adventure', 'Action'];
+    const metroidvania = (name: string) =>
+      game({ name, tags: ['Metroidvania', 'Platformer', 'Action', '2D'] });
+    const pools = build(
+      [
+        ...['Xenoblade 2', 'Xenoblade 3', 'Tales of Arise', 'Dragon Quest XI', 'Ys VIII'].map(
+          (name) => game({ name, tags: [...broad, 'JRPG', 'Fantasy'] }),
+        ),
+        metroidvania('Hollow Knight'),
+        metroidvania('Ori'),
+        metroidvania('Blasphemous'),
+      ],
+      [loved('Aria of Sorrow', ['Metroidvania', 'Platformer', ...broad, 'Horror'], 10)],
+    );
+    expect(pools.moreLike && names(pools.moreLike.games).sort()).toEqual([
+      'Blasphemous',
+      'Hollow Knight',
+      'Ori',
+    ]);
+  });
+
+  it('puts games from the same franchise first', () => {
+    const tags = ['Metroidvania', 'Platformer', 'Action'];
+    const pools = build(
+      [
+        game({ name: 'Hollow Knight', tags }),
+        game({ name: 'Ori', tags }),
+        game({ name: 'Castlevania Advance Collection', tags }),
+      ],
+      [loved('Castlevania: Aria of Sorrow', tags, 10)],
+    );
+    expect(pools.moreLike && names(pools.moreLike.games)[0]).toBe('Castlevania Advance Collection');
   });
 
   it('skips poorly reviewed matches', () => {

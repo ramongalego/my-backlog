@@ -76,3 +76,23 @@ it('updates as soon as the queue changes, without refetching the carousels', () 
   expect(result.current.weekendGames.map((g) => g.app_id)).toEqual([1, 2, 4]);
   expect(global.fetch).not.toHaveBeenCalled();
 });
+
+it('lists every game in More Like ..., even ones another row shows, but not queued ones', () => {
+  const client = new QueryClient();
+  client.setQueryData(queryKeys.carousels.byUser('u'), {
+    ...EMPTY_CAROUSEL_POOLS,
+    pickUpPool: [1].map(game),
+    moreLike: { basedOn: 'Aria of Sorrow', games: [1, 2, 3, 4, 5].map(game) },
+    shortGamesPool: [2, 3].map(game),
+  });
+  client.setQueryData(queryKeys.queue.list('u'), [queued(5)]);
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useCarouselPools('u'), { wrapper });
+
+  expect(result.current.moreLike?.games.map((g) => g.app_id)).toEqual([1, 2, 3, 4]);
+  // And the other rows keep theirs.
+  expect(result.current.pickUp.map((g) => g.app_id)).toEqual([1]);
+  expect(result.current.shortGames.map((g) => g.app_id)).toEqual([2, 3]);
+});

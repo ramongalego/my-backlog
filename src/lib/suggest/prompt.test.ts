@@ -55,7 +55,7 @@ describe('buildSuggestionPrompt', () => {
 
     expect(prompt).toContain('fast, demanding, focus-heavy');
     expect(prompt).toContain('complex systems to learn');
-    expect(prompt).toContain('5-15 hours total');
+    expect(prompt).toContain('6-15 hours total');
   });
 
   it('lists every shortlisted game with its ID', () => {

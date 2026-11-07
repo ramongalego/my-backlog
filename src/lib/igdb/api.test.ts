@@ -126,14 +126,29 @@ describe('igdbTags', () => {
     ).toEqual(['RPG']);
   });
 
-  it('adds only the keywords that match a Steam tag, after genres and themes', () => {
+  it('adds only the keywords that match a Steam tag: a subgenre first, the rest last', () => {
     expect(
       igdbTags({
         genres: rpg,
         themes: [{ name: 'Fantasy' }],
         keywords: [{ name: 'Anime' }, { name: 'dog' }, { name: 'jrpg' }, { name: 'tactical rpg' }],
       }),
-    ).toEqual(['RPG', 'Fantasy', 'Anime', 'JRPG', 'Tactical RPG']);
+    ).toEqual(['Tactical RPG', 'RPG', 'Fantasy', 'Anime', 'JRPG']);
+  });
+
+  it("doesn't call a Japanese Metroidvania, platformer or Souls-like a JRPG", () => {
+    // Castlevania: Aria of Sorrow, as IGDB has it.
+    expect(
+      igdbTags({
+        genres: [{ name: 'Platform' }, rpg[0], { name: 'Adventure' }],
+        themes: [{ name: 'Horror' }],
+        keywords: [{ name: 'metroidvania' }],
+        involved_companies: japanese,
+      }),
+    ).toEqual(['Metroidvania', 'Platformer', 'RPG', 'Adventure', 'Horror']);
+    expect(
+      igdbTags({ genres: rpg, keywords: [{ name: 'soulslike' }], involved_companies: japanese }),
+    ).toEqual(['Souls-like', 'RPG']);
   });
 });
 

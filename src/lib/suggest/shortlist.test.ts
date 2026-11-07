@@ -53,9 +53,10 @@ const names = (games: { game: CandidateGame }[]) => games.map((c) => c.game.name
 describe('timeFit', () => {
   it('matches the ranges the wizard shows', () => {
     expect(timeFit(game({ main_story_hours: 4 }), 'short')).toBe('fit');
-    expect(timeFit(game({ main_story_hours: 8 }), 'short')).toBe(3);
+    expect(timeFit(game({ main_story_hours: 6 }), 'short')).toBe('fit');
+    expect(timeFit(game({ main_story_hours: 8 }), 'short')).toBe(2);
     expect(timeFit(game({ main_story_hours: 12 }), 'medium')).toBe('fit');
-    expect(timeFit(game({ main_story_hours: 3 }), 'medium')).toBe(2);
+    expect(timeFit(game({ main_story_hours: 3 }), 'medium')).toBe(3);
     expect(timeFit(game({ main_story_hours: 18 }), 'long')).toBe('fit');
     expect(timeFit(game({ main_story_hours: 10 }), 'long')).toBe(5);
   });

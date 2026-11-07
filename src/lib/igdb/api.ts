@@ -304,13 +304,44 @@ const KEYWORD_TAGS: Record<string, string> = {
   mecha: 'Mechs',
 };
 
+// The keyword tags that name a subgenre. They say more about how a game plays
+// than its broad genres (a Metroidvania is also a Platformer and an Adventure),
+// so they go first, where Steam's votes would put them and where similarity
+// weighs tags most.
+const SUBGENRE_TAGS = new Set([
+  'Metroidvania',
+  'Roguelike',
+  'Roguelite',
+  'Souls-like',
+  'Immersive Sim',
+  'Boomer Shooter',
+  'Bullet Hell',
+  'Survival Horror',
+  'Deckbuilding',
+  'Creature Collector',
+  'Tactical RPG',
+  'Party-Based RPG',
+  'CRPG',
+  'Turn-Based Tactics',
+  'Turn-Based Combat',
+  'Dungeon Crawler',
+  'Dating Sim',
+  'Life Sim',
+  'Rhythm',
+]);
+
+// Japanese RPGs that Steam's players wouldn't call a JRPG: they play like
+// these first (Castlevania: Aria of Sorrow, Elden Ring).
+const NOT_JRPG = new Set(['Platformer', 'Metroidvania', 'Souls-like']);
+
 // IGDB's code for Japan (ISO 3166-1 numeric).
 const JAPAN = 392;
 
 /**
- * The game's tags in Steam's words, for games Steam doesn't sell: its genres,
+ * The game's tags in Steam's words, for games Steam doesn't sell: its
+ * subgenre (Metroidvania, Roguelike…) when a keyword names one, its genres,
  * then JRPG for an RPG made in Japan (IGDB has no such genre, and its "jrpg"
- * keyword is on few games), then its themes and a few telling keywords.
+ * keyword is on few games), then its themes and other telling keywords.
  */
 export function igdbTags(
   game: Pick<IgdbGame, 'genres' | 'themes' | 'keywords' | 'involved_companies'>,
@@ -319,11 +350,21 @@ export function igdbTags(
   const madeInJapan = (game.involved_companies ?? []).some(
     (c) => c.developer && c.company?.country === JAPAN,
   );
+  const keywordTags = (game.keywords ?? []).flatMap(
+    (k) => KEYWORD_TAGS[k.name.toLowerCase()] ?? [],
+  );
+  const subgenres = keywordTags.filter((tag) => SUBGENRE_TAGS.has(tag));
+  const genreTags = genres.flatMap((name) => TAG_NAMES[name] ?? [name]);
+  const jrpg =
+    madeInJapan &&
+    genres.includes('Role-playing (RPG)') &&
+    ![...subgenres, ...genreTags].some((tag) => NOT_JRPG.has(tag));
   const tags = [
-    ...genres.flatMap((name) => TAG_NAMES[name] ?? [name]),
-    ...(madeInJapan && genres.includes('Role-playing (RPG)') ? ['JRPG'] : []),
+    ...subgenres,
+    ...genreTags,
+    ...(jrpg ? ['JRPG'] : []),
     ...(game.themes ?? []).flatMap((t) => TAG_NAMES[t.name] ?? [t.name]),
-    ...(game.keywords ?? []).flatMap((k) => KEYWORD_TAGS[k.name.toLowerCase()] ?? []),
+    ...keywordTags,
   ];
   return [...new Set(tags)];
 }

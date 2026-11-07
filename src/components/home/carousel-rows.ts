@@ -13,13 +13,13 @@ interface CarouselRow {
 /**
  * Home's rows of games, in order, leaving out any with too few to show.
  * Related rows sit together: games you've started, short games, highly rated
- * ones, then what's new. More Like sits lower but still claims its games
- * first (see useCarouselPools).
+ * ones, then what's new. More Like ... may repeat games from the other rows
+ * (see useCarouselPools).
  */
 export function homeCarouselRows(carousels: ReturnType<typeof useHomePage>['carousels']) {
   const rows: CarouselRow[] = [
     { key: 'pick-up', title: 'Pick Up Where You Left Off', games: carousels.pickUp },
-    { key: 'short', title: 'Top-Rated Games Under 5 Hours', games: carousels.shortGames },
+    { key: 'short', title: 'Finish It in One Sitting', games: carousels.shortGames },
     { key: 'weekend', title: 'Finish It in a Weekend', games: carousels.weekendGames },
     { key: 'rated', title: 'Highly Rated, Never Played', games: carousels.highlyRatedGames },
     {
