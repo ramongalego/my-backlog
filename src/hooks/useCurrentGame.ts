@@ -63,6 +63,11 @@ export function useCurrentGame(userId: string | null) {
     if (!carouselModal) return;
     const { game } = carouselModal;
     setCarouselModal(null);
+    await handleSwitchTo(game);
+  };
+
+  /** Plays a game instead of the one being played, shown in the band (with Undo). */
+  const handleSwitchTo = async (game: GameWithImage) => {
     window.scrollTo({ top: 0, behavior: scrollBehavior() });
     await nowPlaying.switchTo(game);
   };
@@ -120,6 +125,7 @@ export function useCurrentGame(userId: string | null) {
     handleOpenCarouselDetail: (game: GameWithImage) => setCarouselModal({ game }),
     handleConfirmCarouselDetail,
     handlePlayInstead,
+    handleSwitchTo,
     handleCloseCarouselModal: () => setCarouselModal(null),
     handleConfirmStatusChange: nowPlaying.confirmStatusChange,
     handleCloseStatusModal: nowPlaying.closeStatusModal,

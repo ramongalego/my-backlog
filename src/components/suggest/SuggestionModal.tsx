@@ -27,6 +27,8 @@ interface SuggestionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPick: (game: Suggestion['game']) => void;
+  /** With a game playing (`queue` mode): play the picked game now instead. */
+  onPlayNow?: (game: Suggestion['game']) => void;
   mode?: 'play' | 'queue';
   showHistoryWarning?: boolean;
 }
@@ -35,6 +37,7 @@ export function SuggestionModal({
   isOpen,
   onClose,
   onPick,
+  onPlayNow,
   mode = 'play',
   showHistoryWarning = false,
 }: SuggestionModalProps) {
@@ -72,6 +75,13 @@ export function SuggestionModal({
       onClose();
     }
   };
+  const playNow =
+    mode === 'queue' && onPlayNow
+      ? (game: Suggestion['game']) => () => {
+          onPlayNow(game);
+          onClose();
+        }
+      : undefined;
 
   // For the queue, instead of answering the questions: a random backlog game,
   // rolled for like Home's Random, then yours to add or roll again.
@@ -134,6 +144,7 @@ export function SuggestionModal({
             onPick(chance.game);
             onClose();
           }}
+          onPlayNow={playNow?.(chance.game)}
           onReroll={leaveToChance}
           cooldownRemaining={0}
           isLoading={false}
@@ -171,6 +182,7 @@ export function SuggestionModal({
           key={suggestion.game.id}
           suggestion={suggestion}
           onPick={handlePick}
+          onPlayNow={playNow?.(suggestion.game)}
           onReroll={reroll}
           cooldownRemaining={cooldownRemaining}
           isLoading={isLoading}

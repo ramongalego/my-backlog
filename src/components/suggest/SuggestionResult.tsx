@@ -1,6 +1,6 @@
 'use client';
 
-import { Dices, RotateCcw, Sparkles, ExternalLink } from 'lucide-react';
+import { Dices, ExternalLink, Play, RotateCcw, Sparkles } from 'lucide-react';
 import { ArtHeader } from '@/components/games/ArtHeader';
 import { GameRating, Playtime, TimeToBeat } from '@/components/games/GameCardInfo';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,8 @@ import { AnswerLine } from './AnswerLine';
 interface SuggestionResultProps {
   suggestion: SuggestionResultType;
   onPick: () => void;
+  /** With a game playing: play this one now instead (the other is paused at the top of the queue). */
+  onPlayNow?: () => void;
   onReroll: () => void;
   cooldownRemaining: number;
   isLoading: boolean;
@@ -28,6 +30,7 @@ interface SuggestionResultProps {
 export function SuggestionResult({
   suggestion,
   onPick,
+  onPlayNow,
   onReroll,
   cooldownRemaining,
   isLoading,
@@ -112,11 +115,28 @@ export function SuggestionResult({
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex gap-3 pt-1">
-          <Button onClick={onPick} disabled={isLoading} className="flex-1 cursor-pointer">
+        {/* Action buttons. With a game playing, the pick goes to the queue, or
+            can be played now instead; Add to Queue fills the row on phones,
+            the other two share the next. */}
+        <div className="flex flex-wrap gap-3 pt-1">
+          <Button
+            onClick={onPick}
+            disabled={isLoading}
+            className="flex-1 basis-full sm:basis-0 cursor-pointer"
+          >
             {mode === 'queue' ? 'Add to Queue' : 'Start Playing'}
           </Button>
+          {mode === 'queue' && onPlayNow && (
+            <Button
+              variant="secondary"
+              onClick={onPlayNow}
+              disabled={isLoading}
+              className="flex-1 sm:flex-none cursor-pointer"
+            >
+              <Play className="w-4 h-4" aria-hidden="true" />
+              <span>Play now</span>
+            </Button>
+          )}
           <Button
             variant="secondary"
             onClick={onReroll}

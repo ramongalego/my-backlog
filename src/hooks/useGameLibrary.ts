@@ -66,6 +66,7 @@ export function useGameLibrary() {
       handleOpenCarouselDetail: currentGame.handleOpenCarouselDetail,
       handleConfirmCarouselDetail: currentGame.handleConfirmCarouselDetail,
       handlePlayInstead: currentGame.handlePlayInstead,
+      handleSwitchTo: currentGame.handleSwitchTo,
       handleCloseCarouselModal: currentGame.handleCloseCarouselModal,
       handleCancelGame: currentGame.handleCancelGame,
       handleMoveCurrentToQueue: currentGame.handleMoveCurrentToQueue,

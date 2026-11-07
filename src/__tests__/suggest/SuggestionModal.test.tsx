@@ -35,13 +35,14 @@ const celeste = {
 
 function setup(mode: 'play' | 'queue') {
   const onPick = jest.fn();
+  const onPlayNow = jest.fn();
   const onClose = jest.fn();
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <SuggestionModal isOpen onClose={onClose} onPick={onPick} mode={mode} />
+      <SuggestionModal isOpen onClose={onClose} onPick={onPick} onPlayNow={onPlayNow} mode={mode} />
     </QueryClientProvider>,
   );
-  return { onPick, onClose };
+  return { onPick, onPlayNow, onClose };
 }
 
 beforeEach(() => {
@@ -83,4 +84,17 @@ it("says so when there's nothing left to pick, and goes back to the questions", 
 
   fireEvent.click(screen.getByRole('button', { name: 'Change answers' }));
   expect(screen.getByRole('button', { name: /Leave it to chance/ })).toBeInTheDocument();
+});
+
+it('with a game playing, can play the pick now instead of queueing it', async () => {
+  const { onPick, onPlayNow, onClose } = setup('queue');
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Leave it to chance/ }));
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Play now' }));
+
+  expect(onPlayNow).toHaveBeenCalledWith(celeste);
+  expect(onPick).not.toHaveBeenCalled();
+  expect(onClose).toHaveBeenCalled();
 });

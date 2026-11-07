@@ -90,6 +90,7 @@ export default function HomeView() {
     handleOpenCarouselDetail,
     handleConfirmCarouselDetail,
     handlePlayInstead,
+    handleSwitchTo,
     handleCloseCarouselModal,
     handleCancelGame,
     handleMoveCurrentToQueue,
@@ -101,18 +102,19 @@ export default function HomeView() {
     handleCloseSummary,
   } = currentGame;
 
+  const toGame = (suggested: SuggestionResult['game']) => ({
+    id: suggested.id,
+    app_id: suggested.app_id,
+    // Where it's played, so its card shows the console and links the right way.
+    source: suggested.source,
+    platform: suggested.platform,
+    name: suggested.name,
+    header_image: suggested.header_image,
+    main_story_hours: suggested.main_story_hours ?? 0,
+    playtime_forever: suggested.playtime_forever,
+  });
   const handleSuggestionAction = async (suggested: SuggestionResult['game']) => {
-    const game = {
-      id: suggested.id,
-      app_id: suggested.app_id,
-      // Where it's played, so its card shows the console and links the right way.
-      source: suggested.source,
-      platform: suggested.platform,
-      name: suggested.name,
-      header_image: suggested.header_image,
-      main_story_hours: suggested.main_story_hours ?? 0,
-      playtime_forever: suggested.playtime_forever,
-    };
+    const game = toGame(suggested);
     await (currentlyPlaying ? handleQueueGame(game) : handlePickGame(game));
   };
 
@@ -348,6 +350,7 @@ export default function HomeView() {
           isOpen={isSuggestionModalOpen}
           onClose={() => setIsSuggestionModalOpen(false)}
           onPick={handleSuggestionAction}
+          onPlayNow={(suggested) => handleSwitchTo(toGame(suggested))}
           mode={currentlyPlaying ? 'queue' : 'play'}
           showHistoryWarning={historyCount <= 5}
         />

@@ -150,6 +150,41 @@ describe('SuggestionResult', () => {
       expect(screen.queryByText('Start Playing')).not.toBeInTheDocument();
     });
 
+    it('offers Play now beside Add to Queue, when given', () => {
+      const onPlayNow = jest.fn();
+      render(
+        <SuggestionResult
+          suggestion={mockSuggestion}
+          onPick={mockOnPick}
+          onPlayNow={onPlayNow}
+          onReroll={mockOnReroll}
+          cooldownRemaining={0}
+          isLoading={false}
+          mode="queue"
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Play now' }));
+
+      expect(onPlayNow).toHaveBeenCalledTimes(1);
+      expect(mockOnPick).not.toHaveBeenCalled();
+    });
+
+    it('has no Play now when starting a game anyway', () => {
+      render(
+        <SuggestionResult
+          suggestion={mockSuggestion}
+          onPick={mockOnPick}
+          onPlayNow={jest.fn()}
+          onReroll={mockOnReroll}
+          cooldownRemaining={0}
+          isLoading={false}
+        />,
+      );
+
+      expect(screen.queryByRole('button', { name: 'Play now' })).not.toBeInTheDocument();
+    });
+
     it('should call onPick when Add to Queue is clicked', () => {
       render(
         <SuggestionResult
