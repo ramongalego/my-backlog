@@ -6,24 +6,24 @@ import { upcomingRelease } from '@/lib/games/release-date';
 // Everything Stats shows, worked out from the library. Pure: the Stats page
 // and the server (the player profile) both use it.
 
-export interface TagStat {
+interface TagStat {
   tag: string;
   count: number;
 }
 
-export interface TagCompletion {
+interface TagCompletion {
   tag: string;
   total: number;
   finished: number;
   pct: number;
 }
 
-export interface YearStat {
+interface YearStat {
   year: string;
   count: number;
 }
 
-export interface RatingBar {
+interface RatingBar {
   rating: number;
   count: number;
 }
@@ -42,7 +42,7 @@ export interface PlayedALotGame {
 }
 
 /** A game Stats shows with its art. */
-export interface StatGame {
+interface StatGame {
   id: number;
   name: string;
   header_image: string | null;

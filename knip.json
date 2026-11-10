@@ -1,6 +1,6 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/live-checks/*.live.ts"],
   "ignore": [".claude/**"],
-  "ignoreDependencies": ["prettier", "ts-node", "postcss"]
+  "ignoreDependencies": ["prettier", "ts-node"]
 }
