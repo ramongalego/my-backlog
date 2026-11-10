@@ -1,5 +1,5 @@
 import { steamReviewLabel, steamReviewTitle } from '@/lib/steam/review-label';
-import { reviewsChanged } from '@/lib/server/steam-reviews';
+import { reviewsChanged } from '@/lib/server/steam-store-data';
 
 describe('steamReviewLabel', () => {
   it.each([

@@ -4,17 +4,24 @@ import { findLegacyHeaderImages, getStoreHeaderImages } from '@/lib/steam/store-
 import { classifyAppType } from '@/lib/games/software';
 
 const ASSETS = 'https://shared.akamai.steamstatic.com/store_item_assets/';
+// Current store art sits in a folder named for its content hash.
+const HASH = 'a'.repeat(40);
 
-/** GetItems answers with assets for the apps in `known`, and nothing for the rest. */
+/**
+ * GetItems answers with assets for the apps in `known`, and nothing for the
+ * rest. A HEAD finds the old-path `header.jpg` of the `legacy` apps and the
+ * old-path `header_2x.jpg` of the `old2x` ones.
+ */
 function mockSteam(
   known: Record<number, { header: string; header_2x?: string }>,
   legacy: number[] = [],
+  old2x: number[] = [],
 ) {
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (init?.method === 'HEAD') {
-      const id = Number(url.match(/apps\/(\d+)\/header\.jpg/)?.[1]);
-      return { ok: legacy.includes(id) } as Response;
+      const [, id, file] = url.match(/apps\/(\d+)\/(header(?:_2x)?)\.jpg/) ?? [];
+      return { ok: (file === 'header_2x' ? old2x : legacy).includes(Number(id)) } as Response;
     }
     const params = JSON.parse(new URL(url).searchParams.get('input_json')!);
     const store_items = params.ids
@@ -22,7 +29,7 @@ function mockSteam(
       .filter((appid: number) => known[appid])
       .map((appid: number) => ({
         appid,
-        assets: { asset_url_format: `steam/apps/${appid}/abc/\${FILENAME}`, ...known[appid] },
+        assets: { asset_url_format: `steam/apps/${appid}/\${FILENAME}?t=1`, ...known[appid] },
       }));
     return { ok: true, json: async () => ({ response: { store_items } }) } as Response;
   }) as typeof fetch;
@@ -31,15 +38,33 @@ function mockSteam(
 describe('getStoreHeaderImages', () => {
   it('prefers the 920×430 header and skips apps the store no longer has', async () => {
     mockSteam({
-      1: { header: 'header.jpg', header_2x: 'header_2x.jpg' },
-      2: { header: 'header.jpg' },
+      1: { header: `${HASH}/header.jpg`, header_2x: `${HASH}/header_2x.jpg` },
+      2: { header: `${HASH}/header.jpg` },
     });
 
     const images = await getStoreHeaderImages([1, 2, 3]);
 
-    expect(images.get(1)).toBe(`${ASSETS}steam/apps/1/abc/header_2x.jpg`);
-    expect(images.get(2)).toBe(`${ASSETS}steam/apps/2/abc/header.jpg`);
+    expect(images.get(1)).toBe(`${ASSETS}steam/apps/1/${HASH}/header_2x.jpg?t=1`);
+    expect(images.get(2)).toBe(`${ASSETS}steam/apps/2/${HASH}/header.jpg?t=1`);
     expect(images.has(3)).toBe(false);
+  });
+
+  it('uses an old-path 920×430 header only when the file is really there', async () => {
+    // Steam lists a header_2x.jpg for some older games that was never
+    // uploaded (Trine 2): checked, and the 460×215 used instead.
+    mockSteam(
+      {
+        5: { header: 'header.jpg', header_2x: 'header_2x.jpg' },
+        6: { header: 'header.jpg', header_2x: 'header_2x.jpg' },
+      },
+      [],
+      [6],
+    );
+
+    const images = await getStoreHeaderImages([5, 6]);
+
+    expect(images.get(5)).toBe(`${ASSETS}steam/apps/5/header.jpg?t=1`);
+    expect(images.get(6)).toBe(`${ASSETS}steam/apps/6/header_2x.jpg?t=1`);
   });
 
   it('asks for 50 apps per call', async () => {
@@ -103,14 +128,14 @@ describe('syncOwnedGames', () => {
   });
 
   it('gives new games cover art straight away', async () => {
-    mockSteam({ 2: { header: 'header.jpg', header_2x: 'header_2x.jpg' } }, [3]);
+    mockSteam({ 2: { header: `${HASH}/header.jpg`, header_2x: `${HASH}/header_2x.jpg` } }, [3]);
     const { client, inserted } = fakeSupabase({ 1: 'https://cached/header.jpg' });
 
     await syncOwnedGames(client, 'user', [1, 2, 3, 4].map(steamGame));
 
     expect(Object.fromEntries(inserted.map((g) => [g.app_id, g.header_image]))).toEqual({
       1: 'https://cached/header.jpg',
-      2: `${ASSETS}steam/apps/2/abc/header_2x.jpg`,
+      2: `${ASSETS}steam/apps/2/${HASH}/header_2x.jpg?t=1`,
       3: `${ASSETS}steam/apps/3/header.jpg`,
       4: null,
     });

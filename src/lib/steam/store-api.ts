@@ -167,6 +167,30 @@ function headerImage2x(assets: StoreItemAssets | undefined): string | null {
   return STORE_ASSET_BASE + assets.asset_url_format.replace('${FILENAME}', assets.header_2x);
 }
 
+// Current store art sits in a folder named for its content hash.
+const HASHED_ASSET = /^[0-9a-f]{40}\//;
+
+/**
+ * The 920×430 header, when Steam has one that loads. For some older games
+ * Steam lists a `header_2x.jpg` at the old fixed path that was never uploaded
+ * (Trine 2), so a 2x at that path is checked first. Hashed art always exists.
+ */
+async function verifiedHeaderImage2x(assets: StoreItemAssets | undefined): Promise<string | null> {
+  const url = headerImage2x(assets);
+  if (!url || HASHED_ASSET.test(assets!.header_2x!)) return url;
+  try {
+    const response = await fetchWithTimeout(url, { method: 'HEAD' }, TIMEOUTS.STEAM_STORE);
+    return response.ok ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The store header to show: the 920×430 version when there is one, else the 460×215. */
+async function bestHeaderImage(assets: StoreItemAssets | undefined): Promise<string | null> {
+  return (await verifiedHeaderImage2x(assets)) ?? headerImage(assets);
+}
+
 /** Tags, high-resolution header art and review summary for one app, from a single GetItems call. */
 export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | null> {
   try {
@@ -204,7 +228,7 @@ export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | n
 
     return {
       tags: tagNames.length > 0 ? tagNames : null,
-      headerImage2x: headerImage2x(item.assets),
+      headerImage2x: await verifiedHeaderImage2x(item.assets),
       headerImage: headerImage(item.assets),
       reviews: reviewData(item.reviews),
     };
@@ -231,7 +255,7 @@ interface StoreItem {
 async function getItemsInBatches<T>(
   appIds: number[],
   dataRequest: Record<string, unknown>,
-  pick: (item: StoreItem) => T | null,
+  pick: (item: StoreItem) => T | null | Promise<T | null>,
 ): Promise<Map<number, T>> {
   const result = new Map<number, T>();
   const batches: number[][] = [];
@@ -257,10 +281,12 @@ async function getItemsInBatches<T>(
       }
       const data = await response.json();
       const items: StoreItem[] = data?.response?.store_items ?? [];
-      for (const item of items) {
-        const value = item.appid ? pick(item) : null;
-        if (item.appid && value != null) result.set(item.appid, value);
-      }
+      await Promise.all(
+        items.map(async (item) => {
+          const value = item.appid ? await pick(item) : null;
+          if (item.appid && value != null) result.set(item.appid, value);
+        }),
+      );
     } catch (error) {
       console.error('[Steam Store] GetItems batch failed:', error);
     }
@@ -272,9 +298,25 @@ async function getItemsInBatches<T>(
   return result;
 }
 
-/** Current review summaries for many apps. Apps Steam returns no reviews for are left out. */
-export function getStoreReviews(appIds: number[]): Promise<Map<number, SteamReviewData>> {
-  return getItemsInBatches(appIds, { include_reviews: true }, (item) => reviewData(item.reviews));
+/** What the store shows for an app now: its review summary and header art. */
+export interface StoreSummary {
+  reviews: SteamReviewData | null;
+  headerImage: string | null;
+}
+
+/**
+ * Current review summaries and header art for many apps, both from the same
+ * calls. Apps Steam doesn't return (delisted) are left out.
+ */
+export function getStoreSummaries(appIds: number[]): Promise<Map<number, StoreSummary>> {
+  return getItemsInBatches(
+    appIds,
+    { include_reviews: true, include_assets: true },
+    async (item) => ({
+      reviews: reviewData(item.reviews),
+      headerImage: await bestHeaderImage(item.assets),
+    }),
+  );
 }
 
 /**
@@ -282,12 +324,9 @@ export function getStoreReviews(appIds: number[]): Promise<Map<number, SteamRevi
  * Apps that aren't on the store any more are left out.
  */
 export function getStoreHeaderImages(appIds: number[]): Promise<Map<number, string>> {
-  return getItemsInBatches(appIds, { include_assets: true }, (item) => {
-    const { assets } = item;
-    if (!assets?.asset_url_format) return null;
-    const file = headerImage2x(assets) ? assets.header_2x : assets.header;
-    return file ? STORE_ASSET_BASE + assets.asset_url_format.replace('${FILENAME}', file) : null;
-  });
+  return getItemsInBatches(appIds, { include_assets: true }, (item) =>
+    bestHeaderImage(item.assets),
+  );
 }
 
 const LEGACY_CHECK_CONCURRENCY = 10;

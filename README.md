@@ -151,7 +151,7 @@ Library sync works in two stages:
 1. One request checks the shared cache for every game.
 2. Only the misses are fetched, in batches, from the Steam store and HowLongToBeat, then written back to the cache.
 
-Stale entries are refreshed on a schedule. Games HowLongToBeat doesn't know are retried on a backoff (3, 7, 14, then 28 days), so sync never hammers it for the same misses.
+Stale entries are refreshed on a schedule. Games HowLongToBeat doesn't know are retried on a backoff (3, 7, 14, then 28 days), so sync never hammers it for the same misses. Steam review scores and header art are checked about once a day, both from the same batched store calls (50 games each), since Steam swaps art for launches and events.
 
 The HowLongToBeat lookup has to find the site's current search endpoint, which changes now and then. A GitHub Action checks every day that it still works.
 

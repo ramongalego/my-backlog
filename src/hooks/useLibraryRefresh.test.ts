@@ -272,7 +272,7 @@ describe('useLibraryRefresh', () => {
   it('refetches page data only when Steam changed something', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ newGames: 0, updatedPlaytime: 0, updatedGames: 1, updatedReviews: 0 }),
+      json: async () => ({ newGames: 0, updatedPlaytime: 0, updatedGames: 1, updatedStoreData: 0 }),
     });
     const { result } = renderHook(() => useLibraryRefresh());
     await act(async () => {
@@ -285,7 +285,7 @@ describe('useLibraryRefresh', () => {
   it('refetches after new review scores too', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ newGames: 0, updatedPlaytime: 0, updatedGames: 0, updatedReviews: 3 }),
+      json: async () => ({ newGames: 0, updatedPlaytime: 0, updatedGames: 0, updatedStoreData: 3 }),
     });
     const { result } = renderHook(() => useLibraryRefresh());
     await act(async () => {
