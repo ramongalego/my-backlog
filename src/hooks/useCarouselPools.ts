@@ -66,25 +66,36 @@ export function backlogCovers(
 export function useCarouselPools(userId: string | null) {
   const { data = EMPTY_CAROUSEL_POOLS, isPending } = useQuery(queries.carousels(userId));
 
+  // Queued games stay in the rows, marked Queued, so a row still shows every
+  // game that fits it, but they don't count toward its size: a game you've
+  // already queued never takes a suggestion's place. Reading the queue here,
+  // from the cache the page already has, means queuing one updates the rows
+  // at once.
+  const { queuedGameIds } = useQueue(userId);
+  const upTo = (pool: CarouselGame[]) => {
+    const games: CarouselGame[] = [];
+    let suggestions = 0;
+    for (const game of pool) {
+      if (suggestions === CAROUSEL_SIZE) break;
+      games.push(game);
+      if (!queuedGameIds.has(game.id)) suggestions++;
+    }
+    return games;
+  };
+
   // No game appears in two of the picks carousels. They claim games in this
   // order, which isn't their order on Home: a game you've started belongs in
   // Pick Up Where You Left Off, before the general picks.
-  // Queued games are already decided, so they aren't suggested again (Recently
-  // Added still lists them). Filtering here, from the queue the page already
-  // has, means adding or removing one updates the carousels instantly.
-  const { queuedGameIds } = useQueue(userId);
-  const shown = new Set<number>(queuedGameIds);
+  const shown = new Set<number>();
   const take = (pool: CarouselGame[]) => {
-    const games = pool.filter((g) => !shown.has(g.id)).slice(0, CAROUSEL_SIZE);
+    const games = upTo(pool.filter((g) => !shown.has(g.id)));
     games.forEach((g) => shown.add(g.id));
     return games;
   };
 
   // More Like ... lists every game like the one you loved, even ones another
   // row also shows, and takes none away from them.
-  const moreLikeGames = (data.moreLike?.games ?? [])
-    .filter((g) => !queuedGameIds.has(g.id))
-    .slice(0, CAROUSEL_SIZE);
+  const moreLikeGames = upTo(data.moreLike?.games ?? []);
   const pickUp = take(data.pickUpPool);
   const shortGames = take(data.shortGamesPool);
   const weekendGames = take(data.weekendGamesPool);
@@ -98,7 +109,6 @@ export function useCarouselPools(userId: string | null) {
   return {
     pickUp,
     moreLike:
-      // Only worth a row if enough are left after the queued games.
       data.moreLike && moreLikeGames.length >= MORE_LIKE_MIN_GAMES
         ? { basedOn: data.moreLike.basedOn, games: moreLikeGames }
         : null,

@@ -9,7 +9,7 @@ import { ratingOf } from '@/lib/games/rating';
 import { matchesSearch, nameMatchesSearch } from '@/lib/games/search';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useAuth } from './useAuth';
-import { useAddToQueue, useQueue } from '@/hooks/useQueue';
+import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 import { useSwitchGame } from './useSwitchGame';
 import { useUrlState } from './useUrlState';
 import { useManualGameActions } from './useManualGameActions';
@@ -136,6 +136,8 @@ interface UseGamesPageReturn {
   handleCloseStatusModal: () => void;
   handleOpenDetail: (gameId: number) => void;
   handleAddToQueue: (gameId: number) => Promise<void>;
+  /** Takes a queued game off the queue, with Undo; it stays in the backlog. */
+  handleRemoveFromQueue: (gameId: number) => void;
   queuedGameIds: Set<number>;
 }
 
@@ -154,6 +156,7 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const { queuedGameIds } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
+  const removeFromQueue = useRemoveFromQueue(userId);
   const switchGame = useSwitchGame(userId);
 
   // Filter, sort and search live in the URL so they survive navigating away
@@ -353,6 +356,7 @@ export function useGamesPage(): UseGamesPageReturn {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
+    handleRemoveFromQueue: removeFromQueue,
     queuedGameIds,
   };
 }

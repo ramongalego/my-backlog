@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { celebrateGameFinished } from '@/lib/confetti';
-import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/client/queue';
+import { addToQueue, reorderQueue } from '@/lib/client/queue';
 import type { LibraryMeta } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/client/game-status';
@@ -23,7 +23,7 @@ import { removeGameFromPools, type CarouselPools } from '@/hooks/useCarouselPool
 import type { GameWithImage, QueueItem } from '@/types/games';
 import { useSwitchGame } from '@/hooks/useSwitchGame';
 import { QUEUE_SCOPE, fromQueueItem, toPlayingGame, toQueueItem } from '@/lib/games/queue-items';
-import { useAddToQueue, useQueue } from '@/hooks/useQueue';
+import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 
 import type { GameSummaryData } from '@/components/games/GameSummaryModal';
 
@@ -43,7 +43,7 @@ interface CompleteInput {
  */
 export function useNowPlaying(userId: string | null) {
   const queryClient = useQueryClient();
-  const { statusChanged, queue: invalidateQueue } = useInvalidateQueries();
+  const { statusChanged } = useInvalidateQueries();
   const gamesList = usePatchGamesList(userId);
   const playingKey = queryKeys.games.playing(userId ?? '');
   const queueKey = queryKeys.queue.list(userId ?? '');
@@ -65,6 +65,7 @@ export function useNowPlaying(userId: string | null) {
     retry: retryQueue,
   } = useQueue(userId);
   const addGameToQueue = useAddToQueue(userId);
+  const removeGameFromQueue = useRemoveFromQueue(userId);
 
   // Snapshot + optimistic write helpers shared by the mutations below. The
   // status changes are applied to the cached games list (Games page, Stats)
@@ -221,66 +222,6 @@ export function useNowPlaying(userId: string | null) {
     rollback,
   });
 
-  const removeMutation = useMutation({
-    scope: QUEUE_SCOPE,
-    mutationFn: removeFromQueue,
-    onMutate: async (gameId: number) => {
-      const context = await snapshot();
-      dropFromQueue(gameId);
-      return context;
-    },
-    onError: (err, _gameId, context) => {
-      console.error(err);
-      rollback(context);
-      toast.error('Failed to remove game from queue');
-    },
-    // Like moving the playing game away, one quiet click: say where it went
-    // and offer to put it back where it was.
-    onSuccess: (_data, gameId, context) => {
-      const index = context?.previousQueue?.findIndex((q) => q.game_id === gameId) ?? -1;
-      if (index === -1) return;
-      const item = context!.previousQueue![index];
-      toast(`Moved ${item.game.name} to your backlog`, {
-        duration: UNDO_MS,
-        action: { label: 'Undo', onClick: () => restoreMutation.mutate({ item, index }) },
-      });
-    },
-    onSettled: () => invalidateQueue(),
-  });
-
-  // Undo for taking a game off the queue: back on it, in its old place (or
-  // last, if the queue has shrunk since). Only that game: anything else that
-  // changed meanwhile stays as it is.
-  const restoreMutation = useMutation({
-    scope: QUEUE_SCOPE,
-    mutationFn: async ({ item, index }: { item: QueueItem; index: number }) => {
-      // The server adds it last; move it up unless last is where it was.
-      await addToQueue(item.game_id);
-      const rest = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? [])
-        .map((q) => q.game_id)
-        .filter((id) => id !== item.game_id);
-      if (index < rest.length) {
-        rest.splice(index, 0, item.game_id);
-        await reorderQueue(rest);
-      }
-    },
-    onMutate: async ({ item, index }) => {
-      const context = await snapshot();
-      queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) => {
-        const rest = old.filter((q) => q.game_id !== item.game_id);
-        rest.splice(Math.min(index, rest.length), 0, item);
-        return rest.map((q, i) => ({ ...q, position: i }));
-      });
-      return context;
-    },
-    onError: (err, _vars, context) => {
-      console.error(err);
-      rollback(context);
-      toast.error("Couldn't put the game back in your queue");
-    },
-    onSettled: () => invalidateQueue(),
-  });
-
   // The new order shows at once (see `reorder` below); the mutation only
   // saves it. Queue mutations run one at a time, so a mutation's own
   // onMutate can run well after a click, and a second quick reorder would
@@ -392,7 +333,7 @@ export function useNowPlaying(userId: string | null) {
     addToQueue: addGameToQueue,
     /** Plays a game instead of the one being played (paused at the top of the queue). */
     switchTo: switchGame.switchTo,
-    removeFromQueue: (gameId: number) => removeMutation.mutate(gameId),
+    removeFromQueue: removeGameFromQueue,
     /** A queued game's status from its detail dialog; playing starts it like Play does. */
     setQueuedStatus: (vars: StatusEdit) => {
       const item = queue.find((q) => q.game_id === vars.gameId);

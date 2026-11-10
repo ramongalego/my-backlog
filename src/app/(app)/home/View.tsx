@@ -51,6 +51,7 @@ export default function HomeView() {
     handleFinishGame,
     handleDropGame,
     handleQueueGame,
+    handleRemoveFromQueue,
     handleOpenCarouselDetail,
     handleConfirmCarouselDetail,
     handlePlayInstead,
@@ -209,6 +210,7 @@ export default function HomeView() {
                 preferSteamRating={row.key === 'gems'}
                 minGames={row.minGames}
                 preload={i === 0}
+                queuedIds={queuedGameIds}
               />
             ))}
           </section>
@@ -254,6 +256,11 @@ export default function HomeView() {
           onAddToQueue={
             currentlyPlaying && !queuedGameIds.has(carouselModal.game.id)
               ? () => handleQueueGame(carouselModal.game)
+              : undefined
+          }
+          queued={
+            queuedGameIds.has(carouselModal.game.id)
+              ? { onRemove: () => handleRemoveFromQueue(carouselModal.game.id) }
               : undefined
           }
         />

@@ -2,10 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { addToQueue } from '@/lib/client/queue';
+import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/client/queue';
 import { queries } from '@/lib/data/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
+import { UNDO_MS } from '@/lib/undo';
 import type { QueueItem } from '@/types/games';
 import { QUEUE_SCOPE, toQueueItem, type QueueableGame } from '@/lib/games/queue-items';
 
@@ -49,4 +50,87 @@ export function useAddToQueue(userId: string | null) {
   });
 
   return (game: QueueableGame) => mutation.mutate(game);
+}
+
+/**
+ * Takes a game off the queue (it stays in the backlog), with a toast that
+ * offers Undo: back on the queue in its old place. From the queue page's
+ * Move to backlog, and from choosing Backlog in a queued game's dialog.
+ */
+export function useRemoveFromQueue(userId: string | null) {
+  const queryClient = useQueryClient();
+  const { queue: invalidateQueue } = useInvalidateQueries();
+  const queueKey = queryKeys.queue.list(userId ?? '');
+
+  const snapshot = async () => {
+    await queryClient.cancelQueries({ queryKey: queueKey });
+    return { previousQueue: queryClient.getQueryData<QueueItem[]>(queueKey) };
+  };
+  const rollback = (context?: Awaited<ReturnType<typeof snapshot>>) => {
+    if (context?.previousQueue !== undefined) {
+      queryClient.setQueryData(queueKey, context.previousQueue);
+    }
+  };
+
+  const removeMutation = useMutation({
+    scope: QUEUE_SCOPE,
+    mutationFn: removeFromQueue,
+    onMutate: async (gameId: number) => {
+      const context = await snapshot();
+      queryClient.setQueryData<QueueItem[]>(queueKey, (old) =>
+        old?.filter((q) => q.game_id !== gameId),
+      );
+      return context;
+    },
+    onError: (err, _gameId, context) => {
+      console.error(err);
+      rollback(context);
+      toast.error('Failed to remove game from queue');
+    },
+    // One quiet click: say where it went and offer to put it back where it was.
+    onSuccess: (_data, gameId, context) => {
+      const index = context?.previousQueue?.findIndex((q) => q.game_id === gameId) ?? -1;
+      if (index === -1) return;
+      const item = context!.previousQueue![index];
+      toast(`Moved ${item.game.name} to your backlog`, {
+        duration: UNDO_MS,
+        action: { label: 'Undo', onClick: () => restoreMutation.mutate({ item, index }) },
+      });
+    },
+    onSettled: () => invalidateQueue(),
+  });
+
+  // Undo: back on the queue, in its old place (or last, if the queue has
+  // shrunk since). Only that game: anything else that changed meanwhile stays.
+  const restoreMutation = useMutation({
+    scope: QUEUE_SCOPE,
+    mutationFn: async ({ item, index }: { item: QueueItem; index: number }) => {
+      // The server adds it last; move it up unless last is where it was.
+      await addToQueue(item.game_id);
+      const rest = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? [])
+        .map((q) => q.game_id)
+        .filter((id) => id !== item.game_id);
+      if (index < rest.length) {
+        rest.splice(index, 0, item.game_id);
+        await reorderQueue(rest);
+      }
+    },
+    onMutate: async ({ item, index }) => {
+      const context = await snapshot();
+      queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) => {
+        const rest = old.filter((q) => q.game_id !== item.game_id);
+        rest.splice(Math.min(index, rest.length), 0, item);
+        return rest.map((q, i) => ({ ...q, position: i }));
+      });
+      return context;
+    },
+    onError: (err, _vars, context) => {
+      console.error(err);
+      rollback(context);
+      toast.error("Couldn't put the game back in your queue");
+    },
+    onSettled: () => invalidateQueue(),
+  });
+
+  return (gameId: number) => removeMutation.mutate(gameId);
 }

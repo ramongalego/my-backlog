@@ -54,6 +54,12 @@ interface GameDetailModalProps {
    * `onPlayInstead`, switching to this game. */
   disablePlaying?: boolean;
   onAddToQueue?: () => void;
+  /**
+   * The game is in the playing queue: its status shows as Queue, and choosing
+   * Backlog takes it off the queue (`onRemove`). Any other status takes it off
+   * too, as the server does for every status but backlog.
+   */
+  queued?: { onRemove: () => void };
   /** Plays this game instead of the one being played (`playingName`), which
    * goes to the top of the queue. Offered as Playing beside Queue. */
   onPlayInstead?: () => void | Promise<void>;
@@ -134,6 +140,7 @@ export function GameDetailModal({
   initialRating,
   disablePlaying = false,
   onAddToQueue,
+  queued,
   onPlayInstead,
   playingName = null,
   mainStoryHours,
@@ -151,7 +158,7 @@ export function GameDetailModal({
   const initialHours = playtimeMinutes ? String(Math.round((playtimeMinutes / 60) * 10) / 10) : '';
   const [hours, setHours] = useState(initialHours);
   const [platform, setPlatform] = useState(adding?.defaultConsole ?? '');
-  const [status, setStatus] = useState<DetailStatus>(initialStatus);
+  const [status, setStatus] = useState<DetailStatus>(queued ? 'queue' : initialStatus);
   const [hasDate, setHasDate] = useState(!!initialDate);
   const [date, setDate] = useState(initialDate || todayIso());
   const [notes, setNotes] = useState(initialNotes ?? '');
@@ -203,7 +210,10 @@ export function GameDetailModal({
       } else {
         if (manual && hours !== initialHours) await manual.onSaveHours(parsedHours);
         if (status === 'queue') {
-          onAddToQueue?.();
+          // Already queued: nothing to change but the hours above.
+          if (!queued) onAddToQueue?.();
+        } else if (status === 'backlog' && queued) {
+          queued.onRemove();
         } else if (status === 'playing' && switching) {
           await onPlayInstead?.();
         } else {
@@ -222,16 +232,20 @@ export function GameDetailModal({
 
   // When adding, the status buttons are the five places a new game can go;
   // otherwise every status. While another game is being played, Playing
-  // switches to this one (`switching`), and Queue sits beside it. A game that isn't out yet
-  // can't be started (unless it's the one playing).
+  // switches to this one (`switching`), and Queue sits beside it. A queued
+  // game always has Queue, as its status. A game that isn't out yet can't be
+  // started (unless it's the one playing).
   const canStart = isReleased(releaseDate) || initialStatus === 'playing';
   const statusOptions: DetailStatus[] = (
     adding
       ? ADD_STATUSES
       : GAME_STATUSES.flatMap((value): DetailStatus[] =>
-          value === 'playing' && disablePlaying
-            ? [...(onAddToQueue ? ['queue' as const] : []), ...(switching ? [value] : [])]
-            : [value],
+          value !== 'playing'
+            ? [value]
+            : [
+                ...(queued || (disablePlaying && onAddToQueue) ? ['queue' as const] : []),
+                ...(!disablePlaying || switching ? [value] : []),
+              ],
         )
   ).filter((value) => value !== 'playing' || canStart);
   const replacesPlaying =

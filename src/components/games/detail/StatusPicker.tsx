@@ -44,7 +44,8 @@ export function StatusPicker({
             label,
             solid,
           } = option === 'queue'
-            ? { icon: ListOrdered, label: 'Queue', solid: STATUS_STYLE.playing.solid }
+            ? // Parked with a plan, like backlog: neutral, not Playing's orange.
+              { icon: ListOrdered, label: 'Queue', solid: STATUS_STYLE.backlog.solid }
             : STATUS_STYLE[option];
           return (
             <button

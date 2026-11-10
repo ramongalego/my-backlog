@@ -9,7 +9,7 @@ import { useAddGame } from '@/components/games/AddGameProvider';
 import { StatsStart, StatsStartButtons } from '@/components/stats/StatsStart';
 import { connectSteam } from '@/lib/client/steam-connect';
 import { useAuth } from '@/hooks/useAuth';
-import { useAddToQueue } from '@/hooks/useQueue';
+import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 import { useSwitchGame } from '@/hooks/useSwitchGame';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useManualGameActions } from '@/hooks/useManualGameActions';
@@ -45,6 +45,8 @@ export default function StatsView() {
   };
   const manualGames = useManualGameActions(user?.id ?? null);
   const addGameToQueue = useAddToQueue(user?.id ?? null);
+  const removeFromQueue = useRemoveFromQueue(user?.id ?? null);
+  const { queuedGameIds } = useQueue(user?.id ?? null);
   const switchGame = useSwitchGame(user?.id ?? null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
 
@@ -88,6 +90,11 @@ export default function StatsView() {
             initialStatus="backlog"
             disablePlaying={hasPlayingGame}
             onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}
+            queued={
+              queuedGameIds.has(editModal.id)
+                ? { onRemove: () => removeFromQueue(editModal.id) }
+                : undefined
+            }
             onPlayInstead={() => switchGame.switchTo(editModal)}
             playingName={switchGame.playing?.name ?? null}
           />

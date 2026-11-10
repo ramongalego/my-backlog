@@ -640,4 +640,96 @@ describe('GameDetailModal as a form', () => {
     expect(onDelete).toHaveBeenCalled();
     expect(defaultProps.onConfirm).not.toHaveBeenCalled();
   });
+
+  describe('a queued game', () => {
+    const onRemove = jest.fn();
+    const onAddToQueue = jest.fn();
+    const onPlayInstead = jest.fn();
+    const queuedProps = { ...defaultProps, queued: { onRemove } };
+    const statusLabels = () =>
+      Array.from(
+        screen.getByRole('group', { name: 'Status' }).querySelectorAll('button'),
+        (b) => b.textContent,
+      );
+    const selected = () =>
+      screen.getByRole('group', { name: 'Status' }).querySelector('button[aria-pressed="true"]')
+        ?.textContent;
+    const save = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      });
+    };
+    const all = ['Backlog', 'Queue', 'Playing', 'Finished', 'Dropped', "Won't Play", 'Hidden'];
+
+    beforeEach(() => {
+      onRemove.mockClear();
+      onAddToQueue.mockClear();
+      onPlayInstead.mockClear();
+    });
+
+    it('shows Queue as its status, with nothing playing', () => {
+      render(<GameDetailModal {...queuedProps} />);
+      expect(statusLabels()).toEqual(all);
+      expect(selected()).toBe('Queue');
+    });
+
+    it('shows Queue as its status while another game plays, beside Playing to switch', () => {
+      render(
+        <GameDetailModal
+          {...queuedProps}
+          disablePlaying
+          onPlayInstead={onPlayInstead}
+          playingName="Zelda"
+        />,
+      );
+      expect(statusLabels()).toEqual(all);
+      expect(selected()).toBe('Queue');
+    });
+
+    it("has no Playing while another game plays and it can't switch", () => {
+      render(<GameDetailModal {...queuedProps} disablePlaying />);
+      expect(statusLabels()).toEqual(all.filter((label) => label !== 'Playing'));
+    });
+
+    it('changes nothing when saved as it is', async () => {
+      render(<GameDetailModal {...queuedProps} onAddToQueue={onAddToQueue} />);
+      await save();
+      expect(onRemove).not.toHaveBeenCalled();
+      expect(onAddToQueue).not.toHaveBeenCalled();
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('comes off the queue when Backlog is chosen', async () => {
+      render(<GameDetailModal {...queuedProps} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Backlog' }));
+      await save();
+      expect(onRemove).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('saves any other status as a status change', async () => {
+      render(<GameDetailModal {...queuedProps} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Finished' }));
+      await save();
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', null);
+      expect(onRemove).not.toHaveBeenCalled();
+    });
+
+    it('starts it when Playing is chosen with nothing playing', async () => {
+      render(<GameDetailModal {...queuedProps} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
+      await save();
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', '', '', null);
+    });
+  });
+
+  it('offers no Queue for a backlog game that is not queued, with nothing playing', () => {
+    render(<GameDetailModal {...defaultProps} onAddToQueue={jest.fn()} />);
+    const labels = Array.from(
+      screen.getByRole('group', { name: 'Status' }).querySelectorAll('button'),
+      (b) => b.textContent,
+    );
+    expect(labels).toEqual(['Backlog', 'Playing', 'Finished', 'Dropped', "Won't Play", 'Hidden']);
+  });
 });

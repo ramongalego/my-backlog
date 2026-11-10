@@ -63,6 +63,7 @@ export function useHomePage() {
       handleFinishGame: currentGame.handleFinishGame,
       handleDropGame: currentGame.handleDropGame,
       handleQueueGame: currentGame.handleQueueGame,
+      handleRemoveFromQueue: currentGame.handleRemoveFromQueue,
       handleOpenCarouselDetail: currentGame.handleOpenCarouselDetail,
       handleConfirmCarouselDetail: currentGame.handleConfirmCarouselDetail,
       handlePlayInstead: currentGame.handlePlayInstead,

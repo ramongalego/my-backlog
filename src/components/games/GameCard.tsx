@@ -1,11 +1,11 @@
 'use client';
 
-import { ListOrdered } from 'lucide-react';
 import { Rating } from './Rating';
 import type { GameItem } from '@/hooks/useGamesPage';
 import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
 import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
+import { QueuedBadge } from './QueuedBadge';
 import { StatusBadge } from './StatusBadge';
 import { consoleOf } from '@/lib/games/consoles';
 import { upcomingRelease } from '@/lib/games/release-date';
@@ -54,17 +54,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
         >
           <CoverEditHint />
           <div className="absolute top-2 right-2">
-            {queued ? (
-              <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-ink-950/90 text-ink-200 text-xs font-medium"
-                title="In playing queue"
-              >
-                <ListOrdered className="w-3 h-3" aria-hidden="true" />
-                <span>Queued</span>
-              </span>
-            ) : (
-              showStatus && <StatusBadge status={status} />
-            )}
+            {queued ? <QueuedBadge /> : showStatus && <StatusBadge status={status} />}
           </div>
           {showRating && (
             <Rating rating={game.rating!} onArt className="absolute bottom-2 right-2" />

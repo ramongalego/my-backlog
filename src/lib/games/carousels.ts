@@ -88,6 +88,10 @@ const MORE_LIKE_MIN_SCORE = 75;
 export const MORE_LIKE_MIN_GAMES = 3;
 // Same series gets all of it, same franchise half (seriesMatch).
 const SERIES_BONUS = 0.5;
+// How much a game's rating moves it up the row, on top of how alike it is. A
+// game rated 100 gets this much more than one rated MORE_LIKE_MIN_SCORE, about
+// the gap between a close match and a looser one.
+const MORE_LIKE_RATING_WEIGHT = 0.4;
 
 // Two or more of the top tags about playing with others: listed as
 // single-player, but built around multiplayer (ARK, Vermintide, Pummel Party).
@@ -145,8 +149,8 @@ function oneEditionEach(games: CarouselGame[]) {
 
 /**
  * The best-loved game (highest rated, then most recently finished) with enough
- * well-reviewed backlog games that play like it. Games from the same series or
- * franchise get a head start.
+ * well-reviewed backlog games that play like it, closest first with a nudge for
+ * the better rated. Games from the same series or franchise get a head start.
  */
 function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['moreLike'] {
   const seeds = [...loved]
@@ -168,12 +172,15 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
   for (const seed of seeds) {
     const seedTags = topTags(seed.tags, undefined, rarity);
     const matches = candidates
-      .map(({ game, tags }) => ({
-        game,
-        score: similarity(tags, seedTags) + SERIES_BONUS * seriesMatch(game.name, seed.name),
-      }))
+      .map(({ game, tags }) => {
+        const score = similarity(tags, seedTags) + SERIES_BONUS * seriesMatch(game.name, seed.name);
+        // Ordered mostly by how alike, partly by how good: a much better-rated
+        // game can pass a slightly closer one.
+        const rating = ((ratingOf(game) ?? 0) - MORE_LIKE_MIN_SCORE) / (100 - MORE_LIKE_MIN_SCORE);
+        return { game, score, order: score + MORE_LIKE_RATING_WEIGHT * rating };
+      })
       .filter((m) => m.score >= MORE_LIKE_MIN_SIMILARITY)
-      .sort((a, b) => b.score - a.score || byRating(a.game, b.game));
+      .sort((a, b) => b.order - a.order || byRating(a.game, b.game));
     if (matches.length >= MORE_LIKE_MIN_GAMES) {
       return { basedOn: seed.name, games: matches.slice(0, POOL_SIZE).map((m) => m.game) };
     }

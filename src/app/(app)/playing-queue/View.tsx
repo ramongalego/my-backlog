@@ -83,6 +83,7 @@ export default function PlayingQueueView() {
               gameName={detailItem.game.name}
               headerImage={detailItem.game.header_image}
               initialStatus="backlog"
+              queued={{ onRemove: () => handleRemoveFromQueue(detailItem.game_id) }}
               mainStoryHours={detailItem.game.main_story_hours}
               steamReviewScore={detailItem.game.steam_review_score}
               steamReviewCount={detailItem.game.steam_review_count}

@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } fro
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
+import { QueuedBadge } from '@/components/games/QueuedBadge';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
 import { consoleOf } from '@/lib/games/consoles';
 import {
@@ -41,6 +42,8 @@ interface GameCarouselProps {
   minGames?: number;
   /** Mark this carousel as above the fold so its first images are preloaded. */
   preload?: boolean;
+  /** Games in the playing queue, marked Queued on their art. */
+  queuedIds?: ReadonlySet<number>;
 }
 
 /** A row of picks needs a few games to choose between; fewer reads as a gap. */
@@ -113,6 +116,7 @@ export function GameCarousel({
   preload = false,
   preferSteamRating,
   minGames = MIN_CAROUSEL_GAMES,
+  queuedIds,
 }: GameCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const perPage = usePerPage(rowRef);
@@ -254,7 +258,8 @@ export function GameCarousel({
                   <button
                     onClick={() => onOpenDetail?.(game)}
                     className="group block w-full rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
-                    aria-label={`Open details for ${game.name}`}
+                    // Includes the badge, so the name matches what's on screen.
+                    aria-label={`Open details for ${game.name}${queuedIds?.has(game.id) ? ', Queued' : ''}`}
                   >
                     <CoverArt
                       src={game.header_image}
@@ -266,6 +271,9 @@ export function GameCarousel({
                       releaseDate={game.release_date}
                     >
                       <CoverEditHint />
+                      {queuedIds?.has(game.id) && (
+                        <QueuedBadge className="absolute top-2 right-2" />
+                      )}
                     </CoverArt>
                   </button>
                   <div className="pt-3">

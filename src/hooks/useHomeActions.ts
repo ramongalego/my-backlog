@@ -122,6 +122,7 @@ export function useHomeActions(userId: string | null) {
     handleFinishGame: nowPlaying.openFinish,
     handleDropGame: nowPlaying.openDrop,
     handleQueueGame: nowPlaying.addToQueue,
+    handleRemoveFromQueue: nowPlaying.removeFromQueue,
     handleOpenCarouselDetail: (game: GameWithImage) => setCarouselModal({ game }),
     handleConfirmCarouselDetail,
     handlePlayInstead,

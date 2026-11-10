@@ -53,6 +53,7 @@ export default function GamesView() {
     handleCloseStatusModal,
     handleOpenDetail,
     handleAddToQueue,
+    handleRemoveFromQueue,
     queuedGameIds,
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
@@ -119,6 +120,11 @@ export default function GamesView() {
             onAddToQueue={
               hasPlayingGame && statusModal.initialStatus === 'backlog'
                 ? () => handleAddToQueue(statusModal.gameId)
+                : undefined
+            }
+            queued={
+              statusModal.initialStatus === 'backlog' && queuedGameIds.has(statusModal.gameId)
+                ? { onRemove: () => handleRemoveFromQueue(statusModal.gameId) }
                 : undefined
             }
             manual={statusModal.manual}
