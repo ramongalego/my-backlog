@@ -6,27 +6,15 @@ import { Dropdown } from '@/components/ui/Dropdown';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadError } from '@/components/ui/LoadError';
 import { useDiaryPage } from '@/hooks/useDiaryPage';
-import { useUrlState } from '@/hooks/useUrlState';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { DiaryListSkeleton } from './Skeleton';
 import { EmptyStateSkeleton } from '@/components/layout/Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
-import type { DiaryEntry } from '@/hooks/useDiaryPage';
-import { steamLastPlayed } from '@/lib/games/consoles';
 import { useAuth } from '@/hooks/useAuth';
 import { useManualGameActions } from '@/hooks/useManualGameActions';
-import { getMonthKey, monthName } from '@/lib/diary/date-utils';
+import { monthName } from '@/lib/diary/date-utils';
+import { ALL_YEARS } from '@/lib/diary/timeline';
 import { DiaryRow } from '@/components/diary/DiaryRow';
-
-interface MonthGroup {
-  key: string; // "YYYY-MM"
-  entries: DiaryEntry[];
-}
-
-interface YearGroup {
-  year: string; // "YYYY"
-  months: MonthGroup[];
-}
 
 export default function DiaryView() {
   const {
@@ -42,63 +30,13 @@ export default function DiaryView() {
     handlePlayInstead,
     playingName,
     handleSaveNotes,
+    selectedYear,
+    setSelectedYear,
+    timeline,
   } = useDiaryPage();
   const libraryMeta = useCachedLibraryMeta();
   const { user } = useAuth();
   const manualGames = useManualGameActions(user?.id ?? null);
-
-  const [selectedYear, setSelectedYear] = useUrlState<string>('year', 'all');
-
-  // Split into dated and undated
-  const datedEntries = entries.filter((e) => e.finished_at);
-  const undatedEntries = entries
-    .filter((e) => !e.finished_at)
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  // Collect available years (descending)
-  const availableYears = [...new Set(datedEntries.map((e) => e.finished_at!.slice(0, 4)))].sort(
-    (a, b) => b.localeCompare(a),
-  );
-
-  // Filter entries by selected year
-  const filteredDated =
-    selectedYear === 'all'
-      ? datedEntries
-      : datedEntries.filter((e) => e.finished_at!.startsWith(selectedYear));
-  const filteredUndated = selectedYear === 'all' ? undatedEntries : [];
-  const filteredEntries = selectedYear === 'all' ? entries : filteredDated;
-
-  // Build year → month hierarchy
-  const yearGroups: YearGroup[] = [];
-  for (const entry of filteredDated) {
-    const year = entry.finished_at!.slice(0, 4);
-    const monthKey = getMonthKey(entry.finished_at!);
-
-    let yg = yearGroups.find((g) => g.year === year);
-    if (!yg) {
-      yg = { year, months: [] };
-      yearGroups.push(yg);
-    }
-
-    let mg = yg.months.find((m) => m.key === monthKey);
-    if (!mg) {
-      mg = { key: monthKey, entries: [] };
-      yg.months.push(mg);
-    }
-
-    mg.entries.push(entry);
-  }
-
-  const summaryText = (() => {
-    // Counted like the Games page, so an empty diary reads "0 games finished"
-    // rather than repeating the empty state below it.
-    const count = `${filteredEntries.length} game${filteredEntries.length === 1 ? '' : 's'} finished`;
-    if (selectedYear !== 'all') return `${count} in ${selectedYear}`;
-    const thisYearCount = entries.filter((e) =>
-      e.finished_at?.startsWith(String(new Date().getFullYear())),
-    ).length;
-    return thisYearCount > 0 ? `${count} · ${thisYearCount} this year` : count;
-  })();
 
   return (
     <Page
@@ -108,44 +46,35 @@ export default function DiaryView() {
             isOpen={true}
             onClose={handleCloseDetail}
             onConfirm={handleConfirmDetail}
-            gameName={detailModal.gameName}
-            headerImage={detailModal.headerImage}
+            game={detailModal.game}
             initialStatus={detailModal.initialStatus}
             initialDate={detailModal.initialDate}
             initialNotes={detailModal.initialNotes}
             initialRating={detailModal.initialRating}
-            mainStoryHours={detailModal.game.main_story_hours}
-            steamReviewScore={detailModal.game.steam_review_score}
-            steamReviewCount={detailModal.game.steam_review_count}
-            criticScore={detailModal.game.critic_score}
-            criticCount={detailModal.game.critic_count}
-            playtimeMinutes={detailModal.game.playtime_forever}
-            lastPlayedAt={steamLastPlayed(detailModal.game)}
-            deckCompat={detailModal.game.deck_compat}
             manual={manualGames.dialogProps(detailModal.game)}
-            disablePlaying={hasPlayingGame}
-            onPlayInstead={handlePlayInstead}
-            playingName={playingName}
+            playing={
+              hasPlayingGame ? { name: playingName, onPlayInstead: handlePlayInstead } : undefined
+            }
           />
         )
       }
     >
       <PageHeader
         title="Diary"
-        description={!loading && !loadError && summaryText}
+        description={!loading && !loadError && timeline.summary}
         actions={
           !loading &&
           !loadError && (
             <div className="flex items-center gap-6">
-              {availableYears.length >= 2 && entries.length >= 5 && (
+              {timeline.years.length >= 2 && entries.length >= 5 && (
                 <Dropdown
                   value={selectedYear}
                   onChange={setSelectedYear}
                   icon={<CalendarDays className="w-4 h-4" />}
                   aria-label="Filter by year"
                   options={[
-                    { value: 'all', label: 'All time' },
-                    ...availableYears.map((year) => ({ value: year, label: year })),
+                    { value: ALL_YEARS, label: 'All time' },
+                    ...timeline.years.map((year) => ({ value: year, label: year })),
                   ]}
                 />
               )}
@@ -169,9 +98,9 @@ export default function DiaryView() {
       ) : (
         <div>
           {/* Dated entries grouped by year → month */}
-          {yearGroups.map((yg, yi) => (
+          {timeline.groups.map((yg, yi) => (
             <div key={yg.year}>
-              {selectedYear === 'all' && (
+              {selectedYear === ALL_YEARS && (
                 <h2
                   className={`text-xl font-semibold tracking-tight text-ink-50 pb-2 border-b border-ink-800 ${yi === 0 ? 'mt-2' : 'mt-12'}`}
                 >
@@ -182,7 +111,7 @@ export default function DiaryView() {
                 return (
                   <div key={mg.key}>
                     <h3
-                      className={`text-sm font-medium text-ink-300 pb-1 ${selectedYear !== 'all' && yi === 0 ? 'pt-2' : 'pt-6'}`}
+                      className={`text-sm font-medium text-ink-300 pb-1 ${selectedYear !== ALL_YEARS && yi === 0 ? 'pt-2' : 'pt-6'}`}
                     >
                       {monthName(mg.entries[0].finished_at!)}
                     </h3>
@@ -201,10 +130,10 @@ export default function DiaryView() {
           ))}
 
           {/* Undated entries */}
-          {filteredUndated.length > 0 && (
+          {timeline.undated.length > 0 && (
             <div className="mt-12">
               <SectionLabel className="pb-2 border-b border-ink-800">No date</SectionLabel>
-              {filteredUndated.map((entry) => (
+              {timeline.undated.map((entry) => (
                 <DiaryRow
                   key={entry.id}
                   entry={entry}

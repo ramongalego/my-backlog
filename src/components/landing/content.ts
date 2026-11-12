@@ -1,5 +1,6 @@
 // What the landing page shows: sample games and figures, not the visitor's data.
-import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
+import { STATUS_STYLE } from '@/lib/games/status-style';
+import type { GameStatus } from '@/lib/games/status';
 
 export const MOCK_LIBRARY: { image: string; title: string; status: GameStatus }[] = [
   { image: '/lp_hades.jpg', title: 'Hades', status: 'playing' },

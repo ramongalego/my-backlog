@@ -2,7 +2,7 @@
 
 import { ArrowUpDown } from 'lucide-react';
 import { Dropdown } from '@/components/ui/Dropdown';
-import type { GameSort } from '@/hooks/useGamesPage';
+import type { GameSort } from '@/lib/games/library-filter';
 
 interface GamesSortProps {
   value: GameSort;

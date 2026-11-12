@@ -1,3 +1,4 @@
+import type { AddStatus, GameStatus } from '@/lib/games/status';
 // Client helpers for games added by hand (/api/games/search, /api/games/manual).
 // They throw with the server's message, which the dialogs show as is.
 
@@ -23,7 +24,7 @@ export interface GameSearchResult {
   libraryGame: {
     id: number;
     fromSteam: boolean;
-    status: string;
+    status: GameStatus;
     platform: string | null;
     /** When it was finished or dropped, and your notes and rating, to start the dialog from. */
     date: string | null;
@@ -56,7 +57,7 @@ export async function getGameDetails(igdbId: number): Promise<GameDetails> {
 export async function addManualGame(body: {
   igdbId: number;
   platform: string;
-  status: 'backlog' | 'queue' | 'playing' | 'finished' | 'dropped';
+  status: AddStatus;
   hoursPlayed?: number;
   /** When it was finished or dropped (YYYY-MM-DD). */
   date?: string;

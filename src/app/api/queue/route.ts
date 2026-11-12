@@ -2,31 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
-import { loadQueue } from '@/lib/data/loaders';
 import {
   queueAddRequestSchema,
   queueReorderRequestSchema,
   gameIdSchema,
 } from '@/lib/validations/common';
-
-export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return jsonError('Unauthorized', 401);
-  }
-
-  try {
-    const queue = await loadQueue(supabase, user.id);
-    return NextResponse.json({ queue }, { headers: { 'Cache-Control': 'private, no-cache' } });
-  } catch (error) {
-    console.error(error);
-    return jsonError('Failed to load queue', 500);
-  }
-}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

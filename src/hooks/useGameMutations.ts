@@ -4,6 +4,7 @@ import { queryKeys } from '@/lib/query-keys';
 import type { GameItem } from '@/lib/data/loaders';
 import { updateGameStatus } from '@/lib/client/game-status';
 import { applyStatusToList, statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
+import type { GameStatus } from '@/lib/games/status';
 
 /**
  * Returns targeted invalidation functions for specific query groups.
@@ -75,7 +76,7 @@ export function usePatchGamesList(userId: string | null) {
 /** A status change from a game's detail dialog, where one date serves finished and dropped. */
 export interface StatusEdit {
   gameId: number;
-  status: string;
+  status: GameStatus;
   date: string;
   notes: string;
   rating: number | null;

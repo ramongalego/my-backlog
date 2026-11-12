@@ -1,7 +1,7 @@
 'use client';
 
 import { ToggleGroup } from '@/components/ui/ToggleGroup';
-import type { GameFilter, FilterCounts } from '@/hooks/useGamesPage';
+import type { GameFilter, FilterCounts } from '@/lib/games/library-filter';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 
 interface GamesFilterProps {

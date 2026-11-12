@@ -11,7 +11,8 @@ import { GamesPageSkeleton } from './Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
-import { useGamesPage, type GameFilter } from '@/hooks/useGamesPage';
+import { useGamesPage } from '@/hooks/useGamesPage';
+import type { GameFilter } from '@/lib/games/library-filter';
 import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadError } from '@/components/ui/LoadError';
@@ -99,32 +100,24 @@ export default function GamesView() {
             isOpen={true}
             onClose={handleCloseStatusModal}
             onConfirm={handleConfirmDetail}
-            gameName={statusModal.gameName}
-            headerImage={statusModal.headerImage}
-            initialStatus={statusModal.initialStatus}
+            game={statusModal.game}
+            initialStatus={statusModal.game.status}
             initialDate={statusModal.initialDate}
-            initialNotes={statusModal.initialNotes}
-            initialRating={statusModal.initialRating}
-            mainStoryHours={statusModal.mainStoryHours}
-            steamReviewScore={statusModal.steamReviewScore}
-            steamReviewCount={statusModal.steamReviewCount}
-            criticScore={statusModal.criticScore}
-            criticCount={statusModal.criticCount}
-            playtimeMinutes={statusModal.playtimeMinutes}
-            lastPlayedAt={statusModal.lastPlayedAt}
-            deckCompat={statusModal.deckCompat}
-            releaseDate={statusModal.releaseDate}
-            disablePlaying={hasPlayingGame && statusModal.initialStatus !== 'playing'}
-            onPlayInstead={handlePlayInstead}
-            playingName={playingName}
+            initialNotes={statusModal.game.notes}
+            initialRating={statusModal.game.rating}
+            playing={
+              hasPlayingGame && statusModal.game.status !== 'playing'
+                ? { name: playingName, onPlayInstead: handlePlayInstead }
+                : undefined
+            }
             onAddToQueue={
-              hasPlayingGame && statusModal.initialStatus === 'backlog'
-                ? () => handleAddToQueue(statusModal.gameId)
+              hasPlayingGame && statusModal.game.status === 'backlog'
+                ? () => handleAddToQueue(statusModal.game.id)
                 : undefined
             }
             queued={
-              statusModal.initialStatus === 'backlog' && queuedGameIds.has(statusModal.gameId)
-                ? { onRemove: () => handleRemoveFromQueue(statusModal.gameId) }
+              statusModal.game.status === 'backlog' && queuedGameIds.has(statusModal.game.id)
+                ? { onRemove: () => handleRemoveFromQueue(statusModal.game.id) }
                 : undefined
             }
             manual={statusModal.manual}

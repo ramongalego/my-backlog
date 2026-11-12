@@ -4,103 +4,29 @@ import { useState, useDeferredValue } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { GameItem } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
-import { parseReleaseDate } from '@/lib/games/release-date';
-import { ratingOf } from '@/lib/games/rating';
-import { matchesSearch, nameMatchesSearch } from '@/lib/games/search';
+import {
+  GAME_FILTERS,
+  GAME_SORTS,
+  countLibrary,
+  filterLibrary,
+  searchLibrary,
+  type FilterCounts,
+  type GameFilter,
+  type GameSort,
+} from '@/lib/games/library-filter';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useAuth } from './useAuth';
 import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 import { useSwitchGame } from './useSwitchGame';
 import { useUrlState } from './useUrlState';
 import { useManualGameActions } from './useManualGameActions';
-
-export type { GameItem };
-
-const GAME_FILTERS = ['all', 'backlog', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
-const GAME_SORTS = ['playtime', 'score', 'rating', 'recent', 'released', 'length'] as const;
-export type GameFilter = (typeof GAME_FILTERS)[number];
-export type GameSort = (typeof GAME_SORTS)[number];
-
-// Steam gives display dates like "Sep 28, 2010"; "To be announced" and missing
-// dates parse to NaN and sort last. Parsed once per row: a sort compares each
-// game many times, and parsing dominated sorting a big library. Refetched or
-// patched rows are new objects, so they're parsed afresh.
-const releaseTimes = new WeakMap<GameItem, number>();
-function releaseTime(game: GameItem): number {
-  let time = releaseTimes.get(game);
-  if (time === undefined) {
-    time = parseReleaseDate(game.release_date) ?? -Infinity;
-    releaseTimes.set(game, time);
-  }
-  return time;
-}
-
-// Ratings only mean something on finished or dropped games. Some older rows
-// kept a rating after moving back to the backlog, so those count as unrated.
-function myRating(game: GameItem): number {
-  const rated = game.status === 'finished' || game.status === 'dropped';
-  return rated && game.rating != null ? game.rating : -1;
-}
-
-/** Sort comparator for the Games page. */
-export function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
-  switch (sort) {
-    case 'score':
-      // Critic score, else Steam's weighted score (ratingOf), as the cards show.
-      return (ratingOf(b) ?? 0) - (ratingOf(a) ?? 0);
-    case 'rating':
-      // Your own rating, highest first; ties show the most recently finished
-      // first. Unrated games follow, by their rating.
-      return (
-        myRating(b) - myRating(a) ||
-        (b.finished_at ?? '').localeCompare(a.finished_at ?? '') ||
-        (ratingOf(b) ?? 0) - (ratingOf(a) ?? 0)
-      );
-    case 'recent':
-      // When the game joined the library. The first sync imports everything
-      // at once, so ties fall back to the newest on Steam.
-      return (
-        b.created_at.localeCompare(a.created_at) || (b.app_id ?? 0) - (a.app_id ?? 0) || b.id - a.id
-      );
-    case 'released':
-      return releaseTime(b) - releaseTime(a) || b.id - a.id;
-    case 'length': {
-      const aHours = a.main_story_hours ?? Infinity;
-      const bHours = b.main_story_hours ?? Infinity;
-      return aHours - bHours;
-    }
-    case 'playtime':
-    default:
-      return b.playtime_forever - a.playtime_forever;
-  }
-}
-
-export interface FilterCounts {
-  all: number;
-  backlog: number;
-  finished: number;
-  dropped: number;
-  wont_play: number;
-  hidden: number;
-}
+import type { GameStatus } from '@/lib/games/status';
 
 interface GamesPageStatusModal {
-  gameId: number;
-  gameName: string;
-  headerImage: string | null;
-  initialStatus: 'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
+  /** The game as it was when the dialog opened. */
+  game: GameItem;
+  /** When it was finished or dropped, for the dialog's date field. */
   initialDate: string | null;
-  initialNotes: string | null;
-  initialRating: number | null;
-  mainStoryHours: number | null;
-  steamReviewScore: number | null;
-  steamReviewCount: number | null;
-  criticScore: number | null;
-  criticCount: number | null;
-  playtimeMinutes: number;
-  lastPlayedAt: string | null;
-  deckCompat?: number | null;
-  releaseDate?: string | null;
   /** The detail dialog's `manual` prop (hours, removal, back to Steam), for games on a console. */
   manual: ReturnType<ReturnType<typeof useManualGameActions>['dialogProps']>;
 }
@@ -128,7 +54,7 @@ interface UseGamesPageReturn {
   /** The game being played, which that would pause. */
   playingName: string | null;
   handleConfirmDetail: (
-    status: string,
+    status: GameStatus,
     date: string,
     notes: string,
     rating: number | null,
@@ -188,44 +114,24 @@ export function useGamesPage(): UseGamesPageReturn {
     const game = games.find((g) => g.id === gameId);
     if (!game) return;
 
-    const status = (game.status ?? 'backlog') as
-      'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
     const initialDate =
-      status === 'finished'
+      game.status === 'finished'
         ? (game.finished_at?.slice(0, 10) ?? null)
-        : status === 'dropped'
+        : game.status === 'dropped'
           ? (game.dropped_at?.slice(0, 10) ?? null)
           : null;
 
-    setStatusModal({
-      gameId,
-      gameName: game.name,
-      headerImage: game.header_image,
-      initialStatus: status,
-      initialDate,
-      initialNotes: game.notes,
-      initialRating: game.rating,
-      mainStoryHours: game.main_story_hours,
-      steamReviewScore: game.steam_review_score,
-      steamReviewCount: game.steam_review_count,
-      criticScore: game.critic_score,
-      criticCount: game.critic_count,
-      playtimeMinutes: game.playtime_forever,
-      lastPlayedAt: game.last_played_at,
-      deckCompat: game.deck_compat,
-      releaseDate: game.release_date,
-      manual: manualGames.dialogProps(game),
-    });
+    setStatusModal({ game, initialDate, manual: manualGames.dialogProps(game) });
   };
 
   const handleConfirmDetail = async (
-    status: string,
+    status: GameStatus,
     date: string,
     notes: string,
     rating: number | null,
   ) => {
     if (!statusModal) return;
-    statusMutation.mutate({ gameId: statusModal.gameId, status, date, notes, rating });
+    statusMutation.mutate({ gameId: statusModal.game.id, status, date, notes, rating });
   };
 
   const handleCloseStatusModal = () => setStatusModal(null);
@@ -234,13 +140,13 @@ export function useGamesPage(): UseGamesPageReturn {
   // instead. Undo puts it back as it was (queued, backlog, finished...).
   const handlePlayInstead = async () => {
     if (!statusModal) return;
-    const game = games.find((g) => g.id === statusModal.gameId);
+    const game = games.find((g) => g.id === statusModal.game.id);
     if (!game) return;
     await switchGame.switchTo(game, {
-      status: statusModal.initialStatus,
+      status: statusModal.game.status,
       date: statusModal.initialDate ?? '',
-      notes: statusModal.initialNotes,
-      rating: statusModal.initialRating,
+      notes: statusModal.game.notes,
+      rating: statusModal.game.rating,
     });
   };
 
@@ -249,43 +155,12 @@ export function useGamesPage(): UseGamesPageReturn {
     if (game) addGameToQueue(game);
   };
 
-  // Games added by hand: hours played (consoles don't report it) and removal,
-  // shared with every other page's detail dialog.
-
-  // Search-only filtered games (no status filter) — used for dynamic counts and as base for filteredGames
-  const searchFilteredGames = (() => {
-    if (!deferredSearchQuery) return games;
-    return games.filter((game) => matchesSearch(game, deferredSearchQuery));
-  })();
-
-  // Filter and sort games — uses deferredSearchQuery so input stays responsive
-  const filteredGames = (() => {
-    const filtered = searchFilteredGames.filter((game) => {
-      // "All" excludes only hidden — wont_play games are still part of the
-      // library and should appear under All alongside their own tab.
-      if (filter === 'all' && game.status === 'hidden') return false;
-      // Playing games appear under both "all" and "backlog" (like queued games)
-      if (
-        filter === 'backlog' &&
-        game.status &&
-        game.status !== 'backlog' &&
-        game.status !== 'playing'
-      )
-        return false;
-      if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
-      return true;
-    });
-
-    // A search lists games named for it first, then those only tagged with
-    // it, each in the chosen order.
-    if (!deferredSearchQuery) return filtered.sort((a, b) => compareGames(a, b, sort));
-    const named = new Set(
-      filtered.filter((g) => nameMatchesSearch(g, deferredSearchQuery)).map((g) => g.id),
-    );
-    return filtered.sort(
-      (a, b) => Number(named.has(b.id)) - Number(named.has(a.id)) || compareGames(a, b, sort),
-    );
-  })();
+  // What the page shows, from the deferred search text so typing stays
+  // responsive. Counts follow the search, so each filter says how many of the
+  // matches it holds.
+  const searched = searchLibrary(games, deferredSearchQuery);
+  const filteredGames = filterLibrary(searched, filter, sort, deferredSearchQuery);
+  const counts = countLibrary(searched);
 
   const visibleGames = filteredGames.slice(0, visibleCount);
 
@@ -298,33 +173,6 @@ export function useGamesPage(): UseGamesPageReturn {
   // Derived directly from the full games array — not search-filtered — so a search query
   // for a backlog game never hides the now playing game from the count.
   const hasPlayingGame = games.some((g) => g.status === 'playing');
-
-  // Single pass over search-filtered games to compute all counts at once.
-  // Playing games count under both `all` and `backlog` (like queued games).
-  // Hidden games only count under `hidden`.
-  const counts: FilterCounts = (() => {
-    const result = { all: 0, backlog: 0, finished: 0, dropped: 0, wont_play: 0, hidden: 0 };
-    for (const game of searchFilteredGames) {
-      const s = game.status;
-      if (s === 'hidden') {
-        result.hidden++;
-      } else if (s === 'wont_play') {
-        result.all++;
-        result.wont_play++;
-      } else if (s === 'finished') {
-        result.all++;
-        result.finished++;
-      } else if (s === 'dropped') {
-        result.all++;
-        result.dropped++;
-      } else {
-        // null or 'backlog'
-        result.all++;
-        result.backlog++;
-      }
-    }
-    return result;
-  })();
 
   const setFilterAndReset = (f: GameFilter) => {
     setFilter(f);

@@ -18,7 +18,13 @@ const game = {
   notes: null,
   finished_at: null,
 } as GameItem;
-const edit = { gameId: 1, status: 'finished', date: '2026-10-28', notes: '', rating: 9 };
+const edit = {
+  gameId: 1,
+  status: 'finished' as const,
+  date: '2026-10-28',
+  notes: '',
+  rating: 9,
+};
 
 function setup(options?: Parameters<typeof useSetGameStatus>[1]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });

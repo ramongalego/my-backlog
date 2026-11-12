@@ -13,7 +13,7 @@ import {
 } from '@/lib/games/queue-items';
 import { statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
 import { updateGameStatus } from '@/lib/client/game-status';
-import type { GameStatus } from '@/lib/games/status-style';
+import type { GameStatus } from '@/lib/games/status';
 import { useInvalidateQueries, usePatchGamesList } from '@/hooks/useGameMutations';
 import { queryKeys } from '@/lib/query-keys';
 import { UNDO_MS } from '@/lib/undo';

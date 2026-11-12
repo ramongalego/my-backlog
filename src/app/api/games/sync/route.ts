@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-import {
-  fetchGameMetadata,
-  type FetchedMetadata,
-  type GameMetadata,
-} from '@/lib/server/metadata-fetch';
+import { fetchGameMetadata, type FetchedMetadata } from '@/lib/server/metadata-fetch';
 import {
   METADATA_COLUMNS,
   isCacheUsable,
   mergeForCache,
   toGameRowUpdate,
   type CachedMetadata,
+  type GameMetadata,
 } from '@/lib/games/metadata-cache';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';

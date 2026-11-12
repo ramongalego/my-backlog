@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { MAX_BULK_APP_IDS, MAX_HLTB_APP_IDS } from '@/lib/games/sync-limits';
 
+/** Text a user typed, with HTML tags taken out and the ends trimmed. */
+export const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
+
 // Steam app ids are 32-bit; anything larger would fail in the database.
 const appIdSchema = z.number().int().positive().max(2_147_483_647);
 

@@ -213,7 +213,7 @@ it('moves a game you own on Steam to the console you pick, keeping its status', 
     libraryGame: {
       id: 7,
       fromSteam: true,
-      status: 'playing',
+      status: 'playing' as const,
       platform: 'PC',
       date: null,
       notes: null,

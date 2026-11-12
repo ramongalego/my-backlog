@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GameCard } from '@/components/games/GameCard';
-import type { GameItem } from '@/hooks/useGamesPage';
+import type { GameItem } from '@/lib/data/loaders';
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -35,7 +35,7 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   steam_review_weighted: 82,
   header_image: 'https://example.com/image.jpg',
   main_story_hours: 10,
-  status: null,
+  status: 'backlog',
   notes: null,
   rating: null,
   finished_at: null,
@@ -82,7 +82,7 @@ describe('GameCard', () => {
       ['hidden', 'Hidden'],
       ['playing', 'Playing'],
       ['wont_play', "Won't Play"],
-    ])('should show %s badge', (status, label) => {
+    ] as const)('should show %s badge', (status, label) => {
       render(<GameCard game={createGame({ status })} onOpenDetail={mockOnOpenDetail} />);
 
       expect(screen.getByText(label)).toBeInTheDocument();

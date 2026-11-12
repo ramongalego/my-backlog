@@ -133,7 +133,7 @@ export function computeStats(
 
   const estimatedBacklogHours = Math.round(
     games
-      .filter((g) => !g.status || g.status === 'backlog')
+      .filter((g) => g.status === 'backlog')
       .reduce((sum, g) => sum + (g.main_story_hours ?? 0), 0),
   );
 

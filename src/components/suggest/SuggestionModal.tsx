@@ -13,7 +13,6 @@ import { SuggestionLoading } from './SuggestionLoading';
 import { SuggestionError } from './SuggestionError';
 import type { SuggestionResult as Suggestion } from '@/lib/suggest/types';
 import type { QueueItem } from '@/types/games';
-import { createClient } from '@/lib/supabase/client';
 import { findRandomBacklogGame, RANDOM_ROLL_MS, type RandomGame } from '@/lib/client/random-pick';
 import { prefersReducedMotion } from '@/lib/motion';
 
@@ -93,7 +92,7 @@ export function SuggestionModal({
     setRolls((n) => n + 1);
     const rolling = covers.length >= 2 && !prefersReducedMotion();
     const [found] = await Promise.all([
-      findRandomBacklogGame(createClient(), user.id),
+      findRandomBacklogGame(user.id),
       rolling ? new Promise((resolve) => setTimeout(resolve, RANDOM_ROLL_MS)) : null,
     ]);
     setChance(

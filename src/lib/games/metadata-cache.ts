@@ -1,6 +1,25 @@
 import { parseReleaseDate } from './release-date';
 import { isMetadataFresh } from './scoring';
-import type { GameMetadata } from '@/lib/server/metadata-fetch';
+
+/** A game's row in the shared metadata cache (game_metadata). */
+export interface GameMetadata {
+  app_id: number;
+  platform: string;
+  type: string | null;
+  name: string | null;
+  genres: string[] | null;
+  categories: string[] | null;
+  description: string | null;
+  release_date: string | null;
+  header_image: string | null;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
+  steam_review_weighted: number | null;
+  main_story_hours: number | null;
+  deck_compat: number | null;
+  tags: string[] | null;
+  synced_at: string;
+}
 
 export const METADATA_COLUMNS =
   'app_id, platform, type, name, genres, categories, description, release_date, header_image, steam_review_score, steam_review_count, steam_review_weighted, main_story_hours, deck_compat, tags, synced_at, hltb_attempts';

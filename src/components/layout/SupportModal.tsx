@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { SUPPORT_MESSAGE_MAX, SUPPORT_MESSAGE_MIN } from '@/lib/validations/support-limits';
 
 type TicketType = 'bug' | 'feedback' | 'support';
 
@@ -33,12 +34,12 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
   };
 
   const handleSubmit = () => {
-    if (message.trim().length < 10) {
-      setError('Message must be at least 10 characters');
+    if (message.trim().length < SUPPORT_MESSAGE_MIN) {
+      setError(`Message must be at least ${SUPPORT_MESSAGE_MIN} characters`);
       return;
     }
-    if (message.trim().length > 2000) {
-      setError('Message must be at most 2000 characters');
+    if (message.trim().length > SUPPORT_MESSAGE_MAX) {
+      setError(`Message must be at most ${SUPPORT_MESSAGE_MAX} characters`);
       return;
     }
     setError(null);
@@ -99,7 +100,9 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
             className={`${fieldClass(!!error)} block px-3 py-2 text-sm resize-none`}
           />
           {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
-          <p className="mt-1 text-xs text-ink-500 text-right">{message.length}/2000</p>
+          <p className="mt-1 text-xs text-ink-500 text-right">
+            {message.length}/{SUPPORT_MESSAGE_MAX}
+          </p>
         </div>
 
         <div className="flex justify-end gap-2 pt-1">

@@ -31,3 +31,15 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Formatting
+        run: npx prettier --check "src/**/*.{ts,tsx,css}"
+
+      # The build is what catches a server-only module imported into the
+      # browser, and anything else that only fails when the app is compiled.
+      # It needs no secrets: the public values are placeholders.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder

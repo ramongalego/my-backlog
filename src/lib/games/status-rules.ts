@@ -1,10 +1,11 @@
 import type { GameStatusBody } from '@/lib/validations/games';
 import { consoleOf } from './consoles';
+import type { GameStatus } from './status';
 
 export type StatusChange = GameStatusBody;
 
 interface GameUpdate {
-  status: string;
+  status: GameStatus;
   started_at?: string | null;
   finished_at?: string | null;
   dropped_at?: string | null;
@@ -48,14 +49,14 @@ export function statusUpdate(
 /** A status change from the detail dialogs' fields, where one date input serves finished and dropped. */
 export function statusChangeFrom(vars: {
   gameId: number;
-  status: string;
+  status: GameStatus;
   date?: string;
   notes?: string | null;
   rating?: number | null;
 }): StatusChange {
   return {
     gameId: vars.gameId,
-    status: vars.status as StatusChange['status'],
+    status: vars.status,
     finishedAt: vars.status === 'finished' ? vars.date || undefined : undefined,
     droppedAt: vars.status === 'dropped' ? vars.date || undefined : undefined,
     notes: vars.notes,

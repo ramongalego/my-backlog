@@ -8,14 +8,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
 import { useSwitchGame } from './useSwitchGame';
 import { useInvalidateQueries, useSetGameStatus, type StatusEdit } from '@/hooks/useGameMutations';
+import type { GameStatus } from '@/lib/games/status';
+import { ALL_YEARS, diaryTimeline } from '@/lib/diary/timeline';
+import { useUrlState } from './useUrlState';
 
 export type { DiaryEntry };
 
 interface DiaryModal {
-  gameId: number;
-  gameName: string;
-  headerImage: string | null;
-  /** The entry, for the modal's meta row. */
+  /** The entry the dialog is about. */
   game: DiaryEntry;
   initialStatus: 'finished';
   initialDate: string | null;
@@ -38,19 +38,25 @@ interface UseDiaryReturn {
   handleOpenDetail: (gameId: number) => void;
   handleCloseDetail: () => void;
   handleConfirmDetail: (
-    status: string,
+    status: GameStatus,
     date: string,
     notes: string,
     rating: number | null,
   ) => Promise<void>;
   /** Saves just the note, keeping the entry's date and rating. */
   handleSaveNotes: (gameId: number, notes: string) => void;
+  /** The year shown (kept in the URL), or ALL_YEARS. */
+  selectedYear: string;
+  setSelectedYear: (year: string) => void;
+  /** The entries as the page lays them out, for that year. */
+  timeline: ReturnType<typeof diaryTimeline<DiaryEntry>>;
 }
 
 export function useDiaryPage(): UseDiaryReturn {
   const queryClient = useQueryClient();
   const { statusChanged } = useInvalidateQueries();
   const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
+  const [selectedYear, setSelectedYear] = useUrlState<string>('year', ALL_YEARS);
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const diaryKey = queryKeys.games.diary(userId ?? '');
@@ -117,9 +123,6 @@ export function useDiaryPage(): UseDiaryReturn {
     if (!entry) return;
 
     setDetailModal({
-      gameId,
-      gameName: entry.name,
-      headerImage: entry.header_image,
       game: entry,
       initialStatus: 'finished',
       initialDate: entry.finished_at?.slice(0, 10) ?? null,
@@ -135,25 +138,22 @@ export function useDiaryPage(): UseDiaryReturn {
   const switchGame = useSwitchGame(userId);
   const handlePlayInstead = async () => {
     if (!detailModal) return;
-    await switchGame.switchTo(
-      { ...detailModal.game, id: detailModal.gameId },
-      {
-        status: detailModal.initialStatus,
-        date: detailModal.initialDate ?? '',
-        notes: detailModal.initialNotes,
-        rating: detailModal.initialRating,
-      },
-    );
+    await switchGame.switchTo(detailModal.game, {
+      status: detailModal.initialStatus,
+      date: detailModal.initialDate ?? '',
+      notes: detailModal.initialNotes,
+      rating: detailModal.initialRating,
+    });
   };
 
   const handleConfirmDetail = async (
-    status: string,
+    status: GameStatus,
     date: string,
     notes: string,
     rating: number | null,
   ) => {
     if (!detailModal) return;
-    diaryMutation.mutate({ gameId: detailModal.gameId, status, date, notes, rating });
+    diaryMutation.mutate({ gameId: detailModal.game.id, status, date, notes, rating });
   };
 
   const handleSaveNotes = (gameId: number, notes: string) => {
@@ -182,5 +182,8 @@ export function useDiaryPage(): UseDiaryReturn {
     handleCloseDetail,
     handleConfirmDetail,
     handleSaveNotes,
+    selectedYear,
+    setSelectedYear,
+    timeline: diaryTimeline(entries, selectedYear),
   };
 }

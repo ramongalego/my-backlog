@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { GAME_STATUSES, type GameStatus } from '@/lib/games/status-style';
+import { ADD_STATUSES, GAME_STATUSES, type AddStatus, type GameStatus } from '@/lib/games/status';
 import { todayIso } from '@/lib/diary/date-utils';
 import { GameMetaRow } from './GameCardInfo';
 import { ArtHeader } from './ArtHeader';
@@ -17,9 +17,6 @@ import { CompletionDateField } from '@/components/games/detail/CompletionDateFie
 import { ReviewFields } from '@/components/games/detail/ReviewFields';
 import { ManualGameActions } from '@/components/games/detail/ManualGameActions';
 
-/** Where a new game goes when it's added. */
-export type AddStatus = 'backlog' | 'queue' | 'playing' | 'finished' | 'dropped';
-
 interface AddGameValues {
   status: AddStatus;
   platform: string;
@@ -29,30 +26,49 @@ interface AddGameValues {
   rating: number | null;
 }
 
-// Adding offers where a game can go from outside the library; Won't Play and
-// Hidden are for games already in it.
-const ADD_STATUSES: AddStatus[] = ['backlog', 'queue', 'playing', 'finished', 'dropped'];
+/**
+ * The game a dialog is about: what its header and summary row show. These are
+ * the games table's column names, so a page passes the row it already has;
+ * anything the row doesn't carry is simply not shown.
+ */
+interface DialogGame {
+  name: string;
+  header_image: string | null;
+  main_story_hours?: number | null;
+  steam_review_score?: number | null;
+  steam_review_count?: number | null;
+  critic_score?: number | null;
+  critic_count?: number | null;
+  /** Minutes played. Also what the hours field starts from, for a console game. */
+  playtime_forever?: number;
+  last_played_at?: string | null;
+  deck_compat?: number | null;
+  /** An unreleased game gets "Out Nov 5" in the header, beside its console. */
+  release_date?: string | null;
+}
 
 interface GameDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm?: (
-    status: string,
+    status: GameStatus,
     date: string,
     notes: string,
     rating: number | null,
   ) => void | Promise<void>;
-  gameName: string;
-  headerImage: string | null;
+  game: DialogGame;
   /** The header art isn't known yet: a placeholder holds its place. */
   headerLoading?: boolean;
   initialStatus: GameStatus;
   initialDate?: string | null;
   initialNotes?: string | null;
   initialRating?: number | null;
-  /** Another game is being played: Playing becomes Queue and, with
-   * `onPlayInstead`, switching to this game. */
-  disablePlaying?: boolean;
+  /**
+   * Another game is being played (`name`). Playing then means playing this
+   * one instead (`onPlayInstead`: the other goes to the top of the queue),
+   * offered beside Queue; without `onPlayInstead`, Playing isn't offered.
+   */
+  playing?: { name: string | null; onPlayInstead?: () => void | Promise<void> };
   onAddToQueue?: () => void;
   /**
    * The game is in the playing queue: its status shows as Queue, and choosing
@@ -60,20 +76,6 @@ interface GameDetailModalProps {
    * too, as the server does for every status but backlog.
    */
   queued?: { onRemove: () => void };
-  /** Plays this game instead of the one being played (`playingName`), which
-   * goes to the top of the queue. Offered as Playing beside Queue. */
-  onPlayInstead?: () => void | Promise<void>;
-  playingName?: string | null;
-  mainStoryHours?: number | null;
-  steamReviewScore?: number | null;
-  steamReviewCount?: number | null;
-  criticScore?: number | null;
-  criticCount?: number | null;
-  playtimeMinutes?: number;
-  lastPlayedAt?: string | null;
-  deckCompat?: number | null;
-  /** An unreleased game gets "Out Nov 5" in the header, beside its console. */
-  releaseDate?: string | null;
   /** For games added by hand: their console, hours played you enter, and removal. */
   manual?: {
     platform: string | null;
@@ -131,30 +133,22 @@ export function GameDetailModal({
   isOpen,
   onClose,
   onConfirm,
-  gameName,
-  headerImage,
+  game,
   headerLoading = false,
   initialStatus,
   initialDate,
   initialNotes,
   initialRating,
-  disablePlaying = false,
+  playing,
   onAddToQueue,
   queued,
-  onPlayInstead,
-  playingName = null,
-  mainStoryHours,
-  steamReviewScore,
-  steamReviewCount,
-  criticScore,
-  criticCount,
-  playtimeMinutes,
-  lastPlayedAt,
-  deckCompat,
-  releaseDate,
   manual,
   adding,
 }: GameDetailModalProps) {
+  const playtimeMinutes = game.playtime_forever;
+  const releaseDate = game.release_date;
+  const disablePlaying = !!playing;
+  const onPlayInstead = playing?.onPlayInstead;
   const initialHours = playtimeMinutes ? String(Math.round((playtimeMinutes / 60) * 10) / 10) : '';
   const [hours, setHours] = useState(initialHours);
   const [platform, setPlatform] = useState(adding?.defaultConsole ?? '');
@@ -238,7 +232,7 @@ export function GameDetailModal({
   const canStart = isReleased(releaseDate) || initialStatus === 'playing';
   const statusOptions: DetailStatus[] = (
     adding
-      ? ADD_STATUSES
+      ? [...ADD_STATUSES]
       : GAME_STATUSES.flatMap((value): DetailStatus[] =>
           value !== 'playing'
             ? [value]
@@ -249,18 +243,24 @@ export function GameDetailModal({
         )
   ).filter((value) => value !== 'playing' || canStart);
   const replacesPlaying =
-    status !== 'playing' ? null : adding ? adding.playingName : switching ? playingName : null;
+    status !== 'playing'
+      ? null
+      : adding
+        ? adding.playingName
+        : switching
+          ? (playing?.name ?? null)
+          : null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       size="xl"
-      ariaLabel={adding ? `Add ${gameName}` : gameName}
+      ariaLabel={adding ? `Add ${game.name}` : game.name}
       align={adding ? 'top' : 'center'}
     >
       {/* The title runs along the bottom, so the console sits top-left here. */}
-      <ArtHeader src={headerImage} title={gameName} loading={headerLoading}>
+      <ArtHeader src={game.header_image} title={game.name} loading={headerLoading}>
         {(manual?.platform || upcomingRelease(releaseDate)) && (
           <>
             {manual?.platform && <ConsoleBadge platform={manual.platform} />}
@@ -284,14 +284,15 @@ export function GameDetailModal({
       ) : (
         <div className="mt-1">
           <GameMetaRow
-            mainStoryHours={mainStoryHours}
-            steamReviewScore={steamReviewScore}
-            steamReviewCount={steamReviewCount}
-            criticScore={criticScore}
-            criticCount={criticCount}
+            mainStoryHours={game.main_story_hours}
+            steamReviewScore={game.steam_review_score}
+            steamReviewCount={game.steam_review_count}
+            criticScore={game.critic_score}
+            criticCount={game.critic_count}
             playtimeMinutes={playtimeMinutes}
-            lastPlayedAt={lastPlayedAt}
-            deckCompat={deckCompat}
+            // Only Steam's date is shown: with a console, the row leaves it out.
+            lastPlayedAt={game.last_played_at}
+            deckCompat={game.deck_compat}
             platform={manual?.platform}
           />
         </div>

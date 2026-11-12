@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { checkSharedRateLimit } from '@/lib/server/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError } from '@/lib/server/api-response';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-
-const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
-
-const supportTicketSchema = z.object({
-  type: z.enum(['bug', 'feedback', 'support'], { message: 'Invalid type' }),
-  message: safeText.pipe(
-    z
-      .string()
-      .min(10, 'Message must be at least 10 characters')
-      .max(2000, 'Message must be at most 2000 characters'),
-  ),
-});
-
-// Per-user cap — authed-only endpoint, so a user ID is the natural key.
-// Ten tickets/hour is generous for legit use, tight enough to stop spam.
-const SUPPORT_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 };
+import { supportTicketSchema } from '@/lib/validations/support';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -27,27 +12,21 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return jsonError('Unauthorized', 401);
   }
 
-  const rateLimitResult = await checkSharedRateLimit(`support:${user.id}`, SUPPORT_RATE_LIMIT);
+  const rateLimitResult = await checkSharedRateLimit(`support:${user.id}`, RATE_LIMITS.support);
   if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Too many tickets submitted. Please try again later.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
-        },
-      },
-    );
+    return jsonError('Too many tickets submitted. Please try again later.', 429, {
+      'Retry-After': Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000).toString(),
+    });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return jsonError('Invalid JSON', 400);
   }
 
   const parsed = supportTicketSchema.safeParse(body);
@@ -56,7 +35,7 @@ export async function POST(request: NextRequest) {
       parsed.error.flatten().fieldErrors.message?.[0] ??
       parsed.error.flatten().fieldErrors.type?.[0] ??
       'Invalid input';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 
   const { type, message } = parsed.data;
@@ -66,7 +45,7 @@ export async function POST(request: NextRequest) {
   const service = tryCreateServiceClient();
   if (!service) {
     console.error('SUPABASE_SECRET_KEY not configured; cannot save tickets');
-    return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
+    return jsonError('Failed to submit ticket', 500);
   }
   const { error } = await service
     .from('support_tickets')
@@ -74,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
+    return jsonError('Failed to submit ticket', 500);
   }
 
   return NextResponse.json({ success: true });

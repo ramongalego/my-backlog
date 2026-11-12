@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { useStatsPage } from '@/hooks/useStatsPage';
@@ -9,15 +8,9 @@ import { useAddGame } from '@/components/games/AddGameProvider';
 import { StatsStart, StatsStartButtons } from '@/components/stats/StatsStart';
 import { connectSteam } from '@/lib/client/steam-connect';
 import { useAuth } from '@/hooks/useAuth';
-import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
-import { useSwitchGame } from '@/hooks/useSwitchGame';
-import { useSetGameStatus } from '@/hooks/useGameMutations';
-import { useManualGameActions } from '@/hooks/useManualGameActions';
-import type { PlayedALotGame } from '@/lib/stats/compute';
 import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadError } from '@/components/ui/LoadError';
-import { steamLastPlayed } from '@/lib/games/consoles';
 import { StatsContentSkeleton } from './Skeleton';
 import { EmptyStateSkeleton } from '@/components/layout/Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
@@ -30,10 +23,8 @@ import { TagCompletion } from '@/components/stats/TagCompletion';
 import { PlayedALot } from '@/components/stats/PlayedALot';
 import { PlayerProfile } from '@/components/stats/PlayerProfile';
 
-type EditModalState = PlayedALotGame;
-
 export default function StatsView() {
-  const { stats, loading, loadError, retry, hasPlayingGame, profileReady } = useStatsPage();
+  const { stats, loading, loadError, retry, profileReady, gameDialog, openGame } = useStatsPage();
   const libraryMeta = useCachedLibraryMeta();
   const { user, profile } = useAuth();
   const isSteamConnected = profile?.steam_id != null;
@@ -43,63 +34,9 @@ export default function StatsView() {
     onAddGame: () => openAddGame(),
     onConnectSteam: connectSteam,
   };
-  const manualGames = useManualGameActions(user?.id ?? null);
-  const addGameToQueue = useAddToQueue(user?.id ?? null);
-  const removeFromQueue = useRemoveFromQueue(user?.id ?? null);
-  const { queuedGameIds } = useQueue(user?.id ?? null);
-  const switchGame = useSwitchGame(user?.id ?? null);
-  const [editModal, setEditModal] = useState<EditModalState | null>(null);
-
-  // Stats reads the shared games list, so the change shows straight away.
-  const statusMutation = useSetGameStatus(user?.id ?? null);
-
-  const handleEdit = (game: PlayedALotGame) => setEditModal(game);
-
-  const handleAddToQueue = () => {
-    if (!editModal) return;
-    setEditModal(null);
-    addGameToQueue(editModal);
-  };
-
-  const handleConfirm = async (
-    status: string,
-    date: string,
-    notes: string,
-    rating: number | null,
-  ) => {
-    if (!editModal) return;
-    statusMutation.mutate({ gameId: editModal.id, status, date, notes, rating });
-    setEditModal(null);
-  };
-
   return (
     <Page
-      overlay={
-        editModal && (
-          <GameDetailModal
-            isOpen={true}
-            onClose={() => setEditModal(null)}
-            onConfirm={handleConfirm}
-            gameName={editModal.name}
-            headerImage={editModal.header_image}
-            mainStoryHours={editModal.main_story_hours}
-            playtimeMinutes={editModal.playtime_forever}
-            lastPlayedAt={steamLastPlayed(editModal)}
-            deckCompat={editModal.deck_compat}
-            manual={manualGames.dialogProps(editModal)}
-            initialStatus="backlog"
-            disablePlaying={hasPlayingGame}
-            onAddToQueue={hasPlayingGame ? handleAddToQueue : undefined}
-            queued={
-              queuedGameIds.has(editModal.id)
-                ? { onRemove: () => removeFromQueue(editModal.id) }
-                : undefined
-            }
-            onPlayInstead={() => switchGame.switchTo(editModal)}
-            playingName={switchGame.playing?.name ?? null}
-          />
-        )
-      }
+      overlay={gameDialog && <GameDetailModal isOpen initialStatus="backlog" {...gameDialog} />}
     >
       <PageHeader
         title="Stats"
@@ -137,7 +74,7 @@ export default function StatsView() {
           </div>
           {stats.playedALot.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PlayedALot stats={stats} onEdit={handleEdit} />
+              <PlayedALot stats={stats} onEdit={openGame} />
             </div>
           )}
           {profileReady && user && <PlayerProfile userId={user.id} />}

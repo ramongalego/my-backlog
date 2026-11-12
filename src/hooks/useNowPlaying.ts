@@ -8,7 +8,7 @@ import { addToQueue, reorderQueue } from '@/lib/client/queue';
 import type { LibraryMeta } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/client/game-status';
-import { buildCompletionSummary } from '@/lib/games/completion';
+import { buildCompletionSummary, type GameSummaryData } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
 import { UNDO_MS } from '@/lib/undo';
 import { nextPlayable } from '@/lib/games/release-date';
@@ -24,14 +24,13 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 import { useSwitchGame } from '@/hooks/useSwitchGame';
 import { QUEUE_SCOPE, fromQueueItem, toPlayingGame, toQueueItem } from '@/lib/games/queue-items';
 import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
-
-import type { GameSummaryData } from '@/components/games/GameSummaryModal';
+import type { GameStatus } from '@/lib/games/status';
 
 type CompletionStatus = 'finished' | 'dropped';
 
 interface CompleteInput {
   game: GameWithImage;
-  status: string;
+  status: CompletionStatus;
   date: string;
   notes: string;
   rating: number | null;
@@ -124,7 +123,7 @@ export function useNowPlaying(userId: string | null) {
     // One request saves the finish/drop, counts the library and starts the
     // next queued game (the promote is best-effort and reported separately).
     mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
-      completeGame(game.id, status as 'finished' | 'dropped', { date, notes, rating }),
+      completeGame(game.id, status, { date, notes, rating }),
     onSuccess: ({ counts, promoted, promoteFailed }, { game, status, date, notes, rating }) => {
       if (promoteFailed) toast.error("Couldn't start the next game from your queue.");
       gamesList.patch(
@@ -292,11 +291,17 @@ export function useNowPlaying(userId: string | null) {
     openDrop: () => currentlyPlaying && setStatusModal({ action: 'dropped' }),
     closeStatusModal: () => setStatusModal(null),
     closeSummary: () => setGameSummary(null),
-    confirmStatusChange: (status: string, date: string, notes: string, rating: number | null) => {
+    confirmStatusChange: (
+      status: GameStatus,
+      date: string,
+      notes: string,
+      rating: number | null,
+    ) => {
       // The cached game, not the one this render saw: the dialog may have just
       // saved new hours, which the completion summary should show.
       const game = queryClient.getQueryData<GameWithImage | null>(playingKey) ?? currentlyPlaying;
-      if (!game) return;
+      // The Finish and Drop dialogs only offer these two.
+      if (!game || (status !== 'finished' && status !== 'dropped')) return;
       setStatusModal(null);
       // Finishing goes straight to the summary, from what's already known: one
       // more finished game, and the first queued game that's out starts next. The

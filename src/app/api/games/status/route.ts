@@ -39,30 +39,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: true, paused: result.paused });
 }
-
-export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return jsonError('Unauthorized', 401);
-  }
-
-  // Get now playing game
-  const { data, error } = await supabase
-    .from('games')
-    .select('id, app_id, name, header_image, main_story_hours')
-    .eq('user_id', user.id)
-    .eq('status', 'playing')
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error(error);
-    return jsonError('Failed to load current game', 500);
-  }
-
-  return NextResponse.json({ game: data });
-}

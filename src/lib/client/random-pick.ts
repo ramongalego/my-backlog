@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 import { RANDOM_PICK_MAX_PLAYTIME_MINUTES } from '@/lib/games/filtering';
 import { isReleased } from '@/lib/games/release-date';
 import { fetchAllRows } from '@/lib/supabase/paginate';
@@ -25,9 +25,9 @@ const RANDOM_GAME_SELECT =
  * picked, instead of downloading them all to choose one.
  */
 export async function findRandomBacklogGame(
-  supabase: SupabaseClient,
   userId: string,
 ): Promise<{ game: RandomGame } | { error: 'none' | 'failed' }> {
+  const supabase = createClient();
   try {
     // From the server rather than the page, so a queue still loading or
     // changed in another tab can't let a queued game through.

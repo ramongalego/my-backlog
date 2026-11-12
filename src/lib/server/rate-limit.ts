@@ -198,6 +198,8 @@ export const RATE_LIMITS = {
   steamLink: { limit: 10, windowMs: 60 * 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
+  // Support tickets, per user: generous for real use, tight enough to stop spam.
+  support: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Public share pages for finished games, per user
   share: { limit: 30, windowMs: 60 * 60 * 1000 },
   // Rendering a share page's preview image, per visitor (IP). Link-preview

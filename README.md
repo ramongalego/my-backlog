@@ -19,10 +19,10 @@ A full-stack web app that helps players stop scrolling their library and actuall
 | Styling          | Tailwind CSS v4, a small design system documented in [`DESIGN.md`](DESIGN.md)                           |
 | Data and auth    | Supabase: Postgres with row-level security, cookie-based SSR auth, PL/pgSQL for atomic operations       |
 | Client state     | TanStack Query v5: server prefetch and hydration, optimistic updates, targeted invalidation             |
-| Validation       | Zod v4 on every API request body                                                                        |
+| Validation       | Zod v4 on API request bodies, and database constraints behind them                                      |
 | Outside services | Steam Web API and OpenID 2.0, IGDB, HowLongToBeat, SteamGridDB, OpenAI                                  |
 | UI pieces        | dnd-kit (accessible drag and drop), lucide-react, Sonner, react-day-picker, canvas-confetti             |
-| Testing and CI   | Jest and React Testing Library (809 tests), GitHub Actions                                              |
+| Testing and CI   | Jest and React Testing Library (970+ tests); GitHub Actions runs types, lint, tests, knip and the build |
 | Hosting          | Vercel, with Vercel Analytics                                                                           |
 
 ## Getting started
@@ -105,7 +105,7 @@ The rules behind it:
 3. That posts to a route in `app/api/`. The route checks the session, the rate limit and the body (Zod), then calls `lib/server/` to write to Postgres.
 4. When the request settles, only the queries the change touches are invalidated. On failure, the cached data is rolled back.
 
-[`CLAUDE.md`](CLAUDE.md) traces this file by file, with a "where to look for a bug" table.
+[`CLAUDE.md`](CLAUDE.md) traces this file by file, with a "where to look for a bug" table. The layering is checked by lint: pure rules can't import the database client, hooks or components, and components can't import server code or query the database themselves.
 
 ## Architecture highlights
 
@@ -123,7 +123,7 @@ Steam linking is a separate OpenID 2.0 flow, whose `state` is compared in consta
 
 The schema separates **per-user state** (library, queue, shared completions) from a **shared metadata cache** (`game_metadata`) keyed by Steam app id: enriching one user's library warms the cache for everyone.
 
-Row-level security limits per-user rows to `auth.uid()`. Writes that need checking (profiles, share pages, support tickets, the metadata cache) are revoked from the public API keys and go through route handlers using the server's secret key. Share pages aren't readable through the public keys either: a page is built on the server from the finished game (the browser only says which game) and read back by its unguessable id, so pages can't be listed or filled with arbitrary text. Row ids are always generated, never supplied. Column limits on games mirror the forms' limits, so the database enforces them even against direct API writes.
+Row-level security limits per-user rows to `auth.uid()`. Writes that need checking (profiles, share pages, support tickets, the metadata cache) are revoked from the public API keys and go through route handlers using the server's secret key. Share pages aren't readable through the public keys either: a page is built on the server from the finished game (the browser only says which game) and read back by its unguessable id, so pages can't be listed or filled with arbitrary text. Row ids are always generated, never supplied. Column limits on games mirror the forms' limits, and a game's status is held to the app's six, so the database enforces them even against direct API writes.
 
 ### Atomic queue reordering
 
@@ -141,6 +141,8 @@ Starting a game while another is playing sends one request. The server:
 - starts the new game;
 - pauses the current one at the top of the queue, keeping its start date;
 - reports which game it actually paused, so the toast and Undo don't rely on a browser tab that may be out of date.
+
+A status change can write to several rows (the game, the one that stops playing, the queue). The rules for what each row gets are in one place in the app (`lib/games/status-rules.ts`), which the browser also uses to show the change before it's saved; the writes themselves go to one PL/pgSQL function, `apply_status_change`, so they are saved together or not at all.
 
 Finishing the new game resumes the paused one where it left off. Games that aren't out yet are never started automatically.
 
@@ -176,7 +178,7 @@ Query keys are hierarchical, so a change invalidates exactly what it touches. Mu
 
 - **Content Security Policy** and security headers: `frame-ancestors 'none'`, `nosniff`, a strict referrer policy, and camera, microphone and geolocation disabled.
 - **Hostname allowlists** for every image URL a user can submit, checked when saving and when rendering share images.
-- **Zod schemas** on every request body, with explicit upper bounds.
+- **Zod schemas** on request bodies, with explicit upper bounds.
 - **`server-only`** on all server code, so secrets can't reach a client bundle.
 - **No `console` output** in production builds, apart from errors and warnings.
 

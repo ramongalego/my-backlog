@@ -1,5 +1,25 @@
 import type { GameWithImage } from '@/types/games';
-import type { GameSummaryData } from '@/components/games/GameSummaryModal';
+
+/** What the "game finished" summary shows, and what sharing it starts from. */
+export interface GameSummaryData {
+  /** The finished game's row id: all sharing sends. */
+  gameId: number;
+  gameName: string;
+  headerImage: string | null;
+  playtimeMinutes: number;
+  mainStoryHours: number | null;
+  rating: number | null;
+  gamesFinished: number;
+  totalGames: number;
+  backlogHoursRemoved: number | null;
+  nextGame: string | null;
+  /** When you started playing it, for how long it took. */
+  startedAt?: string | null;
+  /** The finish date chosen (YYYY-MM-DD). */
+  finishedAt?: string | null;
+  /** Games finished this year, counting this one. */
+  finishedThisYear?: number | null;
+}
 
 export interface CompletionCounts {
   gamesFinished: number;

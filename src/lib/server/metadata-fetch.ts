@@ -8,25 +8,7 @@ import {
 import { getMainStoryHours, HLTBUnavailableError } from '@/lib/hltb/api';
 import { calculateBayesianScore } from '@/lib/games/scoring';
 import { classifyAppType } from '@/lib/games/software';
-
-export interface GameMetadata {
-  app_id: number;
-  platform: string;
-  type: string | null;
-  name: string | null;
-  genres: string[] | null;
-  categories: string[] | null;
-  description: string | null;
-  release_date: string | null;
-  header_image: string | null;
-  steam_review_score: number | null;
-  steam_review_count: number | null;
-  steam_review_weighted: number | null;
-  main_story_hours: number | null;
-  deck_compat: number | null;
-  tags: string[] | null;
-  synced_at: string;
-}
+import type { GameMetadata } from '@/lib/games/metadata-cache';
 
 /** A fresh snapshot, plus whether HLTB was too busy to be asked (not stored). */
 export type FetchedMetadata = GameMetadata & { hltbUnavailable: boolean };

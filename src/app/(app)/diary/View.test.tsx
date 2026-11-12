@@ -31,7 +31,7 @@ const mockModal = jest.fn();
 jest.mock('@/components/games/GameDetailModal', () => ({
   GameDetailModal: (props: Record<string, unknown>) => {
     mockModal(props);
-    return <div role="dialog">{String(props.gameName)}</div>;
+    return <div role="dialog">{(props.game as DiaryEntry).name}</div>;
   },
 }));
 
@@ -67,9 +67,6 @@ jest.mock('@/hooks/useDiaryPage', () => ({
     retry: mockRetry,
     hasPlayingGame: false,
     detailModal: mockDetail && {
-      appId: 1,
-      gameName: 'Celeste',
-      headerImage: null,
       game: mockDetail.game,
       initialStatus: 'finished',
       initialDate: '2026-10-20',
@@ -80,6 +77,11 @@ jest.mock('@/hooks/useDiaryPage', () => ({
     handleCloseDetail: jest.fn(),
     handleConfirmDetail: jest.fn(),
     handleSaveNotes: jest.fn(),
+    selectedYear: 'all',
+    setSelectedYear: jest.fn(),
+    timeline: jest
+      .requireActual<typeof import('@/lib/diary/timeline')>('@/lib/diary/timeline')
+      .diaryTimeline(mockLoadError ? [] : [entry]),
   }),
 }));
 
@@ -114,12 +116,15 @@ it('gives the modal the game details too', () => {
 
   expect(mockModal).toHaveBeenCalledWith(
     expect.objectContaining({
-      mainStoryHours: 8.3,
-      steamReviewScore: 97,
-      steamReviewCount: 140237,
-      playtimeMinutes: 540,
-      lastPlayedAt: entry.last_played_at,
-      deckCompat: 3,
+      game: expect.objectContaining({
+        name: 'Celeste',
+        main_story_hours: 8.3,
+        steam_review_score: 97,
+        steam_review_count: 140237,
+        playtime_forever: 540,
+        last_played_at: entry.last_played_at,
+        deck_compat: 3,
+      }),
     }),
   );
 });

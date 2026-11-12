@@ -1,8 +1,8 @@
 'use client';
 
 import { Rating } from './Rating';
-import type { GameItem } from '@/hooks/useGamesPage';
-import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
+import type { GameItem } from '@/lib/data/loaders';
+import { STATUS_STYLE } from '@/lib/games/status-style';
 import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { QueuedBadge } from './QueuedBadge';
@@ -19,7 +19,7 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, onOpenDetail, queued, showStatus = true }: GameCardProps) {
-  const status = (game.status ?? 'backlog') as GameStatus;
+  const status = game.status;
   const showRating = (status === 'finished' || status === 'dropped') && game.rating != null;
   // The name includes the badges shown on the art, so it matches what's on
   // screen (WCAG 2.5.3, label in name), e.g. "Open details for Celeste, Finished 9/10".

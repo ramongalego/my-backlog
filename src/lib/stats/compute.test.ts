@@ -120,7 +120,7 @@ describe('topTags and tagCompletion', () => {
 
   it('count finished games per tag, for tags on at least three games', () => {
     const games = [
-      ...['finished', 'finished', 'backlog', 'backlog'].map((status) =>
+      ...(['finished', 'finished', 'backlog', 'backlog'] as const).map((status) =>
         game({ status, tags: ['Metroidvania'] }),
       ),
       game({ status: 'finished', tags: ['Puzzle'] }),

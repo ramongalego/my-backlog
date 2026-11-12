@@ -15,7 +15,6 @@ import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { QueueContentSkeleton } from './Skeleton';
-import { steamLastPlayed } from '@/lib/games/consoles';
 import { NowPlayingRow } from '@/components/queue/NowPlayingRow';
 import { QueueList } from '@/components/queue/QueueList';
 
@@ -29,18 +28,18 @@ export default function PlayingQueueView() {
     isStatusLoading,
     statusModal,
     gameSummary,
-    handleFinish,
-    handleDrop,
-    handleMoveToQueue,
-    handleMoveToBacklog,
-    handleConfirm,
-    handleCloseStatusModal,
-    handleCloseSummary,
-    handleRemoveFromQueue,
-    handlePickFromQueue,
-    handleReorder,
-    handleMoveToTop,
-    handleSetQueuedStatus,
+    openFinish,
+    openDrop,
+    moveToQueue,
+    moveToBacklog,
+    confirmStatusChange,
+    closeStatusModal,
+    closeSummary,
+    removeFromQueue,
+    pickFromQueue,
+    reorder,
+    moveToTop,
+    setQueuedStatus,
     manualDialogProps,
   } = useQueuePage();
   const router = useRouter();
@@ -61,14 +60,17 @@ export default function PlayingQueueView() {
           {statusModal && currentlyPlaying && (
             <GameDetailModal
               isOpen={true}
-              onClose={handleCloseStatusModal}
-              onConfirm={handleConfirm}
-              gameName={currentlyPlaying.name}
-              headerImage={currentlyPlaying.header_image}
+              onClose={closeStatusModal}
+              onConfirm={confirmStatusChange}
+              // Just the game and its hours: finishing a console game is a
+              // good moment to update them.
+              game={{
+                name: currentlyPlaying.name,
+                header_image: currentlyPlaying.header_image,
+                playtime_forever: currentlyPlaying.playtime_forever,
+              }}
               initialStatus={statusModal.action}
               initialDate={todayIso()}
-              // Finishing a console game is a good moment to update its hours.
-              playtimeMinutes={currentlyPlaying.playtime_forever}
               manual={manualDialogProps(currentlyPlaying)}
             />
           )}
@@ -78,32 +80,27 @@ export default function PlayingQueueView() {
               onClose={() => setDetailGameId(null)}
               onConfirm={(status, date, notes, rating) => {
                 setDetailGameId(null);
-                handleSetQueuedStatus({ gameId: detailItem.game_id, status, date, notes, rating });
+                setQueuedStatus({ gameId: detailItem.game_id, status, date, notes, rating });
               }}
-              gameName={detailItem.game.name}
-              headerImage={detailItem.game.header_image}
+              game={detailItem.game}
               initialStatus="backlog"
-              queued={{ onRemove: () => handleRemoveFromQueue(detailItem.game_id) }}
-              mainStoryHours={detailItem.game.main_story_hours}
-              steamReviewScore={detailItem.game.steam_review_score}
-              steamReviewCount={detailItem.game.steam_review_count}
-              criticScore={detailItem.game.critic_score}
-              criticCount={detailItem.game.critic_count}
-              playtimeMinutes={detailItem.game.playtime_forever}
-              lastPlayedAt={steamLastPlayed(detailItem.game)}
-              deckCompat={detailItem.game.deck_compat}
-              releaseDate={detailItem.game.release_date}
-              disablePlaying={!!currentlyPlaying}
-              onPlayInstead={() => {
-                setDetailGameId(null);
-                handlePickFromQueue(detailItem.game_id);
-              }}
-              playingName={currentlyPlaying?.name ?? null}
+              queued={{ onRemove: () => removeFromQueue(detailItem.game_id) }}
+              playing={
+                currentlyPlaying
+                  ? {
+                      name: currentlyPlaying.name,
+                      onPlayInstead: () => {
+                        setDetailGameId(null);
+                        pickFromQueue(detailItem.game_id);
+                      },
+                    }
+                  : undefined
+              }
               manual={manualDialogProps({ ...detailItem.game, id: detailItem.game_id })}
             />
           )}
           {gameSummary && (
-            <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
+            <GameSummaryModal isOpen={true} onClose={closeSummary} {...gameSummary} />
           )}
         </>
       }
@@ -147,10 +144,10 @@ export default function PlayingQueueView() {
               <SectionLabel className="sr-only">Now Playing</SectionLabel>
               <NowPlayingRow
                 game={currentlyPlaying}
-                onFinish={handleFinish}
-                onDrop={handleDrop}
-                onMoveToQueue={handleMoveToQueue}
-                onMoveToBacklog={handleMoveToBacklog}
+                onFinish={openFinish}
+                onDrop={openDrop}
+                onMoveToQueue={moveToQueue}
+                onMoveToBacklog={moveToBacklog}
                 onSaveHours={manualDialogProps(currentlyPlaying)?.onSaveHours}
                 isLoading={isStatusLoading}
               />
@@ -166,11 +163,11 @@ export default function PlayingQueueView() {
               queue={queue}
               playingName={currentlyPlaying?.name ?? null}
               isLoading={isStatusLoading}
-              onPick={handlePickFromQueue}
-              onRemove={handleRemoveFromQueue}
+              onPick={pickFromQueue}
+              onRemove={removeFromQueue}
               onOpen={setDetailGameId}
-              onReorder={handleReorder}
-              onMoveToTop={handleMoveToTop}
+              onReorder={reorder}
+              onMoveToTop={moveToTop}
             />
           )}
         </div>

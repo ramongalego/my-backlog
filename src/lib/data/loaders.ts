@@ -12,6 +12,7 @@ import {
   type LovedGame,
 } from '@/lib/games/carousels';
 import type { GameWithImage, QueueItem } from '@/types/games';
+import type { GameStatus } from '@/lib/games/status';
 
 // ─── Games page ─────────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ export interface GameItem {
   steam_review_weighted: number | null;
   header_image: string | null;
   main_story_hours: number | null;
-  status: string | null;
+  status: GameStatus;
   notes: string | null;
   rating: number | null;
   finished_at: string | null;

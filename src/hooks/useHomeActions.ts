@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/client/random-pick';
 import { nextPlayable } from '@/lib/games/release-date';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
@@ -12,6 +11,7 @@ import type { GameWithImage } from '@/types/games';
 import { prefersReducedMotion, scrollBehavior } from '@/lib/motion';
 import { queryKeys } from '@/lib/query-keys';
 import { backlogCovers, type CarouselPools } from './useCarouselPools';
+import type { GameStatus } from '@/lib/games/status';
 
 /** Home page: the shared now-playing actions plus carousel detail and random pick. */
 export function useHomeActions(userId: string | null) {
@@ -38,7 +38,7 @@ export function useHomeActions(userId: string | null) {
   };
 
   const handleConfirmCarouselDetail = async (
-    status: string,
+    status: GameStatus,
     date: string,
     notes: string,
     rating: number | null,
@@ -104,7 +104,7 @@ export function useHomeActions(userId: string | null) {
 
   /** A random backlog game to play, or null (having said why). */
   const findRandomGame = async (userId: string): Promise<GameWithImage | null> => {
-    const found = await findRandomBacklogGame(createClient(), userId);
+    const found = await findRandomBacklogGame(userId);
     if ('game' in found) return found.game;
     if (found.error === 'none') toast.info('No eligible backlog games to pick from.');
     else toast.error('Could not pick a random game. Please try again.');

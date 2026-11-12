@@ -25,7 +25,6 @@ import { PickNextHint } from '@/components/home/PickNextHint';
 import { UpNext } from '@/components/home/UpNext';
 import { homeCarouselRows } from '@/components/home/carousel-rows';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
-import { steamLastPlayed } from '@/lib/games/consoles';
 
 export default function HomeView() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
@@ -237,22 +236,14 @@ export default function HomeView() {
           isOpen={true}
           onClose={handleCloseCarouselModal}
           onConfirm={handleConfirmCarouselDetail}
-          gameName={carouselModal.game.name}
-          headerImage={carouselModal.game.header_image}
-          mainStoryHours={carouselModal.game.main_story_hours}
-          steamReviewScore={carouselModal.game.steam_review_score}
-          steamReviewCount={carouselModal.game.steam_review_count}
-          criticScore={carouselModal.game.critic_score}
-          criticCount={carouselModal.game.critic_count}
-          playtimeMinutes={carouselModal.game.playtime_forever}
-          lastPlayedAt={steamLastPlayed(carouselModal.game)}
-          deckCompat={carouselModal.game.deck_compat}
-          releaseDate={carouselModal.game.release_date}
+          game={carouselModal.game}
           initialStatus="backlog"
           manual={manualGames.dialogProps(carouselModal.game)}
-          disablePlaying={!!currentlyPlaying}
-          onPlayInstead={handlePlayInstead}
-          playingName={currentlyPlaying?.name ?? null}
+          playing={
+            currentlyPlaying
+              ? { name: currentlyPlaying.name, onPlayInstead: handlePlayInstead }
+              : undefined
+          }
           onAddToQueue={
             currentlyPlaying && !queuedGameIds.has(carouselModal.game.id)
               ? () => handleQueueGame(carouselModal.game)
@@ -271,12 +262,15 @@ export default function HomeView() {
           isOpen={true}
           onClose={handleCloseStatusModal}
           onConfirm={handleConfirmStatusChange}
-          gameName={currentlyPlaying.name}
-          headerImage={currentlyPlaying.header_image}
+          // Just the game and its hours: finishing a console game is a good
+          // moment to update them.
+          game={{
+            name: currentlyPlaying.name,
+            header_image: currentlyPlaying.header_image,
+            playtime_forever: currentlyPlaying.playtime_forever,
+          }}
           initialStatus={statusModal.action}
           initialDate={todayIso()}
-          // Finishing a console game is a good moment to update its hours.
-          playtimeMinutes={currentlyPlaying.playtime_forever}
           manual={manualGames.dialogProps(currentlyPlaying)}
         />
       )}

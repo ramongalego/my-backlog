@@ -23,7 +23,7 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
   - `lib/client/`: browser code that calls the app's API (`game-status`, `queue`, `manual-games`) or reads the database from the browser (`random-pick`).
   - `lib/server/`: the app's server-side logic: applying status changes, rate limits, API responses, syncing Steam data into the database. Every file starts with `import 'server-only'`, so importing one into a component fails the build.
   - `lib/steam`, `lib/igdb`, `lib/hltb`, `lib/steamgriddb`, `lib/supabase`: talking to outside services (their server files are marked `server-only` too).
-  - Everything else (`lib/games`, `lib/suggest`, `lib/diary`, …): pure rules and helpers that run anywhere.
+  - Everything else (`lib/games`, `lib/suggest`, `lib/diary`, …): pure rules and helpers that run anywhere. `npm run lint` enforces these layers (`eslint.config.mjs`): pure folders can't import the database client, `lib/client`, hooks or components; hooks and components can't import `lib/server`; components can't import the database client (sign-in and sign-out excepted).
 - `src/hooks/`: each page's state and actions are in `use<Page>Page` (`useHomePage`, `useGamesPage`, `useQueuePage`, `useDiaryPage`, `useStatsPage`); hooks shared between pages are named for what they do (`useNowPlaying`, `useQueue`, `useSwitchGame`, `useGameMutations`). Mutations invalidate React Query caches; pages read everything from React Query.
 - `src/components/layout/` is the app's frame (header, user menu, footer, page container); `src/components/sync/` is the Steam library sync and its progress.
 - A file is named for what it exports (`GameDetailModal.tsx` exports `GameDetailModal`).
@@ -44,7 +44,7 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
 1. `components/games/GameDetailModal.tsx` calls the page's `onConfirm`, which is `handleConfirmDetail` in `hooks/useGamesPage.ts`.
 2. That runs `useSetGameStatus` (`hooks/useGameMutations.ts`), which updates the cached games list at once (so the page changes before the server answers) and calls `updateGameStatus` in `lib/client/game-status.ts`.
 3. That POSTs to `app/api/games/status/route.ts`, which checks the user, the rate limit (`lib/server/rate-limit.ts`) and the body (`lib/validations/games.ts`), then calls `applyStatusChange` in `lib/server/apply-status.ts`.
-4. `applyStatusChange` writes to Supabase with the rules in `lib/games/status-rules.ts` (only one game playing, finished games get their date and rating, the queue only holds backlog games).
+4. `applyStatusChange` works out each row's new columns with the rules in `lib/games/status-rules.ts` (only one game playing, finished games get their date and rating, the queue only holds backlog games) and saves them in one transaction, through the `apply_status_change` database function. The statuses themselves are listed once, in `lib/games/status.ts`.
 5. Back in the browser, `statusChanged` (`useInvalidateQueries`) refreshes everything else the change touches: the playing game, the diary, counts, carousels and the queue. If the save failed, the cached list is put back.
 
 Playing, finishing and the queue go the same way through `hooks/useNowPlaying.ts` and `hooks/useSwitchGame.ts`.
@@ -54,7 +54,7 @@ Playing, finishing and the queue go the same way through `hooks/useNowPlaying.ts
 | Symptom | Start at |
 |---|---|
 | Something looks wrong on a page | `components/<page>/`, then the page's `View.tsx` |
-| The page shows the wrong data | its page hook in `hooks/`, then `lib/data/loaders.ts` |
+| The page shows the wrong data | its page hook in `hooks/`, then `lib/data/loaders.ts` (Games filter, search and counts: `lib/games/library-filter.ts`; Diary grouping: `lib/diary/timeline.ts`) |
 | A button does the wrong thing | the page hook's handler, then `lib/client/` and the matching `app/api/…/route.ts` |
 | A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them) |
 | Steam, IGDB or HowLongToBeat data is wrong | `lib/steam`, `lib/igdb`, `lib/hltb`, and `lib/server/steam-library.ts` for what's saved |

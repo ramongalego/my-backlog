@@ -4,36 +4,20 @@ import { useAuth } from './useAuth';
 import { useNowPlaying } from './useNowPlaying';
 import { useManualGameActions } from './useManualGameActions';
 
+/**
+ * The Queue page is the game being played and its queue: useNowPlaying's state
+ * and actions under their own names (so a search for one finds every use),
+ * plus what only this page adds.
+ */
 export function useQueuePage() {
   const { user, authResolved } = useAuth();
   const nowPlaying = useNowPlaying(user?.id ?? null);
   const manualGames = useManualGameActions(user?.id ?? null);
 
-  const isLoading = !authResolved || nowPlaying.isLoading;
-
   return {
-    currentlyPlaying: nowPlaying.currentlyPlaying,
-    queue: nowPlaying.queue,
-    isLoading,
-    loadError: nowPlaying.loadError,
-    retry: nowPlaying.retry,
-    isStatusLoading: nowPlaying.isStatusLoading,
-    statusModal: nowPlaying.statusModal,
-    gameSummary: nowPlaying.gameSummary,
-    handleFinish: nowPlaying.openFinish,
-    handleDrop: nowPlaying.openDrop,
-    handleMoveToQueue: nowPlaying.moveToQueue,
-    handleMoveToBacklog: nowPlaying.moveToBacklog,
-    handleConfirm: nowPlaying.confirmStatusChange,
-    handleCloseStatusModal: nowPlaying.closeStatusModal,
-    handleCloseSummary: nowPlaying.closeSummary,
-    handleRemoveFromQueue: nowPlaying.removeFromQueue,
-    handlePickFromQueue: nowPlaying.pickFromQueue,
-    handleReorder: nowPlaying.reorder,
-    handleMoveToTop: nowPlaying.moveToTop,
-    /** A queued game's status, set from its detail dialog. */
-    handleSetQueuedStatus: nowPlaying.setQueuedStatus,
-    /** The finish/drop dialog's `manual` prop for a game on a console. */
+    ...nowPlaying,
+    isLoading: !authResolved || nowPlaying.isLoading,
+    /** The detail dialogs' `manual` prop for a game on a console. */
     manualDialogProps: manualGames.dialogProps,
   };
 }

@@ -1,7 +1,6 @@
 import { z } from 'zod';
-
-// Strips HTML tags and trims whitespace to prevent stored XSS
-const safeText = z.string().transform((val) => val.replace(/<[^>]*>/g, '').trim());
+import { ADD_STATUSES, GAME_STATUSES } from '@/lib/games/status';
+import { safeText } from './common';
 
 // A calendar date ("2025-08-20") or a full timestamp as Postgres returns it.
 // Partial matches like "2024-13-99xyz" used to pass and then fail in Postgres.
@@ -9,11 +8,9 @@ const isoDate = z.union([z.iso.date(), z.iso.datetime({ offset: true, local: tru
   error: 'Invalid date format',
 });
 
-const validStatuses = ['backlog', 'playing', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
-
 export const gameStatusSchema = z.object({
   gameId: z.number().int().positive(),
-  status: z.enum(validStatuses),
+  status: z.enum(GAME_STATUSES),
   finishedAt: isoDate.optional(),
   droppedAt: isoDate.optional(),
   notes: safeText
@@ -39,7 +36,7 @@ export const addManualGameSchema = z.object({
   igdbId: z.number().int().positive(),
   platform: safeText.pipe(z.string().min(1).max(60)),
   // Finished and dropped log a game you've already played, with when and how it went.
-  status: z.enum(['backlog', 'queue', 'playing', 'finished', 'dropped']),
+  status: z.enum(ADD_STATUSES),
   hoursPlayed: hoursPlayed.optional(),
   date: isoDate.optional(),
   notes: gameStatusSchema.shape.notes,

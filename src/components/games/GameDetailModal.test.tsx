@@ -21,10 +21,12 @@ const defaultProps = {
   isOpen: true,
   onClose: jest.fn(),
   onConfirm: jest.fn(),
-  gameName: 'Dark Souls',
-  headerImage: 'https://example.com/dark-souls.jpg',
+  game: { name: 'Dark Souls', header_image: 'https://example.com/dark-souls.jpg' },
   initialStatus: 'backlog' as const,
 };
+
+// Another game is being played, and this dialog can't switch to this one.
+const otherPlaying = { name: 'Zelda' };
 
 // Rating and notes are only editable for finished/dropped games.
 const reviewProps = { ...defaultProps, initialStatus: 'finished' as const };
@@ -408,14 +410,16 @@ describe('GameDetailModal', () => {
       expect(screen.queryByTestId('detail-date')).not.toBeInTheDocument();
     });
 
-    describe('disablePlaying', () => {
-      it('should hide the playing pill when disablePlaying is true', () => {
-        render(<GameDetailModal {...defaultProps} initialStatus="backlog" disablePlaying />);
+    describe('while another game is being played', () => {
+      it('should hide the playing pill when it cannot be switched to', () => {
+        render(
+          <GameDetailModal {...defaultProps} initialStatus="backlog" playing={otherPlaying} />,
+        );
 
         expect(screen.queryByRole('button', { name: /^playing$/i })).not.toBeInTheDocument();
       });
 
-      it('should show the playing pill when disablePlaying is false', () => {
+      it('should show the playing pill when nothing else is playing', () => {
         render(<GameDetailModal {...defaultProps} />);
 
         expect(screen.getByRole('button', { name: /^playing$/i })).toBeInTheDocument();
@@ -429,12 +433,12 @@ describe('GameDetailModal', () => {
         onAddToQueue.mockClear();
       });
 
-      it('should show Queue pill when disablePlaying and onAddToQueue are provided for a backlog game', () => {
+      it('should show Queue pill when another game is playing and onAddToQueue is provided for a backlog game', () => {
         render(
           <GameDetailModal
             {...defaultProps}
             initialStatus="backlog"
-            disablePlaying
+            playing={otherPlaying}
             onAddToQueue={onAddToQueue}
           />,
         );
@@ -444,7 +448,9 @@ describe('GameDetailModal', () => {
       });
 
       it('should not show Queue pill when onAddToQueue is not provided', () => {
-        render(<GameDetailModal {...defaultProps} initialStatus="backlog" disablePlaying />);
+        render(
+          <GameDetailModal {...defaultProps} initialStatus="backlog" playing={otherPlaying} />,
+        );
 
         expect(screen.queryByRole('button', { name: /queue/i })).not.toBeInTheDocument();
       });
@@ -454,7 +460,7 @@ describe('GameDetailModal', () => {
           <GameDetailModal
             {...defaultProps}
             initialStatus="backlog"
-            disablePlaying
+            playing={otherPlaying}
             onAddToQueue={onAddToQueue}
           />,
         );
@@ -471,7 +477,7 @@ describe('GameDetailModal', () => {
           <GameDetailModal
             {...defaultProps}
             initialStatus="backlog"
-            disablePlaying
+            playing={otherPlaying}
             onAddToQueue={onAddToQueue}
           />,
         );
@@ -491,10 +497,8 @@ describe('GameDetailModal', () => {
     const onPlayInstead = jest.fn();
     const switchProps = {
       ...defaultProps,
-      disablePlaying: true,
+      playing: { name: 'Zelda', onPlayInstead },
       onAddToQueue,
-      onPlayInstead,
-      playingName: 'Zelda',
     };
     const statusLabels = () =>
       Array.from(
@@ -561,7 +565,12 @@ describe('GameDetailModal', () => {
 
     it("doesn't offer Playing for a game that isn't out yet", () => {
       const nextYear = new Date().getFullYear() + 1;
-      render(<GameDetailModal {...switchProps} releaseDate={`Jan 28, ${nextYear}`} />);
+      render(
+        <GameDetailModal
+          {...switchProps}
+          game={{ ...defaultProps.game, release_date: `Jan 28, ${nextYear}` }}
+        />,
+      );
 
       expect(statusLabels()).not.toContain('Playing');
       expect(statusLabels()).toContain('Queue');
@@ -674,20 +683,13 @@ describe('GameDetailModal as a form', () => {
     });
 
     it('shows Queue as its status while another game plays, beside Playing to switch', () => {
-      render(
-        <GameDetailModal
-          {...queuedProps}
-          disablePlaying
-          onPlayInstead={onPlayInstead}
-          playingName="Zelda"
-        />,
-      );
+      render(<GameDetailModal {...queuedProps} playing={{ name: 'Zelda', onPlayInstead }} />);
       expect(statusLabels()).toEqual(all);
       expect(selected()).toBe('Queue');
     });
 
     it("has no Playing while another game plays and it can't switch", () => {
-      render(<GameDetailModal {...queuedProps} disablePlaying />);
+      render(<GameDetailModal {...queuedProps} playing={otherPlaying} />);
       expect(statusLabels()).toEqual(all.filter((label) => label !== 'Playing'));
     });
 

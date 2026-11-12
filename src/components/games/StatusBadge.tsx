@@ -1,4 +1,5 @@
-import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
+import { STATUS_STYLE } from '@/lib/games/status-style';
+import type { GameStatus } from '@/lib/games/status';
 
 /**
  * Small status chip for game art and lists. Playing is solid accent so the

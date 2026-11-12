@@ -1,5 +1,6 @@
 import { ListOrdered } from 'lucide-react';
-import { STATUS_STYLE, type GameStatus } from '@/lib/games/status-style';
+import { STATUS_STYLE } from '@/lib/games/status-style';
+import type { GameStatus } from '@/lib/games/status';
 
 /** A game's status, or Queue, which takes Playing's place while another game is played. */
 export type DetailStatus = GameStatus | 'queue';

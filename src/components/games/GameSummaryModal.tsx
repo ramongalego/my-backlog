@@ -5,28 +5,9 @@ import { Check, Share2, Link2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import { createSharePage } from '@/lib/client/share';
+import type { GameSummaryData } from '@/lib/games/completion';
 import { ArtHeader } from './ArtHeader';
 import { CompletionSummary } from './CompletionSummary';
-
-export interface GameSummaryData {
-  /** The finished game's row id: all sharing sends. */
-  gameId: number;
-  gameName: string;
-  headerImage: string | null;
-  playtimeMinutes: number;
-  mainStoryHours: number | null;
-  rating: number | null;
-  gamesFinished: number;
-  totalGames: number;
-  backlogHoursRemoved: number | null;
-  nextGame: string | null;
-  /** When you started playing it, for how long it took. */
-  startedAt?: string | null;
-  /** The finish date chosen (YYYY-MM-DD). */
-  finishedAt?: string | null;
-  /** Games finished this year, counting this one. */
-  finishedThisYear?: number | null;
-}
 
 interface GameSummaryModalProps extends GameSummaryData {
   isOpen: boolean;

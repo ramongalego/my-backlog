@@ -1,41 +1,23 @@
-import { compareGames, type GameItem, type GameFilter, type GameSort } from '@/hooks/useGamesPage';
+import type { GameItem } from '@/lib/data/loaders';
+import {
+  countLibrary,
+  filterLibrary,
+  searchLibrary,
+  type GameFilter,
+  type GameSort,
+} from '@/lib/games/library-filter';
 
-// Test the filtering and sorting logic used in useGamesPage
-// We extract the logic to test it independently of React hooks
-
-function filterAndSortGames(
+// What the Games page does with its filter, search and sort, in one call.
+const filterAndSortGames = (
   games: GameItem[],
   filter: GameFilter,
   searchQuery: string,
   sort: GameSort = 'playtime',
-): GameItem[] {
-  const searchLower = searchQuery.toLowerCase();
-
-  const filtered = games.filter((game) => {
-    // Playing games live on the home page, never shown on the Games page.
-    if (game.status === 'playing') return false;
-    // Status filter — only hidden is excluded from "all"; wont_play still
-    // appears there since it's part of the library.
-    if (filter === 'all' && game.status === 'hidden') return false;
-    if (filter === 'backlog' && game.status && game.status !== 'backlog') return false;
-    if (filter !== 'all' && filter !== 'backlog' && game.status !== filter) return false;
-
-    // Search filter — matches name or any tag
-    if (searchLower) {
-      const nameMatch = game.name.toLowerCase().includes(searchLower);
-      const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ?? false;
-      if (!nameMatch && !tagMatch) return false;
-    }
-
-    return true;
-  });
-
-  return filtered.sort((a, b) => compareGames(a, b, sort));
-}
-
-function filterGames(games: GameItem[], filter: GameFilter, searchQuery: string): GameItem[] {
-  return filterAndSortGames(games, filter, searchQuery, 'playtime');
-}
+) => filterLibrary(searchLibrary(games, searchQuery), filter, sort, searchQuery);
+const filterGames = (games: GameItem[], filter: GameFilter, searchQuery: string) =>
+  filterAndSortGames(games, filter, searchQuery);
+const computeCounts = (games: GameItem[], searchQuery = '') =>
+  countLibrary(searchLibrary(games, searchQuery));
 
 const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   source: 'steam',
@@ -63,7 +45,7 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   ...overrides,
 });
 
-describe('useGamesPage filtering logic', () => {
+describe('filtering the library', () => {
   const sampleGames: GameItem[] = [
     createGame({ id: 1, app_id: 1, name: 'The Legend of Zelda', status: 'backlog' }),
     createGame({ id: 2, app_id: 2, name: 'Final Fantasy VII', status: 'finished' }),
@@ -98,8 +80,8 @@ describe('useGamesPage filtering logic', () => {
     it('should return all library games when search is empty', () => {
       const result = filterGames(sampleGames, 'all', '');
 
-      // 6 games − 1 hidden − 1 playing = 4
-      expect(result).toHaveLength(4);
+      // 6 games − 1 hidden = 5: the game being played is listed too.
+      expect(result).toHaveLength(5);
     });
 
     it('should return empty array when no matches', () => {
@@ -227,16 +209,6 @@ describe('useGamesPage filtering logic', () => {
   });
 
   describe('status filtering', () => {
-    it('should filter by backlog status including null status', () => {
-      const gamesWithNull = [
-        ...sampleGames,
-        createGame({ id: 6, app_id: 6, name: 'New Game', status: null }),
-      ];
-      const result = filterGames(gamesWithNull, 'backlog', '');
-
-      expect(result.map((g) => g.name)).toContain('New Game');
-    });
-
     it('should filter by finished status', () => {
       const result = filterGames(sampleGames, 'finished', '');
 
@@ -251,11 +223,14 @@ describe('useGamesPage filtering logic', () => {
       expect(result[0].name).toBe('Dark Souls');
     });
 
-    it('should exclude playing games from the Games page entirely', () => {
-      // Playing games live on the home page's Currently Playing tile. The
-      // Games page lists the rest of the library, so filter counts sum cleanly.
-      const result = filterGames(sampleGames, 'all', '');
-      expect(result.map((g) => g.name)).not.toContain('Elden Ring');
+    it('lists the game being played under All and Backlog, like queued games', () => {
+      expect(filterGames(sampleGames, 'all', '').map((g) => g.name)).toContain('Elden Ring');
+      expect(filterGames(sampleGames, 'backlog', '').map((g) => g.name)).toEqual(
+        expect.arrayContaining(['The Legend of Zelda', 'Mario Kart', 'Elden Ring']),
+      );
+      expect(filterGames(sampleGames, 'finished', '').map((g) => g.name)).not.toContain(
+        'Elden Ring',
+      );
     });
 
     it('should filter by wont_play status', () => {
@@ -269,17 +244,16 @@ describe('useGamesPage filtering logic', () => {
       expect(result[0].name).toBe('Boring Game');
     });
 
-    it('should show non-hidden / non-playing games (including wont_play) with "all" filter', () => {
+    it('should show every game but hidden ones (including wont_play) with "all" filter', () => {
       const gamesWithWontPlay = [
         ...sampleGames,
         createGame({ id: 99, app_id: 99, name: 'Boring Game', status: 'wont_play' }),
       ];
       const result = filterGames(gamesWithWontPlay, 'all', '');
 
-      // 7 games − 1 hidden − 1 playing = 5 (Zelda, FF, Mario, Dark Souls, Boring)
-      expect(result).toHaveLength(5);
+      // 7 games − 1 hidden = 6 (Zelda, FF, Mario, Dark Souls, Elden Ring, Boring)
+      expect(result).toHaveLength(6);
       expect(result.map((g) => g.name)).not.toContain('Hidden Gem');
-      expect(result.map((g) => g.name)).not.toContain('Elden Ring');
       expect(result.map((g) => g.name)).toContain('Boring Game');
     });
   });
@@ -538,180 +512,100 @@ describe('useGamesPage filtering logic', () => {
   });
 });
 
-// Count computation extracted for independent testing
-function computeCounts(games: GameItem[]) {
-  const result = { all: 0, backlog: 0, finished: 0, dropped: 0, wont_play: 0, hidden: 0 };
-  for (const game of games) {
-    const s = game.status;
-    if (s === 'playing') continue; // Playing games aren't shown on the Games page.
-    if (s === 'hidden') {
-      result.hidden++;
-    } else if (s === 'wont_play') {
-      result.all++;
-      result.wont_play++;
-    } else if (s === 'finished') {
-      result.all++;
-      result.finished++;
-    } else if (s === 'dropped') {
-      result.all++;
-      result.dropped++;
-    } else {
-      result.all++;
-      result.backlog++;
-    }
-  }
-  return result;
-}
-
-function searchFilter(games: GameItem[], query: string): GameItem[] {
-  if (!query) return games;
-  const q = query.toLowerCase();
-  return games.filter((game) => {
-    const nameMatch = game.name.toLowerCase().includes(q);
-    const tagMatch = game.tags?.some((tag) => tag.toLowerCase().includes(q)) ?? false;
-    return nameMatch || tagMatch;
-  });
-}
-
-describe('useGamesPage count computation', () => {
+describe('counting the library', () => {
   const sampleGames: GameItem[] = [
     createGame({ id: 1, app_id: 1, name: 'Zelda', status: 'backlog' }),
     createGame({ id: 2, app_id: 2, name: 'Final Fantasy', status: 'finished' }),
     createGame({ id: 3, app_id: 3, name: 'Mario', status: 'backlog', tags: ['Platformer'] }),
     createGame({ id: 4, app_id: 4, name: 'Dark Souls', status: 'dropped' }),
     createGame({ id: 5, app_id: 5, name: 'Hidden Gem', status: 'hidden' }),
-    createGame({ id: 6, app_id: 6, name: 'New Game', status: null }),
+    createGame({ id: 6, app_id: 6, name: 'New Game', status: 'backlog' }),
     createGame({ id: 7, app_id: 7, name: 'Now Playing', status: 'playing' }),
     createGame({ id: 8, app_id: 8, name: 'Wont Bother', status: 'wont_play' }),
   ];
 
-  it('should exclude hidden and playing games from all count (wont_play is included)', () => {
+  it('counts every game but hidden ones under All', () => {
     const counts = computeCounts(sampleGames);
-    // 8 games − 1 hidden − 1 playing = 6. wont_play IS included.
-    expect(counts.all).toBe(6);
+    // 8 games − 1 hidden = 7. Won't-play games and the one being played are included.
+    expect(counts.all).toBe(7);
     expect(counts.hidden).toBe(1);
     expect(counts.wont_play).toBe(1);
   });
 
-  it('should count null status as backlog', () => {
+  it('counts the game being played under Backlog, where it is listed', () => {
     const counts = computeCounts(sampleGames);
-    expect(counts.backlog).toBe(3); // Zelda + Mario + New Game (null)
+    expect(counts.backlog).toBe(4); // Zelda + Mario + New Game + Now Playing
   });
 
-  it('should have all = backlog + finished + dropped + wont_play', () => {
+  it('has each count match what its filter lists', () => {
     const counts = computeCounts(sampleGames);
-    // The visible buckets must sum cleanly to `all` — this is the invariant
-    // that was broken when playing games used to contribute to `all`.
+    for (const filter of [
+      'all',
+      'backlog',
+      'finished',
+      'dropped',
+      'wont_play',
+      'hidden',
+    ] as const) {
+      expect(counts[filter]).toBe(filterGames(sampleGames, filter, '').length);
+    }
     expect(counts.all).toBe(counts.backlog + counts.finished + counts.dropped + counts.wont_play);
   });
 
-  it('should return dynamic counts when search query is active', () => {
-    const filtered = searchFilter(sampleGames, 'mario');
-    const counts = computeCounts(filtered);
+  it('follows the search', () => {
+    expect(computeCounts(sampleGames, 'mario')).toEqual({
+      all: 1,
+      backlog: 1,
+      finished: 0,
+      dropped: 0,
+      wont_play: 0,
+      hidden: 0,
+    });
+  });
+
+  it('counts the whole library when the search is cleared', () => {
+    expect(computeCounts(sampleGames, '')).toEqual({
+      all: 7,
+      backlog: 4,
+      finished: 1,
+      dropped: 1,
+      wont_play: 1,
+      hidden: 1,
+    });
+  });
+
+  it('counts a game the search finds by its tag', () => {
+    const counts = computeCounts(sampleGames, 'platformer'); // Mario, by tag
     expect(counts.all).toBe(1);
     expect(counts.backlog).toBe(1);
-    expect(counts.finished).toBe(0);
-    expect(counts.dropped).toBe(0);
-    expect(counts.wont_play).toBe(0);
-    expect(counts.hidden).toBe(0);
   });
 
-  it('should return static counts when search is cleared', () => {
-    const filtered = searchFilter(sampleGames, '');
-    const counts = computeCounts(filtered);
-    expect(counts.all).toBe(6);
-    expect(counts.backlog).toBe(3);
-    expect(counts.finished).toBe(1);
-    expect(counts.dropped).toBe(1);
-    expect(counts.wont_play).toBe(1);
-    expect(counts.hidden).toBe(1);
+  it('is all zeros when the search finds nothing', () => {
+    expect(computeCounts(sampleGames, 'xyznotfound')).toEqual({
+      all: 0,
+      backlog: 0,
+      finished: 0,
+      dropped: 0,
+      wont_play: 0,
+      hidden: 0,
+    });
   });
 
-  it('should reflect cross-status search results in counts', () => {
-    const filtered = searchFilter(sampleGames, 'platformer'); // matches Mario by tag
-    const counts = computeCounts(filtered);
-    expect(counts.all).toBe(1);
-    expect(counts.backlog).toBe(1);
+  it("doesn't reorder the list it was given", () => {
+    const before = sampleGames.map((g) => g.id);
+    filterAndSortGames(sampleGames, 'all', '', 'playtime');
+    filterAndSortGames(sampleGames, 'all', 'a', 'recent');
+    expect(sampleGames.map((g) => g.id)).toEqual(before);
   });
 
-  it('should return all zeros when search matches nothing', () => {
-    const filtered = searchFilter(sampleGames, 'xyznotfound');
-    const counts = computeCounts(filtered);
-    expect(counts.all).toBe(0);
-    expect(counts.backlog).toBe(0);
-    expect(counts.finished).toBe(0);
-    expect(counts.dropped).toBe(0);
-    expect(counts.wont_play).toBe(0);
-    expect(counts.hidden).toBe(0);
-  });
-});
-
-// Pagination logic extracted for independent testing
-const BATCH_SIZE = 60;
-
-function paginateGames(games: GameItem[], visibleCount: number) {
-  return {
-    visibleGames: games.slice(0, visibleCount),
-    hasMore: visibleCount < games.length,
-  };
-}
-
-describe('useGamesPage pagination logic', () => {
-  const makeGames = (count: number): GameItem[] =>
-    Array.from({ length: count }, (_, i) =>
-      createGame({ id: i + 1, app_id: i + 1, name: `Game ${i + 1}` }),
-    );
-
-  it('should show only the first batch when visibleCount equals BATCH_SIZE', () => {
-    const games = makeGames(200);
-    const { visibleGames } = paginateGames(games, BATCH_SIZE);
-
-    expect(visibleGames).toHaveLength(BATCH_SIZE);
-    expect(visibleGames[0].name).toBe('Game 1');
-    expect(visibleGames[BATCH_SIZE - 1].name).toBe(`Game ${BATCH_SIZE}`);
-  });
-
-  it('should report hasMore true when games exceed visibleCount', () => {
-    const games = makeGames(200);
-    const { hasMore } = paginateGames(games, BATCH_SIZE);
-
-    expect(hasMore).toBe(true);
-  });
-
-  it('should report hasMore false when all games are visible', () => {
-    const games = makeGames(30);
-    const { hasMore } = paginateGames(games, BATCH_SIZE);
-
-    expect(hasMore).toBe(false);
-  });
-
-  it('should show all games after enough loadMore calls', () => {
-    const games = makeGames(130);
-    const { visibleGames } = paginateGames(games, BATCH_SIZE * 3);
-
-    expect(visibleGames).toHaveLength(130);
-  });
-
-  it('should show next batch after one loadMore', () => {
-    const games = makeGames(200);
-    const { visibleGames } = paginateGames(games, BATCH_SIZE * 2);
-
-    expect(visibleGames).toHaveLength(BATCH_SIZE * 2);
-  });
-
-  it('should handle fewer games than batch size', () => {
-    const games = makeGames(10);
-    const { visibleGames, hasMore } = paginateGames(games, BATCH_SIZE);
-
-    expect(visibleGames).toHaveLength(10);
-    expect(hasMore).toBe(false);
-  });
-
-  it('should handle exactly batch size games', () => {
-    const games = makeGames(BATCH_SIZE);
-    const { visibleGames, hasMore } = paginateGames(games, BATCH_SIZE);
-
-    expect(visibleGames).toHaveLength(BATCH_SIZE);
-    expect(hasMore).toBe(false);
+  it('lists games named for the search before those only tagged with it', () => {
+    const games = [
+      createGame({ id: 1, name: 'Hollow Knight', tags: ['Metroidvania'], playtime_forever: 900 }),
+      createGame({ id: 2, name: 'Metroid Dread', tags: ['Action'], playtime_forever: 10 }),
+    ];
+    expect(filterAndSortGames(games, 'all', 'metroid', 'playtime').map((g) => g.name)).toEqual([
+      'Metroid Dread',
+      'Hollow Knight',
+    ]);
   });
 });

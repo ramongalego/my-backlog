@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { AddGameModal } from './AddGameModal';
-import type { AddStatus } from './GameDetailModal';
+import type { AddStatus } from '@/lib/games/status';
 
 const AddGameContext = createContext<{ open: (query?: string) => void } | null>(null);
 

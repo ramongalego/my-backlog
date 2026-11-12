@@ -18,6 +18,9 @@ interface PausedGame {
   name: string;
 }
 
+/** What apply_status_change raises for a game that isn't in the user's library. */
+const GAME_NOT_FOUND = 'P0002';
+
 type StatusChangeResult =
   { ok: true; paused: PausedGame[] } | { ok: false; status: 404 | 500; error: string };
 
@@ -65,8 +68,10 @@ export async function applyStatusChange(
     resuming = !!queued;
   }
 
-  // Only one game can be playing: move any other one back to the backlog, or
-  // pause it at the top of the queue.
+  // Only one game can be playing: any other one goes back to the backlog, or
+  // is paused at the top of the queue. Those come first in the list, since the
+  // database allows one playing game at any moment.
+  const updates: { id: number; update: ReturnType<typeof statusUpdate> }[] = [];
   const paused: PausedGame[] = [];
   if (status === 'playing') {
     const { data: others, error: playingError } = await supabase
@@ -77,50 +82,29 @@ export async function applyStatusChange(
       .neq('id', gameId);
     if (playingError) return failed(playingError);
     for (const other of others ?? []) {
-      const { error: demoteError } = await supabase
-        .from('games')
-        .update(withLastPlayed(other, pausePlaying ? PAUSED : DEMOTED))
-        .eq('user_id', userId)
-        .eq('id', other.id);
-      if (demoteError) return failed(demoteError);
+      updates.push({
+        id: other.id,
+        update: withLastPlayed(other, pausePlaying ? PAUSED : DEMOTED),
+      });
       if (pausePlaying) paused.push({ id: other.id, name: other.name });
     }
   }
 
   const update = statusUpdate(change);
   if (resuming) delete update.started_at;
-  const { error } = await supabase
-    .from('games')
-    .update(withLastPlayed(target, update))
-    .eq('user_id', userId)
-    .eq('id', gameId);
-  if (error) return failed(error);
+  updates.push({ id: gameId, update: withLastPlayed(target, update) });
 
-  // The queue only holds backlog games; any other status takes the game off it.
-  if (status !== 'backlog') {
-    const { error: dequeueError } = await supabase
-      .from('playing_queue')
-      .delete()
-      .eq('user_id', userId)
-      .eq('game_id', gameId);
-    if (dequeueError) console.error(dequeueError);
-  }
-
-  // The paused game goes first in the queue, ahead of what's there now.
-  if (paused.length) {
-    const { data: first, error: firstError } = await supabase
-      .from('playing_queue')
-      .select('position')
-      .eq('user_id', userId)
-      .order('position', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (firstError) return failed(firstError);
-    const top = (first?.position ?? 1) - 1;
-    const { error: queueError } = await supabase
-      .from('playing_queue')
-      .insert(paused.map(({ id }, i) => ({ user_id: userId, game_id: id, position: top - i })));
-    if (queueError) return failed(queueError);
+  // Saved in one transaction (apply_status_change): every game's new columns,
+  // taking any that left the backlog off the queue, and the paused game's
+  // place at the top of it. If any part fails, none of it is saved.
+  const { error } = await supabase.rpc('apply_status_change', {
+    p_updates: updates,
+    p_pause_ids: paused.map((game) => game.id),
+  });
+  if (error) {
+    // Removed between the check above and the save.
+    if (error.code === GAME_NOT_FOUND) return { ok: false, status: 404, error: 'Game not found' };
+    return failed(error);
   }
 
   return { ok: true, paused };

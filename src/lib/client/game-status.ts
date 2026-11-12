@@ -1,9 +1,10 @@
 import type { GameWithImage } from '@/types/games';
+import type { GameStatus } from '@/lib/games/status';
 import type { CompletionCounts } from '@/lib/games/completion';
 
 export async function updateGameStatus(
   gameId: number,
-  status: string,
+  status: GameStatus,
   opts?: {
     finishedAt?: string;
     droppedAt?: string;

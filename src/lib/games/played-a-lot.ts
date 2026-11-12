@@ -2,7 +2,7 @@ import { isMultiplayerFirst, isPlayedOut } from './carousels';
 
 export interface PlayedGame {
   id: number;
-  status: string | null;
+  status: string;
   playtime_forever: number;
   main_story_hours: number | null;
   categories: string[] | null;
@@ -28,7 +28,7 @@ export function playedALot<T extends PlayedGame>(
   return games
     .filter(
       (g) =>
-        (!g.status || g.status === 'backlog') &&
+        g.status === 'backlog' &&
         !queuedGameIds.has(g.id) &&
         (isPlayedOut(g) ||
           ((isMultiplayerFirst(g) || !g.main_story_hours) &&

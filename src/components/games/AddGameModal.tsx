@@ -15,7 +15,8 @@ import {
   type GameSearchResult,
 } from '@/lib/client/manual-games';
 import { shortPlatformName } from '@/lib/games/consoles';
-import { GameDetailModal, type AddStatus } from './GameDetailModal';
+import { GameDetailModal } from './GameDetailModal';
+import type { AddStatus } from '@/lib/games/status';
 import { defaultConsole, orderConsoles } from './ConsolePicker';
 import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
 
@@ -175,12 +176,14 @@ export function AddGameModal({
         key={picked.igdbId}
         isOpen
         onClose={onClose}
-        gameName={picked.name}
-        // If the details fail, the box art is all there is.
-        headerImage={details ? details.header_image : picked.cover}
+        game={{
+          name: picked.name,
+          // If the details fail, the box art is all there is.
+          header_image: details ? details.header_image : picked.cover,
+          // Adding a game that isn't out yet says so, as its card will.
+          release_date: details?.release_date,
+        }}
         headerLoading={detailsPending}
-        // Adding a game that isn't out yet says so, as its card will.
-        releaseDate={details?.release_date}
         initialStatus={existingStatus ?? 'backlog'}
         initialDate={existing?.date?.slice(0, 10) ?? null}
         initialNotes={existing?.notes}

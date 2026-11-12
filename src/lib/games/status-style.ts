@@ -1,15 +1,5 @@
 import { Archive, Ban, Check, EyeOff, Play, X, type LucideIcon } from 'lucide-react';
-
-export type GameStatus = 'backlog' | 'playing' | 'finished' | 'dropped' | 'wont_play' | 'hidden';
-
-export const GAME_STATUSES: GameStatus[] = [
-  'backlog',
-  'playing',
-  'finished',
-  'dropped',
-  'wont_play',
-  'hidden',
-];
+import type { GameStatus } from './status';
 
 /**
  * The one place a game status gets its label, icon and colours. Playing uses

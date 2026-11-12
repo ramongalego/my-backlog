@@ -5,11 +5,44 @@ type Row = Record<string, unknown>;
 
 /**
  * A small in-memory stand-in for the two tables, enough for the queries these
- * functions make (select/update/delete with eq/neq, order, limit, maybeSingle).
+ * functions make (select with eq/neq, order, limit, maybeSingle), and for
+ * apply_status_change, which saves a change the way the database function
+ * does: every write, or none of them. (The function itself is checked against
+ * a real Postgres; see supabase/migrations/20261112_apply_status_change.sql.)
  */
-function fakeSupabase(tables: { games: Row[]; playing_queue: Row[] }) {
+function fakeSupabase(
+  tables: { games: Row[]; playing_queue: Row[] },
+  { failOnGame }: { failOnGame?: number } = {},
+) {
   const log: string[] = [];
   const client = {
+    async rpc(
+      name: string,
+      args: { p_updates: { id: number; update: Row }[]; p_pause_ids: number[] },
+    ) {
+      if (name !== 'apply_status_change') throw new Error(`unexpected rpc ${name}`);
+      log.push('rpc apply_status_change');
+      // Work on copies, so a failure part-way leaves the tables as they were.
+      const games = tables.games.map((g) => ({ ...g }));
+      let queue = tables.playing_queue.map((q) => ({ ...q }));
+      for (const { id, update } of args.p_updates) {
+        const row = games.find((g) => g.user_id === 'u' && g.id === id);
+        if (!row) return { data: null, error: { code: 'P0002', message: 'Game not found' } };
+        if (id === failOnGame) return { data: null, error: { code: '23514', message: 'boom' } };
+        // JSON drops undefined values, as the request to the database does.
+        Object.assign(row, JSON.parse(JSON.stringify(update)));
+        if (update.status !== 'backlog') queue = queue.filter((q) => q.game_id !== id);
+      }
+      if (games.filter((g) => g.status === 'playing').length > 1)
+        return { data: null, error: { code: '23505', message: 'one playing game' } };
+      const top = Math.min(1, ...queue.map((q) => Number(q.position))) - 1;
+      args.p_pause_ids.forEach((id, i) =>
+        queue.push({ user_id: 'u', game_id: id, position: top - i }),
+      );
+      tables.games.splice(0, tables.games.length, ...games);
+      tables.playing_queue = queue;
+      return { data: null, error: null };
+    },
     from(table: 'games' | 'playing_queue') {
       const filters: ((r: Row) => boolean)[] = [];
       let op: { kind: 'select' | 'update' | 'delete'; values?: Row } = { kind: 'select' };
@@ -148,6 +181,56 @@ describe('applyStatusChange', () => {
       finishedAt: '2026-10-20',
     });
     expect(tables.games[2].last_played_at).toBe('2026-10-20');
+  });
+
+  it('saves all of a change or none of it', async () => {
+    // Starting game 2 moves game 1 to the backlog first; then saving game 2 fails.
+    const { client, tables } = fakeSupabase(
+      {
+        games: [game(1, 'playing'), game(2, 'backlog')],
+        playing_queue: [{ user_id: 'u', game_id: 2, position: 0 }],
+      },
+      { failOnGame: 2 },
+    );
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await applyStatusChange(client, 'u', { gameId: 2, status: 'playing' });
+
+    expect(result).toEqual({ ok: false, status: 500, error: 'Failed to update game status' });
+    expect(tables.games.map((g) => g.status)).toEqual(['playing', 'backlog']);
+    expect(tables.playing_queue).toHaveLength(1);
+  });
+
+  it('sends every write in one call, the game that stops playing first', async () => {
+    const { client, log } = fakeSupabase({
+      games: [game(1, 'playing'), game(2, 'backlog')],
+      playing_queue: [],
+    });
+    const rpc = jest.spyOn(client, 'rpc');
+
+    await applyStatusChange(client, 'u', { gameId: 2, status: 'playing', pausePlaying: true });
+
+    expect(log).toEqual(['rpc apply_status_change']);
+    expect(rpc).toHaveBeenCalledWith('apply_status_change', {
+      p_updates: [
+        { id: 1, update: { status: 'backlog' } },
+        { id: 2, update: { status: 'playing', started_at: expect.any(String) } },
+      ],
+      p_pause_ids: [1],
+    });
+  });
+
+  it('says the game is gone if it was removed while the change was being saved', async () => {
+    const { client, tables } = fakeSupabase({ games: [game(1, 'backlog')], playing_queue: [] });
+    const rpc = client.rpc.bind(client);
+    jest.spyOn(client, 'rpc').mockImplementation(((name: string, args: never) => {
+      tables.games.length = 0;
+      return rpc(name, args);
+    }) as never);
+
+    const result = await applyStatusChange(client, 'u', { gameId: 1, status: 'finished' });
+
+    expect(result).toEqual({ ok: false, status: 404, error: 'Game not found' });
   });
 
   it('refuses a game that is not in the library, without touching anything', async () => {
