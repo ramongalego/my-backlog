@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { Check, Share2, Link2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
+import { createSharePage } from '@/lib/client/share';
 import { ArtHeader } from './ArtHeader';
 import { CompletionSummary } from './CompletionSummary';
 
 export interface GameSummaryData {
+  /** The finished game's row id: all sharing sends. */
+  gameId: number;
   gameName: string;
   headerImage: string | null;
   playtimeMinutes: number;
@@ -49,6 +52,7 @@ function RedditIcon({ className }: { className?: string }) {
 export function GameSummaryModal({
   isOpen,
   onClose,
+  gameId,
   gameName,
   headerImage,
   playtimeMinutes,
@@ -80,27 +84,8 @@ export function GameSummaryModal({
     setShareState('loading');
 
     try {
-      const res = await fetch('/api/share/completion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gameName,
-          headerImage,
-          playtimeMinutes,
-          mainStoryHours,
-          rating,
-          gamesFinished,
-          totalGames,
-          backlogHoursRemoved,
-          nextGame,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to share');
-
-      const data = await res.json();
-      const fullUrl = `${window.location.origin}${data.url}`;
-      setShareUrl(fullUrl);
+      const url = await createSharePage(gameId);
+      setShareUrl(`${window.location.origin}${url}`);
       setShareState('shared');
     } catch {
       setShareState('idle');

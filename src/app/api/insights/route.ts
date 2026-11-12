@@ -11,11 +11,15 @@ import {
   type Insight,
 } from '@/lib/profile/prompt';
 import { insightRequestSchema } from '@/lib/validations/insights';
-import { AI_MODEL } from '@/lib/server/ai-model';
+import { AI_MODEL, OPENAI_OPTIONS } from '@/lib/server/ai-model';
+import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
 import { jsonError } from '@/lib/server/api-response';
 import { getOpenAIApiKey } from '@/lib/server/env';
 import { getSavedInsight, saveInsight, type SavedInsight } from '@/lib/server/player-insights';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+
+// Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
+export const maxDuration = 60;
 
 const MAX_ATTEMPTS = 2;
 
@@ -68,7 +72,10 @@ export async function POST(request: NextRequest) {
   // one written is better than nothing.
   const limit = await checkSharedRateLimit(`insights:${user.id}`, RATE_LIMITS.insights);
   const global = limit.success
-    ? await checkSharedRateLimit('insights:global', RATE_LIMITS.insightsGlobal)
+    ? // If the day's budget can't be counted, nothing is spent (failClosed).
+      await checkSharedRateLimit('insights:global', RATE_LIMITS.insightsGlobal, {
+        failClosed: true,
+      })
     : limit;
   if (!limit.success || !global.success) {
     if (saved) return respond(saved);
@@ -81,14 +88,21 @@ export async function POST(request: NextRequest) {
   } catch {
     return jsonError('Player profiles are not configured', 503);
   }
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({ apiKey, ...OPENAI_OPTIONS });
+  const messages = buildInsightMessages(facts, tone);
+  // The facts are already kept short (lib/prompt-limits); this is the backstop.
+  if (messages.some((m) => m.content.length > MAX_PROMPT_CHARS)) {
+    console.error('Player profile prompt too long');
+    if (saved) return respond(saved);
+    return jsonError('Couldn’t write it right now. Try again in a moment.', 503);
+  }
 
   let insight: Insight | null = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !insight; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
         model: AI_MODEL,
-        messages: buildInsightMessages(facts, tone),
+        messages,
         reasoning_effort: 'none',
         max_completion_tokens: 700,
         response_format: INSIGHT_RESPONSE_FORMAT,

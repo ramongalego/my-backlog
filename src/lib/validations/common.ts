@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-const appIdSchema = z.number().int().positive();
+// Steam app ids are 32-bit; anything larger would fail in the database.
+const appIdSchema = z.number().int().positive().max(2_147_483_647);
 
 /** A game's row id (games.id). */
 export const gameIdSchema = z.number().int().positive();

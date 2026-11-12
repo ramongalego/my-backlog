@@ -5,13 +5,17 @@ import { fetchAllRows } from '@/lib/supabase/paginate';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { getOpenAIApiKey } from '@/lib/server/env';
-import { buildSuggestionPrompt, parseAIResponse, REASONING_STYLE } from '@/lib/suggest/prompt';
+import { buildSuggestionMessages, parseAIResponse } from '@/lib/suggest/prompt';
 import { pickShortlist, scoreCandidates, type HistoryGame } from '@/lib/suggest/shortlist';
 import { withoutLaterEntries } from '@/lib/games/series-order';
 import { isReleased } from '@/lib/games/release-date';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
-import { AI_MODEL } from '@/lib/server/ai-model';
+import { AI_MODEL, OPENAI_OPTIONS } from '@/lib/server/ai-model';
+import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
+
+// Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
+export const maxDuration = 60;
 
 const MAX_ATTEMPTS = 2;
 // How much of your history the prompt lists by name.
@@ -192,22 +196,34 @@ export async function POST(request: NextRequest) {
     previousReasonings,
   };
 
-  let prompt: string;
+  let messages: ReturnType<typeof buildSuggestionMessages>;
   try {
-    prompt = buildSuggestionPrompt(context);
+    messages = buildSuggestionMessages(context);
   } catch (err) {
     console.error('Failed to build prompt:', err);
     return jsonError('Failed to build suggestion request', 500);
   }
 
-  // Counted only for requests that reach the model.
-  const globalLimit = await checkSharedRateLimit('suggestion:global', RATE_LIMITS.suggestionGlobal);
+  // The pieces are already kept short (lib/prompt-limits); this is the backstop.
+  const promptLength = messages.reduce((total, m) => total + m.content.length, 0);
+  if (promptLength > MAX_PROMPT_CHARS) {
+    console.error(`Suggestion prompt too long (${promptLength} characters)`);
+    return jsonError('Failed to build suggestion request', 500);
+  }
+
+  // Counted only for requests that reach the model. If it can't be counted,
+  // nothing is spent (failClosed).
+  const globalLimit = await checkSharedRateLimit(
+    'suggestion:global',
+    RATE_LIMITS.suggestionGlobal,
+    { failClosed: true },
+  );
   if (!globalLimit.success) {
     console.error('Daily AI suggestion cap reached');
     return jsonError('Pick My Game is busy right now. Try again later, or use Random.', 503);
   }
 
-  const openai = new OpenAI({ apiKey: openaiApiKey });
+  const openai = new OpenAI({ apiKey: openaiApiKey, ...OPENAI_OPTIONS });
   const shortlistIds = shortlist.map((c) => c.game.id);
 
   // One retry covers a flaky API call or an answer that doesn't parse.
@@ -219,10 +235,7 @@ export async function POST(request: NextRequest) {
     try {
       const completion = await openai.chat.completions.create({
         model: AI_MODEL,
-        messages: [
-          { role: 'system', content: REASONING_STYLE },
-          { role: 'user', content: prompt },
-        ],
+        messages,
         reasoning_effort: 'none',
         max_completion_tokens: 300,
         response_format: responseFormat(shortlistIds),

@@ -8,3 +8,10 @@ import 'server-only';
  * app works out the facts and the model only writes.
  */
 export const AI_MODEL = 'gpt-6-luna';
+
+/**
+ * How long one request to the model may take, and none of the SDK's own
+ * retries: its defaults are ten minutes and two silent retries, on top of the
+ * one retry each route already makes. An answer here takes a few seconds.
+ */
+export const OPENAI_OPTIONS = { timeout: 20_000, maxRetries: 0 };

@@ -1,20 +1,38 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { safeShareImage } from '@/lib/share/image';
-import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
+import { getSharedCompletion } from '@/lib/server/shared-completions';
+import {
+  checkSharedRateLimit,
+  getClientIp,
+  ipRateLimitKey,
+  RATE_LIMITS,
+} from '@/lib/server/rate-limit';
 
 export const runtime = 'nodejs';
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
+// A share page never changes once made, so its image is cached for a long
+// time: by browsers for a day, by the CDN for a month. Rendering one costs a
+// database read, a fetch of the art and a 1200×630 PNG, and without this every
+// view of a link preview would pay for it again.
+const CACHE_CONTROL = 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400';
 
-  const { data } = await supabase
-    .from('shared_completions')
-    .select(SHARED_COMPLETION_COLUMNS)
-    .eq('id', id)
-    .maybeSingle();
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // The route is public, and a query string gets past the CDN's cache, so
+  // renders are also limited per visitor.
+  const limit = await checkSharedRateLimit(
+    `og:${ipRateLimitKey(getClientIp(request))}`,
+    RATE_LIMITS.shareImage,
+  );
+  if (!limit.success) {
+    return new Response('Too many requests', {
+      status: 429,
+      headers: { 'Retry-After': Math.ceil((limit.resetAt - Date.now()) / 1000).toString() },
+    });
+  }
+
+  const { id } = await params;
+  const data = await getSharedCompletion(id);
 
   if (!data) {
     return new Response('Not found', { status: 404 });
@@ -172,6 +190,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     {
       width: 1200,
       height: 630,
+      headers: { 'Cache-Control': CACHE_CONTROL },
     },
   );
 }

@@ -10,6 +10,10 @@ import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { getSteamApiKey } from '@/lib/server/env';
 
+// A refresh reads the whole library from Steam and, once a day, checks every
+// game's reviews and art (50 per call).
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -70,7 +74,9 @@ export async function POST(request: NextRequest) {
   // the refresh, since the library itself is already up to date.
   // Games added by hand without a time to beat are looked up again in the same
   // pass, each at most weekly (see recheckMissingHours).
-  const body: { reviews?: unknown } = await request.json().catch(() => ({}));
+  // No body, or a body that isn't an object (`null`), means the default.
+  const sent: unknown = await request.json().catch(() => null);
+  const body: { reviews?: unknown } = sent && typeof sent === 'object' ? sent : {};
   let updatedStoreData = 0;
   let updatedCriticScores = 0;
   let updatedHours = 0;

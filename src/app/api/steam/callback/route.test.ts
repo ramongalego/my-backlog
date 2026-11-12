@@ -13,6 +13,9 @@ const steps: string[] = [];
 let linkedSteamId: string | null = OLD_STEAM_ID;
 let profileReadError: Error | null = null;
 let profileUpdateError: Error | null = null;
+let signedIn = true;
+let limited = false;
+let verifications = 0;
 
 jest.mock('@/lib/steam/auth', () => ({
   isSteamAssertion: () => true,
@@ -21,7 +24,10 @@ jest.mock('@/lib/steam/auth', () => ({
     verifyAssertion: (
       _url: string,
       done: (error: null, result: { authenticated: boolean; claimedIdentifier: string }) => void,
-    ) => done(null, { authenticated: true, claimedIdentifier: 'steam-claimed-id' }),
+    ) => {
+      verifications++;
+      done(null, { authenticated: true, claimedIdentifier: 'steam-claimed-id' });
+    },
   }),
 }));
 jest.mock('@/lib/steam/api', () => ({
@@ -35,7 +41,7 @@ jest.mock('@/lib/server/steam-library', () => ({
 }));
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
+    auth: { getUser: async () => ({ data: { user: signedIn ? { id: 'user-1' } : null } }) },
     from: () => ({
       select: () => ({
         eq: () => ({
@@ -47,6 +53,10 @@ jest.mock('@/lib/supabase/server', () => ({
       }),
     }),
   }),
+}));
+jest.mock('@/lib/server/rate-limit', () => ({
+  ...jest.requireActual('@/lib/server/rate-limit'),
+  checkSharedRateLimit: async () => ({ success: !limited }),
 }));
 jest.mock('@/lib/supabase/service', () => ({
   tryCreateServiceClient: () => ({
@@ -75,6 +85,9 @@ beforeEach(() => {
   linkedSteamId = OLD_STEAM_ID;
   profileReadError = null;
   profileUpdateError = null;
+  signedIn = true;
+  limited = false;
+  verifications = 0;
   jest
     .mocked(clearLibrary)
     .mockReset()
@@ -139,4 +152,19 @@ it('refuses a callback whose state does not match the cookie', async () => {
   );
   expect(res.headers.get('location')).toBe('https://mybacklog.test/?error=invalid_state');
   expect(steps).toEqual([]);
+});
+
+describe('before anything is asked of Steam', () => {
+  it('turns away a visitor who is not signed in', async () => {
+    signedIn = false;
+    expect(await link()).toBe('https://mybacklog.test/?error=not_authenticated');
+    expect(verifications).toBe(0);
+  });
+
+  it('turns away a player past the limit', async () => {
+    limited = true;
+    expect(await link()).toBe('https://mybacklog.test/?error=steam_link_limited');
+    expect(verifications).toBe(0);
+    expect(steps).toEqual([]);
+  });
 });

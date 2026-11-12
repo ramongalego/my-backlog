@@ -2,6 +2,8 @@
 // facts (lib/profile/facts.ts). The rules are the system message and the facts
 // arrive as data in the user message, so nothing in a game's name can change
 // the rules.
+import { stripLinks } from '@/lib/ai-text';
+import { boundedJson } from '@/lib/prompt-limits';
 import { factsSignature, type PlayerFacts } from './facts';
 
 export type InsightTone = 'profile' | 'roast';
@@ -108,7 +110,7 @@ export function buildInsightMessages(
 ): { role: 'system' | 'user'; content: string }[] {
   return [
     { role: 'system', content: RULES[tone] },
-    { role: 'user', content: JSON.stringify(factsFor(facts, tone)) },
+    { role: 'user', content: boundedJson(factsFor(facts, tone)) },
   ];
 }
 
@@ -130,16 +132,6 @@ export const INSIGHT_RESPONSE_FORMAT = {
   },
 };
 
-// Web addresses and emails, in any form a model might write them.
-const LINK_PATTERN =
-  /\b(?:https?:\/\/|www\.)\S+|\b[\w.+-]+@[\w-]+\.[\w.-]+\b|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|gg|co|app|xyz|ru|info|biz|me|tv|ly|link|site|online|store|shop)\b(?:\/\S*)?/gi;
-
-const clean = (text: string) =>
-  text
-    .replace(LINK_PATTERN, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
-
 /**
  * The model's answer as an Insight, with any link or address taken out, or
  * null when it isn't one.
@@ -153,8 +145,8 @@ export function parseInsight(raw: string): Insight | null {
   }
   const { headline, paragraphs } = (data ?? {}) as Partial<Insight>;
   if (typeof headline !== 'string' || !Array.isArray(paragraphs)) return null;
-  const text = paragraphs.filter((p): p is string => typeof p === 'string').map(clean);
+  const text = paragraphs.filter((p): p is string => typeof p === 'string').map(stripLinks);
   const kept = text.filter(Boolean);
-  if (!clean(headline) || kept.length === 0) return null;
-  return { headline: clean(headline), paragraphs: kept };
+  if (!stripLinks(headline) || kept.length === 0) return null;
+  return { headline: stripLinks(headline), paragraphs: kept };
 }

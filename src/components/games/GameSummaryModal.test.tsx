@@ -20,6 +20,7 @@ jest.mock('next/image', () => ({
 const defaultProps = {
   isOpen: true,
   onClose: jest.fn(),
+  gameId: 7,
   gameName: 'Hades',
   headerImage: 'https://example.com/hades.jpg',
   playtimeMinutes: 1440, // 24h

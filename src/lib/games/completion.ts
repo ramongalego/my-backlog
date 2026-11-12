@@ -30,6 +30,7 @@ export function buildCompletionSummary({
   const hours = (finishedGame.main_story_hours ?? 0) > 0 ? finishedGame.main_story_hours : null;
 
   return {
+    gameId: finishedGame.id,
     gameName: finishedGame.name,
     headerImage: finishedGame.header_image,
     playtimeMinutes: finishedGame.playtime_forever,

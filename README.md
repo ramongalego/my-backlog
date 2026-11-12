@@ -123,7 +123,7 @@ Steam linking is a separate OpenID 2.0 flow, whose `state` is compared in consta
 
 The schema separates **per-user state** (library, queue, shared completions) from a **shared metadata cache** (`game_metadata`) keyed by Steam app id: enriching one user's library warms the cache for everyone.
 
-Row-level security limits per-user rows to `auth.uid()`. Writes that need checking (profiles, share pages, support tickets, the metadata cache) are revoked from the public API keys and go through route handlers using the server's secret key. Column limits on games mirror the forms' limits, so the database enforces them even against direct API writes.
+Row-level security limits per-user rows to `auth.uid()`. Writes that need checking (profiles, share pages, support tickets, the metadata cache) are revoked from the public API keys and go through route handlers using the server's secret key. Share pages aren't readable through the public keys either: a page is built on the server from the finished game (the browser only says which game) and read back by its unguessable id, so pages can't be listed or filled with arbitrary text. Row ids are always generated, never supplied. Column limits on games mirror the forms' limits, so the database enforces them even against direct API writes.
 
 ### Atomic queue reordering
 
@@ -182,7 +182,7 @@ Query keys are hierarchical, so a change invalidates exactly what it touches. Mu
 
 ### Rate limiting
 
-Every endpoint that writes data or calls an outside service has a per-user (or per-IP) fixed-window limit. The expensive ones (AI suggestions, player profiles, Steam refreshes, share pages, support tickets) are counted in Postgres, so the limit holds across serverless instances. A global daily cap on AI suggestions and player profiles bounds the worst-case OpenAI spend.
+Every endpoint that writes data or calls an outside service has a per-user (or per-IP) fixed-window limit. The expensive ones (AI suggestions, player profiles, Steam refreshes, share pages, support tickets) are counted in Postgres, so the limit holds across serverless instances. A global daily cap on AI suggestions and player profiles bounds the worst-case OpenAI spend: if that count can't be read, the request is refused rather than counted per instance, each request has a 20-second timeout, and what a library can put into a prompt is capped. The share page's preview image is public, so it is cached at the CDN and limited per IP.
 
 ### Performance and accessibility
 

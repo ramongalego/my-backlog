@@ -1,8 +1,7 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
+import { getSharedCompletion } from '@/lib/server/shared-completions';
 import { ArtHeader } from '@/components/games/ArtHeader';
 import { CompletionSummary } from '@/components/games/CompletionSummary';
 import type { Metadata } from 'next';
@@ -12,15 +11,7 @@ interface PageProps {
 }
 
 // cache() dedupes the lookup between generateMetadata and the page render.
-const getCompletion = cache(async (id: string) => {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('shared_completions')
-    .select(SHARED_COMPLETION_COLUMNS)
-    .eq('id', id)
-    .maybeSingle();
-  return data;
-});
+const getCompletion = cache(getSharedCompletion);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
@@ -35,6 +26,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `Finished ${data.game_name}`,
     description,
+    // For the people a link is sent to, not for search results. Link previews
+    // (Open Graph) don't depend on this.
+    robots: { index: false, follow: false },
     openGraph: {
       title: `Finished ${data.game_name}`,
       description,

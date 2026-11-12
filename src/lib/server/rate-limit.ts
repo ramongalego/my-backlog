@@ -112,10 +112,16 @@ export function ipRateLimitKey(ip: string): string {
  * Like checkRateLimit, but counted in Postgres (consume_rate_limit) so the
  * limit holds across serverless instances and cold starts. Falls back to the
  * in-memory limiter if the service key or the function isn't available.
+ *
+ * `failClosed` is for budgets that cap spending (the day's OpenAI calls): in
+ * production, when the shared count can't be read, the request is refused
+ * instead. The in-memory count is per server instance, so falling back to it
+ * would quietly multiply the budget by however many instances are running.
  */
 export async function checkSharedRateLimit(
   identifier: string,
   config: RateLimitConfig,
+  { failClosed = false }: { failClosed?: boolean } = {},
 ): Promise<RateLimitResult> {
   const client = tryCreateServiceClient();
   if (client) {
@@ -135,6 +141,10 @@ export async function checkSharedRateLimit(
       };
     }
     warnSharedLimiterOnce(error);
+  }
+  if (failClosed && process.env.NODE_ENV === 'production') {
+    console.error(`Shared rate limiter unavailable; refusing ${identifier}`);
+    return { success: false, limit: config.limit, remaining: 0, resetAt: Date.now() + 60_000 };
   }
   return checkRateLimit(identifier, config);
 }
@@ -167,7 +177,9 @@ export function getClientIp(request: Request): string {
 export const RATE_LIMITS = {
   // 60 requests per minute for game status updates
   gameStatus: { limit: 60, windowMs: 60 * 1000 },
-  // 500 requests per minute for sync operations (per user) — scoped per user so no abuse concern
+  // Syncing one game's details, per user. A first import asks for every game
+  // the shared cache doesn't have, eight at a time, so this is set well above
+  // what that needs.
   gameSync: { limit: 500, windowMs: 60 * 1000 },
   // 10 bulk sync requests per minute (each resolves hundreds of games from cache)
   gameSyncBulk: { limit: 10, windowMs: 60 * 1000 },
@@ -180,10 +192,18 @@ export const RATE_LIMITS = {
   // Adding, removing and reordering the queue: every drag-reorder is a request,
   // so this only stops scripts, never someone rearranging their queue.
   queueWrite: { limit: 300, windowMs: 60 * 1000 },
+  // Starting to link a Steam account, and verifying the sign-in that comes
+  // back: each makes this server contact Steam. Linking is done once, or a few
+  // times when it goes wrong.
+  steamLink: { limit: 10, windowMs: 60 * 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Public share pages for finished games, per user
   share: { limit: 30, windowMs: 60 * 60 * 1000 },
+  // Rendering a share page's preview image, per visitor (IP). Link-preview
+  // crawlers fetch it once per link, and the CDN caches it for a month, so
+  // this only stops someone rendering in a loop.
+  shareImage: { limit: 60, windowMs: 60 * 1000 },
   // 20 requests per minute for AI suggestions (accounts for rerolls)
   suggestion: { limit: 20, windowMs: 60 * 1000 },
   // And 100 a day per user: plenty for picking and rerolling, while free

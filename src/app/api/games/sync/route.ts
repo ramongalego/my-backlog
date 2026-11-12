@@ -13,7 +13,7 @@ import {
   toGameRowUpdate,
   type CachedMetadata,
 } from '@/lib/games/metadata-cache';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { syncSingleRequestSchema } from '@/lib/validations/common';
 import { SteamUnavailableError } from '@/lib/steam/store-api';
@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
     return jsonError('Unauthorized', 401);
   }
 
-  // Rate limiting per user (not IP) so each user gets their own quota
-  const rateLimitResult = checkRateLimit(`game-sync:${user.id}`, RATE_LIMITS.gameSync);
+  // Per user, and counted across servers: each call can reach Steam and
+  // HowLongToBeat with the app's allowance, which every player shares.
+  const rateLimitResult = await checkSharedRateLimit(`game-sync:${user.id}`, RATE_LIMITS.gameSync);
   if (!rateLimitResult.success) {
     return rateLimited(rateLimitResult);
   }

@@ -6,15 +6,25 @@ import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
 import { clearLibrary, syncOwnedGames } from '@/lib/server/steam-library';
 import { getSteamApiKey } from '@/lib/server/env';
 import { constantTimeCompare } from '@/lib/server/constant-time-compare';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+
+// Linking imports the whole library, with art for each new game.
+export const maxDuration = 60;
 
 type Assertion = { authenticated: boolean; claimedIdentifier?: string } | undefined;
 
 function verifyAssertion(returnUrl: string, requestUrl: string): Promise<Assertion> {
   const relyingParty = createSteamRelyingParty(returnUrl);
   return new Promise((resolve) => {
-    relyingParty.verifyAssertion(requestUrl, (error, result) => {
-      resolve(error ? undefined : result);
-    });
+    // The library throws, rather than calling back, on some malformed
+    // requests (a parameter given twice): that's a failed sign-in, not a 500.
+    try {
+      relyingParty.verifyAssertion(requestUrl, (error, result) => {
+        resolve(error ? undefined : result);
+      });
+    } catch {
+      resolve(undefined);
+    }
   });
 }
 
@@ -42,6 +52,23 @@ export async function GET(request: NextRequest) {
     return redirect('/?error=steam_auth_failed');
   }
 
+  // Who it's being linked to, before anything is asked of Steam: verifying the
+  // sign-in makes this server contact Steam, and the state check above only
+  // proves the request carries a cookie matching its own URL, which any client
+  // can arrange. So that's for signed-in players only, and limited.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    console.error('No authenticated user found');
+    return redirect('/?error=not_authenticated');
+  }
+
+  const limit = await checkSharedRateLimit(`steam-link-verify:${user.id}`, RATE_LIMITS.steamLink);
+  if (!limit.success) return redirect('/?error=steam_link_limited');
+
   // Reconstruct the exact returnUrl used during auth (with state) so OpenID verification passes
   const assertion = await verifyAssertion(
     `${baseUrl}/api/steam/callback?state=${urlState}`,
@@ -63,16 +90,6 @@ export async function GET(request: NextRequest) {
   } catch {
     console.error('STEAM_API_KEY not configured');
     return redirect('/?error=server_config');
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    console.error('No authenticated user found');
-    return redirect('/?error=not_authenticated');
   }
 
   let playerSummary, games, previous;
