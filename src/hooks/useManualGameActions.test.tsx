@@ -8,7 +8,10 @@ import { queryKeys } from '@/lib/query-keys';
 
 const statusChanged = jest.fn();
 jest.mock('sonner', () => ({
-  toast: Object.assign(jest.fn(), { error: jest.fn(), success: jest.fn() }),
+  toast: Object.assign(
+    jest.fn(() => 'removed-toast'),
+    { error: jest.fn(), success: jest.fn(), dismiss: jest.fn() },
+  ),
 }));
 jest.mock('@/hooks/useGameMutations', () => ({ useInvalidateQueries: () => ({ statusChanged }) }));
 jest.mock('@/hooks/useLibraryRefresh', () => ({
@@ -140,4 +143,21 @@ it("doesn't send a removal that was undone when the page goes", async () => {
     window.dispatchEvent(new Event('pagehide'));
   });
   expect(deleteManualGame).not.toHaveBeenCalled();
+});
+
+it("takes the toast down once the delete has gone, so Undo can't pretend to restore the game", async () => {
+  const { result, diary, toastOptions } = setup();
+  act(() => result.current.remove(1, 'Old game'));
+
+  // Switching tabs sends the delete; the toast only pauses while hidden, so it
+  // would still be there, Undo and all, on coming back.
+  await act(async () => {
+    window.dispatchEvent(new Event('pagehide'));
+  });
+  expect(toast.dismiss).toHaveBeenCalledWith('removed-toast');
+
+  // And a click on an Undo that was still on screen changes nothing: the game
+  // is gone on the server, so it mustn't reappear here.
+  act(() => toastOptions(0).action.onClick());
+  expect(diary()).toEqual(['Older game', 'Kept']);
 });

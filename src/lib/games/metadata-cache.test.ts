@@ -3,6 +3,7 @@ import {
   isRecentRelease,
   mergeForCache,
   needsOnlyHltb,
+  needsSyncCheck,
   type CachedMetadata,
 } from '@/lib/games/metadata-cache';
 import { parseReleaseDate } from '@/lib/games/release-date';
@@ -46,10 +47,21 @@ describe('isCacheUsable', () => {
       [2, 7],
       [3, 14],
       [4, 28],
-      [9, 28],
+      // Past the table the wait keeps growing, a month per miss.
+      [5, 56],
+      [6, 84],
     ])('retries after %i misses once %i days have passed', (attempts, days) => {
       expect(isCacheUsable(missing(attempts, days - 1), NOW)).toBe(true);
       expect(isCacheUsable(missing(attempts, days), NOW)).toBe(false);
+    });
+
+    it('stops retrying between full refreshes once the wait outgrows them', () => {
+      // 7 misses wait 112 days, longer than the 90 a cache row lives: the next
+      // try is the full refresh, not every visit from day 28 on.
+      for (const age of [28, 45, 89]) {
+        expect(isCacheUsable(missing(7, age), NOW)).toBe(true);
+        expect(needsOnlyHltb(missing(7, age), NOW)).toBe(false);
+      }
     });
   });
 
@@ -155,5 +167,43 @@ describe('needsOnlyHltb', () => {
     );
     expect(needsOnlyHltb(row({ main_story_hours: 12 }), NOW)).toBe(false);
     expect(needsOnlyHltb(row({ main_story_hours: null, type: 'dlc' }), NOW)).toBe(false);
+  });
+});
+
+describe('needsSyncCheck', () => {
+  const game = (overrides = {}) => ({
+    type: 'game',
+    categories: ['Single-player'],
+    metadata_synced: true,
+    main_story_hours: 12,
+    release_date: 'Sep 28, 2010',
+    ...overrides,
+  });
+
+  it('checks a game that was never synced', () => {
+    expect(needsSyncCheck(game({ metadata_synced: false, type: null }), NOW)).toBe(true);
+  });
+
+  it('checks a synced game still missing its time to beat, or released recently', () => {
+    expect(needsSyncCheck(game({ main_story_hours: null }), NOW)).toBe(true);
+    expect(needsSyncCheck(game({ release_date: 'Aug 1, 2026' }), NOW)).toBe(true);
+  });
+
+  it('leaves a synced game with its time alone', () => {
+    expect(needsSyncCheck(game(), NOW)).toBe(false);
+  });
+
+  it("leaves a game Steam has no store page for: it's asked once, not every visit", () => {
+    // Delisted: synced, but nothing came back, so it has no type or time.
+    expect(
+      needsSyncCheck(game({ type: null, categories: null, main_story_hours: null }), NOW),
+    ).toBe(false);
+  });
+
+  it('leaves software, DLC and multiplayer-only games', () => {
+    expect(needsSyncCheck(game({ type: 'dlc', main_story_hours: null }), NOW)).toBe(false);
+    expect(
+      needsSyncCheck(game({ categories: ['Multi-player'], main_story_hours: null }), NOW),
+    ).toBe(false);
   });
 });

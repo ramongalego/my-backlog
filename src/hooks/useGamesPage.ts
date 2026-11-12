@@ -165,6 +165,15 @@ export function useGamesPage(): UseGamesPageReturn {
   const [sort, setSort] = useUrlState<GameSort>('sort', 'score', GAME_SORTS);
   const [urlSearch, setUrlSearch] = useUrlState<string>('q', '');
   const [searchQuery, setSearchQueryState] = useState(urlSearch);
+  // The URL also changes from outside the box (Games in the header, View on a
+  // game just added), and the page stays mounted when only the query changes:
+  // the box follows it. Typing writes the trimmed text to the URL, so a URL
+  // that matches what's typed is the box's own change and is left alone.
+  const [seenUrlSearch, setSeenUrlSearch] = useState(urlSearch);
+  if (urlSearch !== seenUrlSearch) {
+    setSeenUrlSearch(urlSearch);
+    if (urlSearch !== searchQuery.trim()) setSearchQueryState(urlSearch);
+  }
   const [statusModal, setStatusModal] = useState<GamesPageStatusModal | null>(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 

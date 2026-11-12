@@ -87,7 +87,16 @@ export async function GET(request: NextRequest) {
     console.error('Steam API request failed:', err);
     return redirect('/?error=steam_api_failed');
   }
-  const previousProfile = previous.data;
+  if (previous.error) {
+    // Without it there's no telling whether this is a different Steam account,
+    // whose library has to replace the one that's there.
+    console.error('Profile read failed:', previous.error);
+    return redirect('/?error=profile_update_failed');
+  }
+  // Re-linking the same account keeps statuses, ratings and notes; only a
+  // different Steam account starts from an empty library.
+  const previousSteamId = previous.data?.steam_id;
+  const switching = !!previousSteamId && previousSteamId !== steamId;
 
   // Users can't write their profile themselves: the Steam id is only ever set
   // here, from Steam's verified sign-in, for the signed-in user.
@@ -96,6 +105,22 @@ export async function GET(request: NextRequest) {
     console.error('SUPABASE_SECRET_KEY not configured; cannot link Steam');
     return redirect('/?error=profile_update_failed');
   }
+
+  // The order matters: clear, point the profile at the new account, import.
+  // Whichever step fails, the next refresh puts things right: before the
+  // profile changes it re-imports the old account's games, after it imports
+  // the new one's. Changing the profile first would leave the old games under
+  // the new account for good if clearing then failed, since the next link
+  // would see the same Steam id and never clear.
+  if (switching) {
+    try {
+      await clearLibrary(supabase, user.id);
+    } catch (err) {
+      console.error('Clearing the previous library failed:', err);
+      return redirect('/?error=games_insert_failed');
+    }
+  }
+
   const { error: profileError } = await service
     .from('profiles')
     .update({
@@ -112,12 +137,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Re-linking the same account keeps statuses, ratings and notes; only a
-    // different Steam account starts from an empty library.
-    const previousSteamId = previousProfile?.steam_id;
-    if (previousSteamId && previousSteamId !== steamId) {
-      await clearLibrary(supabase, user.id);
-    }
     await syncOwnedGames(supabase, user.id, games);
   } catch (err) {
     console.error('Library import failed:', err);

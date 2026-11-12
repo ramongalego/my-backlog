@@ -1,7 +1,3 @@
-export function reloadPage(): void {
-  window.location.reload();
-}
-
 /**
  * Reloads after signing in or out, which also changes the page (the landing
  * page becomes Home, and back). A reload keeps the scroll position, so you'd

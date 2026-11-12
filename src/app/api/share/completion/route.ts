@@ -2,41 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
+import { safeShareImage } from '@/lib/share/image';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 
-// header_image is re-fetched server-side by the OG route (next/og ImageResponse
-// requires a raw <img src>). Restrict it to Steam's CDNs and IGDB's image host
-// (games added by hand) so we can't be tricked
-// into SSRF against internal hosts through that code path.
-function isAllowedImageHost(hostname: string): boolean {
-  return (
-    hostname === IGDB_IMAGE_HOST ||
-    hostname === 'steamcdn-a.akamaihd.net' ||
-    hostname.endsWith('.steamstatic.com') ||
-    hostname === 'steamstatic.com'
-  );
-}
-
-const headerImageSchema = z
-  .string()
-  .max(1000)
-  .refine(
-    (url) => {
-      try {
-        const parsed = new URL(url);
-        return parsed.protocol === 'https:' && isAllowedImageHost(parsed.hostname);
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Header image must be from Steam or IGDB' },
-  );
-
 const shareSchema = z.object({
   gameName: z.string().trim().min(1).max(200),
-  headerImage: headerImageSchema.nullish(),
+  // Checked below (safeShareImage): art from anywhere else is left off.
+  headerImage: z.string().max(1000).nullish(),
   playtimeMinutes: z.number().int().min(0).max(10_000_000).default(0),
   mainStoryHours: z.number().min(0).max(10_000).nullish(),
   rating: z.number().int().min(0).max(10).nullish(),
@@ -87,7 +60,7 @@ export async function POST(request: NextRequest) {
     id,
     user_id: user.id,
     game_name: parsed.data.gameName,
-    header_image: parsed.data.headerImage ?? null,
+    header_image: safeShareImage(parsed.data.headerImage),
     playtime_minutes: parsed.data.playtimeMinutes,
     main_story_hours: parsed.data.mainStoryHours ?? null,
     rating: parsed.data.rating ?? null,

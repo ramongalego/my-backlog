@@ -48,7 +48,10 @@ export function useHomeActions(userId: string | null) {
     setCarouselModal(null);
 
     if (status === 'playing') {
-      await handlePickGame(game);
+      // Not awaited. The dialog closes itself once this returns, and by the
+      // time the server answered that would close whichever dialog had been
+      // opened since. The game shows as playing at once either way.
+      void handlePickGame(game);
       return;
     }
 
@@ -63,7 +66,8 @@ export function useHomeActions(userId: string | null) {
     if (!carouselModal) return;
     const { game } = carouselModal;
     setCarouselModal(null);
-    await handleSwitchTo(game);
+    // Not awaited, for the same reason as above.
+    void handleSwitchTo(game).catch((err) => console.error('Failed to switch games:', err));
   };
 
   /** Plays a game instead of the one being played, shown in the band (with Undo). */

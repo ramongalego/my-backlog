@@ -2,7 +2,6 @@ import { renderHook, act } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
-import { reloadPage } from '@/lib/reload';
 
 jest.mock('sonner', () => ({
   toast: {
@@ -17,12 +16,12 @@ let mockUserId = 'user-1';
 jest.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: mockUserId } }) }));
 const keys = () => refreshKeys(mockUserId);
 
-jest.mock('@/lib/reload', () => ({
-  reloadPage: jest.fn(),
+const mockRequestSyncCheck = jest.fn();
+jest.mock('@/components/sync/SyncProvider', () => ({
+  useSyncContext: () => ({ requestSyncCheck: mockRequestSyncCheck }),
 }));
 
 const mockGamesAndQueue = jest.fn();
-const mockReload = reloadPage as jest.Mock;
 const originalFetch = global.fetch;
 
 afterAll(() => {
@@ -86,7 +85,7 @@ describe('useLibraryRefresh', () => {
       // Nothing changed, so nothing is refetched.
     });
 
-    it('reloads the page when new games were added, without showing a toast', async () => {
+    it('brings new games in without reloading the page: refetches and asks for a sync check', async () => {
       mockSuccessResponse({ newGames: 2, updatedPlaytime: 0 });
 
       const { result } = renderHook(() => useLibraryRefresh());
@@ -94,9 +93,21 @@ describe('useLibraryRefresh', () => {
         await result.current.refresh({ manual: true });
       });
 
-      expect(mockReload).toHaveBeenCalledTimes(1);
+      expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
+      expect(mockRequestSyncCheck).toHaveBeenCalledTimes(1);
+      expect(toast.success).toHaveBeenCalledWith('Added 2 new games');
+    });
+
+    it('says nothing about new games found in the background', async () => {
+      mockSuccessResponse({ newGames: 1, updatedPlaytime: 0 });
+
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(mockRequestSyncCheck).toHaveBeenCalledTimes(1);
       expect(toast.success).not.toHaveBeenCalled();
-      expect(mockGamesAndQueue).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when the endpoint returns non-ok', async () => {

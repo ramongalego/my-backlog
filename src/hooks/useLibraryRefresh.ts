@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
-import { reloadPage } from '@/lib/reload';
+import { useSyncContext } from '@/components/sync/SyncProvider';
 import { useAuth } from './useAuth';
 
 // Playtime is one Steam call for the whole library, so it can be checked often.
@@ -49,6 +49,7 @@ let staleRefreshInFlight: Promise<RefreshResult> | null = null;
 export function useLibraryRefresh() {
   const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
   const { user } = useAuth();
+  const { requestSyncCheck } = useSyncContext();
   const keys = refreshKeys(user?.id);
 
   const refresh = useCallback(
@@ -77,8 +78,12 @@ export function useLibraryRefresh() {
         if (reviews) localStorage.setItem(keys.reviews, Date.now().toString());
 
         if (newGames > 0) {
-          // New games need metadata sync which runs on mount — reload to re-enter that flow.
-          reloadPage();
+          // New games need their details synced. That check otherwise runs once
+          // per page load; asking for it again does the job without a reload,
+          // which would throw away a half-written note or an open dialog.
+          invalidateGamesAndQueue();
+          requestSyncCheck();
+          if (manual) toast.success(`Added ${newGames} new ${newGames === 1 ? 'game' : 'games'}`);
           return { success: true, newGames, updatedPlaytime };
         }
 
@@ -105,7 +110,7 @@ export function useLibraryRefresh() {
         return failedResult;
       }
     },
-    [invalidateGamesAndQueue, keys.playtime, keys.reviews],
+    [invalidateGamesAndQueue, requestSyncCheck, keys.playtime, keys.reviews],
   );
 
   const refreshIfStale = useCallback(async () => {

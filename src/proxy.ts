@@ -61,20 +61,26 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // A redirect to another page of the app, keeping the query string (failed
+  // sign-up links and Steam-link failures arrive with ?error=…, which the
+  // page they land on shows) and any session cookies getClaims just refreshed:
+  // without those, the next request would refresh again with a refresh token
+  // that has already been used.
+  const redirectTo = (path: string) => {
+    const url = request.nextUrl.clone();
+    url.pathname = path;
+    const response = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+    return response;
+  };
+
   // Redirect unauthenticated users away from protected routes
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-  if (isProtectedRoute && !user) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  if (isProtectedRoute && !user) return redirectTo('/');
 
   // Redirect authenticated users away from public-only routes (landing page)
   const isPublicOnlyRoute = publicOnlyRoutes.some((route) => pathname === route);
-  if (isPublicOnlyRoute && user) {
-    // Keep the query string: OAuth and Steam-link failures land on / with ?error=…
-    const url = request.nextUrl.clone();
-    url.pathname = '/home';
-    return NextResponse.redirect(url);
-  }
+  if (isPublicOnlyRoute && user) return redirectTo('/home');
 
   return supabaseResponse;
 }

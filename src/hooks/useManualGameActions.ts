@@ -186,10 +186,15 @@ export function useManualGameActions(userId: string | null) {
     };
 
     let settled = false;
+    // The Undo toast, once it's up (send is defined first, for its callbacks).
+    const undoToast: { id?: string | number } = {};
     const send = async (keepalive = false) => {
       if (settled) return;
       settled = true;
       unsentDeletes.delete(gameId);
+      // Sent as the page went into the background: the toast is paused, not
+      // gone, so it's taken down. Its Undo could no longer undo anything.
+      if (keepalive) toast.dismiss(undoToast.id);
       try {
         await deleteManualGame(gameId, keepalive);
         pendingRemovals.delete(gameId);
@@ -203,11 +208,13 @@ export function useManualGameActions(userId: string | null) {
       }
       settleRemovals();
     };
-    toast(`Removed ${name}`, {
+    undoToast.id = toast(`Removed ${name}`, {
       duration: UNDO_MS,
       action: {
         label: 'Undo',
         onClick: () => {
+          // Already sent (see above): there's nothing left to undo.
+          if (settled) return;
           settled = true;
           unsentDeletes.delete(gameId);
           putBack();

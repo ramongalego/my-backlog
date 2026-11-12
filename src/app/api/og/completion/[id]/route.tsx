@@ -1,34 +1,10 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
+import { safeShareImage } from '@/lib/share/image';
 import { SHARED_COMPLETION_COLUMNS } from '@/lib/share/completion';
 
 export const runtime = 'nodejs';
-
-// Defense in depth: even though the /api/share/completion endpoint validates
-// header_image against the Steam CDN allow-list before persisting, we re-check
-// here before rendering. next/og fetches the URL server-side — if a bad row
-// ever lands in the DB (migration, manual edit, schema drift), we must not
-// turn that into an SSRF primitive.
-function isAllowedImageHost(hostname: string): boolean {
-  return (
-    hostname === IGDB_IMAGE_HOST ||
-    hostname === 'steamcdn-a.akamaihd.net' ||
-    hostname.endsWith('.steamstatic.com') ||
-    hostname === 'steamstatic.com'
-  );
-}
-
-function safeImageUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'https:' && isAllowedImageHost(parsed.hostname) ? url : null;
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,7 +20,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return new Response('Not found', { status: 404 });
   }
 
-  const safeHeaderImage = safeImageUrl(data.header_image);
+  // Checked again here, although the share route checks before saving: next/og
+  // fetches this URL on the server, so a bad row must never become a way to
+  // make the server request an arbitrary address.
+  const safeHeaderImage = safeShareImage(data.header_image);
   const steamHours = Math.round((data.playtime_minutes / 60) * 10) / 10;
   const ratingText = data.rating !== null ? `Rated ${data.rating}/10` : null;
 

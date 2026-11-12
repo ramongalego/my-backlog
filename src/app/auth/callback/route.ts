@@ -6,18 +6,24 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const nextParam = searchParams.get('next') ?? '/';
 
-  const safeNext = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/';
+  // Only ever a path on this site. Resolved as a URL and checked, since
+  // "//host" and "/\host" both parse as another site.
+  const target = new URL(nextParam.startsWith('/') ? nextParam : '/', origin);
+  const next = target.origin === origin ? target : new URL('/', origin);
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}${safeNext}?error=invalid_link`);
-  }
+  // The page it lands on shows the error. `next` may carry a query of its own.
+  const invalidLink = () => {
+    const url = new URL(next);
+    url.searchParams.set('error', 'invalid_link');
+    return NextResponse.redirect(url);
+  };
+
+  if (!code) return invalidLink();
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    return NextResponse.redirect(`${origin}${safeNext}?error=invalid_link`);
-  }
+  if (error) return invalidLink();
 
-  return NextResponse.redirect(`${origin}${safeNext}`);
+  return NextResponse.redirect(next);
 }

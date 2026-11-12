@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchAllRows } from '@/lib/supabase/paginate';
-import { isRecentRelease } from '@/lib/games/metadata-cache';
+import { needsSyncCheck } from '@/lib/games/metadata-cache';
 import { useAuth } from '@/hooks/useAuth';
 import type { Game } from '@/types/games';
 import { useSyncContext } from './SyncProvider';
@@ -16,24 +16,23 @@ type SyncCandidate = Game & {
 
 export function LibrarySyncGuard() {
   const { user, profile, authResolved } = useAuth();
-  const { startSync, isSyncing } = useSyncContext();
-  const checkedUserIdRef = useRef<string | null>(null);
+  const { startSync, isSyncing, syncCheckRequests } = useSyncContext();
+  // Once per user per page load, and again whenever a check is asked for.
+  const checkedRef = useRef<string | null>(null);
 
   const steamConnected = !!profile?.steam_id;
 
   useEffect(() => {
     if (!authResolved || !user || !steamConnected || isSyncing) return;
-    if (checkedUserIdRef.current === user.id) return;
-    checkedUserIdRef.current = user.id;
+    const check = `${user.id}:${syncCheckRequests}`;
+    if (checkedRef.current === check) return;
+    checkedRef.current = check;
     const userId = user.id;
 
     async function checkUnsynced() {
       const supabase = createClient();
-      // Never-synced games, games still missing HLTB hours, and recent
-      // releases (whose HLTB times are still settling). The sync endpoints
-      // serve these from the shared cache and only re-fetch upstream when a
-      // retry or monthly refresh is due. Release dates are display text, so
-      // recency is checked here rather than in the query.
+      // Which of these need a look is decided by needsSyncCheck. Release dates
+      // are display text, so recency is checked here rather than in the query.
       const games = await fetchAllRows<SyncCandidate>((from, to) =>
         supabase
           .from('games')
@@ -47,13 +46,7 @@ export function LibrarySyncGuard() {
       );
 
       const now = Date.now();
-      const toSync = games.filter((g) => {
-        if (g.type && g.type !== 'game') return false;
-        if (g.categories && !g.categories.includes('Single-player')) return false;
-        return (
-          !g.metadata_synced || g.main_story_hours === null || isRecentRelease(g.release_date, now)
-        );
-      });
+      const toSync = games.filter((g) => needsSyncCheck(g, now));
 
       if (toSync.length > 0) {
         await startSync(toSync);
@@ -61,7 +54,7 @@ export function LibrarySyncGuard() {
     }
 
     checkUnsynced().catch((err) => console.error('Library sync check failed:', err));
-  }, [authResolved, user, steamConnected, isSyncing, startSync]);
+  }, [authResolved, user, steamConnected, isSyncing, startSync, syncCheckRequests]);
 
   return null;
 }

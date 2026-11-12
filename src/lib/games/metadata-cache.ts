@@ -27,8 +27,42 @@ export function isRecentRelease(releaseDate: string | null, now: number): boolea
 function hltbRetryDue(row: CachedMetadata, now: number): boolean {
   const attempts = row.hltb_attempts ?? 0;
   if (attempts === 0) return true;
-  const days = HLTB_BACKOFF_DAYS[Math.min(attempts, HLTB_BACKOFF_DAYS.length - 1)];
+  // Past the table, every further miss waits another month. The wait counts
+  // from synced_at, which an HLTB-only retry doesn't move, so it has to keep
+  // growing: held at 28 days, a game HLTB doesn't have would be due again on
+  // every visit from day 28 until its full refresh.
+  const last = HLTB_BACKOFF_DAYS.length - 1;
+  const days =
+    attempts <= last
+      ? HLTB_BACKOFF_DAYS[attempts]
+      : HLTB_BACKOFF_DAYS[last] * (attempts - last + 1);
   return now - new Date(row.synced_at).getTime() >= days * DAY_MS;
+}
+
+/** One of a user's Steam games, as the per-visit sync check reads it. */
+export interface SyncCheckGame {
+  type?: string | null;
+  categories?: string[] | null;
+  metadata_synced?: boolean | null;
+  main_story_hours?: number | null;
+  release_date?: string | null;
+}
+
+/**
+ * Whether a Steam game is sent to the sync endpoints on this visit: one never
+ * synced, one still missing its HLTB time, or a recent release (whose time is
+ * still settling). The endpoints answer these from the shared cache and only
+ * go upstream when a retry or refresh is due.
+ */
+export function needsSyncCheck(game: SyncCheckGame, now: number): boolean {
+  if (game.type && game.type !== 'game') return false;
+  if (game.categories && !game.categories.includes('Single-player')) return false;
+  if (!game.metadata_synced) return true;
+  // Synced with nothing to show for it: Steam has no store page for it any
+  // more (delisted). It has no cache row either, so asking again would fetch
+  // from Steam on every visit for the same answer.
+  if (!game.type) return false;
+  return game.main_story_hours === null || isRecentRelease(game.release_date ?? null, now);
 }
 
 /** Whether a shared-cache row can be used as-is instead of re-fetching upstream. */

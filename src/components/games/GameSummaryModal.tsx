@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Share2, Link2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import { ArtHeader } from './ArtHeader';
 import { CompletionSummary } from './CompletionSummary';
@@ -103,6 +104,7 @@ export function GameSummaryModal({
       setShareState('shared');
     } catch {
       setShareState('idle');
+      toast.error("Couldn't create the share link. Try again.");
     }
   };
 
