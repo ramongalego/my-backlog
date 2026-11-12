@@ -1,4 +1,4 @@
-import { HydrationBoundary } from '@tanstack/react-query';
+import { PrefetchedQueries } from '@/components/layout/PrefetchedQueries';
 import { prefetchForUser } from '@/lib/data/prefetch';
 import { queries } from '@/lib/data/queries';
 import PlayingQueueView from './View';
@@ -11,7 +11,7 @@ export default async function PlayingQueuePage() {
 
   return (
     <>
-      <HydrationBoundary state={state} />
+      <PrefetchedQueries state={state} />
       <PlayingQueueView />
     </>
   );

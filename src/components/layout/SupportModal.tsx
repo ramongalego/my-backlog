@@ -5,9 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { sendSupportTicket, type TicketType } from '@/lib/client/support';
 import { SUPPORT_MESSAGE_MAX, SUPPORT_MESSAGE_MIN } from '@/lib/validations/support-limits';
-
-type TicketType = 'bug' | 'feedback' | 'support';
 
 const TYPE_LABELS: Record<TicketType, string> = {
   bug: 'Bug Report',
@@ -46,20 +45,11 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
 
     startTransition(async () => {
       try {
-        const res = await fetch('/api/support', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type, message }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          toast.error(data.error ?? 'Failed to submit');
-        } else {
-          toast.success('Report sent. Thanks!');
-          handleClose();
-        }
-      } catch {
-        toast.error('Failed to submit. Please check your connection and try again.');
+        await sendSupportTicket(type, message);
+        toast.success('Report sent. Thanks!');
+        handleClose();
+      } catch (err) {
+        toast.error((err as Error).message);
       }
     });
   };

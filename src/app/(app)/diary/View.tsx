@@ -10,8 +10,6 @@ import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { DiaryListSkeleton } from './Skeleton';
 import { EmptyStateSkeleton } from '@/components/layout/Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
-import { useAuth } from '@/hooks/useAuth';
-import { useManualGameActions } from '@/hooks/useManualGameActions';
 import { monthName } from '@/lib/diary/date-utils';
 import { ALL_YEARS } from '@/lib/diary/timeline';
 import { DiaryRow } from '@/components/diary/DiaryRow';
@@ -22,43 +20,17 @@ export default function DiaryView() {
     loading,
     loadError,
     retry,
-    hasPlayingGame,
-    detailModal,
+    gameDialog,
     handleOpenDetail,
-    handleCloseDetail,
-    handleConfirmDetail,
-    handlePlayInstead,
-    playingName,
     handleSaveNotes,
     selectedYear,
     setSelectedYear,
     timeline,
   } = useDiaryPage();
   const libraryMeta = useCachedLibraryMeta();
-  const { user } = useAuth();
-  const manualGames = useManualGameActions(user?.id ?? null);
 
   return (
-    <Page
-      overlay={
-        detailModal && (
-          <GameDetailModal
-            isOpen={true}
-            onClose={handleCloseDetail}
-            onConfirm={handleConfirmDetail}
-            game={detailModal.game}
-            initialStatus={detailModal.initialStatus}
-            initialDate={detailModal.initialDate}
-            initialNotes={detailModal.initialNotes}
-            initialRating={detailModal.initialRating}
-            manual={manualGames.dialogProps(detailModal.game)}
-            playing={
-              hasPlayingGame ? { name: playingName, onPlayInstead: handlePlayInstead } : undefined
-            }
-          />
-        )
-      }
-    >
+    <Page overlay={gameDialog && <GameDetailModal isOpen {...gameDialog} />}>
       <PageHeader
         title="Diary"
         description={!loading && !loadError && timeline.summary}

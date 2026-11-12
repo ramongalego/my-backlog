@@ -108,6 +108,9 @@ interface GameDetailModalProps {
   };
 }
 
+/** The dialog's props as a page's hook hands them over: everything but whether it's open. */
+export type GameDialogProps = Omit<GameDetailModalProps, 'isOpen'>;
+
 /**
  * What the last save attempt found. A field's error carries the value it was
  * about, so it shows until that field is changed.

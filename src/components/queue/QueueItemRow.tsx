@@ -10,6 +10,7 @@ import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { consoleOf } from '@/lib/games/consoles';
 import type { QueueItem } from '@/types/games';
 import { isReleased } from '@/lib/games/release-date';
+import { useReleaseZone } from '@/hooks/useReleaseZone';
 
 interface QueueItemRowProps {
   item: QueueItem;
@@ -68,6 +69,7 @@ export function QueueItemRow({
   isDragging?: boolean;
   handleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }) {
+  const zone = useReleaseZone();
   return (
     <div
       ref={rowRef}
@@ -131,7 +133,7 @@ export function QueueItemRow({
               playing it's the page's main action; with a game playing it
               switches to this one (the other waits at the top of the queue),
               so it's a quieter button and says what it does. */}
-          {isReleased(item.game.release_date) && (
+          {isReleased(item.game.release_date, undefined, zone) && (
             <Tooltip
               content={
                 playingName ? (

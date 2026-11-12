@@ -44,17 +44,10 @@ export default function GamesView() {
     hasMore,
     loadMore,
     counts,
-    hasPlayingGame,
     searchQuery,
     setSearchQuery,
-    statusModal,
-    handleConfirmDetail,
-    handlePlayInstead,
-    playingName,
-    handleCloseStatusModal,
+    gameDialog,
     handleOpenDetail,
-    handleAddToQueue,
-    handleRemoveFromQueue,
     queuedGameIds,
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
@@ -93,38 +86,7 @@ export default function GamesView() {
   }
 
   return (
-    <Page
-      overlay={
-        statusModal && (
-          <GameDetailModal
-            isOpen={true}
-            onClose={handleCloseStatusModal}
-            onConfirm={handleConfirmDetail}
-            game={statusModal.game}
-            initialStatus={statusModal.game.status}
-            initialDate={statusModal.initialDate}
-            initialNotes={statusModal.game.notes}
-            initialRating={statusModal.game.rating}
-            playing={
-              hasPlayingGame && statusModal.game.status !== 'playing'
-                ? { name: playingName, onPlayInstead: handlePlayInstead }
-                : undefined
-            }
-            onAddToQueue={
-              hasPlayingGame && statusModal.game.status === 'backlog'
-                ? () => handleAddToQueue(statusModal.game.id)
-                : undefined
-            }
-            queued={
-              statusModal.game.status === 'backlog' && queuedGameIds.has(statusModal.game.id)
-                ? { onRemove: () => handleRemoveFromQueue(statusModal.game.id) }
-                : undefined
-            }
-            manual={statusModal.manual}
-          />
-        )
-      }
-    >
+    <Page overlay={gameDialog && <GameDetailModal isOpen {...gameDialog} />}>
       <PageHeader
         title="My Games"
         description={

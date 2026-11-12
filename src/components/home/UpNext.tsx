@@ -7,6 +7,7 @@ import { CoverThumb } from '@/components/games/CoverArt';
 import { PickIcon } from '@/components/suggest/PickIcon';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { nextPlayable, upcomingRelease } from '@/lib/games/release-date';
+import { useReleaseZone } from '@/hooks/useReleaseZone';
 import type { QueueItem } from '@/types/games';
 
 interface UpNextProps {
@@ -37,9 +38,12 @@ export function UpNext({
 }: UpNextProps) {
   // The queued game that starts next: the first that's out. With only games
   // not out yet in the queue, the first of those, to say when it is.
-  const playNext = nextPlayable(queue);
+  const zone = useReleaseZone();
+  const playNext = nextPlayable(queue, undefined, zone);
   const upNext = playNext ?? queue[0];
-  const upNextRelease = playNext ? null : upcomingRelease(upNext?.game.release_date);
+  const upNextRelease = playNext
+    ? null
+    : upcomingRelease(upNext?.game.release_date, undefined, zone);
 
   return (
     <div

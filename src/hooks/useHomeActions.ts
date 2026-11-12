@@ -7,6 +7,8 @@ import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/client/random-pick'
 import { nextPlayable } from '@/lib/games/release-date';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useNowPlaying } from './useNowPlaying';
+import { useGameDialog } from './useGameDialog';
+import type { GameDialogProps } from '@/components/games/GameDetailModal';
 import type { GameWithImage } from '@/types/games';
 import { prefersReducedMotion, scrollBehavior } from '@/lib/motion';
 import { queryKeys } from '@/lib/query-keys';
@@ -76,6 +78,16 @@ export function useHomeActions(userId: string | null) {
     await nowPlaying.switchTo(game);
   };
 
+  // A carousel game's dialog. Carousels only hold backlog games.
+  const dialogFor = useGameDialog(userId);
+  const carouselDialog: GameDialogProps | null = carouselModal && {
+    game: carouselModal.game,
+    initialStatus: 'backlog',
+    onClose: () => setCarouselModal(null),
+    onConfirm: handleConfirmCarouselDetail,
+    ...dialogFor(carouselModal.game, { onPlayInstead: handlePlayInstead }),
+  };
+
   const handleRandomPick = async () => {
     if (!userId || nowPlaying.isStatusLoading || rollCovers) return;
 
@@ -120,18 +132,15 @@ export function useHomeActions(userId: string | null) {
     retry: nowPlaying.retry,
     statusModal: nowPlaying.statusModal,
     gameSummary: nowPlaying.gameSummary,
-    carouselModal,
+    /** A carousel game's detail dialog: its props, or null when it's closed. */
+    carouselDialog,
     handlePickGame,
     handlePlayNext,
     handleFinishGame: nowPlaying.openFinish,
     handleDropGame: nowPlaying.openDrop,
     handleQueueGame: nowPlaying.addToQueue,
-    handleRemoveFromQueue: nowPlaying.removeFromQueue,
     handleOpenCarouselDetail: (game: GameWithImage) => setCarouselModal({ game }),
-    handleConfirmCarouselDetail,
-    handlePlayInstead,
     handleSwitchTo,
-    handleCloseCarouselModal: () => setCarouselModal(null),
     handleConfirmStatusChange: nowPlaying.confirmStatusChange,
     handleCloseStatusModal: nowPlaying.closeStatusModal,
     handleCloseSummary: nowPlaying.closeSummary,

@@ -35,9 +35,7 @@ export default function StatsView() {
     onConnectSteam: connectSteam,
   };
   return (
-    <Page
-      overlay={gameDialog && <GameDetailModal isOpen initialStatus="backlog" {...gameDialog} />}
-    >
+    <Page overlay={gameDialog && <GameDetailModal isOpen {...gameDialog} />}>
       <PageHeader
         title="Stats"
         description={<>Your whole library, except games you&apos;ve hidden or won&apos;t play</>}

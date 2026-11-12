@@ -73,3 +73,57 @@ describe('nextPlayable', () => {
     expect(nextPlayable([], NOW)).toBeUndefined();
   });
 });
+
+describe('read in UTC, as the server renders it and the browser first repeats it', () => {
+  // The same moment whatever zone the tests run in: 23:30 UTC on Dec 2.
+  const lateOnTheSecond = Date.UTC(2026, 11, 2, 23, 30);
+  const earlyOnTheThird = Date.UTC(2026, 11, 3, 0, 30);
+
+  it('goes by the UTC day, wherever it runs', () => {
+    expect(upcomingRelease('Dec 3, 2026', lateOnTheSecond, 'utc')?.label).toBe('Out tomorrow');
+    expect(upcomingRelease('Dec 3, 2026', earlyOnTheThird, 'utc')).toBeNull();
+    expect(isReleased('Dec 3, 2026', lateOnTheSecond, 'utc')).toBe(false);
+    expect(isReleased('Dec 3, 2026', earlyOnTheThird, 'utc')).toBe(true);
+  });
+
+  it('counts the days, and names the day, by the calendar date', () => {
+    expect(upcomingRelease('Dec 6, 2026', lateOnTheSecond, 'utc')).toEqual({
+      label: 'Out in 4 days',
+      detail: 'Releases Dec 6, 2026 (in 4 days)',
+    });
+    expect(upcomingRelease('Dec 25, 2026', lateOnTheSecond, 'utc')?.label).toBe('Out Dec 25');
+    expect(upcomingRelease('Feb 12, 2027', lateOnTheSecond, 'utc')?.label).toBe('Out Feb 12, 2027');
+  });
+
+  it('ends a year-only release with the UTC year', () => {
+    const newYearsEve = Date.UTC(2026, 11, 31, 23, 30);
+    const newYearsDay = Date.UTC(2027, 0, 1, 0, 30);
+    expect(upcomingRelease('2026', newYearsEve, 'utc')?.label).toBe('Out 2026');
+    expect(upcomingRelease('2026', newYearsDay, 'utc')).toBeNull();
+  });
+
+  it('agrees with the local reading whenever it is the same day in both', () => {
+    // Midday UTC is the same calendar day in every zone from UTC-11 to UTC+11.
+    const midday = Date.UTC(2026, 9, 27, 12, 0);
+    for (const date of [
+      'Oct 27, 2026',
+      'Oct 28, 2026',
+      'Nov 1, 2026',
+      'Nov 5, 2026',
+      'Feb 12, 2027',
+      'Sep 17, 2026',
+      '2027',
+      'Q2 2027',
+      'To be announced',
+      null,
+    ]) {
+      expect(upcomingRelease(date, midday, 'utc')).toEqual(upcomingRelease(date, midday, 'local'));
+    }
+  });
+
+  it('picks the next playable game by the same day', () => {
+    const queue = [{ name: 'Out on the third', game: { release_date: 'Dec 3, 2026' } }];
+    expect(nextPlayable(queue, lateOnTheSecond, 'utc')).toBeUndefined();
+    expect(nextPlayable(queue, earlyOnTheThird, 'utc')?.name).toBe('Out on the third');
+  });
+});

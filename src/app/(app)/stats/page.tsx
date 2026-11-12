@@ -1,4 +1,4 @@
-import { HydrationBoundary } from '@tanstack/react-query';
+import { PrefetchedQueries } from '@/components/layout/PrefetchedQueries';
 import { prefetchForUser } from '@/lib/data/prefetch';
 import { queries } from '@/lib/data/queries';
 import StatsView from './View';
@@ -16,7 +16,7 @@ export default async function StatsPage() {
 
   return (
     <>
-      <HydrationBoundary state={state} />
+      <PrefetchedQueries state={state} />
       <StatsView />
     </>
   );

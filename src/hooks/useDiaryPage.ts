@@ -6,7 +6,8 @@ import type { DiaryEntry } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
 import { useAuth } from '@/hooks/useAuth';
 import { queryKeys } from '@/lib/query-keys';
-import { useSwitchGame } from './useSwitchGame';
+import { useGameDialog } from './useGameDialog';
+import type { GameDialogProps } from '@/components/games/GameDetailModal';
 import { useInvalidateQueries, useSetGameStatus, type StatusEdit } from '@/hooks/useGameMutations';
 import type { GameStatus } from '@/lib/games/status';
 import { ALL_YEARS, diaryTimeline } from '@/lib/diary/timeline';
@@ -14,35 +15,15 @@ import { useUrlState } from './useUrlState';
 
 export type { DiaryEntry };
 
-interface DiaryModal {
-  /** The entry the dialog is about. */
-  game: DiaryEntry;
-  initialStatus: 'finished';
-  initialDate: string | null;
-  initialNotes: string | null;
-  initialRating: number | null;
-}
-
 interface UseDiaryReturn {
   entries: DiaryEntry[];
   loading: boolean;
   /** The first load failed: show that, not an empty page. */
   loadError: boolean;
   retry: () => void;
-  hasPlayingGame: boolean;
-  detailModal: DiaryModal | null;
-  /** Plays the open game instead of the one being played (a replay). */
-  handlePlayInstead: () => Promise<void>;
-  /** The game being played, which that would pause. */
-  playingName: string | null;
+  /** The detail dialog's props for the open entry, or null when it's closed. */
+  gameDialog: GameDialogProps | null;
   handleOpenDetail: (gameId: number) => void;
-  handleCloseDetail: () => void;
-  handleConfirmDetail: (
-    status: GameStatus,
-    date: string,
-    notes: string,
-    rating: number | null,
-  ) => Promise<void>;
   /** Saves just the note, keeping the entry's date and rating. */
   handleSaveNotes: (gameId: number, notes: string) => void;
   /** The year shown (kept in the URL), or ALL_YEARS. */
@@ -55,7 +36,7 @@ interface UseDiaryReturn {
 export function useDiaryPage(): UseDiaryReturn {
   const queryClient = useQueryClient();
   const { statusChanged } = useInvalidateQueries();
-  const [detailModal, setDetailModal] = useState<DiaryModal | null>(null);
+  const [opened, setOpened] = useState<DiaryEntry | null>(null);
   const [selectedYear, setSelectedYear] = useUrlState<string>('year', ALL_YEARS);
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -67,10 +48,6 @@ export function useDiaryPage(): UseDiaryReturn {
     isLoadingError,
     refetch,
   } = useQuery(queries.diary(userId));
-
-  // Shares the home page's cache entry. Used to stop the edit modal from
-  // silently replacing the current game.
-  const { data: playingGame = null } = useQuery(queries.playing(userId));
 
   const diaryMutation = useSetGameStatus<
     StatusEdit & {
@@ -118,42 +95,34 @@ export function useDiaryPage(): UseDiaryReturn {
     },
   });
 
+  // The entry as it was when its dialog opened.
   const handleOpenDetail = (gameId: number) => {
     const entry = entries.find((e) => e.id === gameId);
-    if (!entry) return;
-
-    setDetailModal({
-      game: entry,
-      initialStatus: 'finished',
-      initialDate: entry.finished_at?.slice(0, 10) ?? null,
-      initialNotes: entry.notes,
-      initialRating: entry.rating,
-    });
+    if (entry) setOpened(entry);
   };
 
-  const handleCloseDetail = () => setDetailModal(null);
-
-  // The dialog's Playing while another game is playing: replay this one
-  // instead. Undo puts it back as finished, with its date, rating and notes.
-  const switchGame = useSwitchGame(userId);
-  const handlePlayInstead = async () => {
-    if (!detailModal) return;
-    await switchGame.switchTo(detailModal.game, {
-      status: detailModal.initialStatus,
-      date: detailModal.initialDate ?? '',
-      notes: detailModal.initialNotes,
-      rating: detailModal.initialRating,
-    });
-  };
-
-  const handleConfirmDetail = async (
-    status: GameStatus,
-    date: string,
-    notes: string,
-    rating: number | null,
-  ) => {
-    if (!detailModal) return;
-    diaryMutation.mutate({ gameId: detailModal.game.id, status, date, notes, rating });
+  const dialogFor = useGameDialog(userId);
+  const openedDate = opened?.finished_at?.slice(0, 10) ?? null;
+  const gameDialog: GameDialogProps | null = opened && {
+    game: opened,
+    initialStatus: 'finished',
+    initialDate: openedDate,
+    initialNotes: opened.notes,
+    initialRating: opened.rating,
+    onClose: () => setOpened(null),
+    onConfirm: (status: GameStatus, date: string, notes: string, rating: number | null) =>
+      diaryMutation.mutate({ gameId: opened.id, status, date, notes, rating }),
+    // Playing it again while another game is being played: Undo puts it back
+    // as finished, with its date, rating and notes.
+    ...dialogFor(opened, {
+      status: 'finished',
+      from: {
+        status: 'finished',
+        date: openedDate ?? '',
+        notes: opened.notes,
+        rating: opened.rating,
+      },
+    }),
   };
 
   const handleSaveNotes = (gameId: number, notes: string) => {
@@ -174,13 +143,8 @@ export function useDiaryPage(): UseDiaryReturn {
     loading: !!userId && isPending,
     loadError: isLoadingError,
     retry: () => void refetch(),
-    hasPlayingGame: playingGame !== null,
-    detailModal,
-    handlePlayInstead,
-    playingName: switchGame.playing?.name ?? null,
+    gameDialog,
     handleOpenDetail,
-    handleCloseDetail,
-    handleConfirmDetail,
     handleSaveNotes,
     selectedYear,
     setSelectedYear,

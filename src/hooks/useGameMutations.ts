@@ -5,6 +5,7 @@ import type { GameItem } from '@/lib/data/loaders';
 import { updateGameStatus } from '@/lib/client/game-status';
 import { applyStatusToList, statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
 import type { GameStatus } from '@/lib/games/status';
+import { moreQueueChangesWaiting } from '@/lib/games/queue-items';
 
 /**
  * Returns targeted invalidation functions for specific query groups.
@@ -14,6 +15,10 @@ export function useInvalidateQueries() {
 
   const invalidate = (...keys: (readonly string[])[]) => {
     for (const queryKey of keys) queryClient.invalidateQueries({ queryKey });
+  };
+  // Left to the last of several queue changes in a row (moreQueueChangesWaiting).
+  const invalidateQueue = () => {
+    if (!moreQueueChangesWaiting(queryClient)) invalidate(queryKeys.queue.all);
   };
 
   return {
@@ -30,13 +35,14 @@ export function useInvalidateQueries() {
         queryKey: queryKeys.games.all,
         predicate: (query) => query.queryKey[1] !== 'list',
       });
-      invalidate(queryKeys.library.all, queryKeys.carousels.all, queryKeys.queue.all);
+      invalidate(queryKeys.library.all, queryKeys.carousels.all);
+      invalidateQueue();
     },
     /**
      * Invalidate after a queue-only change. "Queued" badges and the carousels'
      * queued-game filter both read the queue query directly.
      */
-    queue: () => invalidate(queryKeys.queue.all),
+    queue: invalidateQueue,
     /** Invalidate everything, list included, after the library itself changed (sync, playtime refresh). */
     gamesAndQueue: () =>
       invalidate(

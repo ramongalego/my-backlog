@@ -9,6 +9,7 @@ import { QueuedBadge } from './QueuedBadge';
 import { StatusBadge } from './StatusBadge';
 import { consoleOf } from '@/lib/games/consoles';
 import { upcomingRelease } from '@/lib/games/release-date';
+import { useReleaseZone } from '@/hooks/useReleaseZone';
 
 interface GameCardProps {
   game: GameItem;
@@ -30,7 +31,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
       : null;
   // The badges read in on-screen order as one phrase ("Finished 9/10").
   const badges = [badgeText, showRating ? `${game.rating}/10` : null].filter(Boolean).join(' ');
-  const release = upcomingRelease(game.release_date)?.label;
+  const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
   const label = [`Open details for ${game.name}`, badges, release].filter(Boolean).join(', ');
 
   return (

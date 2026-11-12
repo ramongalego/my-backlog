@@ -24,7 +24,7 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
   - `lib/server/`: the app's server-side logic: applying status changes, rate limits, API responses, syncing Steam data into the database. Every file starts with `import 'server-only'`, so importing one into a component fails the build.
   - `lib/steam`, `lib/igdb`, `lib/hltb`, `lib/steamgriddb`, `lib/supabase`: talking to outside services (their server files are marked `server-only` too).
   - Everything else (`lib/games`, `lib/suggest`, `lib/diary`, …): pure rules and helpers that run anywhere. `npm run lint` enforces these layers (`eslint.config.mjs`): pure folders can't import the database client, `lib/client`, hooks or components; hooks and components can't import `lib/server`; components can't import the database client (sign-in and sign-out excepted).
-- `src/hooks/`: each page's state and actions are in `use<Page>Page` (`useHomePage`, `useGamesPage`, `useQueuePage`, `useDiaryPage`, `useStatsPage`); hooks shared between pages are named for what they do (`useNowPlaying`, `useQueue`, `useSwitchGame`, `useGameMutations`). Mutations invalidate React Query caches; pages read everything from React Query.
+- `src/hooks/`: each page's state and actions are in `use<Page>Page` (`useHomePage`, `useGamesPage`, `useQueuePage`, `useDiaryPage`, `useStatsPage`); hooks shared between pages are named for what they do (`useNowPlaying`, `useQueue`, `useSwitchGame`, `useGameMutations`, and `useGameDialog` for the queue and "play this instead" parts of every game dialog). Mutations invalidate React Query caches; pages read everything from React Query.
 - `src/components/layout/` is the app's frame (header, user menu, footer, page container); `src/components/sync/` is the Steam library sync and its progress.
 - A file is named for what it exports (`GameDetailModal.tsx` exports `GameDetailModal`).
 - Tests sit next to the file they test: `YearChart.test.tsx` beside `YearChart.tsx`, `route.test.ts` beside an API `route.ts`. Several tests of one file are named for their topic (`steam-library.clear.test.ts`). Tests call the real code; they never copy it into the test.
@@ -35,7 +35,7 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
 
 **Loading a page** (e.g. Games):
 
-1. `app/(app)/games/page.tsx` runs on the server: `prefetchForUser` (`lib/data/prefetch.ts`) loads the data with the loaders in `lib/data/loaders.ts` and hands it to the browser in a `HydrationBoundary`.
+1. `app/(app)/games/page.tsx` runs on the server: `prefetchForUser` (`lib/data/prefetch.ts`) loads the data with the loaders in `lib/data/loaders.ts` and hands it to the browser through `PrefetchedQueries` (`components/layout/`, a `HydrationBoundary` that also keeps a streamed list from breaking hydration).
 2. `View.tsx` gets its state and actions from its page hook (`hooks/useGamesPage.ts`), which reads React Query with the same definitions (`lib/data/queries.ts`), so the prefetched data is used straight away, with no second fetch.
 3. `View.tsx` draws the page from `components/games/` and `components/ui/`; while it loads, `loading.tsx` shows `Skeleton.tsx`.
 

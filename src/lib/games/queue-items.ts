@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
 // Every mutation on the queue or the playing game (useNowPlaying,
@@ -5,6 +6,23 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 // makes React Query run them one at a time, so e.g. two quick reorders
 // can't reach the server out of order or roll back over each other.
 export const QUEUE_SCOPE = { id: 'queue' };
+
+/**
+ * Whether other changes to the queue or the playing game are still waiting
+ * their turn behind the one that's finishing. Each change shows on screen at
+ * once and is saved in order, so reading the queue back from the server after
+ * the first of several would undo the later ones on screen until they're
+ * saved too: a game just removed flickering back. The last one to finish
+ * reads it back; the ones before it ask here and leave it.
+ *
+ * Call it as a queue change settles: that change still counts as in flight.
+ */
+export function moreQueueChangesWaiting(queryClient: QueryClient): boolean {
+  const inFlight = queryClient.isMutating({
+    predicate: (mutation) => mutation.options.scope?.id === QUEUE_SCOPE.id,
+  });
+  return inFlight > 1;
+}
 
 /** Minimal game data needed to show a game in the queue before the server responds. */
 export type QueueableGame = Pick<

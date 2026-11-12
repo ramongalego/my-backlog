@@ -37,7 +37,17 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   xl: 'max-w-[34rem]',
 };
 
-const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+// What Tab can land on. Disabled controls and hidden inputs are left out: the
+// browser skips them, so counting one as the dialog's last stop would let Tab
+// walk out of the dialog instead of wrapping to the top.
+const FOCUSABLE = [
+  'button:not(:disabled)',
+  '[href]',
+  'input:not(:disabled):not([type="hidden"])',
+  'select:not(:disabled)',
+  'textarea:not(:disabled)',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
 
 export function Modal({
   isOpen,
@@ -70,6 +80,14 @@ export function Modal({
 
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
+
+    // Focus is outside the dialog (the button that had it was disabled while
+    // saving, say): bring it back in rather than tab through the page behind.
+    if (!dialogRef.current.contains(document.activeElement)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+      return;
+    }
 
     if (e.shiftKey && document.activeElement === first) {
       e.preventDefault();

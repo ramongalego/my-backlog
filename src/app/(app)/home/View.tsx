@@ -44,18 +44,14 @@ export default function HomeView() {
     isStatusLoading,
     statusModal,
     gameSummary,
-    carouselModal,
+    carouselDialog,
     handlePickGame,
     handlePlayNext,
     handleFinishGame,
     handleDropGame,
     handleQueueGame,
-    handleRemoveFromQueue,
     handleOpenCarouselDetail,
-    handleConfirmCarouselDetail,
-    handlePlayInstead,
     handleSwitchTo,
-    handleCloseCarouselModal,
     handleCancelGame,
     handleMoveCurrentToQueue,
     handleRandomPick,
@@ -231,31 +227,7 @@ export default function HomeView() {
         <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
       )}
 
-      {carouselModal && (
-        <GameDetailModal
-          isOpen={true}
-          onClose={handleCloseCarouselModal}
-          onConfirm={handleConfirmCarouselDetail}
-          game={carouselModal.game}
-          initialStatus="backlog"
-          manual={manualGames.dialogProps(carouselModal.game)}
-          playing={
-            currentlyPlaying
-              ? { name: currentlyPlaying.name, onPlayInstead: handlePlayInstead }
-              : undefined
-          }
-          onAddToQueue={
-            currentlyPlaying && !queuedGameIds.has(carouselModal.game.id)
-              ? () => handleQueueGame(carouselModal.game)
-              : undefined
-          }
-          queued={
-            queuedGameIds.has(carouselModal.game.id)
-              ? { onRemove: () => handleRemoveFromQueue(carouselModal.game.id) }
-              : undefined
-          }
-        />
-      )}
+      {carouselDialog && <GameDetailModal isOpen {...carouselDialog} />}
 
       {statusModal && currentlyPlaying && (
         <GameDetailModal

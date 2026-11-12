@@ -25,7 +25,7 @@ import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
  * status, and for a finished or dropped game what goes with it. Whether it
  * was queued (and where) comes from the queue as it was.
  */
-interface SwitchedFrom {
+export interface SwitchedFrom {
   status: GameStatus;
   /** Finished or dropped on ("YYYY-MM-DD", or "" for no date). */
   date?: string;

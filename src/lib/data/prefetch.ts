@@ -23,13 +23,13 @@ type PrefetchQuery = ReturnType<(typeof queries)[keyof typeof queries]> & {
 
 /**
  * Runs the given queries on the server for the signed-in user and returns the
- * dehydrated cache for a <HydrationBoundary>, so client hooks render with data
+ * dehydrated cache for <PrefetchedQueries>, so client hooks render with data
  * immediately instead of fetching after hydration. A failed query is simply
  * left out and the client fetches it as before.
  *
- * Render the boundary BEFORE the view, as a sibling, not around it:
+ * Render it BEFORE the view, as a sibling, not around it:
  *
- *   <><HydrationBoundary state={state} /><View /></>
+ *   <><PrefetchedQueries state={state} /><View /></>
  *
  * A query the browser already has (from an earlier page) is hydrated in an
  * effect, and a child's effects run before its parent's. Wrapped around the

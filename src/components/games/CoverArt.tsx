@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
 import { GameArt } from './GameArt';
 import { Gamepad2, Pencil } from 'lucide-react';
-import { ConsoleBadge } from './ConsoleBadge';
-import { ReleaseBadge } from './ReleaseBadge';
-import { upcomingRelease } from '@/lib/games/release-date';
+import { ArtTags } from './ArtTags';
 
 /** Steam header capsules are 460×215; every game image in the app uses this ratio. */
 export const COVER_ASPECT = 'aspect-[460/215]';
@@ -63,12 +61,7 @@ export function CoverArt({
         </div>
       )}
       {children}
-      {(platform || upcomingRelease(releaseDate)) && (
-        <div className="absolute bottom-2 left-2 right-2 flex gap-1">
-          {platform && <ConsoleBadge platform={platform} />}
-          <ReleaseBadge releaseDate={releaseDate} />
-        </div>
-      )}
+      <ArtTags platform={platform} releaseDate={releaseDate} />
     </div>
   );
 }

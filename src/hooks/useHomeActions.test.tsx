@@ -7,6 +7,8 @@ const pick = jest.fn();
 jest.mock('@/hooks/useNowPlaying', () => ({
   useNowPlaying: () => ({ pick, isStatusLoading: false, queuedGameIds: new Set([7, 8]) }),
 }));
+// The carousel dialog's queue and playing wiring has its own tests.
+jest.mock('@/hooks/useGameDialog', () => ({ useGameDialog: () => () => ({}) }));
 jest.mock('@/hooks/useGameMutations', () => ({
   useInvalidateQueries: () => ({ statusChanged: jest.fn() }),
   usePatchGamesList: () => ({ patch: jest.fn(), restore: jest.fn() }),

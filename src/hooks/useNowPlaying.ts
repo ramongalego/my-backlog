@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { celebrateGameFinished } from '@/lib/confetti';
@@ -22,7 +22,13 @@ import { statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
 import { removeGameFromPools, type CarouselPools } from '@/hooks/useCarouselPools';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import { useSwitchGame } from '@/hooks/useSwitchGame';
-import { QUEUE_SCOPE, fromQueueItem, toPlayingGame, toQueueItem } from '@/lib/games/queue-items';
+import {
+  QUEUE_SCOPE,
+  fromQueueItem,
+  moreQueueChangesWaiting,
+  toPlayingGame,
+  toQueueItem,
+} from '@/lib/games/queue-items';
 import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 import type { GameStatus } from '@/lib/games/status';
 
@@ -225,7 +231,6 @@ export function useNowPlaying(userId: string | null) {
   // saves it. Queue mutations run one at a time, so a mutation's own
   // onMutate can run well after a click, and a second quick reorder would
   // be worked out from the order before the first.
-  const pendingReorders = useRef(0);
   const reorderMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: ({ gameIds }: { gameIds: number[]; previous: QueueItem[] | undefined }) =>
@@ -237,10 +242,10 @@ export function useNowPlaying(userId: string | null) {
       toast.error('Failed to reorder queue');
     },
     onSettled: () => {
-      // Only once the last pending reorder is saved: a refetch between two
-      // quick ones would bring back the order before the second for a moment.
-      pendingReorders.current -= 1;
-      if (pendingReorders.current > 0) return;
+      // Only once the last pending queue change is saved: a refetch between
+      // two quick ones would bring back the order before the second for a
+      // moment.
+      if (moreQueueChangesWaiting(queryClient)) return;
       return queryClient.invalidateQueries({ queryKey: queueKey });
     },
   });
@@ -260,7 +265,6 @@ export function useNowPlaying(userId: string | null) {
       queueKey,
       gameIds.map((id, i) => ({ ...byId.get(id)!, position: i })),
     );
-    pendingReorders.current += 1;
     reorderMutation.mutate({ gameIds, previous });
   };
 

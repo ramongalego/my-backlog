@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { queries } from '@/lib/data/queries';
 import { useAuth } from '@/hooks/useAuth';
-import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
-import { useSwitchGame } from '@/hooks/useSwitchGame';
+import { useQueue } from '@/hooks/useQueue';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
-import { useManualGameActions } from '@/hooks/useManualGameActions';
+import { useGameDialog } from '@/hooks/useGameDialog';
+import type { GameDialogProps } from '@/components/games/GameDetailModal';
 import { computeStats, countedInStats, type PlayedALotGame } from '@/lib/stats/compute';
 import { hasEnoughForProfile } from '@/lib/profile/facts';
 import type { GameStatus } from '@/lib/games/status';
@@ -31,44 +31,26 @@ export function useStatsPage() {
 
   const stats = computeStats(games, categories, queuedGameIds);
 
-  const hasPlayingGame = games.some((g) => g.status === 'playing');
   // The player profile shows only once the library says enough about you.
   const profileReady = hasEnoughForProfile(games);
 
   // The game open in the detail dialog: one of the "Played a lot" games, which
   // are all in the backlog.
   const [openedGame, setOpenedGame] = useState<PlayedALotGame | null>(null);
-  const manualGames = useManualGameActions(userId);
-  const addGameToQueue = useAddToQueue(userId);
-  const removeFromQueue = useRemoveFromQueue(userId);
-  const switchGame = useSwitchGame(userId);
+  const dialogFor = useGameDialog(userId);
   // Stats reads the shared games list, so the change shows straight away.
   const statusMutation = useSetGameStatus(userId);
 
   /** The detail dialog's props for the open game, or null when it's closed. */
-  const gameDialog = openedGame && {
+  const gameDialog: GameDialogProps | null = openedGame && {
     game: openedGame,
+    initialStatus: 'backlog',
     onClose: () => setOpenedGame(null),
     onConfirm: (status: GameStatus, date: string, notes: string, rating: number | null) => {
       statusMutation.mutate({ gameId: openedGame.id, status, date, notes, rating });
       setOpenedGame(null);
     },
-    manual: manualGames.dialogProps(openedGame),
-    playing: hasPlayingGame
-      ? {
-          name: switchGame.playing?.name ?? null,
-          onPlayInstead: () => switchGame.switchTo(openedGame),
-        }
-      : undefined,
-    onAddToQueue: hasPlayingGame
-      ? () => {
-          setOpenedGame(null);
-          addGameToQueue(openedGame);
-        }
-      : undefined,
-    queued: queuedGameIds.has(openedGame.id)
-      ? { onRemove: () => removeFromQueue(openedGame.id) }
-      : undefined,
+    ...dialogFor(openedGame),
   };
 
   return {

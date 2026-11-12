@@ -30,6 +30,31 @@ interface UpcomingRelease {
 }
 
 /**
+ * Whose calendar "today" is read from. A release date is a whole day, so
+ * whether a game is out depends on what day it is where you ask:
+ *
+ * - `local`: the time zone of the machine running the code. In the browser,
+ *   the player's; that's the answer the app shows.
+ * - `utc`: the same day everywhere. The server renders a page in this and the
+ *   browser's first render repeats it (see useReleaseZone), so the two agree
+ *   whatever time zone the player is in.
+ */
+export type ReleaseZone = 'local' | 'utc';
+
+/** Midnight at the start of a moment's day, and that day's year, in a zone. */
+function dayOf(time: number, zone: ReleaseZone): { start: number; year: number } {
+  const date = new Date(time);
+  if (zone === 'utc') {
+    return {
+      start: Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+      year: date.getUTCFullYear(),
+    };
+  }
+  date.setHours(0, 0, 0, 0);
+  return { start: date.getTime(), year: date.getFullYear() };
+}
+
+/**
  * A game that isn't out yet, from its stored release date (IGDB's or Steam's
  * display text), or null once it's out or when there's no date at all. It's
  * worked out each time, so the tag goes away on release day by itself.
@@ -37,33 +62,48 @@ interface UpcomingRelease {
 export function upcomingRelease(
   text: string | null | undefined,
   now = Date.now(),
+  zone: ReleaseZone = 'local',
 ): UpcomingRelease | null {
   const date = text?.trim();
   if (!date) return null;
   if (NO_DATE_YET.test(date)) {
     return { label: 'Coming soon', detail: 'No release date announced yet' };
   }
+  const today = dayOf(now, zone);
   const vague = VAGUE_DATE.exec(date);
   if (vague) {
     // Only a year (or quarter): out sometime in it, so upcoming until it ends.
-    if (Number(vague[1]) < new Date(now).getFullYear()) return null;
+    if (Number(vague[1]) < today.year) return null;
     return { label: `Out ${date}`, detail: `Releases in ${date}` };
   }
-  const released = parseReleaseDate(date);
+  // The date's text is parsed as a day in this machine's zone; in UTC the
+  // same calendar day is wanted, not the same instant.
+  const parsed = parseReleaseDate(date);
+  if (parsed === null) return null;
+  const local = new Date(parsed);
+  const released =
+    zone === 'utc'
+      ? Date.UTC(local.getFullYear(), local.getMonth(), local.getDate())
+      : local.getTime();
   // A release date is a whole day: it's out from that morning.
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  if (released === null || released <= today.getTime()) return null;
+  if (released <= today.start) return null;
 
+  const sameYear = local.getFullYear() === today.year;
+  const days = Math.round((released - today.start) / DAY_MS);
+  const timeZone = zone === 'utc' ? 'UTC' : undefined;
   const day = new Date(released);
-  const sameYear = day.getFullYear() === today.getFullYear();
-  const days = Math.round((released - today.getTime()) / DAY_MS);
   const short = day.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone,
   });
-  const full = day.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const full = day.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone,
+  });
   return {
     label:
       days === 1 ? 'Out tomorrow' : days <= COUNTDOWN_DAYS ? `Out in ${days} days` : `Out ${short}`,
@@ -76,8 +116,12 @@ export function upcomingRelease(
  * Random, or as the next in the queue when you finish one. A game with no date
  * at all counts as out.
  */
-export function isReleased(text: string | null | undefined, now = Date.now()): boolean {
-  return upcomingRelease(text, now) === null;
+export function isReleased(
+  text: string | null | undefined,
+  now = Date.now(),
+  zone: ReleaseZone = 'local',
+): boolean {
+  return upcomingRelease(text, now, zone) === null;
 }
 
 /**
@@ -87,6 +131,7 @@ export function isReleased(text: string | null | undefined, now = Date.now()): b
 export function nextPlayable<T extends { game: { release_date?: string | null } }>(
   queue: readonly T[],
   now = Date.now(),
+  zone: ReleaseZone = 'local',
 ): T | undefined {
-  return queue.find((q) => isReleased(q.game.release_date, now));
+  return queue.find((q) => isReleased(q.game.release_date, now, zone));
 }

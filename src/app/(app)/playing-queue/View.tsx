@@ -5,7 +5,6 @@ import { ListOrdered, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadError } from '@/components/ui/LoadError';
-import { useState } from 'react';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { useQueuePage } from '@/hooks/useQueuePage';
@@ -39,18 +38,15 @@ export default function PlayingQueueView() {
     pickFromQueue,
     reorder,
     moveToTop,
-    setQueuedStatus,
     manualDialogProps,
+    gameDialog,
+    openGame,
   } = useQueuePage();
   const router = useRouter();
   const { open: openAddGame } = useAddGame();
   const libraryMeta = useLibraryMeta(useAuth().user?.id ?? null);
   const libraryEmpty = libraryMeta.loaded && libraryMeta.gameCount === 0;
 
-  // The queued game whose details are open; read from the queue each render so
-  // hours saved in the dialog show straight away.
-  const [detailGameId, setDetailGameId] = useState<number | null>(null);
-  const detailItem = queue.find((q) => q.game_id === detailGameId);
   const isEmpty = !currentlyPlaying && queue.length === 0;
 
   return (
@@ -74,31 +70,7 @@ export default function PlayingQueueView() {
               manual={manualDialogProps(currentlyPlaying)}
             />
           )}
-          {detailItem && (
-            <GameDetailModal
-              isOpen={true}
-              onClose={() => setDetailGameId(null)}
-              onConfirm={(status, date, notes, rating) => {
-                setDetailGameId(null);
-                setQueuedStatus({ gameId: detailItem.game_id, status, date, notes, rating });
-              }}
-              game={detailItem.game}
-              initialStatus="backlog"
-              queued={{ onRemove: () => removeFromQueue(detailItem.game_id) }}
-              playing={
-                currentlyPlaying
-                  ? {
-                      name: currentlyPlaying.name,
-                      onPlayInstead: () => {
-                        setDetailGameId(null);
-                        pickFromQueue(detailItem.game_id);
-                      },
-                    }
-                  : undefined
-              }
-              manual={manualDialogProps({ ...detailItem.game, id: detailItem.game_id })}
-            />
-          )}
+          {gameDialog && <GameDetailModal isOpen {...gameDialog} />}
           {gameSummary && (
             <GameSummaryModal isOpen={true} onClose={closeSummary} {...gameSummary} />
           )}
@@ -165,7 +137,7 @@ export default function PlayingQueueView() {
               isLoading={isStatusLoading}
               onPick={pickFromQueue}
               onRemove={removeFromQueue}
-              onOpen={setDetailGameId}
+              onOpen={openGame}
               onReorder={reorder}
               onMoveToTop={moveToTop}
             />
