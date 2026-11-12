@@ -33,14 +33,17 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
   useEffect(() => {
     // Warm the cache with the exact URLs next/image will request, so picker
     // results swap in without pop-in. getImageProps keeps this in sync with
-    // the loader config (width snapping, qualities allowlist).
+    // the loader config (width snapping, qualities allowlist). Once the picker
+    // is on screen: it's below the fold, and at page load these would compete
+    // with the art the visitor can actually see.
+    if (!pickerInView) return;
     for (const game of PICKER_GAMES) {
       const { props } = getImageProps({ src: game.image, alt: '', width: 56, height: 56 });
       const img = new window.Image();
       if (props.srcSet) img.srcset = props.srcSet;
       img.src = props.src;
     }
-  }, []);
+  }, [pickerInView]);
 
   return (
     <section className="border-t border-ink-900">

@@ -175,9 +175,14 @@ const HASHED_ASSET = /^[0-9a-f]{40}\//;
  * Steam lists a `header_2x.jpg` at the old fixed path that was never uploaded
  * (Trine 2), so a 2x at that path is checked first. Hashed art always exists.
  */
-async function verifiedHeaderImage2x(assets: StoreItemAssets | undefined): Promise<string | null> {
+async function verifiedHeaderImage2x(
+  assets: StoreItemAssets | undefined,
+  known?: string | null,
+): Promise<string | null> {
   const url = headerImage2x(assets);
   if (!url || HASHED_ASSET.test(assets!.header_2x!)) return url;
+  // The art already stored for this game: it was checked when it was saved.
+  if (url === known) return url;
   try {
     const response = await fetchWithTimeout(url, { method: 'HEAD' }, TIMEOUTS.STEAM_STORE);
     return response.ok ? url : null;
@@ -187,8 +192,11 @@ async function verifiedHeaderImage2x(assets: StoreItemAssets | undefined): Promi
 }
 
 /** The store header to show: the 920×430 version when there is one, else the 460×215. */
-async function bestHeaderImage(assets: StoreItemAssets | undefined): Promise<string | null> {
-  return (await verifiedHeaderImage2x(assets)) ?? headerImage(assets);
+async function bestHeaderImage(
+  assets: StoreItemAssets | undefined,
+  known?: string | null,
+): Promise<string | null> {
+  return (await verifiedHeaderImage2x(assets, known)) ?? headerImage(assets);
 }
 
 /** Tags, high-resolution header art and review summary for one app, from a single GetItems call. */
@@ -306,15 +314,20 @@ export interface StoreSummary {
 
 /**
  * Current review summaries and header art for many apps, both from the same
- * calls. Apps Steam doesn't return (delisted) are left out.
+ * calls. Apps Steam doesn't return (delisted) are left out. `knownArt` is the
+ * art each app already has: an old-path 2x header that matches it isn't
+ * checked again, so a refresh that changes nothing makes no extra requests.
  */
-export function getStoreSummaries(appIds: number[]): Promise<Map<number, StoreSummary>> {
+export function getStoreSummaries(
+  appIds: number[],
+  knownArt: ReadonlyMap<number, string | null> = new Map(),
+): Promise<Map<number, StoreSummary>> {
   return getItemsInBatches(
     appIds,
     { include_reviews: true, include_assets: true },
     async (item) => ({
       reviews: reviewData(item.reviews),
-      headerImage: await bestHeaderImage(item.assets),
+      headerImage: await bestHeaderImage(item.assets, knownArt.get(item.appid!)),
     }),
   );
 }

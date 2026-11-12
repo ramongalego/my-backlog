@@ -10,8 +10,9 @@ export default async function PlayingQueuePage() {
   ]);
 
   return (
-    <HydrationBoundary state={state}>
+    <>
+      <HydrationBoundary state={state} />
       <PlayingQueueView />
-    </HydrationBoundary>
+    </>
   );
 }

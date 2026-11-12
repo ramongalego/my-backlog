@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { syncOwnedGames } from '@/lib/server/steam-library';
-import { findLegacyHeaderImages, getStoreHeaderImages } from '@/lib/steam/store-api';
+import {
+  findLegacyHeaderImages,
+  getStoreHeaderImages,
+  getStoreSummaries,
+} from '@/lib/steam/store-api';
 import { classifyAppType } from '@/lib/games/software';
 
 const ASSETS = 'https://shared.akamai.steamstatic.com/store_item_assets/';
@@ -71,6 +75,32 @@ describe('getStoreHeaderImages', () => {
     mockSteam({});
     await getStoreHeaderImages(Array.from({ length: 120 }, (_, i) => i + 1));
     expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('getStoreSummaries', () => {
+  const headChecks = () =>
+    jest.mocked(global.fetch).mock.calls.filter(([, init]) => init?.method === 'HEAD').length;
+
+  it("doesn't check an old-path 920×430 header again when it's the art already stored", async () => {
+    const stored = `${ASSETS}steam/apps/6/header_2x.jpg?t=1`;
+    mockSteam({ 6: { header: 'header.jpg', header_2x: 'header_2x.jpg' } }, [], [6]);
+
+    const first = await getStoreSummaries([6]);
+    expect(first.get(6)?.headerImage).toBe(stored);
+    expect(headChecks()).toBe(1);
+
+    // The daily refresh, with nothing changed: no request beyond GetItems.
+    jest.mocked(global.fetch).mockClear();
+    const again = await getStoreSummaries([6], new Map([[6, stored]]));
+    expect(again.get(6)?.headerImage).toBe(stored);
+    expect(headChecks()).toBe(0);
+  });
+
+  it('checks it when the stored art is something else', async () => {
+    mockSteam({ 6: { header: 'header.jpg', header_2x: 'header_2x.jpg' } }, [], [6]);
+    await getStoreSummaries([6], new Map([[6, `${ASSETS}steam/apps/6/header.jpg?t=0`]]));
+    expect(headChecks()).toBe(1);
   });
 });
 

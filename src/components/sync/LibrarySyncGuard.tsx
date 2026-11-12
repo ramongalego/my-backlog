@@ -31,8 +31,19 @@ export function LibrarySyncGuard() {
 
     async function checkUnsynced() {
       const supabase = createClient();
-      // Which of these need a look is decided by needsSyncCheck. Release dates
-      // are display text, so recency is checked here rather than in the query.
+      // Which games need a look is decided by needsSyncCheck. The query only
+      // narrows it down to the ones that could: on an established library
+      // that's a handful of rows, where the whole library used to come down on
+      // every page load. Release dates are display text, so "recent" is asked
+      // for as the two years a date from the last twelve months can contain.
+      const year = new Date().getFullYear();
+      const couldNeedSync = [
+        'metadata_synced.is.null',
+        'metadata_synced.eq.false',
+        'main_story_hours.is.null',
+        `release_date.ilike.*${year}*`,
+        `release_date.ilike.*${year - 1}*`,
+      ].join(',');
       const games = await fetchAllRows<SyncCandidate>((from, to) =>
         supabase
           .from('games')
@@ -41,6 +52,7 @@ export function LibrarySyncGuard() {
           )
           .eq('user_id', userId)
           .eq('source', 'steam')
+          .or(couldNeedSync)
           .order('app_id')
           .range(from, to),
       );

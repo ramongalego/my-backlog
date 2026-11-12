@@ -10,12 +10,14 @@ export default async function StatsPage() {
     // Grows with the library: stream it rather than hold the page for it.
     { ...queries.gamesList(userId, supabase), stream: true },
     queries.queue(userId, supabase),
+    queries.playing(userId, supabase),
     queries.openEndedCategories(userId, supabase),
   ]);
 
   return (
-    <HydrationBoundary state={state}>
+    <>
+      <HydrationBoundary state={state} />
       <StatsView />
-    </HydrationBoundary>
+    </>
   );
 }

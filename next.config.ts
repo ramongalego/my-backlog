@@ -40,7 +40,19 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ['image/avif', 'image/webp'],
-    qualities: [90, 95],
+    // One quality: every distinct (image, width, quality) is optimized and
+    // billed separately.
+    qualities: [90],
+    // Steam's art is at most 920px wide and the optimizer never upscales, so
+    // the larger default widths (1200 up to 3840) each produced the same
+    // picture again as a separate variant. 1080 covers the widest frame the
+    // app draws (the game dialog's art, 544px, on a 2x screen).
+    deviceSizes: [640, 750, 828, 1080],
+    // A month, not the default four hours. Every art URL changes when its
+    // picture does (Steam's hashed paths and ?t=, IGDB and SteamGridDB ids),
+    // so a cached variant never goes stale; re-optimizing each one six times
+    // a day was pure cost.
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       {
         protocol: 'https',

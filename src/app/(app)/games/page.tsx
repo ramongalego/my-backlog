@@ -8,11 +8,13 @@ export default async function GamesPage() {
     // Grows with the library: stream it rather than hold the page for it.
     { ...queries.gamesList(userId, supabase), stream: true },
     queries.queue(userId, supabase),
+    queries.playing(userId, supabase),
   ]);
 
   return (
-    <HydrationBoundary state={state}>
+    <>
+      <HydrationBoundary state={state} />
       <GamesView />
-    </HydrationBoundary>
+    </>
   );
 }

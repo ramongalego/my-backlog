@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { getGameDetails, SteamUnavailableError } from '@/lib/steam/store-api';
 import { useGameSync } from '@/hooks/useGameSync';
+import { queryKeys } from '@/lib/query-keys';
 
 const json = (body: unknown, init: { status?: number; headers?: Record<string, string> } = {}) =>
   ({
@@ -143,6 +144,40 @@ describe('background HowLongToBeat filling', () => {
         [6, 7],
       ]),
     );
+  });
+
+  it('shows a found time in the cached games list, without downloading the list again', async () => {
+    const client = new QueryClient();
+    const listKey = queryKeys.games.list('u');
+    client.setQueryData(listKey, [
+      { id: 1, app_id: 1, name: 'Game 1', main_story_hours: null },
+      { id: 2, app_id: 2, name: 'Game 2', main_story_hours: null },
+      { id: 3, app_id: null, name: 'Added by hand', main_story_hours: null },
+    ]);
+    const withList = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    mockApi({
+      bulk: (ids) => ({ resolved: ids.length, synced: 0, remaining: [], hltbPending: ids }),
+      hltb: (ids) => ({
+        results: ids.map((appId) => ({ appId, hours: appId === 1 ? 12.5 : null })),
+        pending: [],
+        retryAfterMs: 0,
+      }),
+    });
+
+    const { result } = renderHook(() => useGameSync(), { wrapper: withList });
+    await act(() => result.current.startSync(games(2)));
+
+    await waitFor(() =>
+      expect(
+        client
+          .getQueryData<{ main_story_hours: number | null }[]>(listKey)
+          ?.map((g) => g.main_story_hours),
+      ).toEqual([12.5, null, null]),
+    );
+    // Patched in place: the whole library isn't marked for another download.
+    expect(client.getQueryState(listKey)?.isInvalidated).toBe(false);
   });
 
   it('follows up on games synced while HLTB was refusing', async () => {

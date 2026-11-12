@@ -80,7 +80,10 @@ export async function refreshStoreData(
   const games = rows.filter((g) => steamIdOf(g) != null);
   if (!games.length) return 0;
 
-  const fresh = await getStoreSummaries([...new Set(games.map((g) => steamIdOf(g)!))]);
+  const fresh = await getStoreSummaries(
+    [...new Set(games.map((g) => steamIdOf(g)!))],
+    new Map(games.map((g) => [steamIdOf(g)!, g.header_image])),
+  );
   const updates = games.flatMap((game) => {
     const store = fresh.get(steamIdOf(game)!);
     if (!store) return [];

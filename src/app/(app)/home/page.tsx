@@ -13,8 +13,9 @@ export default async function HomePage() {
   ]);
 
   return (
-    <HydrationBoundary state={state}>
+    <>
+      <HydrationBoundary state={state} />
       <HomeView />
-    </HydrationBoundary>
+    </>
   );
 }

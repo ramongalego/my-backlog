@@ -10,8 +10,9 @@ export default async function DiaryPage() {
   ]);
 
   return (
-    <HydrationBoundary state={state}>
+    <>
+      <HydrationBoundary state={state} />
       <DiaryView />
-    </HydrationBoundary>
+    </>
   );
 }

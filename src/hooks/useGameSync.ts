@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
+import type { GameItem } from '@/lib/data/loaders';
+import { queryKeys } from '@/lib/query-keys';
 import { chunk } from '@/lib/supabase/paginate';
-import { MAX_BULK_APP_IDS, MAX_HLTB_APP_IDS } from '@/lib/validations/common';
+import { MAX_BULK_APP_IDS, MAX_HLTB_APP_IDS } from '@/lib/games/sync-limits';
 import type { Game, SyncProgress } from '@/types/games';
 
 // Games synced at once. Each one spends most of its time waiting on
@@ -20,8 +23,10 @@ const MAX_RETRY_WAIT_SECONDS = 15;
 const HLTB_MIN_WAIT_MS = 5_000;
 const HLTB_MAX_WAIT_MS = 60_000;
 const HLTB_MAX_BLOCKS_IN_A_ROW = 6;
-// Found times are shown in batches rather than refetching after every game.
-const HLTB_REFRESH_EVERY_MS = 15_000;
+// A found time goes into the cached games list at once. What's worked out
+// from the times on the server (the short and weekend rows, the queue's
+// figures) is refreshed in batches, not after every game.
+const HLTB_REFRESH_EVERY_MS = 60_000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const clampWait = (ms: number) => Math.min(HLTB_MAX_WAIT_MS, Math.max(HLTB_MIN_WAIT_MS, ms));
@@ -90,7 +95,9 @@ function detailsChanged(
 }
 
 export function useGameSync() {
-  const { gamesAndQueue: invalidateGameData } = useInvalidateQueries();
+  const { gamesAndQueue: invalidateGameData, statusChanged: invalidateAllButList } =
+    useInvalidateQueries();
+  const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress>({ current: 0, total: 0 });
   const [syncingGames, setSyncingGames] = useState<Game[]>([]);
@@ -101,6 +108,19 @@ export function useGameSync() {
   const queueHltb = (appIds: number[]) => {
     const queued = new Set(hltbQueueRef.current);
     hltbQueueRef.current.push(...appIds.filter((id) => !queued.has(id)));
+  };
+
+  // Puts found times into the cached games list (Games, Stats), so they show
+  // without downloading the library again: the time is all that changed.
+  const showHours = (results: { appId: number; hours: number | null }[]) => {
+    const found = new Map(results.flatMap((r) => (r.hours === null ? [] : [[r.appId, r.hours]])));
+    if (found.size === 0) return;
+    queryClient.setQueriesData<GameItem[]>({ queryKey: [...queryKeys.games.all, 'list'] }, (list) =>
+      list?.map((game) => {
+        const hours = game.app_id == null ? undefined : found.get(game.app_id);
+        return hours === undefined ? game : { ...game, main_story_hours: hours };
+      }),
+    );
   };
 
   // Works through the HLTB queue in the background, a few games per request.
@@ -143,9 +163,10 @@ export function useGameSync() {
         hltbQueueRef.current = hltbQueueRef.current.filter(
           (id) => !inBatch.has(id) || pending.has(id),
         );
+        showHours(data.results);
         unshown += data.results.filter((r) => r.hours !== null).length;
         if (unshown > 0 && Date.now() - lastRefresh >= HLTB_REFRESH_EVERY_MS) {
-          invalidateGameData();
+          invalidateAllButList();
           unshown = 0;
           lastRefresh = Date.now();
         }
@@ -157,7 +178,7 @@ export function useGameSync() {
         }
       }
     } finally {
-      if (unshown > 0) invalidateGameData();
+      if (unshown > 0) invalidateAllButList();
       fillingRef.current = false;
     }
   };

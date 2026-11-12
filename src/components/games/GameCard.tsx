@@ -47,7 +47,7 @@ export function GameCard({ game, onOpenDetail, queued, showStatus = true }: Game
         <CoverArt
           src={game.header_image}
           alt=""
-          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 296px"
           interactive
           platform={consoleOf(game)}
           releaseDate={game.release_date}

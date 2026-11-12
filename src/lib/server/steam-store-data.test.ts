@@ -62,7 +62,15 @@ it('refreshes Steam games and games added by hand that Steam sells, each by its 
   expect(
     await refreshStoreData(fakeClient([steamGame, handAdded], writes), 'u', fakeClient([], writes)),
   ).toBe(2);
-  expect(getStoreSummaries).toHaveBeenCalledWith([10, 20]);
+  // With the art each game already has, so art that hasn't changed isn't
+  // checked again.
+  expect(getStoreSummaries).toHaveBeenCalledWith(
+    [10, 20],
+    new Map([
+      [10, ART],
+      [20, null],
+    ]),
+  );
   expect(writes.map(({ table, filters }) => ({ table, filters }))).toEqual([
     { table: 'games', filters: ['user_id=u', 'id=1'] },
     // Only Steam games are in the shared cache.

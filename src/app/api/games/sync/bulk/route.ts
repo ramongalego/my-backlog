@@ -10,7 +10,8 @@ import {
 import { chunk } from '@/lib/supabase/paginate';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
-import { syncBulkRequestSchema, MAX_BULK_APP_IDS } from '@/lib/validations/common';
+import { syncBulkRequestSchema } from '@/lib/validations/common';
+import { MAX_BULK_APP_IDS } from '@/lib/games/sync-limits';
 
 // Keeps each `.in()` URL short and each response under PostgREST's row cap.
 const LOOKUP_CHUNK_SIZE = 200;

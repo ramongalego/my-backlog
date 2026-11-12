@@ -5,6 +5,7 @@ import { PlaytimeRefresher } from '@/components/sync/PlaytimeRefresher';
 import { createClient } from '@/lib/supabase/server';
 import { queryKeys } from '@/lib/query-keys';
 import { queries } from '@/lib/data/queries';
+import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/games';
 import Providers from '../providers';
 import { AddGameProvider } from '@/components/games/AddGameProvider';
@@ -15,27 +16,34 @@ import { AddGameProvider } from '@/components/games/AddGameProvider';
 // persist across client navigations, so this runs once per full page load.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // The user's id comes from the session token, which is verified here without
+  // a round trip (the proxy has just refreshed it). Everything below needs
+  // only that id, so the full user record, the profile and the header's count
+  // load together: this is on the path to every page's first paint, and asking
+  // Supabase Auth for the user first held all of it up.
+  const { data: session } = await supabase.auth.getClaims();
+  const userId = session?.claims?.sub;
 
   const queryClient = new QueryClient();
+  let user: User | null = null;
   let profile: Profile | null = null;
-  if (user) {
-    // Both need only the user id, so they run together: this is on the path to
-    // every page's first paint.
-    const [{ data }] = await Promise.all([
+  if (userId) {
+    const [authUser, { data }] = await Promise.all([
+      // Still asked of Supabase Auth: it's the record the app uses (the email
+      // in the user menu), and it confirms the session hasn't been revoked.
+      supabase.auth.getUser(),
       supabase
         .from('profiles')
         .select('steam_id, steam_username, steam_avatar')
-        .eq('id', user.id)
+        .eq('id', userId)
         .maybeSingle(),
       // The header's game count. Prefetched here rather than by pages: a query
       // the header has already created can only be hydrated after mount, which
       // made the server render a loading state that the client then replaced.
-      queryClient.prefetchQuery(queries.libraryMeta(user.id, supabase)),
+      queryClient.prefetchQuery(queries.libraryMeta(userId, supabase)),
     ]);
-    profile = data;
+    user = authUser.data.user;
+    profile = user ? data : null;
   }
   queryClient.setQueryData(queryKeys.auth.session(), { user, profile });
 
