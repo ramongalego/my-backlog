@@ -1,5 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GameCard } from '@/components/games/GameCard';
+import { ratingOf } from '@/lib/games/rating';
+
+const shown = (game: GameItem) => String(Math.round(ratingOf(game)!));
 import type { GameItem } from '@/lib/data/loaders';
 
 jest.mock('next/image', () => ({
@@ -132,38 +135,30 @@ describe('GameCard', () => {
     expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
   });
   it('keeps Steam reviews on a Steam game moved to a console, but not its Deck rating', () => {
-    render(
-      <GameCard
-        game={createGame({
-          source: 'steam',
-          platform: 'Switch',
-          steam_review_score: 85,
-          deck_compat: 3,
-        })}
-        onOpenDetail={mockOnOpenDetail}
-      />,
-    );
+    const game = createGame({
+      source: 'steam',
+      platform: 'Switch',
+      steam_review_score: 85,
+      deck_compat: 3,
+    });
+    render(<GameCard game={game} onOpenDetail={mockOnOpenDetail} />);
     expect(screen.getByText('Switch')).toBeInTheDocument();
-    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByText(shown(game))).toBeInTheDocument();
     expect(screen.queryByText('Deck')).not.toBeInTheDocument();
   });
 
   it('shows the Steam reviews of a game added by hand that Steam sells, behind its critic score', () => {
-    render(
-      <GameCard
-        game={createGame({
-          source: 'manual',
-          app_id: null,
-          platform: 'PS5',
-          critic_score: 89,
-          critic_count: 8,
-          steam_review_score: 92,
-          steam_review_count: 30000,
-        })}
-        onOpenDetail={mockOnOpenDetail}
-      />,
-    );
-    expect(screen.getByText('89')).toBeInTheDocument();
+    const game = createGame({
+      source: 'manual',
+      app_id: null,
+      platform: 'PS5',
+      critic_score: 89,
+      critic_count: 8,
+      steam_review_score: 92,
+      steam_review_count: 30000,
+    });
+    render(<GameCard game={game} onOpenDetail={mockOnOpenDetail} />);
+    expect(screen.getByText(shown(game))).toBeInTheDocument();
     expect(
       screen
         .getAllByRole('tooltip')
@@ -172,18 +167,14 @@ describe('GameCard', () => {
   });
 
   it('shows Steam reviews and Deck for a Steam game played on Steam', () => {
-    render(
-      <GameCard
-        game={createGame({
-          source: 'steam',
-          platform: 'PC',
-          steam_review_score: 85,
-          deck_compat: 3,
-        })}
-        onOpenDetail={mockOnOpenDetail}
-      />,
-    );
-    expect(screen.getByText('85%')).toBeInTheDocument();
+    const game = createGame({
+      source: 'steam',
+      platform: 'PC',
+      steam_review_score: 85,
+      deck_compat: 3,
+    });
+    render(<GameCard game={game} onOpenDetail={mockOnOpenDetail} />);
+    expect(screen.getByText(shown(game))).toBeInTheDocument();
     expect(screen.getByText('Deck')).toBeInTheDocument();
   });
 

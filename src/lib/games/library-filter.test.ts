@@ -609,3 +609,44 @@ describe('counting the library', () => {
     ]);
   });
 });
+
+describe('reversing the sort', () => {
+  const reversedOrder = (games: GameItem[], sort: GameSort) =>
+    filterLibrary(games, 'all', sort, '', true).map((g) => g.name);
+
+  it('runs a sort the other way', () => {
+    const games = [
+      createGame({ id: 1, name: 'Short', main_story_hours: 2 }),
+      createGame({ id: 2, name: 'Long', main_story_hours: 80 }),
+      createGame({ id: 3, name: 'Medium', main_story_hours: 20 }),
+    ];
+    expect(reversedOrder(games, 'length')).toEqual(['Long', 'Medium', 'Short']);
+    expect(filterLibrary(games, 'all', 'length').map((g) => g.name)).toEqual([
+      'Short',
+      'Medium',
+      'Long',
+    ]);
+  });
+
+  it('keeps games without the value last either way', () => {
+    const games = [
+      createGame({ id: 1, name: 'TBA', release_date: 'To be announced' }),
+      createGame({ id: 2, name: '2010', release_date: 'Sep 28, 2010' }),
+      createGame({ id: 3, name: 'No time', main_story_hours: null }),
+      createGame({ id: 4, name: '2023', release_date: 'Jun 16, 2023' }),
+    ];
+    expect(reversedOrder(games, 'released').slice(0, 2)).toEqual(['2010', '2023']);
+    expect(reversedOrder(games, 'length').at(-1)).toBe('No time');
+  });
+
+  it('still lists games named for the search first', () => {
+    const games = [
+      createGame({ id: 1, name: 'Hollow Knight', tags: ['Metroidvania'], playtime_forever: 900 }),
+      createGame({ id: 2, name: 'Metroid Dread', tags: ['Action'], playtime_forever: 10 }),
+    ];
+    expect(filterLibrary(games, 'all', 'playtime', 'metroid', true).map((g) => g.name)).toEqual([
+      'Metroid Dread',
+      'Hollow Knight',
+    ]);
+  });
+});

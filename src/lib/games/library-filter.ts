@@ -19,6 +19,21 @@ export type GameFilter = (typeof GAME_FILTERS)[number];
 export type GameSort = (typeof GAME_SORTS)[number];
 export type FilterCounts = Record<GameFilter, number>;
 
+/** How each sort reads in its usual order, then reversed. */
+export const SORT_DIRECTIONS: Record<GameSort, [string, string]> = {
+  score: ['Highest first', 'Lowest first'],
+  rating: ['Highest first', 'Lowest first'],
+  recent: ['Newest first', 'Oldest first'],
+  released: ['Newest first', 'Oldest first'],
+  playtime: ['Most first', 'Least first'],
+  length: ['Shortest first', 'Longest first'],
+};
+
+/** Whether the list runs from the smallest value up (only Time to beat does, usually). */
+export function sortsAscending(sort: GameSort, reversed: boolean): boolean {
+  return (sort === 'length') !== reversed;
+}
+
 // Steam gives display dates like "Sep 28, 2010"; "To be announced" and missing
 // dates parse to NaN and sort last. Parsed once per row: a sort compares each
 // game many times, and parsing dominated sorting a big library. Refetched or
@@ -73,6 +88,34 @@ function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
   }
 }
 
+/**
+ * Whether a game has the value a sort orders by. Games without one (no
+ * rating, no time to beat, no release date) go last either way: reversing
+ * a sort shouldn't bring every unknown to the top.
+ */
+function hasSortValue(game: GameItem, sort: GameSort): boolean {
+  switch (sort) {
+    case 'score':
+      return ratingOf(game) !== null;
+    case 'rating':
+      return myRating(game) >= 0;
+    case 'released':
+      return releaseTime(game) !== -Infinity;
+    case 'length':
+      return game.main_story_hours != null;
+    default:
+      return true;
+  }
+}
+
+/** Orders two games by a sort, either way, with games missing its value last. */
+function orderGames(a: GameItem, b: GameItem, sort: GameSort, reversed: boolean): number {
+  const aHas = hasSortValue(a, sort);
+  if (aHas !== hasSortValue(b, sort)) return aHas ? -1 : 1;
+  const order = compareGames(a, b, sort);
+  return reversed ? -order : order;
+}
+
 /** The games a search finds, by name or tag: every game when there's no search. */
 export function searchLibrary(games: GameItem[], query: string): GameItem[] {
   if (!query) return games;
@@ -90,6 +133,8 @@ export function filterLibrary(
   filter: GameFilter,
   sort: GameSort,
   query = '',
+  /** The other way from the sort's usual order. */
+  reversed = false,
 ): GameItem[] {
   const filtered = searched.filter((game) => {
     if (filter === 'all') return game.status !== 'hidden';
@@ -97,10 +142,10 @@ export function filterLibrary(
     return game.status === filter;
   });
 
-  if (!query) return filtered.sort((a, b) => compareGames(a, b, sort));
+  if (!query) return filtered.sort((a, b) => orderGames(a, b, sort, reversed));
   const named = new Set(filtered.filter((g) => nameMatchesSearch(g, query)).map((g) => g.id));
   return filtered.sort(
-    (a, b) => Number(named.has(b.id)) - Number(named.has(a.id)) || compareGames(a, b, sort),
+    (a, b) => Number(named.has(b.id)) - Number(named.has(a.id)) || orderGames(a, b, sort, reversed),
   );
 }
 

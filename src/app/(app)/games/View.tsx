@@ -5,6 +5,9 @@ import { Gamepad2, Plus } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 
 import { GameCard } from '@/components/games/GameCard';
+import { GameList } from '@/components/games/GameList';
+import { GamesViewToggle } from '@/components/games/GamesViewToggle';
+import { useGamesView } from '@/hooks/useGamesView';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
 import { GamesPageSkeleton } from './Skeleton';
@@ -40,6 +43,9 @@ export default function GamesView() {
     setFilter,
     sort,
     setSort,
+    reversed,
+    reverse,
+    sortBy,
     visibleGames,
     hasMore,
     loadMore,
@@ -53,6 +59,10 @@ export default function GamesView() {
   const { open: openAddGame } = useAddGame();
   const isSteamConnected = !!useAuth().profile?.steam_id;
   const libraryMeta = useCachedLibraryMeta();
+  const [view, setView] = useGamesView();
+  // In All and Backlog the badge tells statuses apart (e.g. Playing); in a
+  // single-status filter it would repeat the filter on every game.
+  const showStatus = filter === 'all' || filter === 'backlog';
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +82,7 @@ export default function GamesView() {
   }, [hasMore, loadMore]);
 
   if (loading) {
-    return <GamesPageSkeleton empty={libraryMeta?.gameCount === 0} />;
+    return <GamesPageSkeleton empty={libraryMeta?.gameCount === 0} view={view} />;
   }
 
   // Counts, filters and search would all describe an empty library.
@@ -113,7 +123,10 @@ export default function GamesView() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
-          <GamesSort value={sort} onChange={setSort} />
+          <div className="flex items-center justify-between sm:justify-end gap-4">
+            <GamesViewToggle value={view} onChange={setView} />
+            <GamesSort value={sort} onChange={setSort} reversed={reversed} onReverse={reverse} />
+          </div>
         </div>
       </PageHeader>
 
@@ -162,19 +175,29 @@ export default function GamesView() {
         )
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
-            {visibleGames.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                onOpenDetail={handleOpenDetail}
-                queued={queuedGameIds.has(game.id)}
-                // In All and Backlog the badge tells statuses apart (e.g. Playing);
-                // in a single-status filter it would repeat the filter on every card.
-                showStatus={filter === 'all' || filter === 'backlog'}
-              />
-            ))}
-          </div>
+          {view === 'list' ? (
+            <GameList
+              games={visibleGames}
+              queuedGameIds={queuedGameIds}
+              showStatus={showStatus}
+              sort={sort}
+              reversed={reversed}
+              onSortChange={sortBy}
+              onOpenDetail={handleOpenDetail}
+            />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
+              {visibleGames.map((game) => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  onOpenDetail={handleOpenDetail}
+                  queued={queuedGameIds.has(game.id)}
+                  showStatus={showStatus}
+                />
+              ))}
+            </div>
+          )}
           <div ref={sentinelRef} />
         </>
       )}

@@ -2,7 +2,9 @@
 
 import { GamesPageSkeleton } from './Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
+import { useGamesView } from '@/hooks/useGamesView';
 
 export default function GamesLoading() {
-  return <GamesPageSkeleton empty={useCachedLibraryMeta()?.gameCount === 0} />;
+  const [view] = useGamesView();
+  return <GamesPageSkeleton empty={useCachedLibraryMeta()?.gameCount === 0} view={view} />;
 }

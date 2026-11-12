@@ -1,4 +1,6 @@
 import { COVER_ASPECT } from '@/components/games/CoverArt';
+import { LIST_COLUMN, LIST_ROW, LIST_THUMB } from '@/components/games/game-list-columns';
+import type { GamesView } from '@/lib/games/games-view';
 import {
   EmptyStateSkeleton,
   PageHeaderSkeleton,
@@ -25,8 +27,44 @@ function GameGridSkeleton({ count = 12 }: { count?: number }) {
   );
 }
 
-/** `empty`: the library is known to be empty, so no grid of cards to hold. */
-export function GamesPageSkeleton({ empty = false }: { empty?: boolean }) {
+/** Mirrors GameList: the column header, then rows of small art, name and details. */
+function GameListSkeleton({ count = 12 }: { count?: number }) {
+  return (
+    <div>
+      <div className={`hidden lg:flex ${LIST_ROW} h-9 border-b border-ink-800`}>
+        <span className={`${LIST_THUMB} shrink-0`} />
+        <Skeleton className="h-3 w-10" />
+      </div>
+      <div className="mt-1 lg:mt-2">
+        {Array.from({ length: count }, (_, i) => (
+          <div key={i} className={`${LIST_ROW} py-2`}>
+            <Skeleton className={`${LIST_THUMB} ${COVER_ASPECT} shrink-0 rounded-md`} />
+            <div className="flex-1 min-w-0">
+              <Skeleton className="h-5 w-2/5" />
+              <Skeleton className="h-4 w-1/3 mt-1 lg:hidden" />
+            </div>
+            <Skeleton className={`${LIST_COLUMN.toBeat} h-4`} />
+            <Skeleton className={`${LIST_COLUMN.rating} h-4`} />
+            <Skeleton className={`${LIST_COLUMN.played} h-4`} />
+            <span className={LIST_COLUMN.myRating} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * `empty`: the library is known to be empty, so no grid of cards to hold.
+ * `view`: the grid or the list, as the page will be drawn.
+ */
+export function GamesPageSkeleton({
+  empty = false,
+  view = 'grid',
+}: {
+  empty?: boolean;
+  view?: GamesView;
+}) {
   return (
     <PageSkeleton>
       <PageHeaderSkeleton
@@ -42,10 +80,19 @@ export function GamesPageSkeleton({ empty = false }: { empty?: boolean }) {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Skeleton className="h-10 w-full sm:w-80 rounded-lg" />
-          <Skeleton className="h-5 w-32" />
+          <div className="flex items-center justify-between sm:justify-end gap-4">
+            <Skeleton className="h-10 w-[78px] rounded-lg" />
+            <Skeleton className="h-5 w-28" />
+          </div>
         </div>
       </PageHeaderSkeleton>
-      {empty ? <EmptyStateSkeleton /> : <GameGridSkeleton />}
+      {empty ? (
+        <EmptyStateSkeleton />
+      ) : view === 'list' ? (
+        <GameListSkeleton />
+      ) : (
+        <GameGridSkeleton />
+      )}
     </PageSkeleton>
   );
 }

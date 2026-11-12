@@ -9,6 +9,9 @@ import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/games';
 import Providers from '../providers';
 import { AddGameProvider } from '@/components/games/AddGameProvider';
+import { cookies } from 'next/headers';
+import { GAMES_VIEW_COOKIE, parseGamesView } from '@/lib/games/games-view';
+import { GamesViewProvider } from '@/hooks/useGamesView';
 
 // The app shell: React Query, the auth-aware header, background library sync
 // and playtime refreshes. The session is resolved here on the server and handed to useAuth, so
@@ -46,6 +49,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     profile = user ? data : null;
   }
   queryClient.setQueryData(queryKeys.auth.session(), { user, profile });
+  // The Games page's grid or list, as it was left: read here so the page and
+  // its loading skeleton are drawn that way from the start.
+  const gamesView = parseGamesView((await cookies()).get(GAMES_VIEW_COOKIE)?.value);
 
   return (
     <Providers>
@@ -54,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Header />
           <LibrarySyncGuard />
           <PlaytimeRefresher />
-          {children}
+          <GamesViewProvider value={gamesView}>{children}</GamesViewProvider>
         </AddGameProvider>
       </HydrationBoundary>
     </Providers>

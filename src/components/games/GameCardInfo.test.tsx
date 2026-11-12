@@ -1,5 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
+import { ratingOf } from '@/lib/games/rating';
+
+// The figure a card shows: the rating games are ranked by, rounded.
+const shown = (game: Parameters<typeof ratingOf>[0]) => String(Math.round(ratingOf(game)!));
 
 describe('GameCardInfo', () => {
   describe('time to beat', () => {
@@ -17,7 +21,7 @@ describe('GameCardInfo', () => {
   });
 
   describe('critic score', () => {
-    it('shows the critic score instead of Steam reviews, with both in the tooltip', () => {
+    it('shows the rating games are ranked by, with the critic and Steam scores on hover', () => {
       render(
         <GameCardInfo
           appId={1}
@@ -29,7 +33,16 @@ describe('GameCardInfo', () => {
         />,
       );
 
-      expect(screen.getByText('88')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          shown({
+            critic_score: 88,
+            critic_count: 9,
+            steam_review_score: 94,
+            steam_review_count: 12345,
+          }),
+        ),
+      ).toBeInTheDocument();
       expect(screen.queryByText('94%')).not.toBeInTheDocument();
       const tooltip = screen.getByRole('tooltip');
       expect(tooltip).toHaveTextContent("Critic score: 88The average of 9 critics' reviews");
@@ -54,7 +67,8 @@ describe('GameCardInfo', () => {
     it('shows on a console game, which has no Steam reviews', () => {
       render(<GameCardInfo name="Game" platform="Switch" criticScore={93} criticCount={9} />);
 
-      expect(screen.getByText('93')).toBeInTheDocument();
+      expect(screen.getByText(shown({ critic_score: 93, critic_count: 9 }))).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Critic score: 93');
       expect(screen.getByRole('tooltip')).not.toHaveTextContent('Steam');
     });
   });
@@ -66,9 +80,12 @@ describe('GameCardInfo', () => {
       expect(screen.getByText('85%')).toBeInTheDocument();
     });
 
-    it('should put the Steam label and review count in the tooltip', () => {
+    it('should rate a Steam-only game from its Steam score, with the Steam label and review count on hover', () => {
       render(<GameCardInfo appId={1} name="Game" steamReviewScore={90} steamReviewCount={5000} />);
 
+      expect(
+        screen.getByText(shown({ steam_review_score: 90, steam_review_count: 5000 })),
+      ).toBeInTheDocument();
       const tooltip = screen.getByRole('tooltip');
       expect(tooltip).toHaveTextContent('Very Positive');
       expect(tooltip).toHaveTextContent('90% of 5,000 Steam reviews are positive');

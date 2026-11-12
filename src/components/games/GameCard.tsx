@@ -2,7 +2,7 @@
 
 import { Rating } from './Rating';
 import type { GameItem } from '@/lib/data/loaders';
-import { STATUS_STYLE } from '@/lib/games/status-style';
+import { openGameLabel } from '@/lib/games/game-label';
 import { CoverArt, CoverEditHint } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { QueuedBadge } from './QueuedBadge';
@@ -22,17 +22,8 @@ interface GameCardProps {
 export function GameCard({ game, onOpenDetail, queued, showStatus = true }: GameCardProps) {
   const status = game.status;
   const showRating = (status === 'finished' || status === 'dropped') && game.rating != null;
-  // The name includes the badges shown on the art, so it matches what's on
-  // screen (WCAG 2.5.3, label in name), e.g. "Open details for Celeste, Finished 9/10".
-  const badgeText = queued
-    ? 'Queued'
-    : showStatus && status !== 'backlog'
-      ? STATUS_STYLE[status].label
-      : null;
-  // The badges read in on-screen order as one phrase ("Finished 9/10").
-  const badges = [badgeText, showRating ? `${game.rating}/10` : null].filter(Boolean).join(' ');
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
-  const label = [`Open details for ${game.name}`, badges, release].filter(Boolean).join(', ');
+  const label = openGameLabel(game, { queued, showStatus, release });
 
   return (
     // content-visibility lets the browser skip layout/paint for off-screen

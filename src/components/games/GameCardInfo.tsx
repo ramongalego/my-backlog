@@ -1,17 +1,19 @@
 import { Clock, ExternalLink, History, ThumbsUp } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
-import { steamReviewLabel } from '@/lib/steam/review-label';
 import { formatLastPlayed } from '@/lib/games/last-played';
 import { steamStoreUrl } from '@/lib/games/store-link';
-import { MIN_CRITIC_REVIEWS } from '@/lib/games/rating';
+import { steamReviewLabel } from '@/lib/steam/review-label';
+import { MIN_CRITIC_REVIEWS, ratingOf } from '@/lib/games/rating';
 import { SteamDeckBadge } from './SteamDeckBadge';
 import { playedHours } from '@/lib/games/playtime';
 
 /**
- * How a game rates, as one item in a meta row with a thumbs-up: its critic
- * score ("88") when enough critics reviewed it, Steam games and games added by
- * hand alike, else Steam's review score ("94%"). The tooltip shows both when
- * the game has both.
+ * How a game rates, as one item in a meta row with a thumbs-up: the rating
+ * games are ranked by (ratingOf, the critic and Steam scores together), so a
+ * list sorted by Rating reads in order. The tooltip shows the critic score
+ * and Steam's score, as it always has. Hidden Gems, ranked by Steam's own score, shows that instead
+ * (`preferSteam`), as does a Steam score without its review count, which
+ * isn't ranked.
  */
 export function GameRating({
   criticScore,
@@ -19,21 +21,30 @@ export function GameRating({
   steamScore,
   steamCount,
   preferSteam = false,
+  icon = true,
   iconClassName = 'w-3 h-3',
 }: {
   criticScore?: number | null;
   criticCount?: number | null;
   steamScore?: number | null;
   steamCount?: number | null;
-  /** Show Steam's score first, where it's what picked the game (Hidden Gems). */
+  /** Show Steam's own score, where it's what picked the game (Hidden Gems). */
   preferSteam?: boolean;
+  /** Off under a column heading that already says what the figure is. */
+  icon?: boolean;
   iconClassName?: string;
 }) {
   const critic =
     criticScore != null && (criticCount ?? 0) >= MIN_CRITIC_REVIEWS ? criticScore : null;
   const steam = steamScore || null;
-  const showCritic = critic !== null && !(preferSteam && steam !== null);
-  if (critic === null && steam === null) return null;
+  const ranked = ratingOf({
+    critic_score: criticScore,
+    critic_count: criticCount,
+    steam_review_score: steamScore,
+    steam_review_count: steamCount,
+  });
+  const showSteam = steam !== null && (preferSteam || ranked === null);
+  if (!showSteam && ranked === null) return null;
 
   const steamLabel =
     steam !== null && steamCount != null ? steamReviewLabel(steam, steamCount) : null;
@@ -53,8 +64,8 @@ export function GameRating({
   return (
     <Tooltip
       content={
-        // The score on the card first, then the other.
-        (showCritic ? [criticText, steamText] : [steamText, criticText])
+        // Steam's first where its score is the figure, else the critics'.
+        (showSteam ? [steamText, criticText] : [criticText, steamText])
           .filter(Boolean)
           .map((text, i) => (
             <span key={i} className={i ? 'mt-1.5 block' : 'block'}>
@@ -63,16 +74,16 @@ export function GameRating({
           ))
       }
     >
-      <ThumbsUp className={iconClassName} aria-hidden="true" />
-      {showCritic ? (
-        <>
-          <span>{critic}</span>
-          <span className="sr-only"> critic score</span>
-        </>
-      ) : (
+      {icon && <ThumbsUp className={iconClassName} aria-hidden="true" />}
+      {showSteam ? (
         <>
           <span>{steam}%</span>
           <span className="sr-only"> on Steam</span>
+        </>
+      ) : (
+        <>
+          <span>{Math.round(ranked!)}</span>
+          <span className="sr-only"> rating</span>
         </>
       )}
     </Tooltip>
@@ -82,14 +93,17 @@ export function GameRating({
 /** HowLongToBeat's main story time, with what the number means in the tooltip. */
 export function TimeToBeat({
   hours,
+  icon = true,
   iconClassName = 'w-3 h-3',
 }: {
   hours: number;
+  /** Off under a column heading that already says what the figure is. */
+  icon?: boolean;
   iconClassName?: string;
 }) {
   return (
     <Tooltip content={<TooltipText title="Time to beat: Main Story" detail="From HowLongToBeat" />}>
-      <Clock className={iconClassName} aria-hidden="true" />
+      {icon && <Clock className={iconClassName} aria-hidden="true" />}
       <span>{hours}h</span>
       <span className="sr-only"> to beat the main story</span>
     </Tooltip>
@@ -109,6 +123,7 @@ export function Playtime({
   lastPlayedAt,
   compact = false,
   showLabel = false,
+  icon = true,
   iconClassName = 'w-3 h-3',
   className = '',
 }: {
@@ -117,6 +132,8 @@ export function Playtime({
   compact?: boolean;
   /** With `compact`: always show "played", not only in a wide meta row. */
   showLabel?: boolean;
+  /** With `compact`: off under a column heading that already says what it is. */
+  icon?: boolean;
   iconClassName?: string;
   className?: string;
 }) {
@@ -137,7 +154,7 @@ export function Playtime({
     >
       {compact ? (
         <>
-          <History className={iconClassName} aria-hidden="true" />
+          {icon && <History className={iconClassName} aria-hidden="true" />}
           <span>{hours}h</span>
           {/* Read out always; shown when there's room (the meta row is a container). */}
           <span className={showLabel ? '' : 'sr-only @[16rem]:not-sr-only'}> played</span>

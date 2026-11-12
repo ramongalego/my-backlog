@@ -31,7 +31,13 @@ interface UseGamesPageReturn {
   filter: GameFilter;
   setFilter: (filter: GameFilter) => void;
   sort: GameSort;
+  /** Picks a sort, in its usual order. */
   setSort: (sort: GameSort) => void;
+  /** The sort runs the other way from its usual (lowest first, oldest first...). */
+  reversed: boolean;
+  reverse: () => void;
+  /** A list column's heading: sort by it, or reverse it when it's the sort already. */
+  sortBy: (sort: GameSort) => void;
   visibleGames: GameItem[];
   hasMore: boolean;
   loadMore: () => void;
@@ -45,6 +51,9 @@ interface UseGamesPageReturn {
 }
 
 const BATCH_SIZE = 60;
+
+const SORT_ORDERS = ['usual', 'reversed'] as const;
+type SortOrder = (typeof SORT_ORDERS)[number];
 
 export function useGamesPage(): UseGamesPageReturn {
   const { user } = useAuth();
@@ -63,6 +72,8 @@ export function useGamesPage(): UseGamesPageReturn {
   // and back. Search keeps local state too so typing stays instant.
   const [filter, setFilter] = useUrlState<GameFilter>('filter', 'all', GAME_FILTERS);
   const [sort, setSort] = useUrlState<GameSort>('sort', 'score', GAME_SORTS);
+  const [order, setOrder] = useUrlState<SortOrder>('order', 'usual', SORT_ORDERS);
+  const reversed = order === 'reversed';
   const [urlSearch, setUrlSearch] = useUrlState<string>('q', '');
   const [searchQuery, setSearchQueryState] = useState(urlSearch);
   // The URL also changes from outside the box (Games in the header, View on a
@@ -122,7 +133,7 @@ export function useGamesPage(): UseGamesPageReturn {
   // responsive. Counts follow the search, so each filter says how many of the
   // matches it holds.
   const searched = searchLibrary(games, deferredSearchQuery);
-  const filteredGames = filterLibrary(searched, filter, sort, deferredSearchQuery);
+  const filteredGames = filterLibrary(searched, filter, sort, deferredSearchQuery, reversed);
   const counts = countLibrary(searched);
 
   const visibleGames = filteredGames.slice(0, visibleCount);
@@ -140,6 +151,12 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const setSortAndReset = (s: GameSort) => {
     setSort(s);
+    setOrder('usual');
+    setVisibleCount(BATCH_SIZE);
+  };
+
+  const reverse = () => {
+    setOrder(reversed ? 'usual' : 'reversed');
     setVisibleCount(BATCH_SIZE);
   };
 
@@ -158,6 +175,9 @@ export function useGamesPage(): UseGamesPageReturn {
     setFilter: setFilterAndReset,
     sort,
     setSort: setSortAndReset,
+    reversed,
+    reverse,
+    sortBy: (s: GameSort) => (s === sort ? reverse() : setSortAndReset(s)),
     visibleGames,
     hasMore,
     loadMore,

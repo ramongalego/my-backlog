@@ -29,6 +29,7 @@ export function ToggleGroup<T extends string>({
   onChange,
   label,
   variant = 'chips',
+  size = 'sm',
   wrap = true,
   className = '',
 }: {
@@ -38,13 +39,15 @@ export function ToggleGroup<T extends string>({
   /** Accessible name for the group. */
   label: string;
   variant?: 'chips' | 'segmented';
+  /** Segmented only: `md` is as tall as a field (40px), to sit in a toolbar beside one. */
+  size?: 'sm' | 'md';
   /** Chips only: wrap onto new lines, or scroll sideways in a single row. */
   wrap?: boolean;
   className?: string;
 }) {
   const segmented = variant === 'segmented';
   const container = segmented
-    ? 'inline-flex gap-0.5 rounded-lg bg-ink-800 p-0.5'
+    ? `inline-flex gap-0.5 rounded-lg bg-ink-800 ${size === 'md' ? 'p-1' : 'p-0.5'}`
     : `flex gap-1.5 ${wrap ? 'flex-wrap' : 'overflow-x-auto scrollbar-none'}`;
 
   // A row that scrolls sideways keeps the chosen chip in sight: on a phone,
@@ -80,7 +83,9 @@ export function ToggleGroup<T extends string>({
             onClick={() => onChange(option.value)}
             aria-pressed={selected}
             className={`shrink-0 flex items-center gap-2 font-medium cursor-pointer transition-colors ${
-              segmented ? 'h-7 px-2.5 rounded-md text-xs' : 'h-8 px-3 rounded-lg text-sm'
+              segmented
+                ? `${size === 'md' ? 'h-8' : 'h-7'} px-2.5 rounded-md text-xs`
+                : 'h-8 px-3 rounded-lg text-sm'
             } ${tone}`}
           >
             <span>{option.label}</span>
