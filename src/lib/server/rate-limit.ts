@@ -189,6 +189,9 @@ export const RATE_LIMITS = {
   gameSearch: { limit: 60, windowMs: 60 * 1000 },
   // Adding games by hand: each one looks up IGDB and HowLongToBeat
   gameAdd: { limit: 30, windowMs: 60 * 1000 },
+  // Choose art: each time the choices are opened, SteamGridDB is asked with
+  // the app's key. Saving a pick is counted under the same allowance.
+  gameArt: { limit: 30, windowMs: 60 * 1000 },
   // Adding, removing and reordering the queue: every drag-reorder is a request,
   // so this only stops scripts, never someone rearranging their queue.
   queueWrite: { limit: 300, windowMs: 60 * 1000 },

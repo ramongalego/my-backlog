@@ -1,3 +1,4 @@
+import { syncedArt } from '@/lib/games/art';
 import { parseReleaseDate } from './release-date';
 import { isMetadataFresh } from './scoring';
 
@@ -147,16 +148,18 @@ export function mergeForCache(
 /**
  * Columns copied from the shared cache onto a user's `games` row. Not the
  * platform: that's the console you play it on, which you can change (a Steam
- * game you play on Switch), so the sync sets it only once, on insert.
+ * game you play on Switch), so the sync sets it only once, on insert. For a
+ * game whose art the player chose (`artChosen`), the cache's art goes behind
+ * that choice, as the default to go back to.
  */
-export function toGameRowUpdate(m: GameMetadata) {
+export function toGameRowUpdate(m: GameMetadata, artChosen = false) {
   return {
     type: m.type,
     genres: m.genres,
     categories: m.categories,
     description: m.description,
     release_date: m.release_date,
-    header_image: m.header_image,
+    ...syncedArt({ art_chosen: artChosen }, m.header_image),
     steam_review_score: m.steam_review_score,
     steam_review_count: m.steam_review_count,
     steam_review_weighted: m.steam_review_weighted,

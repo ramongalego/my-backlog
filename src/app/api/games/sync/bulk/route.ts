@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       idChunks.map((ids) =>
         supabase
           .from('games')
-          .select('app_id, main_story_hours, metadata_synced')
+          .select('app_id, main_story_hours, metadata_synced, art_chosen')
           .eq('user_id', userId)
           .in('app_id', ids),
       ),
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       batch.map((row) =>
         supabase
           .from('games')
-          .update(toGameRowUpdate(row))
+          .update(toGameRowUpdate(row, !!own.get(row.app_id)?.art_chosen))
           .eq('user_id', userId)
           .eq('app_id', row.app_id),
       ),

@@ -33,6 +33,10 @@ create table games (
   description text,
   release_date text,
   header_image text,
+  -- The player picked header_image themselves (Choose art), and the art the
+  -- game would have otherwise, which syncs keep up to date instead.
+  art_chosen boolean not null default false,
+  default_header_image text,
   metadata_synced boolean default false,
   main_story_hours numeric,
   -- One of the app's six statuses (lib/games/status.ts).

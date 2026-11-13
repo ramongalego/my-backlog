@@ -51,11 +51,11 @@ export async function POST(request: NextRequest) {
   // HowLongToBeat with the app's keys, and fills the cache every user reads.
   const { data: owned, error: ownedError } = await supabase
     .from('games')
-    .select('id')
+    .select('id, header_image, art_chosen')
     .eq('user_id', user.id)
     .eq('app_id', appId)
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<{ id: number; header_image: string | null; art_chosen: boolean }>();
   if (ownedError) {
     console.error(ownedError);
     return jsonError('Failed to read the game', 500);
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     // Update user's game with metadata from shared table
     const { error: updateError } = await supabase
       .from('games')
-      .update(toGameRowUpdate(metadata))
+      .update(toGameRowUpdate(metadata, owned.art_chosen))
       .eq('user_id', user.id)
       .eq('app_id', appId);
 
@@ -135,7 +135,8 @@ export async function POST(request: NextRequest) {
         categories: metadata.categories,
         description: metadata.description,
         release_date: metadata.release_date,
-        header_image: metadata.header_image,
+        // What the game shows: art the player chose stays as it is.
+        header_image: owned.art_chosen ? owned.header_image : metadata.header_image,
         main_story_hours: metadata.main_story_hours,
         steam_review_score: metadata.steam_review_score,
         steam_review_count: metadata.steam_review_count,

@@ -1,6 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateBayesianScore } from '@/lib/games/scoring';
+import { originalArt, syncedArt } from '@/lib/games/art';
 import { chunk, fetchAllRows } from '@/lib/supabase/paginate';
 import { getStoreSummaries, type SteamReviewData } from '@/lib/steam/store-api';
 
@@ -22,6 +23,8 @@ interface StoredGame extends StoredReviews {
   app_id: number | null;
   steam_app_id: number | null;
   header_image: string | null;
+  art_chosen: boolean;
+  default_header_image: string | null;
 }
 
 export function reviewsChanged(stored: StoredReviews, fresh: SteamReviewData): boolean {
@@ -68,7 +71,7 @@ export async function refreshStoreData(
     supabase
       .from('games')
       .select(
-        'id, source, app_id, steam_app_id, steam_review_score, steam_review_count, header_image',
+        'id, source, app_id, steam_app_id, steam_review_score, steam_review_count, header_image, art_chosen, default_header_image',
       )
       .eq('user_id', userId)
       .eq('type', 'game')
@@ -82,36 +85,38 @@ export async function refreshStoreData(
 
   const fresh = await getStoreSummaries(
     [...new Set(games.map((g) => steamIdOf(g)!))],
-    new Map(games.map((g) => [steamIdOf(g)!, g.header_image])),
+    // Steam's art for the game, which a player's own choice sits in front of.
+    new Map(games.map((g) => [steamIdOf(g)!, originalArt(g)])),
   );
   const updates = games.flatMap((game) => {
     const store = fresh.get(steamIdOf(game)!);
     if (!store) return [];
     const { reviews, headerImage } = store;
-    const values = {
-      ...(reviews && reviewsChanged(game, reviews)
+    const newReviews =
+      reviews && reviewsChanged(game, reviews)
         ? {
             steam_review_score: reviews.score,
             steam_review_count: reviews.count,
             steam_review_weighted: calculateBayesianScore(reviews.score, reviews.count),
           }
-        : {}),
-      // Only ever replaced with art Steam has: a game it no longer returns
-      // art for keeps what it has.
-      ...(headerImage && headerImageChanged(game.header_image, headerImage)
-        ? { header_image: headerImage }
-        : {}),
-    };
-    return Object.keys(values).length ? [{ game, values }] : [];
+        : {};
+    // Only ever replaced with art Steam has: a game it no longer returns
+    // art for keeps what it has.
+    const newArt = headerImage && headerImageChanged(originalArt(game), headerImage);
+    // The player's row: new art goes behind art they chose, not over it.
+    const values = { ...newReviews, ...(newArt ? syncedArt(game, headerImage) : {}) };
+    // The shared cache has no choices: it always takes Steam's art.
+    const cached = { ...newReviews, ...(newArt ? { header_image: headerImage } : {}) };
+    return Object.keys(values).length ? [{ game, values, cached }] : [];
   });
 
   for (const batch of chunk(updates, UPDATE_CONCURRENCY)) {
     const results = await Promise.all(
-      batch.flatMap(({ game, values }) => [
+      batch.flatMap(({ game, values, cached }) => [
         supabase.from('games').update(values).eq('user_id', userId).eq('id', game.id),
         // The shared cache holds Steam games only.
         ...(service && game.source === 'steam'
-          ? [service.from('game_metadata').update(values).eq('app_id', game.app_id)]
+          ? [service.from('game_metadata').update(cached).eq('app_id', game.app_id)]
           : []),
       ]),
     );

@@ -2,10 +2,9 @@
 // fetches the art on the server (next/og needs a raw image), so it's limited to
 // the hosts game art really comes from: nothing else can be fetched through it.
 import { IGDB_IMAGE_HOST } from '@/lib/igdb/images';
-
-// SteamGridDB's art host, for console games neither Steam nor IGDB has wide
-// art for (lib/server/manual-details.ts). Keep in step with next.config.ts.
-const STEAMGRIDDB_IMAGE_HOST = 'cdn2.steamgriddb.com';
+// SteamGridDB's art: for console games neither Steam nor IGDB has wide art
+// for (lib/server/manual-details.ts), and any game whose art the player chose.
+import { STEAMGRIDDB_IMAGE_HOST } from '@/lib/steamgriddb/images';
 
 function isAllowedImageHost(hostname: string): boolean {
   return (

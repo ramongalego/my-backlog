@@ -24,6 +24,9 @@ export const queryKeys = {
     all: ['library'] as const,
     meta: (userId: string) => [...queryKeys.library.all, 'meta', userId] as const,
   },
+  // The images a game's art can be chosen from (Choose art). Not under games:
+  // it's SteamGridDB's answer, which a change to the library doesn't change.
+  gameArt: (gameId: number) => ['game-art', gameId] as const,
   igdb: {
     game: (igdbId: number) => ['igdb', 'game', igdbId] as const,
   },

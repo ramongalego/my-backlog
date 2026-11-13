@@ -28,6 +28,12 @@ export const gameStatusSchema = z.object({
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;
 
+// Choosing a game's art: the image picked, or null for the original.
+export const gameArtSchema = z.object({
+  gameId: z.number().int().positive(),
+  url: z.string().url().max(500).nullable(),
+});
+
 // ─── Games added by hand ─────────────────────────────────────────────────────
 
 // Hours you've played, entered yourself (consoles don't report playtime).

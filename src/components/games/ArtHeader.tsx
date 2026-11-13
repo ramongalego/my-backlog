@@ -17,6 +17,7 @@ export function ArtHeader({
   loading = false,
   preload = false,
   artClassName = '',
+  action,
   children,
 }: {
   src: string | null | undefined;
@@ -30,6 +31,8 @@ export function ArtHeader({
   preload?: boolean;
   /** On the art itself, e.g. the reveal when a pick lands. */
   artClassName?: string;
+  /** A round control for the top-right corner, left of the dialog's close button. */
+  action?: ReactNode;
   /** Badges for the top-left corner (the close button has the top-right). */
   children?: ReactNode;
 }) {
@@ -56,8 +59,13 @@ export function ArtHeader({
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent" />
+      {action && <div className="absolute top-3 right-14 z-10 flex">{action}</div>}
       {children && (
-        <div className="absolute top-3 left-4 sm:left-6 right-14 flex gap-1">{children}</div>
+        <div
+          className={`absolute top-3 left-4 sm:left-6 flex gap-1 ${action ? 'right-[6.5rem]' : 'right-14'}`}
+        >
+          {children}
+        </div>
       )}
       <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6">
         <Heading className="text-2xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">

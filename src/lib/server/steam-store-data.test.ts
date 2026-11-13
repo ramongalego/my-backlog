@@ -16,6 +16,8 @@ const steamGame = {
   steam_review_score: 80,
   steam_review_count: 100,
   header_image: ART,
+  art_chosen: false,
+  default_header_image: null,
 };
 const handAdded = {
   id: 2,
@@ -25,6 +27,8 @@ const handAdded = {
   steam_review_score: null,
   steam_review_count: null,
   header_image: null,
+  art_chosen: false,
+  default_header_image: null,
 };
 
 /** A Supabase stand-in that returns `rows` and records every update. */
@@ -92,6 +96,33 @@ it("picks up art Steam has swapped, in the user's row and the shared cache", asy
     ['games', { header_image: LAUNCH_ART }],
     ['game_metadata', { header_image: LAUNCH_ART }],
   ]);
+});
+
+describe('a game whose art the player chose', () => {
+  const PICK = 'https://cdn2.steamgriddb.com/grid/abc.png';
+  const chosen = { ...steamGame, header_image: PICK, art_chosen: true, default_header_image: ART };
+
+  it("puts Steam's new art behind the choice, and still in the shared cache", async () => {
+    store([[10, { reviews: { score: 80, count: 100 }, headerImage: LAUNCH_ART }]]);
+    const writes: { table: string; values: object; filters: string[] }[] = [];
+
+    expect(await refreshStoreData(fakeClient([chosen], writes), 'u', fakeClient([], writes))).toBe(
+      1,
+    );
+    expect(writes.map((w) => [w.table, w.values])).toEqual([
+      ['games', { default_header_image: LAUNCH_ART }],
+      ['game_metadata', { header_image: LAUNCH_ART }],
+    ]);
+  });
+
+  it("compares Steam's art with the default, so a choice isn't taken for a change", async () => {
+    store([[10, { reviews: { score: 80, count: 100 }, headerImage: ART }]]);
+    const writes: { table: string; values: object; filters: string[] }[] = [];
+
+    expect(await refreshStoreData(fakeClient([chosen], writes), 'u', null)).toBe(0);
+    expect(writes).toEqual([]);
+    expect(getStoreSummaries).toHaveBeenLastCalledWith([10], new Map([[10, ART]]));
+  });
 });
 
 it('writes nothing when neither changed, and keeps art Steam no longer returns', async () => {

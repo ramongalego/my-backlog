@@ -1,6 +1,7 @@
 'use client';
 
-import { startTransition, useActionState, useState } from 'react';
+import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
+import { ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ADD_STATUSES, GAME_STATUSES, type AddStatus, type GameStatus } from '@/lib/games/status';
@@ -16,6 +17,8 @@ import { StatusPicker, type DetailStatus } from '@/components/games/detail/Statu
 import { CompletionDateField } from '@/components/games/detail/CompletionDateField';
 import { ReviewFields } from '@/components/games/detail/ReviewFields';
 import { ManualGameActions } from '@/components/games/detail/ManualGameActions';
+import { ArtPicker } from '@/components/games/detail/ArtPicker';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface AddGameValues {
   status: AddStatus;
@@ -76,6 +79,11 @@ interface GameDetailModalProps {
    * too, as the server does for every status but backlog.
    */
   queued?: { onRemove: () => void };
+  /**
+   * The game is in the library, so its art can be chosen: a button on the art
+   * swaps the dialog's fields for the images to pick from.
+   */
+  art?: { gameId: number };
   /** For games added by hand: their console, hours played you enter, and removal. */
   manual?: {
     platform: string | null;
@@ -145,6 +153,7 @@ export function GameDetailModal({
   playing,
   onAddToQueue,
   queued,
+  art,
   manual,
   adding,
 }: GameDetailModalProps) {
@@ -160,6 +169,27 @@ export function GameDetailModal({
   const [date, setDate] = useState(initialDate || todayIso());
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
+
+  // Choose art: the picker takes the fields' place. The header shows the pick
+  // being looked at, then the art saved here, ahead of the page's own copy of
+  // the game catching up.
+  const [choosingArt, setChoosingArt] = useState(false);
+  const [previewArt, setPreviewArt] = useState<string | null | undefined>(undefined);
+  const [savedArt, setSavedArt] = useState<string | null | undefined>(undefined);
+  const shownArt = savedArt !== undefined ? savedArt : game.header_image;
+  const headerArt = choosingArt && previewArt !== undefined ? previewArt : shownArt;
+  const artButton = useRef<HTMLButtonElement>(null);
+  const wasChoosingArt = useRef(false);
+  // Back from the picker, whose buttons are gone: focus returns to the button
+  // that opened it.
+  useEffect(() => {
+    if (wasChoosingArt.current && !choosingArt) artButton.current?.focus();
+    wasChoosingArt.current = choosingArt;
+  }, [choosingArt]);
+  const closeArtPicker = () => {
+    setChoosingArt(false);
+    setPreviewArt(undefined);
+  };
 
   // The API only stores date, rating and notes for finished/dropped games.
   const showDateField = status === 'finished' || status === 'dropped';
@@ -263,7 +293,29 @@ export function GameDetailModal({
       align={adding ? 'top' : 'center'}
     >
       {/* The title runs along the bottom, so the console sits top-left here. */}
-      <ArtHeader src={game.header_image} title={game.name} loading={headerLoading}>
+      <ArtHeader
+        src={headerArt}
+        title={game.name}
+        loading={headerLoading}
+        action={
+          art &&
+          !adding &&
+          !choosingArt && (
+            <Tooltip content="Choose art">
+              <button
+                ref={artButton}
+                type="button"
+                onClick={() => setChoosingArt(true)}
+                aria-label="Choose art"
+                // The close button's twin: a dark disc, so it reads over any art.
+                className="p-2 rounded-full bg-ink-950/60 text-ink-200 hover:bg-ink-950/85 hover:text-ink-50 transition-colors cursor-pointer"
+              >
+                <ImageIcon className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </Tooltip>
+          )
+        }
+      >
         {(manual?.platform || upcomingRelease(releaseDate)) && (
           <>
             {manual?.platform && <ConsoleBadge platform={manual.platform} />}
@@ -272,7 +324,18 @@ export function GameDetailModal({
         )}
       </ArtHeader>
 
-      {adding ? (
+      {choosingArt && art ? (
+        <ArtPicker
+          gameId={art.gameId}
+          shown={shownArt}
+          onPreview={setPreviewArt}
+          onDone={(saved) => {
+            setSavedArt(saved);
+            closeArtPicker();
+          }}
+          onCancel={closeArtPicker}
+        />
+      ) : adding ? (
         <div className="mt-1 flex items-center gap-2 text-xs text-ink-400">
           {adding.year && <span className="tabular-nums">{adding.year}</span>}
           {adding.year && <span aria-hidden="true">·</span>}
@@ -301,7 +364,7 @@ export function GameDetailModal({
         </div>
       )}
 
-      <div className="space-y-5 mt-4">
+      <div className="space-y-5 mt-4" hidden={choosingArt}>
         {/* A form, so Enter in a field saves. Not a form action: React resets
             a form after its action runs, and these fields are controlled. */}
         <form

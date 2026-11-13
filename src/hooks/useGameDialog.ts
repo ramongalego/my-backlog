@@ -25,8 +25,8 @@ interface DialogOptions {
  * The parts of a game's dialog that depend on the rest of the library: the
  * game being played, the queue, and the console a game is played on. Every
  * page that opens a library game's dialog takes them from here, so Queue,
- * "play this instead" and a console game's hours work the same wherever the
- * game is opened. Returns a function of the open game:
+ * "play this instead", a console game's hours and Choose art work the same
+ * wherever the game is opened. Returns a function of the open game:
  *
  *   <GameDetailModal game={game} {...dialogFor(game)} ... />
  */
@@ -41,6 +41,8 @@ export function useGameDialog(userId: string | null) {
     const playing = switchGame.playing;
     const queued = status === 'backlog' && queuedGameIds.has(game.id);
     return {
+      /** The game's art can be chosen (Choose art). */
+      art: { gameId: game.id },
       /** A console game's hours, and removing it or moving it back to Steam. */
       manual: manualGames.dialogProps(game),
       /** Another game is being played: Playing means playing this one instead. */

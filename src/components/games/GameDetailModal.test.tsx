@@ -17,6 +17,27 @@ jest.mock('next/image', () => ({
   },
 }));
 
+// The picker has its own tests; here it's the dialog around it that's checked.
+jest.mock('@/components/games/detail/ArtPicker', () => ({
+  ArtPicker: ({
+    onPreview,
+    onDone,
+    onCancel,
+  }: {
+    onPreview: (url: string) => void;
+    onDone: (url: string) => void;
+    onCancel: () => void;
+  }) => (
+    <div data-testid="art-picker">
+      <button onClick={() => onPreview('https://cdn2.steamgriddb.com/grid/pick.png')}>
+        Preview
+      </button>
+      <button onClick={() => onDone('https://cdn2.steamgriddb.com/grid/pick.png')}>Done</button>
+      <button onClick={onCancel}>Cancel art</button>
+    </div>
+  ),
+}));
+
 const defaultProps = {
   isOpen: true,
   onClose: jest.fn(),
@@ -723,6 +744,75 @@ describe('GameDetailModal as a form', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
       await save();
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', '', '', null);
+    });
+  });
+
+  describe('choosing art', () => {
+    const artButton = () => screen.queryByRole('button', { name: 'Choose art' });
+
+    it('is offered for a game in the library, on its art', () => {
+      render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      expect(artButton()).toBeInTheDocument();
+    });
+
+    it("isn't offered without the game's id, or for a game still being added", () => {
+      const { unmount } = render(<GameDetailModal {...defaultProps} />);
+      expect(artButton()).not.toBeInTheDocument();
+      unmount();
+
+      render(
+        <GameDetailModal
+          {...defaultProps}
+          art={{ gameId: 7 }}
+          adding={{
+            consoles: ['Switch'],
+            defaultConsole: 'Switch',
+            year: 2020,
+            playingName: null,
+            onAdd: jest.fn(),
+            onChangeGame: jest.fn(),
+          }}
+        />,
+      );
+      expect(artButton()).not.toBeInTheDocument();
+    });
+
+    it('swaps the fields for the picker, previews a pick in the header, and comes back', async () => {
+      render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      fireEvent.click(artButton()!);
+
+      // The picker is there; the status fields are kept, out of sight.
+      expect(screen.getByTestId('art-picker')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Status', hidden: true })).not.toBeVisible();
+      expect(artButton()).not.toBeInTheDocument();
+
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      expect(document.querySelector('img[src="https://cdn2.steamgriddb.com/grid/pick.png"]')).toBe(
+        document.querySelector('img'),
+      );
+
+      // Saved: the fields are back, the header keeps the new art, and focus
+      // returns to the button that opened the picker.
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Done' })));
+      expect(screen.queryByTestId('art-picker')).not.toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Status' })).toBeVisible();
+      expect(document.querySelector('img')).toHaveAttribute(
+        'src',
+        'https://cdn2.steamgriddb.com/grid/pick.png',
+      );
+      expect(artButton()).toHaveFocus();
+    });
+
+    it('goes back to the art it had when the picker is cancelled', async () => {
+      render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      fireEvent.click(artButton()!);
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Cancel art' })));
+
+      expect(document.querySelector('img')).toHaveAttribute(
+        'src',
+        'https://example.com/dark-souls.jpg',
+      );
     });
   });
 

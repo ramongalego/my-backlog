@@ -13,7 +13,7 @@ const csp = [
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com",
+  "img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com https://cdn2.steamgriddb.com",
   "font-src 'self' data:",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://va.vercel-scripts.com`,
   "frame-ancestors 'none'",

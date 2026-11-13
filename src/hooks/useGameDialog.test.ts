@@ -44,6 +44,8 @@ beforeEach(() => {
 describe('with nothing being played', () => {
   it('offers neither a switch nor the queue: Playing just starts the game', () => {
     expect(dialogFor()(hades)).toEqual({
+      // Any library game's art can be chosen.
+      art: { gameId: 1 },
       manual: undefined,
       playing: undefined,
       onAddToQueue: undefined,
