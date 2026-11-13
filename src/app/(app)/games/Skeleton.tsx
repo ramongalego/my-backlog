@@ -80,9 +80,11 @@ export function GamesPageSkeleton({
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Skeleton className="h-10 w-full sm:w-80 rounded-lg" />
-          <div className="flex items-center justify-between sm:justify-end gap-4">
+          {/* Select, the view switch and Sort: three controls of one height. */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-10 sm:w-[92px] rounded-lg" />
             <Skeleton className="h-10 w-[78px] rounded-lg" />
-            <Skeleton className="h-5 w-28" />
+            <Skeleton className="ml-auto sm:ml-0 h-10 w-[116px] rounded-lg" />
           </div>
         </div>
       </PageHeaderSkeleton>

@@ -3,7 +3,12 @@ import { toast } from 'sonner';
 import { queryKeys } from '@/lib/query-keys';
 import type { GameItem } from '@/lib/data/loaders';
 import { updateGameStatus } from '@/lib/client/game-status';
-import { applyStatusToList, statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
+import {
+  applyStatusToList,
+  applyStatusesToList,
+  statusChangeFrom,
+  type StatusChange,
+} from '@/lib/games/status-rules';
 import type { GameStatus } from '@/lib/games/status';
 import { moreQueueChangesWaiting } from '@/lib/games/queue-items';
 
@@ -70,6 +75,30 @@ export function usePatchGamesList(userId: string | null) {
       queryClient.setQueryData<GameItem[]>(
         listKey,
         (old) => old && changes.reduce((list, change) => applyStatusToList(list, change), old),
+      );
+      return previous;
+    },
+    /** Several changes at once, none of which starts a game (a bulk change). */
+    patchMany: (changes: StatusChange[]) => {
+      const previous = queryClient.getQueryData<GameItem[]>(listKey);
+      queryClient.setQueryData<GameItem[]>(
+        listKey,
+        (old) => old && applyStatusesToList(old, changes),
+      );
+      return previous;
+    },
+    /** Games put back as they were (a bulk change's Undo): the fields the list keeps. */
+    patchRows: (rows: { id: number }[]) => {
+      const previous = queryClient.getQueryData<GameItem[]>(listKey);
+      const byGame = new Map(rows.map((row) => [row.id, row as Record<string, unknown>]));
+      queryClient.setQueryData<GameItem[]>(listKey, (old) =>
+        old?.map((game) => {
+          const row = byGame.get(game.id);
+          if (!row) return game;
+          const next = { ...game } as Record<string, unknown>;
+          for (const [key, value] of Object.entries(row)) if (key in next) next[key] = value;
+          return next as unknown as GameItem;
+        }),
       );
       return previous;
     },

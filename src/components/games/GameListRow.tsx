@@ -2,7 +2,9 @@
 
 import type { GameItem } from '@/lib/data/loaders';
 import { consoleOf, steamLastPlayed } from '@/lib/games/consoles';
-import { openGameLabel } from '@/lib/games/game-label';
+import { openGameLabel, selectGameLabel } from '@/lib/games/game-label';
+import type { GameSelection } from './GameCard';
+import { SelectTick } from './SelectTick';
 import { upcomingRelease } from '@/lib/games/release-date';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
 import { CoverThumb } from './CoverArt';
@@ -18,6 +20,8 @@ interface GameListRowProps {
   queued?: boolean;
   /** Off when the page is filtered to one status: the column would repeat the filter. */
   showStatus?: boolean;
+  /** Select mode: a click ticks the game instead of opening it. */
+  selection?: GameSelection;
 }
 
 /**
@@ -26,7 +30,13 @@ interface GameListRowProps {
  * hours played, your rating). Below `lg` the columns give way to the meta row
  * the cards use. The whole row opens the game.
  */
-export function GameListRow({ game, onOpenDetail, queued, showStatus = true }: GameListRowProps) {
+export function GameListRow({
+  game,
+  onOpenDetail,
+  queued,
+  showStatus = true,
+  selection,
+}: GameListRowProps) {
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
   const platform = consoleOf(game);
   const rated = (game.status === 'finished' || game.status === 'dropped') && game.rating != null;
@@ -43,10 +53,20 @@ export function GameListRow({ game, onOpenDetail, queued, showStatus = true }: G
     // out rows off screen; the intrinsic size is a row's usual height, so the
     // scrollbar holds still.
     <li
-      onClick={() => onOpenDetail(game.id)}
-      className={`group relative ${LIST_ROW} py-2 rounded-lg cursor-pointer select-none hover:bg-ink-900 transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_4rem]`}
+      onClick={(e) =>
+        selection ? selection.selectable && selection.onToggle(e.shiftKey) : onOpenDetail(game.id)
+      }
+      className={`group relative ${LIST_ROW} py-2 rounded-lg select-none transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_4rem] ${
+        selection && !selection.selectable
+          ? 'cursor-not-allowed opacity-40'
+          : 'cursor-pointer hover:bg-ink-900'
+      } ${selection?.selected ? 'bg-ink-900' : ''}`}
     >
-      <CoverThumb src={game.header_image} alt="" className={LIST_THUMB} />
+      <CoverThumb src={game.header_image} alt="" className={LIST_THUMB}>
+        {selection?.selectable && (
+          <SelectTick selected={selection.selected} className="absolute top-1 left-1" />
+        )}
+      </CoverThumb>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
@@ -54,7 +74,13 @@ export function GameListRow({ game, onOpenDetail, queued, showStatus = true }: G
               its focus ring is drawn round the whole row. */}
           <button
             type="button"
-            aria-label={openGameLabel(game, { queued, showStatus, release })}
+            aria-label={
+              selection
+                ? selectGameLabel(game, selection, queued)
+                : openGameLabel(game, { queued, showStatus, release })
+            }
+            aria-pressed={selection ? selection.selected : undefined}
+            aria-disabled={selection && !selection.selectable ? true : undefined}
             className="min-w-0 truncate text-left font-medium text-ink-100 cursor-pointer after:absolute after:inset-0 after:rounded-lg after:pointer-events-none focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-accent-400 focus-visible:after:-outline-offset-2"
           >
             {game.name}

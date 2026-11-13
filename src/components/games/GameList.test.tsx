@@ -179,3 +179,53 @@ describe('the column header', () => {
     );
   });
 });
+
+describe('Select mode', () => {
+  const onOpenDetail = jest.fn();
+  const onToggle = jest.fn();
+  const list = () =>
+    render(
+      <GameList
+        games={GAMES}
+        queuedGameIds={new Set()}
+        showStatus
+        sort="score"
+        reversed={false}
+        onSortChange={jest.fn()}
+        onOpenDetail={onOpenDetail}
+        selectionFor={(g) => ({
+          selected: g.id === 1,
+          selectable: g.id !== 2,
+          onToggle: (range) => onToggle(g.id, range),
+        })}
+      />,
+    );
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('ticks a game from its row instead of opening it', () => {
+    list();
+    const hades = screen.getByRole('button', { name: 'Select Hades' });
+    expect(hades).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(hades.closest('li')!);
+    fireEvent.click(hades.closest('li')!, { shiftKey: true });
+
+    expect(onToggle.mock.calls).toEqual([
+      [1, false],
+      [1, true],
+    ]);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it("leaves a game that can't be ticked alone", () => {
+    list();
+    const row = screen.getAllByRole('listitem')[1];
+    expect(within(row).getByRole('button')).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(row);
+
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+});

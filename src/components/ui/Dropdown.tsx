@@ -19,6 +19,8 @@ interface DropdownProps<T extends string> {
   'aria-label'?: string;
   /** Inside a sentence: the value reads as underlined text in the sentence's own type. */
   inline?: boolean;
+  /** Added to the trigger: its padding and hover fill when it's part of a toolbar control. */
+  triggerClassName?: string;
 }
 
 const ALIGN_CLASS = {
@@ -40,6 +42,7 @@ export function Dropdown<T extends string>({
   align = 'right',
   'aria-label': ariaLabel,
   inline = false,
+  triggerClassName = '',
 }: DropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -111,7 +114,7 @@ export function Dropdown<T extends string>({
         className={
           inline
             ? 'group cursor-pointer text-left text-ink-100 hover:text-ink-50 transition-colors'
-            : 'flex items-center gap-2 h-10 text-sm font-medium text-ink-300 hover:text-ink-50 transition-colors cursor-pointer'
+            : `flex items-center gap-2 h-10 text-sm font-medium text-ink-300 hover:text-ink-50 transition-colors cursor-pointer ${triggerClassName}`
         }
         aria-haspopup="listbox"
         aria-expanded={open}

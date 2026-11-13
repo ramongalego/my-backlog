@@ -1,6 +1,8 @@
 import type { GameWithImage } from '@/types/games';
 import type { GameStatus } from '@/lib/games/status';
 import type { CompletionCounts } from '@/lib/games/completion';
+import type { StatusChange } from '@/lib/games/status-rules';
+import type { GameRestore } from '@/lib/games/bulk-status';
 
 export async function updateGameStatus(
   gameId: number,
@@ -43,6 +45,30 @@ export async function updateGameStatus(
   }
   const body = await res.json().catch(() => null);
   return { paused: body?.paused ?? [] };
+}
+
+async function postBulk(body: object): Promise<{ previous?: GameRestore[] }> {
+  const res = await fetch('/api/games/status/bulk', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const answer = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(answer?.error ?? 'Failed to update the games');
+  return answer ?? {};
+}
+
+/**
+ * Moves several games to a status in one request (Games, Select), all or
+ * none. Resolves with what each game had before, for Undo.
+ */
+export async function updateGameStatuses(changes: StatusChange[]): Promise<GameRestore[]> {
+  return (await postBulk({ changes })).previous ?? [];
+}
+
+/** Puts several games back exactly as they were: a bulk change's Undo. */
+export async function restoreGameStatuses(games: GameRestore[]): Promise<void> {
+  await postBulk({ restore: games });
 }
 
 interface CompleteGameResult {

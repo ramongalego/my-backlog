@@ -9,6 +9,7 @@ import {
 } from '@/lib/games/status-rules';
 import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
 import { isReleased } from '@/lib/games/release-date';
+import type { GameRestore } from '@/lib/games/bulk-status';
 import type { GameWithImage } from '@/types/games';
 
 /** A game paused for another one (`pausePlaying`): reported so the browser
@@ -115,6 +116,155 @@ export async function applyStatusChange(
   }
 
   return { ok: true, paused };
+}
+
+/** As many ids as one read asks for: a longer list wouldn't fit in the request's address. */
+const READ_CHUNK = 200;
+
+type BulkFailure = { ok: false; status: 400 | 404 | 500; error: string };
+
+/** A game as the table has it: any status, the one being played included. */
+interface BulkTarget extends Omit<GameRestore, 'status'> {
+  status: string;
+  source: string;
+  platform: string | null;
+}
+
+const bulkFailed = (err: unknown): BulkFailure => {
+  console.error(err);
+  return { ok: false, status: 500, error: 'Failed to update the games' };
+};
+
+/**
+ * The user's games with these ids, as they are now. Refuses unless every one
+ * is theirs and none is being played: that game is only changed from its own
+ * dialog (stopping it can start the next queued game).
+ */
+async function readBulkTargets(
+  supabase: SupabaseClient,
+  userId: string,
+  ids: number[],
+): Promise<{ ok: true; targets: Map<number, BulkTarget> } | BulkFailure> {
+  const targets = new Map<number, BulkTarget>();
+  for (let i = 0; i < ids.length; i += READ_CHUNK) {
+    const { data, error } = await supabase
+      .from('games')
+      .select(
+        'id, status, source, platform, started_at, finished_at, dropped_at, notes, rating, last_played_at',
+      )
+      .eq('user_id', userId)
+      .in('id', ids.slice(i, i + READ_CHUNK));
+    if (error) return bulkFailed(error);
+    for (const game of (data ?? []) as BulkTarget[]) targets.set(game.id, game);
+  }
+  // Every game must be the user's, before any of them is touched.
+  if (targets.size !== ids.length) return { ok: false, status: 404, error: 'Game not found' };
+  if ([...targets.values()].some((game) => game.status === 'playing')) {
+    return {
+      ok: false,
+      status: 400,
+      error: "The game you're playing can't be changed with others. Change it from its own dialog.",
+    };
+  }
+  return { ok: true, targets };
+}
+
+async function saveBulk(
+  supabase: SupabaseClient,
+  updates: { id: number; update: object }[],
+): Promise<{ ok: true } | BulkFailure> {
+  const { error } = await supabase.rpc('apply_status_change', {
+    p_updates: updates,
+    p_pause_ids: [],
+  });
+  if (!error) return { ok: true };
+  if (error.code === GAME_NOT_FOUND) return { ok: false, status: 404, error: 'Game not found' };
+  return bulkFailed(error);
+}
+
+/**
+ * Sets the status of several games at once (Games, Select), by the same rules
+ * as one, and saves them in one transaction: all of them, or none. Returns
+ * what each game had before (`previous`), which restoreGames writes back for
+ * Undo: the rules clear things (a date, a rating, notes) that re-applying the
+ * old status wouldn't bring back.
+ */
+export async function applyStatusChanges(
+  supabase: SupabaseClient,
+  userId: string,
+  changes: StatusChange[],
+): Promise<{ ok: true; count: number; previous: GameRestore[] } | BulkFailure> {
+  // One change per game: the last one given.
+  const byGame = new Map(changes.map((change) => [change.gameId, change]));
+  const ids = [...byGame.keys()];
+
+  const read = await readBulkTargets(supabase, userId, ids);
+  if (!read.ok) return read;
+
+  const saved = await saveBulk(
+    supabase,
+    ids.map((id) => ({
+      id,
+      update: withLastPlayed(read.targets.get(id)!, statusUpdate(byGame.get(id)!)),
+    })),
+  );
+  if (!saved.ok) return saved;
+
+  return {
+    ok: true,
+    count: ids.length,
+    previous: ids.map((id) => {
+      const game = read.targets.get(id)!;
+      return {
+        id,
+        // Not playing: that was refused above.
+        status: game.status as GameRestore['status'],
+        started_at: game.started_at,
+        finished_at: game.finished_at,
+        dropped_at: game.dropped_at,
+        notes: game.notes,
+        rating: game.rating,
+        last_played_at: game.last_played_at,
+      };
+    }),
+  };
+}
+
+/**
+ * Puts several games back exactly as they were (a bulk change's Undo): the
+ * status and everything a status change can touch, as given, in one
+ * transaction. Not through the rules, which would clear or stamp things.
+ */
+export async function restoreGames(
+  supabase: SupabaseClient,
+  userId: string,
+  games: GameRestore[],
+): Promise<{ ok: true; count: number } | BulkFailure> {
+  const byGame = new Map(games.map((game) => [game.id, game]));
+  const ids = [...byGame.keys()];
+
+  const read = await readBulkTargets(supabase, userId, ids);
+  if (!read.ok) return read;
+
+  const saved = await saveBulk(
+    supabase,
+    ids.map((id) => {
+      const game = byGame.get(id)!;
+      return {
+        id,
+        update: {
+          status: game.status,
+          started_at: game.started_at,
+          finished_at: game.finished_at,
+          dropped_at: game.dropped_at,
+          notes: game.notes,
+          rating: game.rating,
+          last_played_at: game.last_played_at,
+        },
+      };
+    }),
+  );
+  return saved.ok ? { ok: true, count: ids.length } : saved;
 }
 
 /**

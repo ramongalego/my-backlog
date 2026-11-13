@@ -7,6 +7,8 @@ import { SteamIcon } from '@/components/ui/SteamIcon';
 import { GameCard } from '@/components/games/GameCard';
 import { GameList } from '@/components/games/GameList';
 import { GamesViewToggle } from '@/components/games/GamesViewToggle';
+import { GamesSelectToggle } from '@/components/games/GamesSelectToggle';
+import { GamesBulkBar } from '@/components/games/GamesBulkBar';
 import { useGamesView } from '@/hooks/useGamesView';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { GamesFilter } from '@/components/games/GamesFilter';
@@ -55,6 +57,8 @@ export default function GamesView() {
     gameDialog,
     handleOpenDetail,
     queuedGameIds,
+    selection,
+    toggleSelecting,
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
   const isSteamConnected = !!useAuth().profile?.steam_id;
@@ -123,9 +127,15 @@ export default function GamesView() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
-          <div className="flex items-center justify-between sm:justify-end gap-4">
+          {/* One row of controls on the same surface, 8px apart: what to act
+              on, how it's laid out, what order it's in. On phones the sort
+              keeps the right edge. */}
+          <div className="flex items-center gap-2">
+            <GamesSelectToggle on={!!selection} onToggle={toggleSelecting} />
             <GamesViewToggle value={view} onChange={setView} />
-            <GamesSort value={sort} onChange={setSort} reversed={reversed} onReverse={reverse} />
+            <div className="ml-auto sm:ml-0">
+              <GamesSort value={sort} onChange={setSort} reversed={reversed} onReverse={reverse} />
+            </div>
           </div>
         </div>
       </PageHeader>
@@ -184,6 +194,7 @@ export default function GamesView() {
               reversed={reversed}
               onSortChange={sortBy}
               onOpenDetail={handleOpenDetail}
+              selectionFor={selection?.of}
             />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
@@ -194,11 +205,30 @@ export default function GamesView() {
                   onOpenDetail={handleOpenDetail}
                   queued={queuedGameIds.has(game.id)}
                   showStatus={showStatus}
+                  selection={selection?.of(game)}
                 />
               ))}
             </div>
           )}
           <div ref={sentinelRef} />
+        </>
+      )}
+
+      {selection && (
+        <>
+          {/* Room for the last games to scroll clear of the bar. */}
+          <div className="h-56 sm:h-28" aria-hidden="true" />
+          <GamesBulkBar
+            count={selection.count}
+            total={selection.total}
+            onSelectAll={selection.selectAll}
+            onClear={selection.clear}
+            moves={selection.moves}
+            reviewsCleared={selection.reviewsCleared}
+            onMove={selection.move}
+            pending={selection.pending}
+            onClose={selection.stop}
+          />
         </>
       )}
     </Page>

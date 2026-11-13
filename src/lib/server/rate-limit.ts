@@ -177,6 +177,9 @@ export function getClientIp(request: Request): string {
 export const RATE_LIMITS = {
   // 60 requests per minute for game status updates
   gameStatus: { limit: 60, windowMs: 60 * 1000 },
+  // Moving several games at once (Games, Select): one request for the lot,
+  // and one more for an Undo.
+  gameStatusBulk: { limit: 20, windowMs: 60 * 1000 },
   // Syncing one game's details, per user. A first import asks for every game
   // the shared cache doesn't have, eight at a time, so this is set well above
   // what that needs.

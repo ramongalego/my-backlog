@@ -1,5 +1,6 @@
 'use client';
 
+import type { GameSelection } from './GameCard';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import type { GameItem } from '@/lib/data/loaders';
 import { SORT_DIRECTIONS, sortsAscending, type GameSort } from '@/lib/games/library-filter';
@@ -16,6 +17,8 @@ interface GameListProps {
   /** A heading was clicked: sort by it, or reverse it when it's the sort already. */
   onSortChange: (sort: GameSort) => void;
   onOpenDetail: (gameId: number) => void;
+  /** Select mode: each game's part in it. */
+  selectionFor?: (game: GameItem) => GameSelection;
 }
 
 /**
@@ -31,6 +34,7 @@ export function GameList({
   reversed,
   onSortChange,
   onOpenDetail,
+  selectionFor,
 }: GameListProps) {
   const column = (label: string, by: GameSort, className: string) => (
     <SortColumn
@@ -65,6 +69,7 @@ export function GameList({
             onOpenDetail={onOpenDetail}
             queued={queuedGameIds.has(game.id)}
             showStatus={showStatus}
+            selection={selectionFor?.(game)}
           />
         ))}
       </ul>

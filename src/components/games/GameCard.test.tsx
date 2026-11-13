@@ -47,6 +47,60 @@ const createGame = (overrides: Partial<GameItem> = {}): GameItem => ({
   ...overrides,
 });
 
+describe('GameCard in Select mode', () => {
+  const onOpenDetail = jest.fn();
+  const onToggle = jest.fn();
+  const card = (selection: { selected: boolean; selectable: boolean }, queued = false) =>
+    render(
+      <GameCard
+        game={createGame({ name: 'Hades' })}
+        onOpenDetail={onOpenDetail}
+        queued={queued}
+        selection={{ ...selection, onToggle }}
+      />,
+    );
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('ticks the game instead of opening it', () => {
+    card({ selected: false, selectable: true });
+    const button = screen.getByRole('button', { name: 'Select Hades' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(button);
+
+    expect(onToggle).toHaveBeenCalledWith(false);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('asks for the range on a shift-click', () => {
+    card({ selected: false, selectable: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Select Hades' }), { shiftKey: true });
+    expect(onToggle).toHaveBeenCalledWith(true);
+  });
+
+  it('shows a ticked game as pressed', () => {
+    card({ selected: true, selectable: true });
+    expect(screen.getByRole('button', { name: 'Select Hades' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it("can't tick a queued game, and says why", () => {
+    card({ selected: false, selectable: false }, true);
+    const button = screen.getByRole('button', {
+      name: 'Hades, queued: change it from its own dialog',
+    });
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(button);
+
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+});
+
 describe('GameCard', () => {
   const mockOnOpenDetail = jest.fn();
 

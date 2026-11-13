@@ -1,5 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { applyStatusChange, promoteNextFromQueue } from '@/lib/server/apply-status';
+import {
+  applyStatusChange,
+  applyStatusChanges,
+  promoteNextFromQueue,
+  restoreGames,
+} from '@/lib/server/apply-status';
 
 type Row = Record<string, unknown>;
 
@@ -368,6 +373,216 @@ describe('moving the playing game to the queue (queueAtTop)', () => {
 
     expect(tables.games[0].status).toBe('dropped');
     expect(queueOrder(tables.playing_queue)).toEqual([2, 3]);
+  });
+});
+
+describe('applyStatusChanges (several games at once)', () => {
+  const library = (opts?: { failOnGame?: number }) =>
+    fakeSupabase(
+      {
+        games: [
+          game(1, 'backlog'),
+          { ...game(2, 'finished'), finished_at: '2026-10-25', notes: 'Loved it', rating: 9 },
+          game(3, 'backlog'),
+          game(4, 'playing'),
+        ],
+        playing_queue: [{ user_id: 'u', game_id: 3, position: 0 }],
+      },
+      opts,
+    );
+
+  it('moves every game by the same rules as one, in a single save', async () => {
+    const { client, tables, log } = library();
+
+    const result = await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'hidden' },
+      { gameId: 2, status: 'hidden' },
+      { gameId: 3, status: 'wont_play' },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, count: 3 });
+    expect(tables.games.map((g) => g.status)).toEqual(['hidden', 'hidden', 'wont_play', 'playing']);
+    // Hidden clears a review, as it does for one game.
+    expect(tables.games[1]).toMatchObject({ finished_at: null, notes: null, rating: null });
+    // A game that left the backlog leaves the queue.
+    expect(tables.playing_queue).toEqual([]);
+    expect(log).toEqual(['rpc apply_status_change']);
+  });
+
+  it('answers with what each game had, and writing that back undoes the move exactly', async () => {
+    // What the rules clear on the way out and wouldn't bring back: a date left
+    // on a game since moved to the backlog, an empty note, a start date.
+    const leftovers = {
+      ...game(1, 'backlog'),
+      started_at: '2026-02-28T17:43:40.217+00:00',
+      finished_at: '2026-04-08T00:00:00+00:00',
+      dropped_at: null,
+      notes: '',
+      rating: 8,
+      last_played_at: null,
+    };
+    const reviewed = {
+      ...game(2, 'finished'),
+      started_at: null,
+      finished_at: '2026-10-25T00:00:00+00:00',
+      dropped_at: null,
+      notes: 'Loved it',
+      rating: 9,
+      last_played_at: null,
+    };
+    const { client, tables } = fakeSupabase({
+      games: [{ ...leftovers }, { ...reviewed }],
+      playing_queue: [],
+    });
+
+    const moved = await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'wont_play' },
+      { gameId: 2, status: 'wont_play' },
+    ]);
+
+    if (!moved.ok) throw new Error('the move failed');
+    expect(tables.games[0]).toMatchObject({ status: 'wont_play', finished_at: null, rating: null });
+    expect(moved.previous).toEqual([
+      {
+        id: 1,
+        status: 'backlog',
+        started_at: '2026-02-28T17:43:40.217+00:00',
+        finished_at: '2026-04-08T00:00:00+00:00',
+        dropped_at: null,
+        notes: '',
+        rating: 8,
+        last_played_at: null,
+      },
+      expect.objectContaining({ id: 2, status: 'finished', notes: 'Loved it', rating: 9 }),
+    ]);
+
+    expect(await restoreGames(client, 'u', moved.previous)).toEqual({ ok: true, count: 2 });
+    expect(tables.games).toEqual([leftovers, reviewed]);
+  });
+
+  it('writes an Undo back in one save, without the rules stamping or clearing anything', async () => {
+    // A console game: re-finishing it through the rules would date "last played".
+    const { client, tables, log } = fakeSupabase({
+      games: [{ ...game(1, 'hidden'), source: 'manual', platform: 'Switch', last_played_at: null }],
+      playing_queue: [],
+    });
+
+    await restoreGames(client, 'u', [
+      {
+        id: 1,
+        status: 'finished',
+        started_at: null,
+        finished_at: '2023-01-19T00:00:00+00:00',
+        dropped_at: null,
+        notes: null,
+        rating: 9,
+        last_played_at: null,
+      },
+    ]);
+
+    expect(tables.games[0]).toMatchObject({
+      status: 'finished',
+      finished_at: '2023-01-19T00:00:00+00:00',
+      rating: 9,
+      last_played_at: null,
+    });
+    expect(log).toEqual(['rpc apply_status_change']);
+  });
+
+  it("refuses an Undo for a game that isn't the user's, or that is being played now", async () => {
+    const back = {
+      status: 'backlog' as const,
+      started_at: null,
+      finished_at: null,
+      dropped_at: null,
+      notes: null,
+      rating: null,
+      last_played_at: null,
+    };
+    const { client, tables, log } = library();
+
+    expect(await restoreGames(client, 'u', [{ id: 99, ...back }])).toMatchObject({
+      ok: false,
+      status: 404,
+    });
+    expect(await restoreGames(client, 'u', [{ id: 4, ...back }])).toMatchObject({
+      ok: false,
+      status: 400,
+    });
+    expect(tables.games[3].status).toBe('playing');
+    expect(log).toEqual([]);
+  });
+
+  it("refuses the lot if one game isn't the user's, changing nothing", async () => {
+    const { client, tables, log } = library();
+
+    const result = await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'hidden' },
+      { gameId: 99, status: 'hidden' },
+    ]);
+
+    expect(result).toEqual({ ok: false, status: 404, error: 'Game not found' });
+    expect(tables.games[0].status).toBe('backlog');
+    expect(log).toEqual([]);
+  });
+
+  it('leaves the game being played to its own dialog', async () => {
+    const { client, tables, log } = library();
+
+    const result = await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'hidden' },
+      { gameId: 4, status: 'hidden' },
+    ]);
+
+    expect(result).toMatchObject({ ok: false, status: 400 });
+    expect(tables.games.map((g) => g.status)).toEqual([
+      'backlog',
+      'finished',
+      'backlog',
+      'playing',
+    ]);
+    expect(log).toEqual([]);
+  });
+
+  it('saves all of them or none', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { client, tables } = library({ failOnGame: 3 });
+
+    const result = await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'hidden' },
+      { gameId: 3, status: 'hidden' },
+    ]);
+
+    expect(result).toMatchObject({ ok: false, status: 500 });
+    expect(tables.games[0].status).toBe('backlog');
+    expect(tables.playing_queue).toHaveLength(1);
+  });
+
+  it('takes the last change given for a game named twice', async () => {
+    const { client, tables } = library();
+
+    const result = await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'hidden' },
+      { gameId: 1, status: 'wont_play' },
+    ]);
+
+    expect(result).toMatchObject({ ok: true, count: 1 });
+    expect(tables.games[0].status).toBe('wont_play');
+  });
+
+  it('reads a big selection in batches', async () => {
+    const games = Array.from({ length: 450 }, (_, i) => game(i + 1, 'backlog'));
+    const { client, tables } = fakeSupabase({ games, playing_queue: [] });
+
+    const result = await applyStatusChanges(
+      client,
+      'u',
+      games.map((g) => ({ gameId: g.id as number, status: 'hidden' as const })),
+    );
+
+    expect(result).toMatchObject({ ok: true, count: 450 });
+    expect(result.ok && result.previous).toHaveLength(450);
+    expect(tables.games.every((g) => g.status === 'hidden')).toBe(true);
   });
 });
 

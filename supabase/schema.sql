@@ -310,9 +310,9 @@ begin
 
   if p_updates is null
     or jsonb_typeof(p_updates) <> 'array'
-    or jsonb_array_length(p_updates) not between 1 and 20
+    or jsonb_array_length(p_updates) not between 1 and 2000
   then
-    raise exception 'Expected between 1 and 20 updates' using errcode = '22023';
+    raise exception 'Expected between 1 and 2000 updates' using errcode = '22023';
   end if;
 
   for v_item in select value from jsonb_array_elements(p_updates) loop

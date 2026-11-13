@@ -46,6 +46,21 @@ export function statusUpdate(
   return update;
 }
 
+/**
+ * Applies several status changes to a cached list in one pass (a bulk change
+ * can be hundreds of games). None of them starts a game, so no other game is
+ * affected.
+ */
+export function applyStatusesToList<
+  T extends { id: number; status: string | null; source?: string; platform?: string | null },
+>(games: T[], changes: StatusChange[], now = new Date()): T[] {
+  const byGame = new Map(changes.map((change) => [change.gameId, change]));
+  return games.map((g) => {
+    const change = byGame.get(g.id);
+    return change ? patch(g, withLastPlayed(g, statusUpdate(change, now), now)) : g;
+  });
+}
+
 /** A status change from the detail dialogs' fields, where one date input serves finished and dropped. */
 export function statusChangeFrom(vars: {
   gameId: number;

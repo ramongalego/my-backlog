@@ -31,23 +31,31 @@ export function GamesSort({ value, onChange, reversed, onReverse }: GamesSortPro
   const [now, other] = reversed ? [...SORT_DIRECTIONS[value]].reverse() : SORT_DIRECTIONS[value];
   const Arrow = sortsAscending(value, reversed) ? ArrowUpNarrowWide : ArrowDownWideNarrow;
   return (
-    <div className="flex items-center gap-1">
+    // The same surface and height as the view switch and Select beside it;
+    // a hairline parts the arrow from the menu, since each does its own thing
+    // (gone on hover, when the half under the pointer fills instead).
+    <div className="group/sort flex h-10 items-center rounded-lg bg-ink-800">
       <Tooltip content={<TooltipText title={now} detail={`Click for ${other.toLowerCase()}`} />}>
         <button
           type="button"
           onClick={onReverse}
           aria-label={`${now}. Reverse the order`}
-          className="flex items-center justify-center h-10 w-8 rounded-md text-ink-400 hover:text-ink-50 transition-colors cursor-pointer"
+          className="flex h-10 w-10 items-center justify-center rounded-l-lg text-ink-300 hover:bg-ink-700 hover:text-ink-50 transition-colors cursor-pointer"
         >
           <Arrow className="w-4 h-4" aria-hidden="true" />
         </button>
       </Tooltip>
+      <span
+        className="h-5 w-px bg-ink-700 transition-opacity group-hover/sort:opacity-0"
+        aria-hidden="true"
+      />
       <Dropdown
         value={value}
         options={SORT_OPTIONS}
         onChange={onChange}
         align="responsive"
         aria-label="Sort by"
+        triggerClassName="px-3 rounded-r-lg hover:bg-ink-700"
       />
     </div>
   );

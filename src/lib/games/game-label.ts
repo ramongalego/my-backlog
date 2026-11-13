@@ -31,3 +31,16 @@ export function openGameLabel(
   const badges = [badge, rated ? `${game.rating}/10` : null].filter(Boolean).join(' ');
   return [`Open details for ${game.name}`, badges, release].filter(Boolean).join(', ');
 }
+
+/**
+ * What a game's button is called in Select mode, where it ticks the game
+ * rather than opening it ("Select Hades"), or why it can't be ticked.
+ */
+export function selectGameLabel(
+  game: { name: string },
+  selection: { selectable: boolean },
+  queued?: boolean,
+): string {
+  if (selection.selectable) return `Select ${game.name}`;
+  return `${game.name}, ${queued ? 'queued' : 'playing'}: change it from its own dialog`;
+}

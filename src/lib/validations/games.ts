@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ADD_STATUSES, GAME_STATUSES } from '@/lib/games/status';
+import { ADD_STATUSES, BULK_STATUSES, GAME_STATUSES, MAX_BULK_CHANGES } from '@/lib/games/status';
 import { safeText } from './common';
 
 // A calendar date ("2025-08-20") or a full timestamp as Postgres returns it.
@@ -27,6 +27,39 @@ export const gameStatusSchema = z.object({
 });
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;
+
+// Several games moved at once (Games, Select): each with the status it goes
+// to and, for Undo, the date, rating and notes it had.
+export const bulkStatusSchema = z.object({
+  changes: z
+    .array(
+      gameStatusSchema
+        .pick({ gameId: true, finishedAt: true, droppedAt: true, notes: true, rating: true })
+        .extend({ status: z.enum(BULK_STATUSES) }),
+    )
+    .min(1)
+    .max(MAX_BULK_CHANGES, `No more than ${MAX_BULK_CHANGES} games at once`),
+});
+
+// A bulk change's Undo: each game with the status and details it had, to be
+// written back as they were.
+export const bulkRestoreSchema = z.object({
+  restore: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        status: z.enum(BULK_STATUSES),
+        started_at: isoDate.nullable(),
+        finished_at: isoDate.nullable(),
+        dropped_at: isoDate.nullable(),
+        notes: z.string().max(1000).nullable(),
+        rating: z.number().int().min(0).max(10).nullable(),
+        last_played_at: isoDate.nullable(),
+      }),
+    )
+    .min(1)
+    .max(MAX_BULK_CHANGES, `No more than ${MAX_BULK_CHANGES} games at once`),
+});
 
 // Choosing a game's art: the image picked, or null for the original.
 export const gameArtSchema = z.object({

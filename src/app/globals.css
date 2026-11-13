@@ -336,3 +336,10 @@ html [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]
   outline: 2px solid var(--color-accent-400);
   outline-offset: 2px;
 }
+
+/* Games, Select: the bar fixed to the bottom of the window gives its height
+   (GamesBulkBar), and toasts, which sit bottom-right, move up clear of it. */
+[data-sonner-toaster] {
+  translate: 0 calc(-1 * var(--bulk-bar, 0px));
+  transition: translate 150ms ease-out;
+}

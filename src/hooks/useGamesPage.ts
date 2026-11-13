@@ -1,5 +1,9 @@
 'use client';
 
+import { isSelectable, reviewsCleared, selectRange, toggleSelected } from '@/lib/games/bulk-status';
+import type { BulkStatus } from '@/lib/games/status';
+import type { GameSelection } from '@/components/games/GameCard';
+import { useBulkStatus } from './useBulkStatus';
 import { useState, useDeferredValue } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { GameItem } from '@/lib/data/loaders';
@@ -48,6 +52,29 @@ interface UseGamesPageReturn {
   gameDialog: GameDialogProps | null;
   handleOpenDetail: (gameId: number) => void;
   queuedGameIds: Set<number>;
+  /** Select mode's state and actions, or null when it's off. */
+  selection: GamesSelection | null;
+  toggleSelecting: () => void;
+}
+
+/** Select mode on the Games page: ticking games to move several at once. */
+interface GamesSelection {
+  /** Games ticked. */
+  count: number;
+  /** Games the page lists that can be ticked, loaded on screen or not. */
+  total: number;
+  /** A game's part in it, for its card or row. */
+  of: (game: GameItem) => GameSelection;
+  selectAll: () => void;
+  clear: () => void;
+  /** How many ticked games a move to a status would move: the ones not there already. */
+  moves: (status: BulkStatus) => number;
+  /** How many ticked games would lose a rating or notes by moving to a status. */
+  reviewsCleared: (status: BulkStatus) => number;
+  /** Moves the ticked games, and closes Select mode once they're saved. */
+  move: (status: BulkStatus) => void;
+  pending: boolean;
+  stop: () => void;
 }
 
 const BATCH_SIZE = 60;
@@ -93,6 +120,18 @@ export function useGamesPage(): UseGamesPageReturn {
 
   const statusMutation = useSetGameStatus(userId);
 
+  // Select mode: games ticked to move together. The last one ticked is where
+  // a shift-click's range starts.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+  const [lastTicked, setLastTicked] = useState<number | null>(null);
+  const bulk = useBulkStatus(userId);
+  const stopSelecting = () => {
+    setSelecting(false);
+    setSelected(new Set());
+    setLastTicked(null);
+  };
+
   // The game as it was when its dialog opened.
   const handleOpenDetail = (gameId: number) => {
     const game = games.find((g) => g.id === gameId);
@@ -137,6 +176,40 @@ export function useGamesPage(): UseGamesPageReturn {
   const counts = countLibrary(searched);
 
   const visibleGames = filteredGames.slice(0, visibleCount);
+
+  // Everything the page lists that can be ticked, loaded on screen or not.
+  const selectableIds = filteredGames
+    .filter((game) => isSelectable(game, queuedGameIds))
+    .map((game) => game.id);
+  const ticked = games.filter((game) => selected.has(game.id));
+  const selection: GamesSelection | null = selecting
+    ? {
+        count: ticked.length,
+        total: selectableIds.length,
+        of: (game) => ({
+          selected: selected.has(game.id),
+          selectable: isSelectable(game, queuedGameIds),
+          onToggle: (range: boolean) => {
+            setSelected((prev) =>
+              range && lastTicked !== null
+                ? selectRange(selectableIds, prev, lastTicked, game.id)
+                : toggleSelected(prev, game.id),
+            );
+            setLastTicked(game.id);
+          },
+        }),
+        selectAll: () => setSelected((prev) => new Set([...prev, ...selectableIds])),
+        clear: () => setSelected(new Set()),
+        moves: (status: BulkStatus) => ticked.filter((game) => game.status !== status).length,
+        reviewsCleared: (status: BulkStatus) => reviewsCleared(ticked, status),
+        // The move is the point of selecting: the bar says "Moving…" while
+        // it's saved, then Select mode closes as the toast offers the Undo. If
+        // the save fails it stays open, the games still ticked, to try again.
+        move: (status: BulkStatus) => bulk.move(ticked, status, stopSelecting),
+        pending: bulk.pending,
+        stop: stopSelecting,
+      }
+    : null;
 
   const hasMore = visibleCount < filteredGames.length;
 
@@ -187,5 +260,7 @@ export function useGamesPage(): UseGamesPageReturn {
     gameDialog,
     handleOpenDetail,
     queuedGameIds,
+    selection,
+    toggleSelecting: () => (selecting ? stopSelecting() : setSelecting(true)),
   };
 }

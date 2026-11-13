@@ -23,3 +23,14 @@ export type GameStatus = (typeof GAME_STATUSES)[number];
 export const ADD_STATUSES = ['backlog', 'queue', 'playing', 'finished', 'dropped'] as const;
 
 export type AddStatus = (typeof ADD_STATUSES)[number];
+
+/**
+ * The statuses several games can be moved to at once (Games, Select). Not
+ * Playing: only one game plays at a time.
+ */
+export const BULK_STATUSES = ['backlog', 'finished', 'dropped', 'wont_play', 'hidden'] as const;
+
+export type BulkStatus = (typeof BULK_STATUSES)[number];
+
+/** As many games as one bulk change takes. */
+export const MAX_BULK_CHANGES = 2000;
