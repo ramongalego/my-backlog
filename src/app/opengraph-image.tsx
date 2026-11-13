@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { getBaseUrl } from '@/lib/url';
 
 export const runtime = 'nodejs';
 export const alt = 'MyBacklog: Play the games you already own';
@@ -95,7 +96,7 @@ export default function OgImage() {
           fontWeight: 600,
         }}
       >
-        mybacklog.app
+        {new URL(getBaseUrl()).host}
       </div>
     </div>,
     { width: 1200, height: 630 },

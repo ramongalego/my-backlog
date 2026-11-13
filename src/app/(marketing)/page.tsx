@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { LandingPage } from '@/components/landing/LandingPage';
+import { getBaseUrl } from '@/lib/url';
 
 const OG_IMAGE = {
   url: '/opengraph-image',
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     title: 'MyBacklog · Play the games you already own',
     description:
       'MyBacklog imports your Steam library or the games you add from any console, suggests what to play next from the games you already own, and keeps a diary of the ones you finish.',
-    url: 'https://mybacklog.app',
+    url: getBaseUrl(),
     siteName: 'MyBacklog',
     type: 'website',
     // Set here because this block replaces the root one, file-based image
@@ -37,7 +38,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
   name: 'MyBacklog',
-  url: 'https://mybacklog.app',
+  url: getBaseUrl(),
   description:
     'Track your game backlog from Steam and any console, pick what to play next from the games you own, and log the ones you finish.',
   applicationCategory: 'GameApplication',

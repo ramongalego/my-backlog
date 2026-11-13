@@ -21,7 +21,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const steamHours = Math.round((data.playtime_minutes / 60) * 10) / 10;
   const ratingPart = data.rating !== null ? `, rated ${data.rating}/10` : '';
-  const description = `Finished ${data.game_name} after ${steamHours}h${ratingPart}`;
+  const hoursPart = steamHours > 0 ? ` after ${steamHours}h` : '';
+  const description = `Finished ${data.game_name}${hoursPart}${ratingPart}`;
 
   return {
     title: `Finished ${data.game_name}`,
@@ -71,7 +72,6 @@ export default async function SharedCompletionPage({ params }: PageProps) {
                 rating={data.rating}
                 gamesFinished={data.games_finished}
                 totalGames={data.total_games}
-                backlogHoursRemoved={data.backlog_hours_removed}
                 nextGame={data.next_game}
               />
             </div>

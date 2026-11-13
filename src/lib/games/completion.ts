@@ -11,8 +11,9 @@ export interface GameSummaryData {
   rating: number | null;
   gamesFinished: number;
   totalGames: number;
-  backlogHoursRemoved: number | null;
   nextGame: string | null;
+  /** The next game's art, beside its name. */
+  nextGameImage?: string | null;
   /** When you started playing it, for how long it took. */
   startedAt?: string | null;
   /** The finish date chosen (YYYY-MM-DD). */
@@ -58,8 +59,8 @@ export function buildCompletionSummary({
     rating,
     gamesFinished: counts.gamesFinished,
     totalGames: counts.totalGames,
-    backlogHoursRemoved: hours,
     nextGame: promoted?.name ?? null,
+    nextGameImage: promoted?.header_image ?? null,
     startedAt: finishedGame.started_at ?? null,
     finishedAt,
     finishedThisYear: counts.finishedThisYear ?? null,

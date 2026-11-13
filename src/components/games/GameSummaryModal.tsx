@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Share2, Link2, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, Share2, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { createSharePage } from '@/lib/client/share';
 import type { GameSummaryData } from '@/lib/games/completion';
@@ -41,8 +42,8 @@ export function GameSummaryModal({
   rating,
   gamesFinished,
   totalGames,
-  backlogHoursRemoved,
   nextGame,
+  nextGameImage,
   startedAt,
   finishedAt,
   finishedThisYear,
@@ -50,6 +51,13 @@ export function GameSummaryModal({
   const [shareState, setShareState] = useState<'idle' | 'loading' | 'shared'>('idle');
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyRef = useRef<HTMLButtonElement>(null);
+
+  // Share is replaced by the places to share to: focus moves on to them,
+  // rather than being lost with the button that was pressed.
+  useEffect(() => {
+    if (shareState === 'shared') copyRef.current?.focus();
+  }, [shareState]);
 
   const steamHours = Math.round((playtimeMinutes / 60) * 10) / 10;
 
@@ -84,7 +92,12 @@ export function GameSummaryModal({
 
   const handleCopyLink = async () => {
     if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      toast.error("Couldn't copy the link.");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -101,77 +114,86 @@ export function GameSummaryModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" ariaLabel={gameName}>
-      <ArtHeader src={headerImage} title={gameName} />
+      {/* The art comes into focus, as it did when the game was picked. */}
+      <ArtHeader
+        src={headerImage}
+        title={gameName}
+        artClassName="animate-reveal motion-reduce:animate-overlay-in"
+      />
 
-      <div className="space-y-5 mt-5 -mb-2">
+      <div className="space-y-5 mt-5">
         <CompletionSummary
           playtimeMinutes={playtimeMinutes}
           mainStoryHours={mainStoryHours}
           rating={rating}
           gamesFinished={gamesFinished}
           totalGames={totalGames}
-          backlogHoursRemoved={backlogHoursRemoved}
           nextGame={nextGame}
+          nextGameImage={nextGameImage}
           startedAt={startedAt}
           finishedAt={finishedAt}
           finishedThisYear={finishedThisYear}
         />
 
         {/* Share section */}
-        <div className="pt-4 border-t border-ink-800">
-          {shareState === 'idle' && (
-            <button
-              onClick={handleShare}
-              className="flex items-center justify-center gap-2 text-sm text-ink-500 hover:text-ink-300 transition-colors cursor-pointer w-full"
-            >
-              <Share2 className="w-4 h-4" />
-              <span>Share</span>
-            </button>
-          )}
-
-          {shareState === 'loading' && (
-            <div className="flex items-center justify-center gap-2 text-sm text-ink-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Creating share link…</span>
-            </div>
-          )}
-
-          {shareState === 'shared' && shareUrl && (
-            <div className="flex items-center justify-center gap-3">
-              <button
+        <div className="pt-5 border-t border-ink-800">
+          <p role="status" className="sr-only">
+            {copied ? 'Link copied' : shareState === 'shared' ? 'Share link ready' : ''}
+          </p>
+          {shareState === 'shared' && shareUrl ? (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
                 onClick={handleReddit}
-                aria-label="Share on Reddit"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-800 text-ink-400 hover:text-ink-200 hover:bg-ink-700 transition-colors text-sm cursor-pointer"
+                className="flex-auto px-2 whitespace-nowrap cursor-pointer"
               >
-                <RedditIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                <RedditIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>Reddit</span>
-              </button>
-              <button
+                <span className="sr-only">(opens in a new tab)</span>
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={handleTwitter}
-                aria-label="Share on Twitter"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-800 text-ink-400 hover:text-ink-200 hover:bg-ink-700 transition-colors text-sm cursor-pointer"
+                className="flex-auto px-2 whitespace-nowrap cursor-pointer"
               >
-                <TwitterIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                <TwitterIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>Twitter</span>
-              </button>
-              <button
+                <span className="sr-only">(opens in a new tab)</span>
+              </Button>
+              <Button
+                ref={copyRef}
+                variant="secondary"
                 onClick={handleCopyLink}
-                aria-label="Copy share link"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-800 text-ink-400 hover:text-ink-200 hover:bg-ink-700 transition-colors text-sm cursor-pointer"
+                className="flex-auto px-2 whitespace-nowrap cursor-pointer"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <Check className="w-4 h-4 shrink-0 text-emerald-400" aria-hidden="true" />
                     <span className="text-emerald-400">Copied!</span>
                   </>
                 ) : (
                   <>
-                    <Link2 className="w-3.5 h-3.5" />
+                    <Link2 className="w-4 h-4 shrink-0" aria-hidden="true" />
                     <span>Copy link</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleShare}
+                isLoading={shareState === 'loading'}
+                className="w-full cursor-pointer"
+              >
+                {shareState !== 'loading' && <Share2 className="w-4 h-4" aria-hidden="true" />}
+                <span>Share</span>
+              </Button>
+              <p className="mt-2 text-center text-xs text-ink-500">
+                Makes a public page with this summary.
+              </p>
+            </>
           )}
         </div>
       </div>
