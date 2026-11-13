@@ -69,6 +69,11 @@ interface GameDetailModalProps {
    * is already a change to save.
    */
   savedStatus?: GameStatus;
+  /**
+   * The only statuses to offer, when it isn't all of them: Home's and the
+   * Queue's Finish and Drop save one of those two and nothing else.
+   */
+  statuses?: readonly GameStatus[];
   initialDate?: string | null;
   initialNotes?: string | null;
   initialRating?: number | null;
@@ -154,6 +159,7 @@ export function GameDetailModal({
   headerLoading = false,
   initialStatus,
   savedStatus,
+  statuses = GAME_STATUSES,
   initialDate,
   initialNotes,
   initialRating,
@@ -240,7 +246,19 @@ export function GameDetailModal({
     else if (next === 'finished' || next === 'dropped') setHasDate(true);
   }
 
+  // A save on its way. The button shows it from the next redraw; this stops
+  // a second click or Enter that lands before then from saving twice.
+  const submitting = useRef(false);
+
   const [saveState, save, saving] = useActionState(async (): Promise<SaveState> => {
+    try {
+      return await saveFields();
+    } finally {
+      submitting.current = false;
+    }
+  }, {});
+
+  async function saveFields(): Promise<SaveState> {
     // Check every field before saving any of them, so a bad rating can't
     // leave the hours saved and the rest not.
     const parsedRating = showDateField && rating !== '' ? parseInt(rating, 10) : null;
@@ -287,13 +305,13 @@ export function GameDetailModal({
     }
     onClose();
     return {};
-  }, {});
+  }
 
   const ratingError = saveState.rating?.value === rating ? saveState.rating.error : null;
   const hoursError = saveState.hours?.value === hours ? saveState.hours.error : null;
 
   // When adding, the status buttons are the five places a new game can go;
-  // otherwise every status. While another game is being played, Playing
+  // otherwise every status (or the ones the page asked for). While another game is being played, Playing
   // switches to this one (`switching`), and Queue sits beside it. A queued
   // game always has Queue, as its status. A game that isn't out yet can't be
   // started (unless it's the one playing).
@@ -301,7 +319,7 @@ export function GameDetailModal({
   const statusOptions: DetailStatus[] = (
     adding
       ? [...ADD_STATUSES]
-      : GAME_STATUSES.flatMap((value): DetailStatus[] =>
+      : statuses.flatMap((value): DetailStatus[] =>
           value !== 'playing'
             ? [value]
             : [
@@ -409,7 +427,8 @@ export function GameDetailModal({
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
-            if ((adding && !pickedConsole) || !changed) return;
+            if ((adding && !pickedConsole) || !changed || submitting.current) return;
+            submitting.current = true;
             startTransition(save);
           }}
         >

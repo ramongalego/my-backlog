@@ -17,7 +17,7 @@ jest.mock('@/lib/data/loaders', () => ({
 }));
 jest.mock('@/lib/confetti', () => ({ celebrateGameFinished: jest.fn() }));
 jest.mock('sonner', () => ({
-  toast: Object.assign(jest.fn(), { error: jest.fn(), success: jest.fn() }),
+  toast: Object.assign(jest.fn(), { error: jest.fn(), success: jest.fn(), dismiss: jest.fn() }),
 }));
 jest.mock('@/hooks/useGameMutations', () => ({
   useInvalidateQueries: () => ({ statusChanged: jest.fn(), queue: jest.fn() }),
@@ -162,6 +162,20 @@ it('goes back to the old order, and says so, if saving fails', async () => {
 
   await waitFor(() => expect(order()).toEqual(['A', 'B', 'C', 'D']));
   expect(toast.error).toHaveBeenCalledWith('Failed to reorder queue');
+  // The toast that said it moved, with its Undo, is taken down.
+  const [, said] = jest.mocked(toast).mock.calls[0] as unknown as [string, { id: string }];
+  expect(toast.dismiss).toHaveBeenCalledWith(said.id);
+});
+
+it("leaves the toasts alone when a reorder that wasn't a move to the top fails", async () => {
+  jest.mocked(reorderQueue).mockRejectedValue(new Error('offline'));
+  const { result, order } = setup();
+
+  act(() => result.current.reorder([2, 1, 3, 4]));
+
+  await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to reorder queue'));
+  expect(order()).toEqual(['A', 'B', 'C', 'D']);
+  expect(toast.dismiss).not.toHaveBeenCalled();
 });
 
 it("never shows an older order while quick moves are saving, and ends on the server's", async () => {

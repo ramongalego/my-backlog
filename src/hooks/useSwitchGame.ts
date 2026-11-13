@@ -6,6 +6,7 @@ import { queries } from '@/lib/data/queries';
 import { removeFromQueue, reorderQueue } from '@/lib/client/queue';
 import {
   QUEUE_SCOPE,
+  QUEUE_UNDO_TOAST,
   fromQueueItem,
   toPlayingGame,
   toQueueItem,
@@ -15,6 +16,7 @@ import { statusChangeFrom, type StatusChange } from '@/lib/games/status-rules';
 import { updateGameStatus } from '@/lib/client/game-status';
 import type { GameStatus } from '@/lib/games/status';
 import { useInvalidateQueries, usePatchGamesList } from '@/hooks/useGameMutations';
+import { useInFlight } from '@/hooks/useInFlight';
 import { queryKeys } from '@/lib/query-keys';
 import { UNDO_MS } from '@/lib/undo';
 import type { GameWithImage, QueueItem } from '@/types/games';
@@ -64,6 +66,7 @@ export function useSwitchGame(userId: string | null) {
   const { data: playingNow = null } = useQuery(queries.playing(userId));
   const playingKey = queryKeys.games.playing(userId ?? '');
   const queueKey = queryKeys.queue.list(userId ?? '');
+  const inFlight = useInFlight();
 
   const mutation = useMutation({
     scope: QUEUE_SCOPE,
@@ -147,7 +150,10 @@ export function useSwitchGame(userId: string | null) {
       }
       const before = context?.previousQueue ?? [];
       const queuedBefore = before.find((q) => q.game_id === game.id);
+      // One Undo per switch, however many times it's clicked.
+      let undone = false;
       toast(`Now playing ${game.name}. ${stopped.name} is first in your queue.`, {
+        id: QUEUE_UNDO_TOAST,
         duration: UNDO_MS,
         action: {
           label: 'Undo',
@@ -155,7 +161,8 @@ export function useSwitchGame(userId: string | null) {
             // Only while nothing has changed the playing game since.
             const now = queryClient.getQueryData<GameWithImage | null>(playingKey);
             const queue = queryClient.getQueryData<QueueItem[]>(queueKey) ?? [];
-            if (now?.id !== game.id) return;
+            if (undone || now?.id !== game.id) return;
+            undone = true;
             // Its queue row, or (if the queue hasn't caught up yet) enough of
             // it to show it playing until the server's answer replaces it.
             const pausedRow = queue.find((q) => q.game_id === stopped.id);
@@ -203,16 +210,26 @@ export function useSwitchGame(userId: string | null) {
      * now, for Undo (backlog by default; whether it's queued is looked up).
      */
     switchTo: async (game: QueueableGame, from: SwitchedFrom = { status: 'backlog' }) => {
-      if (!userId) return;
-      // Pages that don't show the playing game or the queue may not have them
-      // loaded yet; the switch needs both. What's loaded is used as it is, so
-      // the switch shows at once (the server pauses whatever is really playing).
-      const [playing] = await Promise.all([
-        queryClient.ensureQueryData(queries.playing(userId)),
-        queryClient.ensureQueryData(queries.queue(userId)),
-      ]);
-      if (!playing || playing.id === game.id) return;
-      mutation.mutate({ game, playing, from });
+      // Once per game: a second click before the page shows the switch would
+      // send it again (and say "Now playing" twice).
+      const key = `switch:${game.id}`;
+      if (!userId || !inFlight.take(key)) return;
+      const done = () => inFlight.release(key);
+      try {
+        // Pages that don't show the playing game or the queue may not have them
+        // loaded yet; the switch needs both. What's loaded is used as it is, so
+        // the switch shows at once (the server pauses whatever is really playing).
+        const [playing] = await Promise.all([
+          queryClient.ensureQueryData(queries.playing(userId)),
+          queryClient.ensureQueryData(queries.queue(userId)),
+        ]);
+        if (!playing || playing.id === game.id) return done();
+        // Not waited for: the switch already shows, and the save reports itself.
+        void mutation.mutateAsync({ game, playing, from }).then(done, done);
+      } catch (err) {
+        done();
+        throw err;
+      }
     },
     isPending: mutation.isPending,
   };

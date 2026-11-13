@@ -24,15 +24,15 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 import { useSwitchGame } from '@/hooks/useSwitchGame';
 import {
   QUEUE_SCOPE,
+  QUEUE_UNDO_TOAST,
   fromQueueItem,
   moreQueueChangesWaiting,
   toPlayingGame,
   toQueueItem,
 } from '@/lib/games/queue-items';
 import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
-import type { GameStatus } from '@/lib/games/status';
-
-type CompletionStatus = 'finished' | 'dropped';
+import type { CompletionStatus, GameStatus } from '@/lib/games/status';
+import { useInFlight } from '@/hooks/useInFlight';
 
 interface CompleteInput {
   game: GameWithImage;
@@ -69,6 +69,9 @@ export function useNowPlaying(userId: string | null) {
     loadError: queueError,
     retry: retryQueue,
   } = useQueue(userId);
+  // Play, Finish and the two Moves each go once per game, however many
+  // clicks land before the page has redrawn without the button.
+  const { once } = useInFlight();
   const addGameToQueue = useAddToQueue(userId);
   const removeGameFromQueue = useRemoveFromQueue(userId);
 
@@ -106,6 +109,9 @@ export function useNowPlaying(userId: string | null) {
     // The status route also takes the game off the queue if it was queued.
     mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'playing'),
     onMutate: async (game) => {
+      // An Undo still on screen (the last game, moved to the backlog) would
+      // now start that game over this one: starting a game settles it.
+      toast.dismiss(QUEUE_UNDO_TOAST);
       const context = await snapshot({ gameId: game.id, status: 'playing' });
       queryClient.setQueryData(playingKey, game);
       dropFromQueue(game.id);
@@ -123,6 +129,12 @@ export function useNowPlaying(userId: string | null) {
     },
     onSettled: () => statusChanged(),
   });
+
+  /** Starts a game, once: the server takes it off the queue if it was queued. */
+  const start = (game: GameWithImage) =>
+    once(`play:${game.id}`, () => pickMutation.mutateAsync(game));
+  /** The playing game leaving (finished, dropped, queued or to the backlog), once. */
+  const stop = (game: GameWithImage, send: () => Promise<unknown>) => once(`stop:${game.id}`, send);
 
   const completeMutation = useMutation({
     scope: QUEUE_SCOPE,
@@ -166,8 +178,9 @@ export function useNowPlaying(userId: string | null) {
   // also takes it off the queue).
   const offerUndo = (game: GameWithImage, where: 'queue' | 'backlog') =>
     toast(`Moved ${game.name} to your ${where}`, {
+      id: QUEUE_UNDO_TOAST,
       duration: UNDO_MS,
-      action: { label: 'Undo', onClick: () => pickMutation.mutate(game) },
+      action: { label: 'Undo', onClick: () => void start(game) },
     });
 
   const moveToQueueMutation = useMutation({
@@ -231,12 +244,19 @@ export function useNowPlaying(userId: string | null) {
   // be worked out from the order before the first.
   const reorderMutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: ({ gameIds }: { gameIds: number[]; previous: QueueItem[] | undefined }) =>
-      reorderQueue(gameIds),
-    onError: (err, { previous }) => {
+    mutationFn: ({
+      gameIds,
+    }: {
+      gameIds: number[];
+      previous: QueueItem[] | undefined;
+      offeredUndo: boolean;
+    }) => reorderQueue(gameIds),
+    onError: (err, { previous, offeredUndo }) => {
       console.error(err);
       // Back to the order just before this one.
       if (previous) queryClient.setQueryData(queueKey, previous);
+      // The move its toast announced didn't happen.
+      if (offeredUndo) toast.dismiss(QUEUE_UNDO_TOAST);
       toast.error('Failed to reorder queue');
     },
     onSettled: () => {
@@ -248,8 +268,11 @@ export function useNowPlaying(userId: string | null) {
     },
   });
 
-  /** Shows the queue in this order straight away, then saves it. */
-  const reorder = (gameIds: number[]) => {
+  /**
+   * Shows the queue in this order straight away, then saves it. `offeredUndo`:
+   * the caller says the move in a toast, to take down if the save fails.
+   */
+  const reorder = (gameIds: number[], offeredUndo = false) => {
     const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
     if (!previous) return;
     const byId = new Map(previous.map((q) => [q.game_id, q]));
@@ -263,7 +286,7 @@ export function useNowPlaying(userId: string | null) {
       queueKey,
       gameIds.map((id, i) => ({ ...byId.get(id)!, position: i })),
     );
-    reorderMutation.mutate({ gameIds, previous });
+    reorderMutation.mutate({ gameIds, previous, offeredUndo });
   };
 
   const isStatusLoading =
@@ -304,39 +327,47 @@ export function useNowPlaying(userId: string | null) {
       const game = queryClient.getQueryData<GameWithImage | null>(playingKey) ?? currentlyPlaying;
       // The Finish and Drop dialogs only offer these two.
       if (!game || (status !== 'finished' && status !== 'dropped')) return;
-      setStatusModal(null);
-      // Finishing goes straight to the summary, from what's already known: one
-      // more finished game, and the first queued game that's out starts next. The
-      // server's answer fills in the exact figures when it arrives.
-      if (status === 'finished') {
-        const meta = queryClient.getQueryData<LibraryMeta>(queryKeys.library.meta(userId ?? ''));
-        const next = nextPlayable(queue);
-        setGameSummary(
-          buildCompletionSummary({
-            finishedGame: game,
-            promoted: next ? toPlayingGame(next) : null,
-            counts: meta
-              ? { gamesFinished: meta.finishedCount + 1, totalGames: meta.gameCount }
-              : { gamesFinished: 0, totalGames: 0 },
-            rating,
-            finishedAt: date,
-          }),
-        );
-        celebrateGameFinished();
-      }
-      completeMutation.mutate({ game, status, date, notes, rating });
+      void stop(game, () => {
+        setStatusModal(null);
+        // Finishing goes straight to the summary, from what's already known: one
+        // more finished game, and the first queued game that's out starts next. The
+        // server's answer fills in the exact figures when it arrives.
+        if (status === 'finished') {
+          const meta = queryClient.getQueryData<LibraryMeta>(queryKeys.library.meta(userId ?? ''));
+          const next = nextPlayable(queue);
+          setGameSummary(
+            buildCompletionSummary({
+              finishedGame: game,
+              promoted: next ? toPlayingGame(next) : null,
+              counts: meta
+                ? { gamesFinished: meta.finishedCount + 1, totalGames: meta.gameCount }
+                : { gamesFinished: 0, totalGames: 0 },
+              rating,
+              finishedAt: date,
+            }),
+          );
+          celebrateGameFinished();
+        }
+        return completeMutation.mutateAsync({ game, status, date, notes, rating });
+      });
     },
 
-    pick: (game: GameWithImage) => pickMutation.mutateAsync(game).catch(() => undefined),
+    pick: start,
     /** Starts a queued game; with another one playing, switches to it (with Undo). */
     pickFromQueue: (gameId: number) => {
       const item = queue.find((q) => q.game_id === gameId);
       if (!item) return;
       if (currentlyPlaying) void switchGame.switchTo(fromQueueItem(item));
-      else pickMutation.mutate(toPlayingGame(item));
+      else void start(toPlayingGame(item));
     },
-    moveToQueue: () => currentlyPlaying && moveToQueueMutation.mutate(currentlyPlaying),
-    moveToBacklog: () => currentlyPlaying && moveToBacklogMutation.mutate(currentlyPlaying),
+    moveToQueue: () => {
+      const game = currentlyPlaying;
+      if (game) void stop(game, () => moveToQueueMutation.mutateAsync(game));
+    },
+    moveToBacklog: () => {
+      const game = currentlyPlaying;
+      if (game) void stop(game, () => moveToBacklogMutation.mutateAsync(game));
+    },
     addToQueue: addGameToQueue,
     /** Plays a game instead of the one being played (paused at the top of the queue). */
     switchTo: switchGame.switchTo,
@@ -345,7 +376,7 @@ export function useNowPlaying(userId: string | null) {
     setQueuedStatus: (vars: StatusEdit) => {
       const item = queue.find((q) => q.game_id === vars.gameId);
       if (vars.status === 'playing') {
-        if (item) pickMutation.mutate(toPlayingGame(item));
+        if (item) void start(toPlayingGame(item));
       } else if (vars.status !== 'backlog') {
         queuedStatusMutation.mutate(vars);
       }
@@ -362,8 +393,9 @@ export function useNowPlaying(userId: string | null) {
       const from = ids.indexOf(gameId);
       if (from <= 0) return false;
       const name = current[from].game.name;
-      reorder([gameId, ...ids.filter((id) => id !== gameId)]);
+      reorder([gameId, ...ids.filter((id) => id !== gameId)], true);
       toast(`Moved ${name} to the top`, {
+        id: QUEUE_UNDO_TOAST,
         duration: UNDO_MS,
         action: {
           label: 'Undo',

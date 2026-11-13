@@ -149,6 +149,51 @@ it('names the game the server paused, even if the page thought another was playi
   );
 });
 
+it('switches once, however many times Play is pressed before the page shows it', async () => {
+  const { result } = setup([queued(metroid, 0)]);
+
+  await act(async () => {
+    void result.current.switchTo(momodora);
+    void result.current.switchTo(momodora);
+    await result.current.switchTo(momodora);
+  });
+
+  await waitFor(() => expect(toast).toHaveBeenCalled());
+  expect(updateGameStatus).toHaveBeenCalledTimes(1);
+  expect(toast).toHaveBeenCalledTimes(1);
+});
+
+it('can switch to the same game again later', async () => {
+  const { result, queryClient } = setup([queued(metroid, 0)]);
+  await act(() => result.current.switchTo(momodora));
+  await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+
+  // Zelda is played again, then Momodora once more.
+  act(() => queryClient.setQueryData(queryKeys.games.playing('u'), zelda));
+  await act(() => result.current.switchTo(momodora));
+
+  await waitFor(() => expect(updateGameStatus).toHaveBeenCalledTimes(2));
+});
+
+it('undoes a switch once, however many times Undo is pressed', async () => {
+  const { result } = setup([queued(metroid, 0)]);
+  await act(() => result.current.switchTo(momodora));
+  await waitFor(() => expect(toast).toHaveBeenCalled());
+  const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
+    string,
+    { action: { onClick: () => void } },
+  ];
+
+  act(() => {
+    options.action.onClick();
+    options.action.onClick();
+  });
+
+  await waitFor(() => expect(removeFromQueue).toHaveBeenCalled());
+  await waitFor(() => expect(result.current.playing?.id).toBe(1));
+  expect(removeFromQueue).toHaveBeenCalledTimes(1);
+});
+
 it("does nothing for the game that's already playing", async () => {
   const { result } = setup([]);
   await act(() => result.current.switchTo(zelda));

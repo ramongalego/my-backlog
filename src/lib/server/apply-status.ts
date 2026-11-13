@@ -7,7 +7,7 @@ import {
   withLastPlayed,
   type StatusChange,
 } from '@/lib/games/status-rules';
-import { PLAYING_GAME_SELECT } from '@/lib/data/loaders';
+import { PLAYING_GAME_SELECT, loadCurrentlyPlaying } from '@/lib/data/loaders';
 import { isReleased } from '@/lib/games/release-date';
 import type { GameRestore } from '@/lib/games/bulk-status';
 import type { GameWithImage } from '@/types/games';
@@ -55,6 +55,10 @@ export async function applyStatusChange(
     .maybeSingle();
   if (targetError) return failed(targetError);
   if (!target) return { ok: false, status: 404, error: 'Game not found' };
+
+  // Already playing (Play sent twice, or started in another tab): nothing to
+  // change. Saving it again would move its start date to now.
+  if (status === 'playing' && target.status === 'playing') return { ok: true, paused: [] };
 
   // A game paused for another one keeps its start date while it waits in the
   // queue, and picking it up again carries on from there. (Taking it off the
@@ -271,11 +275,19 @@ export async function restoreGames(
  * Starts the first game in the queue that's out, if there is one, and returns
  * it with everything the playing card shows. Games not out yet stay queued, in
  * their places. Throws if the queue had a game but it couldn't be started.
+ *
+ * With a game already playing, that game is returned and the queue is left
+ * alone: a finish sent twice (or after starting a game in another tab) would
+ * otherwise start a second queued game and send the first to the backlog,
+ * off the queue.
  */
 export async function promoteNextFromQueue(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<GameWithImage | null> {
+  const playing = await loadCurrentlyPlaying(supabase, userId);
+  if (playing) return playing;
+
   const { data: queue, error: queueError } = await supabase
     .from('playing_queue')
     .select('game_id')

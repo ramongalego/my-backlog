@@ -12,6 +12,7 @@ import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useAuth } from '@/hooks/useAuth';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
+import { COMPLETION_STATUSES } from '@/lib/games/status';
 import { Page, PageHeader, SectionLabel } from '@/components/layout/Page';
 import { QueueContentSkeleton } from './Skeleton';
 import { NowPlayingRow } from '@/components/queue/NowPlayingRow';
@@ -67,6 +68,7 @@ export default function PlayingQueueView() {
               }}
               initialStatus={statusModal.action}
               savedStatus="playing"
+              statuses={COMPLETION_STATUSES}
               initialDate={todayIso()}
               manual={manualDialogProps(currentlyPlaying)}
             />

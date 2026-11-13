@@ -8,7 +8,12 @@ import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { UNDO_MS } from '@/lib/undo';
 import type { QueueItem } from '@/types/games';
-import { QUEUE_SCOPE, toQueueItem, type QueueableGame } from '@/lib/games/queue-items';
+import {
+  QUEUE_SCOPE,
+  QUEUE_UNDO_TOAST,
+  toQueueItem,
+  type QueueableGame,
+} from '@/lib/games/queue-items';
 
 /** The user's queue. The single cached source for queue items and "queued" badges. */
 export function useQueue(userId: string | null) {
@@ -92,9 +97,19 @@ export function useRemoveFromQueue(userId: string | null) {
       const index = context?.previousQueue?.findIndex((q) => q.game_id === gameId) ?? -1;
       if (index === -1) return;
       const item = context!.previousQueue![index];
+      // One Undo per removal, however many times it's clicked.
+      let undone = false;
       toast(`Moved ${item.game.name} to your backlog`, {
+        id: QUEUE_UNDO_TOAST,
         duration: UNDO_MS,
-        action: { label: 'Undo', onClick: () => restoreMutation.mutate({ item, index }) },
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            if (undone) return;
+            undone = true;
+            restoreMutation.mutate({ item, index });
+          },
+        },
       });
     },
     onSettled: () => invalidateQueue(),

@@ -8,6 +8,14 @@ import type { GameWithImage, QueueItem } from '@/types/games';
 export const QUEUE_SCOPE = { id: 'queue' };
 
 /**
+ * The one toast every change to the queue or the playing game says itself in,
+ * with its Undo. A new change takes the last one's place, so only the latest
+ * can be undone: undoing an older one after a newer put games back a place
+ * off (each Undo goes by where the game was when it moved).
+ */
+export const QUEUE_UNDO_TOAST = 'queue-undo';
+
+/**
  * Whether other changes to the queue or the playing game are still waiting
  * their turn behind the one that's finishing. Each change shows on screen at
  * once and is saved in order, so reading the queue back from the server after

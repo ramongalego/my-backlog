@@ -146,6 +146,19 @@ describe('applyStatusChange', () => {
     expect(tables.playing_queue).toHaveLength(0);
   });
 
+  it('leaves a game that is already playing as it is: Play sent twice keeps its start date', async () => {
+    const { client, tables, log } = fakeSupabase({
+      games: [{ ...game(1, 'playing'), started_at: '2026-10-30T19:24:07Z' }],
+      playing_queue: [],
+    });
+
+    const result = await applyStatusChange(client, 'u', { gameId: 1, status: 'playing' });
+
+    expect(result).toEqual({ ok: true, paused: [] });
+    expect(tables.games[0].started_at).toBe('2026-10-30T19:24:07Z');
+    expect(log).not.toContain('rpc apply_status_change');
+  });
+
   it('keeps one game playing by moving the old one back to the backlog', async () => {
     const { client, tables } = fakeSupabase({
       games: [game(1, 'playing'), game(2, 'backlog')],
@@ -599,6 +612,26 @@ describe('promoteNextFromQueue', () => {
     const promoted = await promoteNextFromQueue(client, 'u');
 
     expect(promoted).toMatchObject({ id: 2, app_id: 1002, status: 'playing' });
+    expect(tables.playing_queue.map((q) => q.game_id)).toEqual([3]);
+  });
+
+  it('starts nothing when a game is already playing, and returns that game', async () => {
+    // A finish sent twice: the first started game 2, and the second must not
+    // start game 3 (which would send game 2 to the backlog, off the queue).
+    const { client, tables } = fakeSupabase({
+      games: [game(1, 'finished'), game(2, 'backlog'), game(3, 'backlog')],
+      playing_queue: [
+        { user_id: 'u', game_id: 2, position: 0 },
+        { user_id: 'u', game_id: 3, position: 1 },
+      ],
+    });
+
+    const first = await promoteNextFromQueue(client, 'u');
+    const second = await promoteNextFromQueue(client, 'u');
+
+    expect(first).toMatchObject({ id: 2 });
+    expect(second).toMatchObject({ id: 2 });
+    expect(tables.games.map((g) => g.status)).toEqual(['finished', 'playing', 'backlog']);
     expect(tables.playing_queue.map((q) => q.game_id)).toEqual([3]);
   });
 

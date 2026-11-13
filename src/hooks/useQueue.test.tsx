@@ -2,7 +2,9 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
-import { removeFromQueue } from '@/lib/client/queue';
+import { toast } from 'sonner';
+import { addToQueue, removeFromQueue } from '@/lib/client/queue';
+import { QUEUE_UNDO_TOAST } from '@/lib/games/queue-items';
 import { loadQueue } from '@/lib/data/loaders';
 import type { QueueItem } from '@/types/games';
 
@@ -52,6 +54,8 @@ const shown = (result: { current: { queue: QueueItem[] } }) =>
 beforeEach(() => {
   server = [item(1), item(2), item(3), item(4)];
   saves = [];
+  jest.mocked(toast).mockClear();
+  jest.mocked(addToQueue).mockReset().mockResolvedValue(undefined);
   jest
     .mocked(loadQueue)
     .mockReset()
@@ -116,4 +120,29 @@ it('still reads the queue back after a single removal', async () => {
 
   await waitFor(() => expect(loadQueue).toHaveBeenCalledTimes(2));
   expect(shown(result)).toEqual([1, 2, 4]);
+});
+
+it('puts a removed game back once, however many times Undo is pressed', async () => {
+  const { result } = setup();
+  await waitFor(() => expect(shown(result)).toEqual([1, 2, 3, 4]));
+
+  act(() => result.current.remove(4));
+  await waitFor(() => expect(saves).toHaveLength(1));
+  await act(async () => saves[0].finish());
+  await waitFor(() => expect(toast).toHaveBeenCalled());
+  const [said, options] = jest.mocked(toast).mock.calls[0] as unknown as [
+    string,
+    { id: string; action: { onClick: () => void } },
+  ];
+  expect(said).toBe('Moved Game 4 to your backlog');
+  // The queue's one Undo toast: a later change takes its place.
+  expect(options.id).toBe(QUEUE_UNDO_TOAST);
+
+  act(() => {
+    options.action.onClick();
+    options.action.onClick();
+  });
+
+  await waitFor(() => expect(addToQueue).toHaveBeenCalled());
+  expect(addToQueue).toHaveBeenCalledTimes(1);
 });

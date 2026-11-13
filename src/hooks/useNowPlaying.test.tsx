@@ -10,7 +10,7 @@ import { queryKeys } from '@/lib/query-keys';
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 jest.mock('@/lib/confetti', () => ({ celebrateGameFinished: jest.fn() }));
 jest.mock('sonner', () => ({
-  toast: Object.assign(jest.fn(), { error: jest.fn(), success: jest.fn() }),
+  toast: Object.assign(jest.fn(), { error: jest.fn(), success: jest.fn(), dismiss: jest.fn() }),
 }));
 jest.mock('@/hooks/useGameMutations', () => ({
   useInvalidateQueries: () => ({ statusChanged: jest.fn(), queue: jest.fn() }),
@@ -113,6 +113,92 @@ it('moves the playing game to the top of the queue, ahead of what was queued', a
   await waitFor(() =>
     expect(toast).toHaveBeenCalledWith('Moved SteamWorld Dig to your queue', expect.anything()),
   );
+});
+
+describe('clicks that land before the page has redrawn', () => {
+  it('moves the playing game to the backlog once, with one toast', async () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.moveToBacklog();
+      result.current.moveToBacklog();
+      result.current.moveToBacklog();
+    });
+
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    expect(updateGameStatus).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes the first of Move to Queue and Move to Backlog pressed together', async () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.moveToQueue();
+      result.current.moveToBacklog();
+    });
+
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    expect(updateGameStatus).toHaveBeenCalledTimes(1);
+    expect(updateGameStatus).toHaveBeenCalledWith(1, 'backlog', { queueAtTop: true });
+  });
+
+  it('starts a queued game once', async () => {
+    const { result } = setup({ queue: [queued, queuedDread], nowPlaying: null });
+
+    act(() => {
+      result.current.pickFromQueue(3);
+      result.current.pickFromQueue(3);
+    });
+
+    await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(3));
+    await waitFor(() => expect(updateGameStatus).toHaveBeenCalled());
+    expect(updateGameStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishes the playing game once: a second Save must not start a second queued game', async () => {
+    jest.mocked(completeGame).mockResolvedValue({
+      counts: { gamesFinished: 41, totalGames: 192 },
+      promoted: null,
+      promoteFailed: false,
+    });
+    const { result } = setup();
+
+    act(() => {
+      result.current.confirmStatusChange('finished', '2026-11-13', '', 9);
+      result.current.confirmStatusChange('finished', '2026-11-13', '', 9);
+    });
+
+    await waitFor(() => expect(completeGame).toHaveBeenCalled());
+    expect(completeGame).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes the same action again once the first has been saved', async () => {
+    const { result, queryClient } = setup();
+
+    act(() => result.current.moveToBacklog());
+    await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+    // Started again (Undo), then moved to the backlog a second time.
+    act(() => queryClient.setQueryData(queryKeys.games.playing('u'), playing));
+    await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
+    act(() => result.current.moveToBacklog());
+
+    await waitFor(() => expect(updateGameStatus).toHaveBeenCalledTimes(2));
+  });
+});
+
+it('says every change with an Undo in the same toast, so only the latest can be undone', async () => {
+  const { result } = setup({ queue: [queued, queuedDread] });
+
+  act(() => {
+    result.current.moveToTop(3);
+  });
+  act(() => result.current.moveToQueue());
+  await waitFor(() => expect(toast).toHaveBeenCalledTimes(2));
+
+  const ids = jest.mocked(toast).mock.calls.map(([, options]) => (options as { id?: string }).id);
+  expect(ids[0]).toBeDefined();
+  expect(ids[1]).toBe(ids[0]);
 });
 
 it('opens the summary as soon as a game is saved as finished, before the server answers', async () => {
@@ -228,6 +314,15 @@ describe('switching games from the queue', () => {
       gameName: 'Metroid Dread',
       nextGame: 'SteamWorld Dig',
     });
+  });
+
+  it('takes down an Undo still on screen when a game is started', async () => {
+    const { result } = setup({ queue: [queued, queuedDread], nowPlaying: null });
+
+    act(() => result.current.pickFromQueue(3));
+
+    await waitFor(() => expect(updateGameStatus).toHaveBeenCalledWith(3, 'playing'));
+    expect(toast.dismiss).toHaveBeenCalledWith('queue-undo');
   });
 
   it('with nothing playing, Play just starts the game', async () => {

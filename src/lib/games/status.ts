@@ -15,6 +15,11 @@ export const GAME_STATUSES = [
 
 export type GameStatus = (typeof GAME_STATUSES)[number];
 
+/** How playing a game ends: what Home's and the Queue's Finish and Drop offer. */
+export const COMPLETION_STATUSES = ['finished', 'dropped'] as const;
+
+export type CompletionStatus = (typeof COMPLETION_STATUSES)[number];
+
 /**
  * Where a new game can go when it's added. Queue isn't a status of its own (a
  * queued game is a backlog game with a place in the queue); Won't Play and

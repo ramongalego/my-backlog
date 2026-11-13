@@ -986,3 +986,74 @@ describe('GameDetailModal as a form', () => {
     expect(labels).toEqual(['Backlog', 'Playing', 'Finished', 'Dropped', "Won't Play", 'Hidden']);
   });
 });
+
+describe('GameDetailModal with only some statuses to offer', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  // Home's and the Queue's Finish: the game is playing, the dialog opens on Finished.
+  const finishing = {
+    ...defaultProps,
+    initialStatus: 'finished' as const,
+    savedStatus: 'playing' as const,
+    statuses: ['finished', 'dropped'] as const,
+  };
+
+  it('offers those and no others', () => {
+    render(<GameDetailModal {...finishing} />);
+
+    expect(screen.getByRole('button', { name: 'Finished' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dropped' })).toBeInTheDocument();
+    for (const name of ['Backlog', 'Playing', 'Queue', "Won't Play", 'Hidden']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it('offers every status when none are named', () => {
+    render(<GameDetailModal {...defaultProps} />);
+    for (const name of ['Backlog', 'Playing', 'Finished', 'Dropped', "Won't Play", 'Hidden']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+  });
+});
+
+describe('GameDetailModal saving once', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('saves once, however many times Save is pressed before the first has gone through', async () => {
+    let saved!: () => void;
+    const onConfirm = jest.fn(() => new Promise<void>((resolve) => (saved = resolve)));
+    render(<GameDetailModal {...defaultProps} onConfirm={onConfirm} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Finished' }));
+    const form = screen.getByLabelText(/your rating/i).closest('form')!;
+
+    await act(async () => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    await act(async () => saved());
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('can be saved again after a save that failed', async () => {
+    const onConfirm = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('Could not reach the server'))
+      .mockResolvedValue(undefined);
+    render(<GameDetailModal {...defaultProps} onConfirm={onConfirm} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Finished' }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+});
