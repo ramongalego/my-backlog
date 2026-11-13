@@ -29,14 +29,16 @@ type StatusChangeResult =
  * finish/drop route both use it so the rules live in one place. Only one game
  * can be playing, and the queue only holds backlog games. With `pausePlaying`,
  * the game that was playing goes to the top of the queue instead, and keeps
- * its start date: a paused game picked up again from the queue resumes.
+ * its start date: a paused game picked up again from the queue resumes. With
+ * `queueAtTop`, a game going back to the backlog (the one being played, moved
+ * to the queue) is put at the top of the queue in the same save.
  */
 export async function applyStatusChange(
   supabase: SupabaseClient,
   userId: string,
   change: StatusChange,
 ): Promise<StatusChangeResult> {
-  const { gameId, status, pausePlaying = false } = change;
+  const { gameId, status, pausePlaying = false, queueAtTop = false } = change;
   const failed = (err: unknown): StatusChangeResult => {
     console.error(err);
     return { ok: false, status: 500, error: 'Failed to update game status' };
@@ -94,12 +96,17 @@ export async function applyStatusChange(
   if (resuming) delete update.started_at;
   updates.push({ id: gameId, update: withLastPlayed(target, update) });
 
+  // The games that go to the top of the queue: one paused for another, or
+  // this one, moved there from playing.
+  const toTop = paused.map((game) => game.id);
+  if (queueAtTop && status === 'backlog') toTop.push(gameId);
+
   // Saved in one transaction (apply_status_change): every game's new columns,
-  // taking any that left the backlog off the queue, and the paused game's
-  // place at the top of it. If any part fails, none of it is saved.
+  // taking any that left the backlog off the queue, and those games' place at
+  // the top of it. If any part fails, none of it is saved.
   const { error } = await supabase.rpc('apply_status_change', {
     p_updates: updates,
-    p_pause_ids: paused.map((game) => game.id),
+    p_pause_ids: toTop,
   });
   if (error) {
     // Removed between the check above and the save.

@@ -12,6 +12,8 @@ export async function updateGameStatus(
     rating?: number | null;
     /** Pause the game being played (top of the queue) instead of moving it to the backlog. */
     pausePlaying?: boolean;
+    /** With status backlog: put the game at the top of the queue in the same save. */
+    queueAtTop?: boolean;
   },
 ): Promise<{ paused: { id: number; name: string }[] }> {
   const res = await fetch('/api/games/status', {
@@ -25,6 +27,7 @@ export async function updateGameStatus(
       notes: opts?.notes,
       rating: opts?.rating,
       ...(opts?.pausePlaying ? { pausePlaying: true } : {}),
+      ...(opts?.queueAtTop ? { queueAtTop: true } : {}),
     }),
   });
 

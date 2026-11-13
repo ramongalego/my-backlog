@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { celebrateGameFinished } from '@/lib/confetti';
-import { addToQueue, reorderQueue } from '@/lib/client/queue';
+import { reorderQueue } from '@/lib/client/queue';
 import type { LibraryMeta } from '@/lib/data/loaders';
 import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/client/game-status';
@@ -172,17 +172,16 @@ export function useNowPlaying(userId: string | null) {
 
   const moveToQueueMutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: async (game: GameWithImage) => {
-      await updateGameStatus(game.id, 'backlog');
-      await addToQueue(game.id);
-    },
+    // One request: back to the backlog and to the top of the queue, as when
+    // it's paused for another game. It's the one most likely to be picked up
+    // again.
+    mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'backlog', { queueAtTop: true }),
     onMutate: async (game) => {
       const context = await snapshot({ gameId: game.id, status: 'backlog' });
       queryClient.setQueryData(playingKey, null);
-      queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) => [
-        ...old,
-        toQueueItem(game, old.length),
-      ]);
+      queryClient.setQueryData<QueueItem[]>(queueKey, (old = []) =>
+        [toQueueItem(game, 0), ...old].map((q, i) => ({ ...q, position: i })),
+      );
       return context;
     },
     onError: (err, _game, context) => {
@@ -191,7 +190,6 @@ export function useNowPlaying(userId: string | null) {
       toast.error('Failed to move game to queue');
     },
     onSuccess: (_data, game) => offerUndo(game, 'queue'),
-    // Refetch either way: the first step may have succeeded before the second failed.
     onSettled: () => statusChanged(),
   });
 

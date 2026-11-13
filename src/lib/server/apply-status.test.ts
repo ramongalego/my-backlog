@@ -321,6 +321,56 @@ describe('switching games (pausePlaying)', () => {
   });
 });
 
+describe('moving the playing game to the queue (queueAtTop)', () => {
+  const queueOrder = (rows: Row[]) =>
+    [...rows].sort((a, b) => Number(a.position) - Number(b.position)).map((q) => q.game_id);
+  const library = () =>
+    fakeSupabase({
+      games: [
+        { ...game(1, 'playing'), started_at: '2026-10-30T19:24:07Z' },
+        game(2, 'backlog'),
+        game(3, 'backlog'),
+      ],
+      playing_queue: [
+        { user_id: 'u', game_id: 2, position: 0 },
+        { user_id: 'u', game_id: 3, position: 1 },
+      ],
+    });
+
+  it('puts it at the top of the queue, ahead of what was queued, in one save', async () => {
+    const { client, tables, log } = library();
+
+    const result = await applyStatusChange(client, 'u', {
+      gameId: 1,
+      status: 'backlog',
+      queueAtTop: true,
+    });
+
+    expect(result).toEqual({ ok: true, paused: [] });
+    // Back in the backlog as any game moved there: started afresh next time.
+    expect(tables.games[0]).toMatchObject({ status: 'backlog', started_at: null });
+    expect(queueOrder(tables.playing_queue)).toEqual([1, 2, 3]);
+    expect(log.filter((entry) => entry !== 'rpc apply_status_change')).toEqual([]);
+  });
+
+  it('without it, a game moved to the backlog is not queued', async () => {
+    const { client, tables } = library();
+
+    await applyStatusChange(client, 'u', { gameId: 1, status: 'backlog' });
+
+    expect(queueOrder(tables.playing_queue)).toEqual([2, 3]);
+  });
+
+  it('only queues a game going to the backlog', async () => {
+    const { client, tables } = library();
+
+    await applyStatusChange(client, 'u', { gameId: 1, status: 'dropped', queueAtTop: true });
+
+    expect(tables.games[0].status).toBe('dropped');
+    expect(queueOrder(tables.playing_queue)).toEqual([2, 3]);
+  });
+});
+
 describe('promoteNextFromQueue', () => {
   it('starts the first game in the queue and returns it', async () => {
     const { client, tables } = fakeSupabase({

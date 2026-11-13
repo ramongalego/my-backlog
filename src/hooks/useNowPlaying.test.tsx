@@ -87,6 +87,34 @@ beforeEach(() => {
   jest.mocked(toast).mockClear();
 });
 
+it('moves the playing game to the top of the queue, ahead of what was queued', async () => {
+  const { result, queryClient } = setup({ queue: [queued, queuedDread] });
+
+  act(() => {
+    result.current.moveToQueue();
+  });
+
+  // At once, before the server answers: nothing playing, and the game first.
+  await waitFor(() => expect(queryClient.getQueryData(queryKeys.games.playing('u'))).toBeNull());
+  const queue = queryClient.getQueryData<{ game_id: number; position: number }[]>(
+    queryKeys.queue.list('u'),
+  );
+  expect(queue?.map((q) => [q.game_id, q.position])).toEqual([
+    [1, 0],
+    [2, 1],
+    [3, 2],
+  ]);
+
+  // One request does both: back to the backlog, and to the top of the queue.
+  await waitFor(() =>
+    expect(updateGameStatus).toHaveBeenCalledWith(1, 'backlog', { queueAtTop: true }),
+  );
+  expect(updateGameStatus).toHaveBeenCalledTimes(1);
+  await waitFor(() =>
+    expect(toast).toHaveBeenCalledWith('Moved SteamWorld Dig to your queue', expect.anything()),
+  );
+});
+
 it('opens the summary as soon as a game is saved as finished, before the server answers', async () => {
   let answer!: (value: Awaited<ReturnType<typeof completeGame>>) => void;
   jest.mocked(completeGame).mockReturnValue(new Promise((resolve) => (answer = resolve)));

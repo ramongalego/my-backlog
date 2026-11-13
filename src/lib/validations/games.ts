@@ -21,6 +21,9 @@ export const gameStatusSchema = z.object({
   // Starting a game while another is playing: the other one is paused (top of
   // the queue, start date kept) instead of going back to the backlog.
   pausePlaying: z.boolean().optional(),
+  // Moving the game being played to the queue: with status backlog, it also
+  // goes to the top of the queue, in the same save.
+  queueAtTop: z.boolean().optional(),
 });
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;
