@@ -1,14 +1,27 @@
 'use client';
 
+import { useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { restoreGameStatuses, updateGameStatuses } from '@/lib/client/game-status';
+import { BulkMoveError, restoreGameStatuses, updateGameStatuses } from '@/lib/client/game-status';
 import { bulkChanges, type BulkGame, type GameRestore } from '@/lib/games/bulk-status';
 import type { BulkStatus } from '@/lib/games/status';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import type { StatusChange } from '@/lib/games/status-rules';
 import { UNDO_MS } from '@/lib/undo';
 import { useInvalidateQueries, usePatchGamesList } from './useGameMutations';
+
+const MOVED_TOAST = 'bulk-move';
+
+/** What to tell the player when a move or its Undo couldn't be saved. */
+function whatWentWrong(err: unknown): string {
+  if (err instanceof BulkMoveError) {
+    if (err.status === 429) return 'Too many moves in a row. Try again in a moment.';
+    // The server's own words for a move it won't make (the game being played).
+    if (err.status === 409 && err.message) return err.message;
+  }
+  return "Couldn't move those games. Please try again.";
+}
 
 /**
  * Moves several games to a status at once (Games, Select). The games change on
@@ -21,10 +34,14 @@ export function useBulkStatus(userId: string | null) {
   const gamesList = usePatchGamesList(userId);
   const { statusChanged } = useInvalidateQueries();
 
+  // A move in flight. The button is disabled while one is, but only from the
+  // next render: this stops a second click that lands before it.
+  const moving = useRef(false);
+
   const failed = (err: unknown, previousList: ReturnType<typeof gamesList.patchMany>) => {
     console.error('Failed to move games:', err);
     gamesList.restore(previousList);
-    toast.error("Couldn't move those games. Please try again.");
+    toast.error(whatWentWrong(err));
   };
 
   const undo = useMutation({
@@ -40,12 +57,28 @@ export function useBulkStatus(userId: string | null) {
     onMutate: ({ changes }) => ({ previousList: gamesList.patchMany(changes) }),
     onError: (err, _move, context) => failed(err, context?.previousList),
     onSuccess: (previous, { said }) => {
+      // One Undo per move, however many times it's clicked.
+      let undone = false;
       toast(said, {
+        // The same toast each time, so a new move takes the last one's place:
+        // only the latest move can be undone. (Undoing an older one after a
+        // newer would put games back in between the two.)
+        id: MOVED_TOAST,
         duration: UNDO_MS,
-        action: { label: 'Undo', onClick: () => undo.mutate(previous) },
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            if (undone) return;
+            undone = true;
+            undo.mutate(previous);
+          },
+        },
       });
     },
-    onSettled: () => statusChanged(),
+    onSettled: () => {
+      moving.current = false;
+      statusChanged();
+    },
   });
 
   return {
@@ -55,11 +88,13 @@ export function useBulkStatus(userId: string | null) {
      * away when there was nothing to move. Not when the save fails.
      */
     move: (games: BulkGame[], status: BulkStatus, onMoved?: () => void) => {
+      if (moving.current) return;
       const changes = bulkChanges(games, status);
       if (changes.length === 0) {
         onMoved?.();
         return;
       }
+      moving.current = true;
       move.mutate(
         {
           changes,

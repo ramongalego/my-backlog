@@ -256,6 +256,36 @@ describe('closing', () => {
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
   });
 
+  it('leaves Escape to a dialog that closes itself on the same key press', () => {
+    bar();
+    const dialog = document.body.appendChild(document.createElement('div'));
+    dialog.setAttribute('role', 'dialog');
+    // The dialog handles the key first and is gone by the time it gets to the bar.
+    const closeDialog = () => dialog.remove();
+    document.body.addEventListener('keydown', closeDialog);
+
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+
+    expect(dialog.isConnected).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
+    document.body.removeEventListener('keydown', closeDialog);
+
+    // With nothing over the page any more, the next Escape is the bar's.
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves Escape to an open menu too', () => {
+    bar();
+    const menu = document.body.appendChild(document.createElement('ul'));
+    menu.setAttribute('role', 'listbox');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(onClose).not.toHaveBeenCalled();
+    menu.remove();
+  });
+
   it('leaves Escape to a dialog that is open over the page', () => {
     bar();
     const dialog = document.body.appendChild(document.createElement('div'));

@@ -507,7 +507,7 @@ describe('applyStatusChanges (several games at once)', () => {
     });
     expect(await restoreGames(client, 'u', [{ id: 4, ...back }])).toMatchObject({
       ok: false,
-      status: 400,
+      status: 409,
     });
     expect(tables.games[3].status).toBe('playing');
     expect(log).toEqual([]);
@@ -534,7 +534,7 @@ describe('applyStatusChanges (several games at once)', () => {
       { gameId: 4, status: 'hidden' },
     ]);
 
-    expect(result).toMatchObject({ ok: false, status: 400 });
+    expect(result).toMatchObject({ ok: false, status: 409 });
     expect(tables.games.map((g) => g.status)).toEqual([
       'backlog',
       'finished',

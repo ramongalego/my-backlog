@@ -47,6 +47,17 @@ export async function updateGameStatus(
   return { paused: body?.paused ?? [] };
 }
 
+/** A bulk move the server didn't make, with its status so the page can say why. */
+export class BulkMoveError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'BulkMoveError';
+  }
+}
+
 async function postBulk(body: object): Promise<{ previous?: GameRestore[] }> {
   const res = await fetch('/api/games/status/bulk', {
     method: 'POST',
@@ -54,8 +65,12 @@ async function postBulk(body: object): Promise<{ previous?: GameRestore[] }> {
     body: JSON.stringify(body),
   });
   const answer = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(answer?.error ?? 'Failed to update the games');
-  return answer ?? {};
+  // Anything but the route's own "done" counts as not saved, a 200 with some
+  // other body included (a proxy's page, say): the games would look moved.
+  if (!res.ok || answer?.success !== true) {
+    throw new BulkMoveError(answer?.error ?? '', res.status);
+  }
+  return answer;
 }
 
 /**

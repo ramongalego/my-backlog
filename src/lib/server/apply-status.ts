@@ -121,7 +121,7 @@ export async function applyStatusChange(
 /** As many ids as one read asks for: a longer list wouldn't fit in the request's address. */
 const READ_CHUNK = 200;
 
-type BulkFailure = { ok: false; status: 400 | 404 | 500; error: string };
+type BulkFailure = { ok: false; status: 404 | 409 | 500; error: string };
 
 /** A game as the table has it: any status, the one being played included. */
 interface BulkTarget extends Omit<GameRestore, 'status'> {
@@ -162,7 +162,7 @@ async function readBulkTargets(
   if ([...targets.values()].some((game) => game.status === 'playing')) {
     return {
       ok: false,
-      status: 400,
+      status: 409,
       error: "The game you're playing can't be changed with others. Change it from its own dialog.",
     };
   }

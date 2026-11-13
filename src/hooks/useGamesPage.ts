@@ -199,7 +199,10 @@ export function useGamesPage(): UseGamesPageReturn {
           },
         }),
         selectAll: () => setSelected((prev) => new Set([...prev, ...selectableIds])),
-        clear: () => setSelected(new Set()),
+        clear: () => {
+          setSelected(new Set());
+          setLastTicked(null);
+        },
         moves: (status: BulkStatus) => ticked.filter((game) => game.status !== status).length,
         reviewsCleared: (status: BulkStatus) => reviewsCleared(ticked, status),
         // The move is the point of selecting: the bar says "Moving…" while

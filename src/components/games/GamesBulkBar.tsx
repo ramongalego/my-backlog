@@ -73,14 +73,26 @@ export function GamesBulkBar({
     };
   }, []);
 
-  // Escape closes Select mode. Not while a dialog is open over the page, which
-  // takes Escape itself.
+  // Escape closes Select mode. Not while a dialog or a menu is open over the
+  // page: that takes the Escape. It has usually closed by the time the key
+  // gets here, so whether one was open is noted on the way down, before
+  // anything has handled the key.
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !document.querySelector('[role="dialog"]')) onClose();
+    let overlayOpen = false;
+    const onKeyDownFirst = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        overlayOpen = !!document.querySelector('[role="dialog"], [role="listbox"]');
+      }
     };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !overlayOpen && !e.defaultPrevented) onClose();
+    };
+    document.addEventListener('keydown', onKeyDownFirst, true);
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDownFirst, true);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [onClose]);
 
   // The pick stays while the move is saved: the page closes Select mode when

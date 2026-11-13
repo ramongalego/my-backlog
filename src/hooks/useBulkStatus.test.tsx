@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { useBulkStatus } from '@/hooks/useBulkStatus';
-import { restoreGameStatuses, updateGameStatuses } from '@/lib/client/game-status';
+import { BulkMoveError, restoreGameStatuses, updateGameStatuses } from '@/lib/client/game-status';
 import type { GameRestore } from '@/lib/games/bulk-status';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -14,6 +14,7 @@ jest.mock('@/lib/client/game-status', () => ({
   updateGameStatuses: jest.fn(),
   restoreGameStatuses: jest.fn(),
 }));
+// (BulkMoveError stays the real class, through requireActual above.)
 
 const game = (id: number, overrides: Record<string, unknown> = {}) => ({
   id,
@@ -160,6 +161,90 @@ describe('telling the page when a move is done', () => {
     const { result } = setup();
     act(() => result.current.move([portal] as never, 'hidden', onMoved));
     expect(onMoved).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('clicks that come too fast', () => {
+  it('sends a move once, however many times Move is pressed before the page catches up', async () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.move([hades] as never, 'hidden');
+      result.current.move([hades] as never, 'hidden');
+      result.current.move([hades] as never, 'hidden');
+    });
+
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    expect(updateGameStatuses).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes the next move once the first is saved, or has failed', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.mocked(updateGameStatuses).mockRejectedValueOnce(new Error('down'));
+    const { result } = setup();
+
+    act(() => result.current.move([hades] as never, 'hidden'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    act(() => result.current.move([hades] as never, 'hidden'));
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    act(() => result.current.move([celeste] as never, 'hidden'));
+
+    await waitFor(() => expect(updateGameStatuses).toHaveBeenCalledTimes(3));
+  });
+
+  it('undoes once, however many times Undo is pressed', async () => {
+    const { result } = setup();
+    act(() => result.current.move([hades, celeste] as never, 'hidden'));
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+
+    act(() => {
+      undoFromToast().onClick();
+      undoFromToast().onClick();
+    });
+
+    await waitFor(() => expect(restoreGameStatuses).toHaveBeenCalled());
+    expect(restoreGameStatuses).toHaveBeenCalledTimes(1);
+  });
+});
+
+it("replaces the last move's toast with the new one, so only the latest move can be undone", async () => {
+  const { result } = setup();
+  act(() => result.current.move([hades] as never, 'hidden'));
+  await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+  act(() => result.current.move([celeste] as never, 'backlog'));
+  await waitFor(() => expect(toast).toHaveBeenCalledTimes(2));
+
+  const ids = jest.mocked(toast).mock.calls.map(([, options]) => (options as { id?: string }).id);
+  expect(ids[0]).toBeDefined();
+  expect(ids[1]).toBe(ids[0]);
+});
+
+describe('saying what went wrong', () => {
+  const failWith = async (err: Error) => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.mocked(updateGameStatuses).mockRejectedValue(err);
+    const { result } = setup();
+    act(() => result.current.move([hades] as never, 'hidden'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    return jest.mocked(toast.error).mock.calls[0][0];
+  };
+
+  it('asks to wait when moves came too fast', async () => {
+    expect(await failWith(new BulkMoveError('Too many requests', 429))).toBe(
+      'Too many moves in a row. Try again in a moment.',
+    );
+  });
+
+  it("passes on the server's reason for a move it won't make", async () => {
+    const reason = "The game you're playing can't be changed with others.";
+    expect(await failWith(new BulkMoveError(reason, 409))).toBe(reason);
+  });
+
+  it('keeps to the plain message for anything else', async () => {
+    expect(await failWith(new BulkMoveError('Invalid input', 400))).toBe(
+      "Couldn't move those games. Please try again.",
+    );
   });
 });
 
