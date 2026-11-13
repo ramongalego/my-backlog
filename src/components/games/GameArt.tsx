@@ -13,12 +13,15 @@ export function GameArt({
   sizes,
   preload,
   quality,
+  onSettled,
 }: {
   src: string;
   alt: string;
   sizes: string;
   preload?: boolean;
   quality?: number;
+  /** The art has loaded, or couldn't be: whoever is waiting on it can stop. */
+  onSettled?: () => void;
 }) {
   if (!isBoxArt(src)) {
     return (
@@ -31,6 +34,8 @@ export function GameArt({
         quality={quality}
         className="object-cover"
         draggable={false}
+        onLoad={onSettled}
+        onError={onSettled}
       />
     );
   }
@@ -58,6 +63,8 @@ export function GameArt({
         quality={quality}
         className="object-contain"
         draggable={false}
+        onLoad={onSettled}
+        onError={onSettled}
       />
     </>
   );

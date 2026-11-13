@@ -242,6 +242,7 @@ export default function HomeView() {
             playtime_forever: currentlyPlaying.playtime_forever,
           }}
           initialStatus={statusModal.action}
+          savedStatus="playing"
           initialDate={todayIso()}
           manual={manualGames.dialogProps(currentlyPlaying)}
         />

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 
 jest.mock('next/image', () => ({
@@ -223,11 +223,12 @@ describe('GameDetailModal', () => {
         <GameDetailModal {...defaultProps} initialStatus="finished" initialDate="2024-06-15" />,
       );
 
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '8' } });
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', '', null);
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', '', 8);
     });
   });
 
@@ -257,11 +258,12 @@ describe('GameDetailModal', () => {
     it('should pass empty string when saving without checking the date (null initialDate)', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
+      fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: 'Great' } });
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', 'Great', null);
     });
 
     it("should pass today's date when checking then saving with null initialDate", async () => {
@@ -289,21 +291,28 @@ describe('GameDetailModal', () => {
         />,
       );
 
+      fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: 'Great game' } });
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '2024-06-15', 'Good game', 9);
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith(
+        'finished',
+        '2024-06-15',
+        'Great game',
+        9,
+      );
     });
 
     it('should call onConfirm with null rating when field is empty', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="backlog" />);
 
+      fireEvent.click(screen.getByRole('button', { name: 'Finished' }));
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       });
 
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('backlog', expect.any(String), '', null);
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', expect.any(String), '', null);
     });
 
     it('should call onConfirm with updated status after switching', async () => {
@@ -415,14 +424,14 @@ describe('GameDetailModal', () => {
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
     });
 
-    it('should pre-select playing when initialStatus is playing', async () => {
+    it('should pre-select playing when initialStatus is playing', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="playing" />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-      });
-
-      expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', expect.any(String), '', null);
+      expect(screen.getByRole('button', { name: 'Playing' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
     });
 
     it('should not show date field for playing status', () => {
@@ -647,6 +656,7 @@ describe('GameDetailModal as a form', () => {
     const onConfirm = jest.fn().mockRejectedValue(new Error('Could not reach the server'));
     render(<GameDetailModal {...defaultProps} onConfirm={onConfirm} />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Finished' }));
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     });
@@ -714,13 +724,14 @@ describe('GameDetailModal as a form', () => {
       expect(statusLabels()).toEqual(all.filter((label) => label !== 'Playing'));
     });
 
-    it('changes nothing when saved as it is', async () => {
+    it('has nothing to save as it is', async () => {
       render(<GameDetailModal {...queuedProps} onAddToQueue={onAddToQueue} />);
+      expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
       await save();
       expect(onRemove).not.toHaveBeenCalled();
       expect(onAddToQueue).not.toHaveBeenCalled();
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
-      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
     });
 
     it('comes off the queue when Backlog is chosen', async () => {
@@ -744,6 +755,121 @@ describe('GameDetailModal as a form', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
       await save();
       expect(defaultProps.onConfirm).toHaveBeenCalledWith('playing', '', '', null);
+    });
+  });
+
+  describe('Save changes', () => {
+    const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
+    const finished = {
+      ...defaultProps,
+      initialStatus: 'finished' as const,
+      initialDate: '2024-06-15',
+      initialNotes: 'Good game',
+      initialRating: 9,
+    };
+
+    it('is disabled until something changes, and again when the change is undone', () => {
+      render(<GameDetailModal {...defaultProps} />);
+      expect(saveButton()).toBeDisabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hidden' }));
+      expect(saveButton()).toBeEnabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Backlog' }));
+      expect(saveButton()).toBeDisabled();
+    });
+
+    it.each([
+      ['the rating', () => screen.getByLabelText(/your rating/i), '9', '7'],
+      ['the notes', () => screen.getByLabelText(/notes/i), 'Good game', 'Great game'],
+    ])('is enabled by a change to %s, and not once it is put back', (_, field, was, now) => {
+      render(<GameDetailModal {...finished} />);
+      expect(saveButton()).toBeDisabled();
+
+      fireEvent.change(field(), { target: { value: now } });
+      expect(saveButton()).toBeEnabled();
+
+      fireEvent.change(field(), { target: { value: was } });
+      expect(saveButton()).toBeDisabled();
+    });
+
+    it('puts the date back as it was on returning to the status it opened on', () => {
+      // Dropped without a date: choosing Dropped anew would tick today's.
+      render(<GameDetailModal {...defaultProps} initialStatus="dropped" initialDate={null} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Backlog' }));
+      expect(saveButton()).toBeEnabled();
+      fireEvent.click(screen.getByRole('button', { name: 'Dropped' }));
+
+      expect(screen.getByRole('checkbox')).not.toBeChecked();
+      expect(saveButton()).toBeDisabled();
+
+      // A status the game didn't have still gets the date ticked.
+      fireEvent.click(screen.getByRole('button', { name: 'Finished' }));
+      expect(screen.getByRole('checkbox')).toBeChecked();
+      expect(saveButton()).toBeEnabled();
+    });
+
+    it('is enabled by taking the date off, or adding one', () => {
+      const { unmount } = render(<GameDetailModal {...finished} />);
+      fireEvent.click(screen.getByLabelText(/finished on/i));
+      expect(saveButton()).toBeEnabled();
+      fireEvent.click(screen.getByLabelText(/add the date/i));
+      expect(saveButton()).toBeDisabled();
+      unmount();
+
+      render(<GameDetailModal {...finished} initialDate={null} />);
+      expect(saveButton()).toBeDisabled();
+      fireEvent.click(screen.getByRole('checkbox'));
+      expect(saveButton()).toBeEnabled();
+    });
+
+    it("is enabled by a console game's hours", () => {
+      render(
+        <GameDetailModal
+          {...defaultProps}
+          game={{ ...defaultProps.game, playtime_forever: 120 }}
+          manual={{ platform: 'Switch', onSaveHours: jest.fn() }}
+        />,
+      );
+      expect(saveButton()).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText(/hours played/i), { target: { value: '3.5' } });
+      expect(saveButton()).toBeEnabled();
+
+      fireEvent.change(screen.getByLabelText(/hours played/i), { target: { value: '2' } });
+      expect(saveButton()).toBeDisabled();
+    });
+
+    it('is enabled straight away when the dialog opens on a status the game does not have yet', async () => {
+      // Home's Finish button: the game is playing, and the dialog opens on Finished.
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" savedStatus="playing" />);
+      expect(saveButton()).toBeEnabled();
+
+      await act(async () => {
+        fireEvent.click(saveButton());
+      });
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith('finished', '', '', null);
+    });
+
+    it("doesn't save on Enter with nothing changed", async () => {
+      render(<GameDetailModal {...finished} />);
+
+      await act(async () => {
+        fireEvent.submit(screen.getByLabelText(/notes/i).closest('form')!);
+      });
+
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it("isn't held back by choosing art, which saves by itself", async () => {
+      render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Choose art' }));
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Done' })));
+
+      // New art, and still nothing for Save changes to save.
+      expect(saveButton()).toBeDisabled();
     });
   });
 
@@ -779,6 +905,9 @@ describe('GameDetailModal as a form', () => {
 
     it('swaps the fields for the picker, previews a pick in the header, and comes back', async () => {
       render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      // The dialog takes focus a frame after it opens: let that happen first,
+      // as it has by the time anyone clicks.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus());
       fireEvent.click(artButton()!);
 
       // The picker is there; the status fields are kept, out of sight.
@@ -801,6 +930,38 @@ describe('GameDetailModal as a form', () => {
         'https://cdn2.steamgriddb.com/grid/pick.png',
       );
       expect(artButton()).toHaveFocus();
+    });
+
+    it('shows a spinner over the art while a pick loads, keeping the old art until then', async () => {
+      render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      fireEvent.click(artButton()!);
+      expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
+
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      expect(screen.getByRole('status', { name: 'Loading the art' })).toBeInTheDocument();
+
+      // The pick has arrived.
+      fireEvent.load(document.querySelector('img')!);
+      expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
+
+      // Picking what's already showing loads nothing: no spinner to get stuck.
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
+    });
+
+    it("stops the spinner when a pick's image can't be loaded, or the picker is closed", async () => {
+      render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
+      fireEvent.click(artButton()!);
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      fireEvent.error(document.querySelector('img')!);
+      expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
+
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Cancel art' })));
+      fireEvent.click(artButton()!);
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      expect(screen.getByRole('status', { name: 'Loading the art' })).toBeInTheDocument();
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Cancel art' })));
+      expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
     });
 
     it('goes back to the art it had when the picker is cancelled', async () => {

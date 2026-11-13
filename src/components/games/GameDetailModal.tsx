@@ -63,6 +63,12 @@ interface GameDetailModalProps {
   /** The header art isn't known yet: a placeholder holds its place. */
   headerLoading?: boolean;
   initialStatus: GameStatus;
+  /**
+   * The status the game has now, when the dialog opens on another one: Home's
+   * and the Queue's Finish and Drop open it on Finished or Dropped, and that
+   * is already a change to save.
+   */
+  savedStatus?: GameStatus;
   initialDate?: string | null;
   initialNotes?: string | null;
   initialRating?: number | null;
@@ -147,6 +153,7 @@ export function GameDetailModal({
   game,
   headerLoading = false,
   initialStatus,
+  savedStatus,
   initialDate,
   initialNotes,
   initialRating,
@@ -169,6 +176,8 @@ export function GameDetailModal({
   const [date, setDate] = useState(initialDate || todayIso());
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
+  // The fields as the dialog opened, to tell whether anything has changed.
+  const [opened] = useState({ status, hasDate, date, notes, rating });
 
   // Choose art: the picker takes the fields' place. The header shows the pick
   // being looked at, then the art saved here, ahead of the page's own copy of
@@ -178,6 +187,13 @@ export function GameDetailModal({
   const [savedArt, setSavedArt] = useState<string | null | undefined>(undefined);
   const shownArt = savedArt !== undefined ? savedArt : game.header_image;
   const headerArt = choosingArt && previewArt !== undefined ? previewArt : shownArt;
+  // A pick whose image hasn't arrived in the header yet.
+  const [pendingArt, setPendingArt] = useState<string | null>(null);
+  const previewPick = (url: string | null) => {
+    // The same art as is showing loads nothing, so there's nothing to wait for.
+    if (url !== headerArt) setPendingArt(url);
+    setPreviewArt(url);
+  };
   const artButton = useRef<HTMLButtonElement>(null);
   const wasChoosingArt = useRef(false);
   // Back from the picker, whose buttons are gone: focus returns to the button
@@ -189,6 +205,7 @@ export function GameDetailModal({
   const closeArtPicker = () => {
     setChoosingArt(false);
     setPreviewArt(undefined);
+    setPendingArt(null);
   };
 
   // The API only stores date, rating and notes for finished/dropped games.
@@ -200,9 +217,27 @@ export function GameDetailModal({
   // Another game is being played and this one can be played instead.
   const switching = disablePlaying && !!onPlayInstead;
 
+  // Save is only offered once something it would save has changed: the
+  // status, a console game's hours, or a finished or dropped game's date,
+  // rating and notes. (Art is saved by its own picker.) Adding a game is
+  // always something to save.
+  const statusChanged = status !== (queued ? 'queue' : (savedStatus ?? initialStatus));
+  const hoursChanged = showHours && hours !== initialHours;
+  const reviewChanged =
+    showDateField &&
+    (hasDate !== opened.hasDate ||
+      (hasDate && date !== opened.date) ||
+      notes !== opened.notes ||
+      rating !== opened.rating);
+  const changed = !!adding || statusChanged || hoursChanged || reviewChanged;
+
   function handleStatusChange(next: DetailStatus) {
     setStatus(next);
-    if (next === 'finished' || next === 'dropped') setHasDate(true);
+    // Back on the status the dialog opened on: its date as it was, so going
+    // away and back is no change. A game newly finished or dropped gets
+    // today's date ticked.
+    if (next === opened.status) setHasDate(opened.hasDate);
+    else if (next === 'finished' || next === 'dropped') setHasDate(true);
   }
 
   const [saveState, save, saving] = useActionState(async (): Promise<SaveState> => {
@@ -297,6 +332,8 @@ export function GameDetailModal({
         src={headerArt}
         title={game.name}
         loading={headerLoading}
+        artPending={pendingArt !== null}
+        onArtSettled={() => setPendingArt(null)}
         action={
           art &&
           !adding &&
@@ -328,7 +365,7 @@ export function GameDetailModal({
         <ArtPicker
           gameId={art.gameId}
           shown={shownArt}
-          onPreview={setPreviewArt}
+          onPreview={previewPick}
           onDone={(saved) => {
             setSavedArt(saved);
             closeArtPicker();
@@ -372,7 +409,7 @@ export function GameDetailModal({
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
-            if (adding && !pickedConsole) return;
+            if ((adding && !pickedConsole) || !changed) return;
             startTransition(save);
           }}
         >
@@ -459,7 +496,7 @@ export function GameDetailModal({
             <Button
               type="submit"
               isLoading={saving}
-              disabled={!!adding && !pickedConsole}
+              disabled={(!!adding && !pickedConsole) || !changed}
               aria-describedby={adding && !pickedConsole ? 'needs-console' : undefined}
               // With the console already known, Enter adds it straight away.
               data-autofocus={adding?.defaultConsole ? true : undefined}

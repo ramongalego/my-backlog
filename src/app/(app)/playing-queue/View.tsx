@@ -66,6 +66,7 @@ export default function PlayingQueueView() {
                 playtime_forever: currentlyPlaying.playtime_forever,
               }}
               initialStatus={statusModal.action}
+              savedStatus="playing"
               initialDate={todayIso()}
               manual={manualDialogProps(currentlyPlaying)}
             />
