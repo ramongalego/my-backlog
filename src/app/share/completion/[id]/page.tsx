@@ -73,6 +73,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
                 gamesFinished={data.games_finished}
                 totalGames={data.total_games}
                 nextGame={data.next_game}
+                nextGameImage={data.next_game_image}
               />
             </div>
           </div>
@@ -83,7 +84,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
               href="/"
               className="text-sm text-accent-400 hover:text-accent-300 transition-colors"
             >
-              Track your own Steam backlog with MyBacklog
+              Track your own gaming backlog with MyBacklog
             </Link>
           </div>
         </div>

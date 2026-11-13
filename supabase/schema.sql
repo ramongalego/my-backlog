@@ -120,6 +120,7 @@ create table shared_completions (
   total_games integer not null default 0,
   backlog_hours_removed real,
   next_game text,
+  next_game_image text,
   created_at timestamptz not null default now(),
   user_id uuid references auth.users (id) on delete cascade
 );

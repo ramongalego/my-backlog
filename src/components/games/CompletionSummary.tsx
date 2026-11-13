@@ -227,7 +227,7 @@ export function CompletionSummary({
             <CoverThumb src={nextGameImage} alt="" className="w-24" />
             <p className="min-w-0 text-sm text-ink-400">
               Next up
-              <span className="block truncate font-medium text-ink-100">{nextGame}</span>
+              <span className="line-clamp-2 font-medium text-ink-100">{nextGame}</span>
             </p>
           </div>
         ) : (

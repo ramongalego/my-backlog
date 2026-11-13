@@ -9,7 +9,7 @@ type Row = Record<string, unknown>;
 let user: { id: string } | null = { id: 'user-1' };
 // The player's own game with that id, and the game they're playing now.
 let game: Row | null = null;
-let playing: { name: string } | null = null;
+let playing: { name: string; header_image: string | null } | null = null;
 const inserted: Row[] = [];
 
 // ESM-only, which Jest can't load here: the id itself isn't what's tested.
@@ -18,9 +18,10 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user } }) },
     from: () => ({
-      // The two reads differ by what they select: the game's fields, or a name.
+      // The two reads differ by what they select: the finished game's fields, or
+      // the playing game's name and art.
       select: (columns: string) => {
-        const result = { data: columns === 'name' ? playing : game, error: null };
+        const result = { data: columns === 'name, header_image' ? playing : game, error: null };
         const query = {
           eq: () => query,
           neq: () => query,
@@ -68,7 +69,7 @@ const finished = (overrides: Row = {}): Row => ({
 beforeEach(() => {
   user = { id: 'user-1' };
   game = finished();
-  playing = { name: 'Celeste' };
+  playing = { name: 'Celeste', header_image: 'https://cdn.akamai.steamstatic.com/celeste.jpg' };
   inserted.length = 0;
 });
 
@@ -110,6 +111,7 @@ it('builds the page from the finished game, not from anything the browser sends'
       total_games: 208,
       backlog_hours_removed: 32,
       next_game: 'Celeste',
+      next_game_image: 'https://cdn.akamai.steamstatic.com/celeste.jpg',
     },
   ]);
 });
@@ -134,6 +136,7 @@ it('leaves out what the game has none of: a rating, a time to beat, a next game'
     backlog_hours_removed: null,
     playtime_minutes: 0,
     next_game: null,
+    next_game_image: null,
   });
 });
 
@@ -142,4 +145,11 @@ it('still shares, without the art, when the art is from anywhere but a game-art 
 
   expect((await share({ gameId: 7 })).status).toBe(200);
   expect(inserted[0]).toMatchObject({ game_name: 'Pokémon Platinum', header_image: null });
+});
+
+it("names the next game without its art when that art isn't from a game-art host", async () => {
+  playing = { name: 'Celeste', header_image: 'https://example.com/celeste.jpg' };
+
+  expect((await share({ gameId: 7 })).status).toBe(200);
+  expect(inserted[0]).toMatchObject({ next_game: 'Celeste', next_game_image: null });
 });

@@ -22,6 +22,7 @@ const shared: SharedCompletion = {
   total_games: 15,
   backlog_hours_removed: 20,
   next_game: null,
+  next_game_image: null,
   created_at: '2026-11-13T12:00:00Z',
 };
 

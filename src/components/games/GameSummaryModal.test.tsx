@@ -252,6 +252,32 @@ describe('GameSummaryModal', () => {
       expect(screen.getByRole('status')).toHaveTextContent('Link copied');
     });
 
+    it('posts to Reddit under the same announcement', async () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      mockCreateSharePage.mockResolvedValue('/share/completion/abc');
+      render(<GameSummaryModal {...defaultProps} />);
+      share();
+      fireEvent.click(await screen.findByRole('button', { name: /Reddit/ }));
+
+      const post = new URL(open.mock.calls[0][0] as string);
+      expect(post.searchParams.get('title')).toBe('Just finished Hades!');
+      expect(post.searchParams.get('url')).toBe(`${window.location.origin}/share/completion/abc`);
+      open.mockRestore();
+    });
+
+    it('tweets only the announcement, since the card shows the rest', async () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      mockCreateSharePage.mockResolvedValue('/share/completion/abc');
+      render(<GameSummaryModal {...defaultProps} />);
+      share();
+      fireEvent.click(await screen.findByRole('button', { name: /Twitter/ }));
+
+      const tweet = new URL(open.mock.calls[0][0] as string);
+      expect(tweet.searchParams.get('text')).toBe('Just finished Hades!');
+      expect(tweet.searchParams.get('url')).toBe(`${window.location.origin}/share/completion/abc`);
+      open.mockRestore();
+    });
+
     it("says so when the link can't be copied", async () => {
       Object.assign(navigator, {
         clipboard: { writeText: jest.fn().mockRejectedValue(new Error('denied')) },

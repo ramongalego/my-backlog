@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Finishing a game starts the next one in the queue: that's "Next up".
     supabase
       .from('games')
-      .select('name')
+      .select('name, header_image')
       .eq('user_id', user.id)
       .eq('status', 'playing')
       .neq('id', gameId)
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
     total_games: counts.totalGames,
     backlog_hours_removed: hours,
     next_game: playing.data?.name ?? null,
+    next_game_image: safeShareImage(playing.data?.header_image),
   });
 
   if (error) {

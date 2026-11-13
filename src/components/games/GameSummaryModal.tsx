@@ -59,8 +59,6 @@ export function GameSummaryModal({
     if (shareState === 'shared') copyRef.current?.focus();
   }, [shareState]);
 
-  const steamHours = Math.round((playtimeMinutes / 60) * 10) / 10;
-
   const handleShare = async () => {
     if (shareState === 'loading') return;
 
@@ -82,13 +80,8 @@ export function GameSummaryModal({
     }
   };
 
-  const shareText = [
-    `Just finished ${gameName}!`,
-    steamHours > 0 ? `${steamHours}h played` : null,
-    rating !== null ? `Rated ${rating}/10` : null,
-  ]
-    .filter(Boolean)
-    .join(' - ');
+  // Only the announcement: the link's preview already shows the hours and the rating.
+  const shareText = `Just finished ${gameName}!`;
 
   const handleCopyLink = async () => {
     if (!shareUrl) return;
