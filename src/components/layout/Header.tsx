@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Gamepad2, Menu, X } from 'lucide-react';
@@ -45,7 +45,19 @@ export function Header() {
     return () => clearTimeout(id);
   }, [isRefreshDisabled, user?.id]);
 
+  // A refresh on its way. The menu item is disabled from the next redraw;
+  // this stops a second click before then from refreshing twice.
+  const refreshing = useRef(false);
   const handleRefreshLibrary = async () => {
+    if (refreshing.current) return;
+    refreshing.current = true;
+    try {
+      await refreshLibrary();
+    } finally {
+      refreshing.current = false;
+    }
+  };
+  const refreshLibrary = async () => {
     setIsRefreshing(true);
     // The menu closes when it starts, so say it's working until the result's toast.
     const progress = toast.loading('Refreshing your library…');
