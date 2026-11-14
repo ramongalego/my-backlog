@@ -6,6 +6,7 @@ import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/client/queue';
 import { queries } from '@/lib/data/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
+import { useInFlight } from '@/hooks/useInFlight';
 import { UNDO_MS } from '@/lib/undo';
 import type { QueueItem } from '@/types/games';
 import {
@@ -33,6 +34,7 @@ export function useAddToQueue(userId: string | null) {
   const queryClient = useQueryClient();
   const { queue: invalidateQueue } = useInvalidateQueries();
   const queueKey = queryKeys.queue.list(userId ?? '');
+  const { once } = useInFlight();
 
   const mutation = useMutation({
     scope: QUEUE_SCOPE,
@@ -54,7 +56,14 @@ export function useAddToQueue(userId: string | null) {
     onSettled: () => invalidateQueue(),
   });
 
-  return (game: QueueableGame) => mutation.mutate(game);
+  return (game: QueueableGame) => {
+    // Queued already: nothing to add (and nothing to say again).
+    const queue = queryClient.getQueryData<QueueItem[]>(queueKey);
+    if (queue?.some((q) => q.game_id === game.id)) return;
+    // Once per game: a second click before the page shows it queued would
+    // send it again, and be told it's already there.
+    void once(`queue:${game.id}`, () => mutation.mutateAsync(game));
+  };
 }
 
 /**

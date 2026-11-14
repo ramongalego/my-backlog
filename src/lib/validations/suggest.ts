@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const MAX_EXCLUDE_GAME_IDS = 200;
-const MAX_PREVIOUS_REASONINGS = 5;
+/** How many earlier picks' reasons a reroll sends along (so the next isn't worded the same). */
+export const MAX_PREVIOUS_REASONINGS = 5;
 const MAX_REASONING_LENGTH = 500;
 
 export const suggestRequestSchema = z.object({

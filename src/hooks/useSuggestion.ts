@@ -8,6 +8,7 @@ import type {
   EnergyLevel,
   TimeCommitment,
 } from '@/lib/suggest/types';
+import { MAX_PREVIOUS_REASONINGS } from '@/lib/validations/suggest';
 
 type WizardStep = 'mood' | 'energy' | 'time' | 'loading' | 'result';
 
@@ -51,6 +52,9 @@ export function useSuggestion(): UseSuggestionReturn {
   const excludedGameIdsRef = useRef<number[]>([]);
   const previousReasoningsRef = useRef<string[]>([]);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // A pick on its way. Each one is a call to the AI and counts toward the
+  // day's picks, so an answer, Reroll or Try again pressed twice asks once.
+  const asking = useRef(false);
 
   // Cleanup cooldown interval on unmount
   useEffect(() => {
@@ -83,6 +87,8 @@ export function useSuggestion(): UseSuggestionReturn {
   };
 
   const fetchSuggestion = async (preferences: SuggestionPreferences) => {
+    if (asking.current) return;
+    asking.current = true;
     setIsLoading(true);
     setError(null);
     setStep('loading');
@@ -94,7 +100,9 @@ export function useSuggestion(): UseSuggestionReturn {
         body: JSON.stringify({
           ...preferences,
           excludeGameIds: excludedGameIdsRef.current,
-          previousReasonings: previousReasoningsRef.current,
+          // The latest few: the server takes no more, and refused the
+          // request once a sitting had seen more picks than that.
+          previousReasonings: previousReasoningsRef.current.slice(-MAX_PREVIOUS_REASONINGS),
         }),
       });
 
@@ -116,6 +124,7 @@ export function useSuggestion(): UseSuggestionReturn {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setStep('result');
     } finally {
+      asking.current = false;
       setIsLoading(false);
     }
   };
@@ -149,7 +158,14 @@ export function useSuggestion(): UseSuggestionReturn {
   };
 
   const reroll = async () => {
-    if (cooldownRemaining > 0 || !suggestion || !answers.mood || !answers.energy || !answers.time) {
+    if (
+      asking.current ||
+      cooldownRemaining > 0 ||
+      !suggestion ||
+      !answers.mood ||
+      !answers.energy ||
+      !answers.time
+    ) {
       return;
     }
 
@@ -185,6 +201,7 @@ export function useSuggestion(): UseSuggestionReturn {
     setError(null);
     setIsLoading(false);
     setCooldownRemaining(0);
+    asking.current = false;
     excludedGameIdsRef.current = [];
     previousReasoningsRef.current = [];
 

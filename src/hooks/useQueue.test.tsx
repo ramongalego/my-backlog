@@ -1,14 +1,16 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
+import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 import { toast } from 'sonner';
 import { addToQueue, removeFromQueue } from '@/lib/client/queue';
 import { QUEUE_UNDO_TOAST } from '@/lib/games/queue-items';
 import { loadQueue } from '@/lib/data/loaders';
 import type { QueueItem } from '@/types/games';
 
-jest.mock('sonner', () => ({ toast: Object.assign(jest.fn(), { error: jest.fn() }) }));
+jest.mock('sonner', () => ({
+  toast: Object.assign(jest.fn(), { error: jest.fn(), success: jest.fn() }),
+}));
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 jest.mock('@/lib/client/queue', () => ({
   addToQueue: jest.fn(),
@@ -145,4 +147,47 @@ it('puts a removed game back once, however many times Undo is pressed', async ()
 
   await waitFor(() => expect(addToQueue).toHaveBeenCalled());
   expect(addToQueue).toHaveBeenCalledTimes(1);
+});
+
+describe('adding a game to the queue', () => {
+  const game = {
+    id: 9,
+    app_id: 9,
+    name: 'Game 9',
+    header_image: null,
+    main_story_hours: 10,
+    playtime_forever: 0,
+  };
+  const setupAdd = () => {
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    return renderHook(() => ({ queue: useQueue('u').queue, add: useAddToQueue('u') }), { wrapper });
+  };
+
+  it('adds it once, however many times Add to Queue is pressed', async () => {
+    const { result } = setupAdd();
+    await waitFor(() => expect(shown(result)).toEqual([1, 2, 3, 4]));
+
+    act(() => {
+      result.current.add(game);
+      result.current.add(game);
+      result.current.add(game);
+    });
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(addToQueue).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a game that is queued already alone', async () => {
+    const { result } = setupAdd();
+    await waitFor(() => expect(shown(result)).toEqual([1, 2, 3, 4]));
+
+    act(() => result.current.add({ ...game, id: 2 }));
+
+    expect(addToQueue).not.toHaveBeenCalled();
+    expect(shown(result)).toEqual([1, 2, 3, 4]);
+  });
 });

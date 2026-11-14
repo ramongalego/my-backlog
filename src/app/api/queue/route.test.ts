@@ -9,6 +9,8 @@ let userId = '';
 // What reading the queue's last position returns.
 let maxPosition: { data: { position: number } | null; error: { message: string } | null };
 const inserted: Record<string, unknown>[] = [];
+// The game is in the queue already: the insert breaks the unique constraint.
+let alreadyQueued = false;
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
@@ -23,6 +25,7 @@ jest.mock('@/lib/supabase/server', () => ({
         delete: () => builder,
         maybeSingle: async () => maxPosition,
         insert: async (row: Record<string, unknown>) => {
+          if (alreadyQueued) return { error: { code: '23505', message: 'duplicate key' } };
           inserted.push(row);
           return { error: null };
         },
@@ -47,6 +50,7 @@ beforeEach(() => {
   userId = `user-${Math.random()}`;
   maxPosition = { data: { position: 2 }, error: null };
   inserted.length = 0;
+  alreadyQueued = false;
 });
 
 it('adds the game after the last one in the queue', async () => {
@@ -85,4 +89,13 @@ it('rate limits queue writes per user, across adding, reordering and removing', 
   // Someone else's queue isn't affected.
   userId = 'another-user';
   expect((await reorder()).status).toBe(200);
+});
+
+it('takes adding a game that is queued already as done, not as an error', async () => {
+  alreadyQueued = true;
+
+  const res = await add();
+
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ success: true });
 });

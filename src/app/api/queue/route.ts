@@ -58,8 +58,9 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     if (error.code === '23505') {
-      // Unique constraint violation — game already in queue
-      return jsonError('Game already in queue', 409);
+      // Queued already (added twice, or from another tab): it's where it was
+      // asked to be, so that's a success, not an error to show.
+      return NextResponse.json({ success: true });
     }
     if (error.code === '23503') {
       // Foreign key violation: not one of the user's games.
