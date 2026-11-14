@@ -82,3 +82,5 @@ It reads `DESIGN.md`. Pass a URL (e.g. `http://localhost:3000/`) to scan a rende
 
 - Commits carry only the author's name: no `Co-Authored-By` or AI attribution lines.
 - Never print or commit secrets from `.env`.
+- Anything that sends a request when pressed (a button, a form, an Undo) sends once per press. Guard it with a ref, not only state: `disabled={isPending}` and `if (isLoading) return` only apply from the next redraw, so a second click before then gets through. In a hook, use `useInFlight` (`src/hooks/useInFlight.ts`), keyed per game where two games can be acted on at once. In a component, use a `useRef(false)` lock (see Save in `GameDetailModal`). Release it when the request settles, so it can be tried again after a failure. Give it a test that presses two or three times inside one `act` and expects one request.
+- Where a repeated request would change data (finishing, starting a game, adding to the queue), the server treats the repeat as already done instead of doing it again.
