@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AuthError } from '@supabase/supabase-js';
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import { createClient } from '@/lib/supabase/client';
@@ -36,6 +36,9 @@ export function LoginForm({
   const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // A submit on its way. The button is disabled from the next redraw; this
+  // stops a second press before then from sending the form again.
+  const submitting = useRef(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,6 +53,7 @@ export function LoginForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrors({});
     setServerError(null);
 
@@ -66,6 +70,7 @@ export function LoginForm({
       return;
     }
 
+    submitting.current = true;
     setIsLoading(true);
     try {
       const supabase = createClient();
@@ -83,6 +88,7 @@ export function LoginForm({
     } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };

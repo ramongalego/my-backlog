@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SignUpForm } from '@/components/auth/SignUpForm';
 
@@ -163,4 +163,29 @@ describe('SignUpForm', () => {
 
     expect(mockOnSwitchToLogin).toHaveBeenCalled();
   });
+});
+
+it('signs up once, however many times the form is submitted before the button shows it', async () => {
+  let answer!: (value: unknown) => void;
+  const signUp = jest.fn(() => new Promise((resolve) => (answer = resolve)));
+  mockCreateClient.mockReturnValue({ auth: { signUp } });
+  render(<SignUpForm />);
+  fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } });
+  fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123' } });
+  fireEvent.change(screen.getByLabelText(/confirm password/i), {
+    target: { value: 'Password123' },
+  });
+  const form = screen.getByLabelText(/^email$/i).closest('form')!;
+
+  await act(async () => {
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+  });
+  await act(async () =>
+    answer({ data: { session: null, user: { identities: [{}] } }, error: null }),
+  );
+
+  expect(signUp).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
 });

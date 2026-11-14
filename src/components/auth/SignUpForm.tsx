@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { MailCheck } from 'lucide-react';
 import { signUpSchema, type SignUpFormData } from '@/lib/validations/auth';
 import { createClient } from '@/lib/supabase/client';
@@ -24,6 +24,9 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [accountExists, setAccountExists] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // A submit on its way. The button is disabled from the next redraw; this
+  // stops a second press before then from sending the form again.
+  const submitting = useRef(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,6 +42,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrors({});
     setServerError(null);
     setAccountExists(false);
@@ -56,6 +60,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
       return;
     }
 
+    submitting.current = true;
     setIsLoading(true);
     try {
       const supabase = createClient();
@@ -88,6 +93,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
     } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };

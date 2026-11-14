@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoginForm } from '@/components/auth/LoginForm';
 
@@ -174,4 +174,28 @@ describe('LoginForm', () => {
       expect(screen.queryByText('Email is required')).not.toBeInTheDocument();
     });
   });
+});
+
+it('signs in once, however many times the form is submitted, and can be tried again after a failure', async () => {
+  let answer!: (value: unknown) => void;
+  const signInWithPassword = jest.fn(() => new Promise((resolve) => (answer = resolve)));
+  mockCreateClient.mockReturnValue({ auth: { signInWithPassword } });
+  render(<LoginForm />);
+  fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } });
+  fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123' } });
+  const form = screen.getByLabelText(/^email$/i).closest('form')!;
+
+  await act(async () => {
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+  });
+  expect(signInWithPassword).toHaveBeenCalledTimes(1);
+
+  await act(async () => answer({ error: { code: 'invalid_credentials' } }));
+  expect(await screen.findByText('Invalid email or password.')).toBeInTheDocument();
+
+  await act(async () => {
+    fireEvent.submit(form);
+  });
+  expect(signInWithPassword).toHaveBeenCalledTimes(2);
 });

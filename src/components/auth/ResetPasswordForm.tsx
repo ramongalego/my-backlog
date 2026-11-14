@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth';
@@ -18,6 +18,9 @@ export function ResetPasswordForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof ResetPasswordFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // A submit on its way. The button is disabled from the next redraw; this
+  // stops a second press before then from sending the form again.
+  const submitting = useRef(false);
   const [isDone, setIsDone] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,6 +36,7 @@ export function ResetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrors({});
     setServerError(null);
 
@@ -49,6 +53,7 @@ export function ResetPasswordForm() {
       return;
     }
 
+    submitting.current = true;
     setIsLoading(true);
     try {
       const supabase = createClient();
@@ -63,6 +68,7 @@ export function ResetPasswordForm() {
     } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };

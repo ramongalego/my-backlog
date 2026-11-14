@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { MailCheck } from 'lucide-react';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth';
 import { createClient } from '@/lib/supabase/client';
@@ -17,6 +17,9 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
   const [errors, setErrors] = useState<Partial<Record<keyof ForgotPasswordFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // A submit on its way. The button is disabled from the next redraw; this
+  // stops a second press before then from sending the form again.
+  const submitting = useRef(false);
   const [isSent, setIsSent] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,6 +35,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrors({});
     setServerError(null);
 
@@ -48,6 +52,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
       return;
     }
 
+    submitting.current = true;
     setIsLoading(true);
     try {
       const supabase = createClient();
@@ -64,6 +69,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };
