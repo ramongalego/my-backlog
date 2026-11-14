@@ -19,10 +19,13 @@ interface DiaryRowProps {
   onSaveNotes: (gameId: number, notes: string) => void;
 }
 
-// On desktop the day, rating and buttons line up with the cover, whose height
+// From lg the day, rating and buttons line up with the cover, whose height
 // follows from its width at the shared 460:215 ratio (192px → 90px, 224px →
 // 105px). On phones the cover is full width above the text, so they sit on the
-// title line instead.
+// title line instead. In between (sm to lg: a phone on its side, a small
+// tablet, a folding phone open) the cover is beside the text but the hours and
+// rating stay on the title line: as columns they left the title and the note
+// about 80px.
 const COVER_WIDTH = 'w-full sm:w-48 lg:w-56';
 const COVER_SIZES = '(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px';
 const COVER_HEIGHT = 'sm:min-h-[90px] lg:min-h-[105px]';
@@ -120,18 +123,18 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
               title={entry.name}
               className="group/title flex-1 min-w-0 inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors"
             >
-              <span className="sm:truncate min-w-0">{entry.name}</span>
+              <span className="lg:truncate min-w-0">{entry.name}</span>
               <ExternalLink
                 className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
                 aria-hidden="true"
               />
             </a>
           ) : (
-            <p title={entry.name} className="flex-1 min-w-0 font-medium text-ink-100 sm:truncate">
+            <p title={entry.name} className="flex-1 min-w-0 font-medium text-ink-100 lg:truncate">
               {entry.name}
             </p>
           )}
-          <div className="sm:hidden flex items-center gap-1 shrink-0 -my-1 -mr-1.5">
+          <div className="lg:hidden flex items-center gap-1 shrink-0 -my-1 -mr-1.5">
             {entry.playtime_forever >= 60 && (
               <span className="mr-2.5">
                 <HoursPlayed entry={entry} />
@@ -164,14 +167,14 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         )}
       </div>
 
-      {/* Hours played, rating and buttons — desktop */}
-      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-28`}>
+      {/* Hours played, rating and buttons, from lg */}
+      <div className={`${ALIGN_WITH_COVER} hidden lg:flex justify-end shrink-0 w-28`}>
         <HoursPlayed entry={entry} size="md" />
       </div>
-      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end shrink-0 w-20`}>
+      <div className={`${ALIGN_WITH_COVER} hidden lg:flex justify-end shrink-0 w-20`}>
         {entry.rating != null && <Rating rating={entry.rating} size="md" />}
       </div>
-      <div className={`${ALIGN_WITH_COVER} hidden sm:flex justify-center shrink-0 w-8`}>
+      <div className={`${ALIGN_WITH_COVER} hidden lg:flex justify-center shrink-0 w-8`}>
         {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
       </div>
     </div>

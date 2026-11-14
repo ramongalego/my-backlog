@@ -407,7 +407,7 @@ export function GameDetailModal({
           <button
             type="button"
             onClick={adding.onChangeGame}
-            className="cursor-pointer text-ink-300 underline decoration-ink-600 underline-offset-4 hover:text-ink-50"
+            className="cursor-pointer py-1 -my-1 text-ink-300 underline decoration-ink-600 underline-offset-4 hover:text-ink-50"
           >
             Not this game?
           </button>
@@ -518,7 +518,9 @@ export function GameDetailModal({
               variant="secondary"
               onClick={onClose}
               disabled={saving}
-              className="flex-1 cursor-pointer"
+              // On the narrowest phones it takes only its own width, so the
+              // main button's label ("Add to library") fits on one line.
+              className="flex-1 max-[359px]:flex-none cursor-pointer"
             >
               Cancel
             </Button>
@@ -529,7 +531,7 @@ export function GameDetailModal({
               aria-describedby={adding && !pickedConsole ? 'needs-console' : undefined}
               // With the console already known, Enter adds it straight away.
               data-autofocus={adding?.defaultConsole ? true : undefined}
-              className="flex-1 cursor-pointer"
+              className="flex-1 cursor-pointer whitespace-nowrap"
             >
               {submitLabel(adding, pickedConsole, saving)}
             </Button>

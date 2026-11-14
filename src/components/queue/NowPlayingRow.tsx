@@ -134,7 +134,7 @@ export function NowPlayingRow({
                 <span>Drop</span>
               </Button>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-4 whitespace-nowrap">
               <button onClick={onMoveToQueue} disabled={isLoading} className={secondaryAction}>
                 <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Move to Queue</span>

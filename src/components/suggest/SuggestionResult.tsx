@@ -97,7 +97,7 @@ export function SuggestionResult({
               href={storeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 ml-auto hover:text-ink-300 transition-colors"
+              className="flex items-center gap-1 ml-auto py-1 -my-1 hover:text-ink-300 transition-colors"
             >
               <span>Steam</span> <ExternalLink className="w-3 h-3" />
             </a>

@@ -130,7 +130,7 @@ export function LoginForm({
             <button
               type="button"
               onClick={onSwitchToForgotPassword}
-              className="text-sm text-accent-400 hover:text-accent-300 font-medium transition-colors"
+              className="py-1 -my-1 text-sm text-accent-400 hover:text-accent-300 font-medium transition-colors"
             >
               Forgot password?
             </button>
@@ -148,7 +148,7 @@ export function LoginForm({
           <button
             type="button"
             onClick={onSwitchToSignUp}
-            className="text-accent-400 hover:text-accent-300 font-medium transition-colors"
+            className="py-1 -my-1 text-accent-400 hover:text-accent-300 font-medium transition-colors"
           >
             Sign up
           </button>

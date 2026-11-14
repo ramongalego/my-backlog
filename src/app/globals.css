@@ -217,6 +217,28 @@
   --rdp-selected-border: none;
   color: var(--color-ink-200);
 }
+/* On a phone the calendar opens inside the dialog, as wide as its fields:
+   the days shrink so seven fit across (the dialog's own padding is 4rem of
+   the screen, the calendar's 1rem). Never below 32px, still easy to tap. */
+@media (max-width: 767px) {
+  .rdp-root {
+    --rdp-day-width: clamp(32px, calc((100vw - 5rem) / 7), 44px);
+    --rdp-day-height: var(--rdp-day-width);
+    --rdp-day_button-width: calc(var(--rdp-day-width) - 2px);
+    --rdp-day_button-height: calc(var(--rdp-day-width) - 2px);
+  }
+}
+/* On the narrowest phones (320px) the month and year would run under the
+   arrows: both get a little smaller. */
+@media (max-width: 359px) {
+  .rdp-root {
+    --rdp-nav_button-width: 1.75rem;
+  }
+  .rdp-dropdowns {
+    gap: 0.25rem;
+    font-size: 0.875rem;
+  }
+}
 .rdp-day_button {
   color: var(--color-ink-200);
   border-radius: 0.5rem;

@@ -261,7 +261,7 @@ export function AddGameModal({
           <button
             type="button"
             onClick={close}
-            className="cursor-pointer rounded-md text-sm text-ink-400 transition-colors hover:text-ink-100 sm:border sm:border-ink-700 sm:px-1.5 sm:py-0.5 sm:text-xs sm:font-medium"
+            className="cursor-pointer rounded-md text-sm text-ink-400 transition-colors hover:text-ink-100 max-sm:-my-2 max-sm:-mr-1 max-sm:px-1 max-sm:py-2 sm:border sm:border-ink-700 sm:px-1.5 sm:py-0.5 sm:text-xs sm:font-medium"
           >
             {/* Named by what it shows: "Cancel" on a phone, "Close, Esc" with a keyboard. */}
             <span className="sm:hidden">Cancel</span>

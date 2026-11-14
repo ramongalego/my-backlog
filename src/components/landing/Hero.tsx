@@ -47,7 +47,7 @@ export function Hero({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
             <button
               aria-haspopup="dialog"
               onClick={() => onOpen('login')}
-              className="text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
+              className="py-1 -my-1 text-sm text-ink-400 hover:text-ink-100 transition-colors cursor-pointer"
             >
               Already have an account?{' '}
               <span className="font-medium text-ink-200 underline decoration-ink-600 underline-offset-4">

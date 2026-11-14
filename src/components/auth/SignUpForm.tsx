@@ -184,7 +184,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-accent-400 hover:text-accent-300 font-medium transition-colors"
+            className="py-1 -my-1 text-accent-400 hover:text-accent-300 font-medium transition-colors"
           >
             Sign in
           </button>

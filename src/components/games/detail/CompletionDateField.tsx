@@ -73,7 +73,9 @@ export function CompletionDateField({
   }, [calendarOpen]);
 
   return (
-    <div className="flex items-center gap-2.5">
+    // The calendar hangs off this row below md: as wide as the dialog's
+    // fields, where hanging off the date button ran it off a phone's screen.
+    <div className="relative flex items-center gap-2.5">
       <input
         id="date-toggle"
         type="checkbox"
@@ -95,7 +97,7 @@ export function CompletionDateField({
       </label>
 
       {hasDate && (
-        <div className="relative" ref={calendarRef}>
+        <div className="md:relative" ref={calendarRef}>
           <button
             type="button"
             data-testid="detail-date"
@@ -110,7 +112,9 @@ export function CompletionDateField({
           </button>
 
           {calendarOpen && (
-            <div className="absolute left-0 top-full mt-2 sm:left-full sm:top-1/2 sm:-translate-y-1/2 sm:mt-0 sm:ml-2 z-50 bg-ink-800 border border-ink-700 rounded-xl shadow-2xl px-4 py-2">
+            // Below md: under the row, its days sized to fit seven across
+            // (globals.css). From md there's room beside the date.
+            <div className="absolute left-0 top-full mt-2 w-max max-w-full md:max-w-none md:left-full md:top-1/2 md:-translate-y-1/2 md:mt-0 md:ml-2 z-50 bg-ink-800 border border-ink-700 rounded-xl shadow-2xl px-2 py-2 md:px-4">
               <Suspense fallback={null}>
                 <DayPicker
                   mode="single"

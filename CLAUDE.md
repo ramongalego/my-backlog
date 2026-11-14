@@ -92,6 +92,17 @@ The app is checked against WCAG 2.2 AA (axe-core plus a keyboard pass). What new
 - Form fields have a label, `required` where they are, and errors linked with `aria-describedby` in a `role="alert"` (`Input` does this). Forms are `noValidate`.
 - Dialogs use `Modal` (focus goes in, Tab stays in, Escape closes, focus returns). Every animation has a `motion-reduce:` variant.
 
+## Responsive layout
+
+New or changed UI is checked at these widths before it's done, not only at a phone and a desktop: **320** (smallest phones), **390** (most phones), **466 × 678** (a folding phone closed: wide but short), **626 to 669** (a folding phone open), **768** (tablet upright), and a phone on its side (**844 × 390**). What has gone wrong before:
+
+- **640 to 1023px is where layouts break.** `sm:` turns a stacked row into a side-by-side one with only about 600px to share, so anything with fixed-width columns squeezes its text (Diary's title and note got 80px). Give a row its extra columns from `lg:`, and below that keep those values on the title line as on phones (`DiaryRow`). A phone on its side, a small tablet and an open folding phone all land here.
+- **Wrap names below `lg`, don't truncate them** (`lg:truncate`, not `sm:truncate`), wherever a second line fits.
+- **Anything that pops out of a control inside a dialog must fit the dialog on a phone.** Anchor it to a full-width parent (the field's row), not to the small button it opens from, and size it from the screen (the date calendar: `CompletionDateField`, with its day size in `globals.css`). One that's too wide makes the whole dialog scroll sideways.
+- **A button's label stays on one line** (`whitespace-nowrap`), and a row of text actions wraps as whole items (`flex flex-wrap` on the row), never mid-label. Where two buttons can't both fit at 320px, the secondary one gives way (`max-[359px]:flex-none` or `max-[359px]:hidden`).
+- **Text links are 24px tall to tap**: `py-1 -my-1` adds the room without moving anything.
+- No page scrolls sideways at any width. A row that scrolls on purpose (filter chips, carousels) is the only exception.
+
 ## Conventions
 
 - Commits carry only the author's name: no `Co-Authored-By` or AI attribution lines.

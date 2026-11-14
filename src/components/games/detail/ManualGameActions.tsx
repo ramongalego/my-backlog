@@ -42,7 +42,7 @@ export function ManualGameActions({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="cursor-pointer mx-auto block text-sm text-ink-400 hover:text-ink-100 transition-colors"
+        className="cursor-pointer mx-auto block py-1 -my-1 text-sm text-ink-400 hover:text-ink-100 transition-colors"
       >
         Play on Steam instead
       </button>
@@ -66,7 +66,7 @@ export function ManualGameActions({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="cursor-pointer mx-auto block text-sm text-ink-400 hover:text-rose-400 transition-colors"
+        className="cursor-pointer mx-auto block py-1 -my-1 text-sm text-ink-400 hover:text-rose-400 transition-colors"
       >
         Remove from library
       </button>
