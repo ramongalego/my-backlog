@@ -65,8 +65,10 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
     <Modal isOpen={open} onClose={handleClose} title="Report an issue" size="md">
       <div className="space-y-4">
         <div>
-          <p className="mb-2 text-xs font-medium text-ink-400">Type</p>
-          <div className="flex gap-2">
+          <p id="support-type" className="mb-2 text-xs font-medium text-ink-400">
+            Type
+          </p>
+          <div role="group" aria-labelledby="support-type" className="flex gap-2">
             {(Object.keys(TYPE_LABELS) as TicketType[]).map((t) => (
               <button
                 key={t}

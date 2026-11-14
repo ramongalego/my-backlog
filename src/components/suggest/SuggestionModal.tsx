@@ -110,6 +110,15 @@ export function SuggestionModal({
 
   const isWizardStep = step === 'mood' || step === 'energy' || step === 'time';
 
+  // The pick, for screen readers: the answer tiles are gone by the time it
+  // lands, so nothing has focus to read it from.
+  const picked =
+    chance?.phase === 'result'
+      ? `Picked ${chance.game.name}.`
+      : !chance && step === 'result' && suggestion && !error
+        ? `Picked ${suggestion.game.name}. ${suggestion.reasoning}`
+        : '';
+
   // Rendered only while open (see the home page), so each opening starts from
   // a fresh wizard and a late response can't land in a closed modal.
   return (
@@ -121,6 +130,10 @@ export function SuggestionModal({
       align="top"
       ariaLabel="Pick your next game"
     >
+      {/* Always here, so its text changing is what's announced. */}
+      <p className="sr-only" aria-live="polite">
+        {picked}
+      </p>
       {chance?.phase === 'rolling' && (
         // The first roll comes straight from the questions; another from its game.
         <SuggestionLoading covers={covers} roll opening={rolls === 1} />

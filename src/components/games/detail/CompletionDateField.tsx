@@ -101,6 +101,8 @@ export function CompletionDateField({
             data-testid="detail-date"
             onClick={() => setCalendarOpen((o) => !o)}
             aria-expanded={calendarOpen}
+            // Named for what it does; the date it shows comes last, as it reads on screen.
+            aria-label={`Change the date, ${formatDateLabel(date)}`}
             className="cursor-pointer flex items-center gap-1.5 bg-ink-800 hover:bg-ink-700 rounded-lg px-2.5 py-1 text-sm text-ink-100 transition-colors"
           >
             <CalendarDays className="w-3.5 h-3.5 text-ink-400" />

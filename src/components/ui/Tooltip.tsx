@@ -24,10 +24,17 @@ export function Tooltip({
   content,
   children,
   className = '',
+  described = true,
 }: {
   content: ReactNode;
   children: ReactNode;
   className?: string;
+  /**
+   * Off for a tooltip inside a button that already says the same in its name
+   * (a tag on a game's art): the hidden description would be text inside the
+   * button that its name doesn't have, and nothing reads it out there anyway.
+   */
+  described?: boolean;
 }) {
   const id = useId();
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -69,7 +76,7 @@ export function Tooltip({
     <span
       ref={triggerRef}
       tabIndex={-1}
-      aria-describedby={id}
+      aria-describedby={described ? id : undefined}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
@@ -90,9 +97,11 @@ export function Tooltip({
     >
       {children}
       {/* The description screen readers announce; the visible bubble below is decorative. */}
-      <span id={id} role="tooltip" className="sr-only">
-        {content}
-      </span>
+      {described && (
+        <span id={id} role="tooltip" className="sr-only">
+          {content}
+        </span>
+      )}
       {anchor &&
         createPortal(
           <span

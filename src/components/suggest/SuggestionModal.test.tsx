@@ -98,3 +98,17 @@ it('with a game playing, can play the pick now instead of queueing it', async ()
   expect(onPick).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalled();
 });
+
+it('says what it picked for screen readers, from a region that was already there', async () => {
+  setup('queue');
+  // Empty, but in the page before the pick: a region added with its text is often not read.
+  const announcer = document.querySelector('[aria-live="polite"]')!;
+  expect(announcer).toHaveTextContent('');
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Leave it to chance/ }));
+  });
+  await screen.findByRole('button', { name: 'Add to Queue' });
+
+  expect(announcer).toHaveTextContent('Picked Celeste.');
+});

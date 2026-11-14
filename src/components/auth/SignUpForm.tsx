@@ -146,6 +146,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
         onChange={handleChange}
         placeholder="you@example.com"
         error={errors.email}
+        required
         autoComplete="email"
       />
 
@@ -157,6 +158,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
         onChange={handleChange}
         placeholder="Create a password"
         error={errors.password}
+        required
         autoComplete="new-password"
       />
 
@@ -168,6 +170,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
         onChange={handleChange}
         placeholder="Confirm your password"
         error={errors.confirmPassword}
+        required
         autoComplete="new-password"
       />
 

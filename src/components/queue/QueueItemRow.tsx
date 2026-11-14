@@ -9,7 +9,8 @@ import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
 import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { consoleOf } from '@/lib/games/consoles';
 import type { QueueItem } from '@/types/games';
-import { isReleased } from '@/lib/games/release-date';
+import { isReleased, upcomingRelease } from '@/lib/games/release-date';
+import { withArtTags } from '@/lib/games/game-label';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
 
 interface QueueItemRowProps {
@@ -86,7 +87,10 @@ export function QueueItemRow({
       <button
         type="button"
         onClick={() => onOpen(item.game_id)}
-        aria-label={`Open details for ${item.game.name}`}
+        aria-label={withArtTags(`Open details for ${item.game.name}`, {
+          console: consoleOf(item.game),
+          release: upcomingRelease(item.game.release_date, undefined, zone)?.label,
+        })}
         className="group w-full sm:w-48 lg:w-56 shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
       >
         <CoverArt
@@ -100,12 +104,13 @@ export function QueueItemRow({
         >
           <CoverEditHint />
           {/* On phones the position rides on the art. */}
+          {/* Drawn by CSS: it repeats the number beside the row, and as text
+              inside the button it would have to be in the button's name. */}
           <span
             aria-hidden="true"
-            className="sm:hidden absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-ink-950/90 px-1.5 text-xs font-semibold text-ink-100 tabular-nums"
-          >
-            {index + 1}
-          </span>
+            data-chip={index + 1}
+            className="sm:hidden absolute top-2 left-2 inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-ink-950/90 px-1.5 text-xs font-semibold text-ink-100 tabular-nums before:content-[attr(data-chip)]"
+          />
         </CoverArt>
       </button>
 

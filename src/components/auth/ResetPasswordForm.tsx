@@ -102,6 +102,7 @@ export function ResetPasswordForm() {
         onChange={handleChange}
         placeholder="Enter a new password"
         error={errors.password}
+        required
         autoComplete="new-password"
       />
 
@@ -113,6 +114,7 @@ export function ResetPasswordForm() {
         onChange={handleChange}
         placeholder="Confirm your new password"
         error={errors.confirmPassword}
+        required
         autoComplete="new-password"
       />
 

@@ -165,7 +165,7 @@ describe('CurrentlyPlaying', () => {
       const { rerender } = render(
         <CurrentlyPlaying game={consoleGame(0)} {...defaultCallbacks} onSaveHours={onSaveHours} />,
       );
-      expect(screen.getByRole('button', { name: /Edit hours played on PS5/ })).toHaveTextContent(
+      expect(screen.getByRole('button', { name: /played on PS5. Edit hours/ })).toHaveTextContent(
         '0h played',
       );
       rerender(
@@ -176,7 +176,7 @@ describe('CurrentlyPlaying', () => {
         />,
       );
       // Under 10 hours, to a tenth: an hour and a half shows as one.
-      expect(screen.getByRole('button', { name: /Edit hours played on PS5/ })).toHaveTextContent(
+      expect(screen.getByRole('button', { name: /played on PS5. Edit hours/ })).toHaveTextContent(
         '1.5h played',
       );
     });
@@ -190,7 +190,7 @@ describe('CurrentlyPlaying', () => {
           onSaveHours={onSaveHours}
         />,
       );
-      fireEvent.click(screen.getByRole('button', { name: /Edit hours played/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Edit hours/ }));
       const field = screen.getByRole('spinbutton', { name: 'Hours played on PS5' });
       // Tenths, so an edit doesn't round 2.5h away.
       expect(field).toHaveValue(2.5);
@@ -199,7 +199,7 @@ describe('CurrentlyPlaying', () => {
       expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
       expect(onSaveHours).not.toHaveBeenCalled();
 
-      fireEvent.click(screen.getByRole('button', { name: /Edit hours played/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Edit hours/ }));
       fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '-3' } });
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-invalid', 'true');
@@ -213,7 +213,7 @@ describe('CurrentlyPlaying', () => {
     it("keeps a Steam game's hours read-only", () => {
       render(<CurrentlyPlaying game={createGame(150)} {...defaultCallbacks} />);
       expect(screen.getAllByText('2.5h played').length).toBeGreaterThan(0);
-      expect(screen.queryByRole('button', { name: /Edit hours played/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Edit hours/ })).not.toBeInTheDocument();
     });
   });
 });

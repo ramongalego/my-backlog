@@ -9,6 +9,7 @@ import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/D
 import type { DiaryEntry } from '@/hooks/useDiaryPage';
 import { steamStoreUrl } from '@/lib/games/store-link';
 import { consoleOf } from '@/lib/games/consoles';
+import { withArtTags } from '@/lib/games/game-label';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { formatDay, shortDate } from '@/lib/diary/date-utils';
 
@@ -84,7 +85,7 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
       <button
         type="button"
         onClick={edit}
-        aria-label={`Edit ${entry.name}`}
+        aria-label={withArtTags(`Edit ${entry.name}`, { console: consoleOf(entry) })}
         className={`group ${COVER_WIDTH} shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2`}
       >
         <CoverArt
@@ -97,9 +98,13 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
           <CoverEditHint />
           {/* On phones the date rides on the art. */}
           {entry.finished_at && (
-            <span className="sm:hidden absolute top-2 left-2 rounded-md bg-ink-950/90 px-2 py-0.5 text-xs font-medium text-ink-100 tabular-nums">
-              {shortDate(entry.finished_at)}
-            </span>
+            // Drawn by CSS: the date is in the row's headings, and as text
+            // inside the button it would have to be in the button's name.
+            <span
+              aria-hidden="true"
+              data-chip={shortDate(entry.finished_at)}
+              className="sm:hidden absolute top-2 left-2 rounded-md bg-ink-950/90 px-2 py-0.5 text-xs font-medium text-ink-100 tabular-nums before:content-[attr(data-chip)]"
+            />
           )}
         </CoverArt>
       </button>

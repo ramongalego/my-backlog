@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { LoginForm } from './LoginForm';
@@ -25,9 +25,25 @@ const TITLES: Record<AuthMode, string> = {
 function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
+  // Switching form removes the link that was pressed, and focus with it: it
+  // moves to the new form's title, which is read out, with Tab going on to
+  // its first field.
+  const title = useRef<HTMLHeadingElement>(null);
+  const shown = useRef(mode);
+  useEffect(() => {
+    if (shown.current === mode) return;
+    shown.current = mode;
+    title.current?.focus();
+  }, [mode]);
+
   return (
     <>
-      <h2 id={TITLE_ID} className="text-xl font-semibold tracking-tight text-ink-50 mb-6">
+      <h2
+        ref={title}
+        id={TITLE_ID}
+        tabIndex={-1}
+        className="text-xl font-semibold tracking-tight text-ink-50 mb-6 outline-none"
+      >
         {TITLES[mode]}
       </h2>
       {mode === 'login' && (

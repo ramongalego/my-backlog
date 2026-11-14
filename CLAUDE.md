@@ -78,6 +78,20 @@ npx impeccable detect src/
 
 It reads `DESIGN.md`. Pass a URL (e.g. `http://localhost:3000/`) to scan a rendered public page.
 
+## Accessibility
+
+The app is checked against WCAG 2.2 AA (axe-core plus a keyboard pass). What new UI has to keep true:
+
+- **A control's name has every word shown inside it, in the order shown** (label in name). A button that holds game art uses `openGameLabel`, `selectGameLabel` or `withArtTags` (`lib/games/game-label.ts`), which add the badges and tags drawn on the art. If the name starts from an `aria-label`, any new badge inside the control must be added to it too.
+- **Separate pieces of text inside one control need a space between them** in the markup (`{' '}`), or they run together as one word when read as a whole ("QueuedSwitch").
+- **A chip that only repeats what's beside it** (the queue position and the date on phone art) is drawn with CSS (`data-chip` and `before:content-[attr(data-chip)]`, `aria-hidden`), so it isn't text the button's name would need. A `Tooltip` inside a button takes `described={false}`.
+- **When an action removes the element that had focus, move focus to what replaced it**: the new heading or group (`tabIndex={-1}`), as the picker's questions, Choose art and the sign-in forms do. Focus never falls back to the page.
+- **Something that arrives without focus moving is announced**: a result goes in an `aria-live="polite"` element that was already on the page when its text changes (`SuggestionModal`), progress in `role="status"`, an error in `role="alert"`.
+- Icon-only buttons have an `aria-label` and an `aria-hidden` icon, and are at least 24px to hit: add padding round a small icon, not a bigger icon.
+- Pick-one buttons sit in a named `role="group"` and each has `aria-pressed`.
+- Form fields have a label, `required` where they are, and errors linked with `aria-describedby` in a `role="alert"` (`Input` does this). Forms are `noValidate`.
+- Dialogs use `Modal` (focus goes in, Tab stays in, Escape closes, focus returns). Every animation has a `motion-reduce:` variant.
+
 ## Conventions
 
 - Commits carry only the author's name: no `Co-Authored-By` or AI attribution lines.

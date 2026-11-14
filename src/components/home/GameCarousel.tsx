@@ -7,6 +7,9 @@ import { GameCardInfo } from '@/components/games/GameCardInfo';
 import { QueuedBadge } from '@/components/games/QueuedBadge';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
 import { consoleOf } from '@/lib/games/consoles';
+import { withArtTags } from '@/lib/games/game-label';
+import { upcomingRelease } from '@/lib/games/release-date';
+import { useReleaseZone } from '@/hooks/useReleaseZone';
 import {
   CAROUSEL_CARD_WIDTH as CARD_WIDTH,
   CAROUSEL_FADE_CLASS,
@@ -120,6 +123,7 @@ export function GameCarousel({
 }: GameCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const perPage = usePerPage(rowRef);
+  const zone = useReleaseZone();
   const loopMode = useLoopMode();
 
   // The first visible game. While sliding it can step past either end of the
@@ -258,8 +262,15 @@ export function GameCarousel({
                   <button
                     onClick={() => onOpenDetail?.(game)}
                     className="group block w-full rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
-                    // Includes the badge, so the name matches what's on screen.
-                    aria-label={`Open details for ${game.name}${queuedIds?.has(game.id) ? ', Queued' : ''}`}
+                    // Includes the badge and the art's tags, so the name
+                    // matches what's on screen.
+                    aria-label={withArtTags(
+                      `Open details for ${game.name}${queuedIds?.has(game.id) ? ', Queued' : ''}`,
+                      {
+                        console: consoleOf(game),
+                        release: upcomingRelease(game.release_date, undefined, zone)?.label,
+                      },
+                    )}
                   >
                     <CoverArt
                       src={game.header_image}

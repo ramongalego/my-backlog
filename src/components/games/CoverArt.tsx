@@ -61,6 +61,8 @@ export function CoverArt({
         </div>
       )}
       {children}
+      {/* A space, so the words of one tag don't run into the next when the
+          art's text is read as a whole (it draws nothing). */}{' '}
       <ArtTags platform={platform} releaseDate={releaseDate} />
     </div>
   );

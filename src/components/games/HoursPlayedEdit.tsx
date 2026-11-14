@@ -56,7 +56,8 @@ export function HoursPlayedEdit({
         <button
           type="button"
           onClick={open}
-          aria-label={`Edit hours played on ${platform}, ${hours}h now`}
+          // Starts with the words on the button, so it can be asked for by them.
+          aria-label={`${hours}h played on ${platform}. Edit hours`}
           // A 44px tap target on phones, without taking more room.
           className={`group/hours cursor-pointer inline-flex items-center gap-1.5 py-3 -my-3 rounded-md hover:text-ink-50 transition-colors ${className}`}
         >

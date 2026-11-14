@@ -109,6 +109,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
         onChange={handleChange}
         placeholder="you@example.com"
         error={errors.email}
+        required
         autoComplete="email"
       />
 

@@ -109,6 +109,7 @@ export function LoginForm({
         onChange={handleChange}
         placeholder="you@example.com"
         error={errors.email}
+        required
         autoComplete="email"
       />
 
@@ -121,6 +122,7 @@ export function LoginForm({
           onChange={handleChange}
           placeholder="Enter your password"
           error={errors.password}
+          required
           autoComplete="current-password"
         />
         {onSwitchToForgotPassword && (

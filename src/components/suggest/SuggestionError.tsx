@@ -11,7 +11,7 @@ interface SuggestionErrorProps {
 
 export function SuggestionError({ error, onRetry, onStartOver }: SuggestionErrorProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16">
+    <div className="flex flex-col items-center justify-center py-16" role="alert">
       <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-4">
         <AlertCircle className="w-8 h-8 text-rose-400" aria-hidden="true" />
       </div>

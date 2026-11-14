@@ -41,7 +41,8 @@ export function GameCard({
   const status = game.status;
   const showRating = (status === 'finished' || status === 'dropped') && game.rating != null;
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
-  const label = openGameLabel(game, { queued, showStatus, release });
+  const art = { showStatus, console: consoleOf(game), release };
+  const label = openGameLabel(game, { queued, ...art });
 
   return (
     // content-visibility lets the browser skip layout/paint for off-screen
@@ -58,7 +59,7 @@ export function GameCard({
         className={`relative block w-full rounded-lg select-none focus-visible:-outline-offset-2 ${
           selection && !selection.selectable ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
         }`}
-        aria-label={selection ? selectGameLabel(game, selection, queued) : label}
+        aria-label={selection ? selectGameLabel(game, selection, queued, art) : label}
       >
         <CoverArt
           src={game.header_image}
@@ -78,6 +79,7 @@ export function GameCard({
           <div className="absolute top-2 right-2">
             {queued ? <QueuedBadge /> : showStatus && <StatusBadge status={status} />}
           </div>
+          {/* A space between the badge and the rating as text (it draws nothing). */}{' '}
           {showRating && (
             <Rating rating={game.rating!} onArt className="absolute bottom-2 right-2" />
           )}

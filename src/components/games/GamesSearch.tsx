@@ -22,11 +22,13 @@ export function GamesSearch({ value, onSearchChange }: GamesSearchProps) {
       />
       {value && (
         <button
+          type="button"
           onClick={() => onSearchChange('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-500 hover:text-ink-300 transition-colors"
+          // The padding makes it a 24px target around the same 16px icon.
+          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded p-1 text-ink-500 hover:text-ink-300 transition-colors"
           aria-label="Clear search"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
     </div>
