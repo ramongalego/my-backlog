@@ -26,7 +26,7 @@ interface UseDiaryReturn {
   handleOpenDetail: (gameId: number) => void;
   /** Saves just the note, keeping the entry's date and rating. */
   handleSaveNotes: (gameId: number, notes: string) => void;
-  /** The year shown (kept in the URL), or ALL_YEARS. */
+  /** The year shown (kept in the URL), or ALL_YEARS; a year with no entries is every year. */
   selectedYear: string;
   setSelectedYear: (year: string) => void;
   /** The entries as the page lays them out, for that year. */
@@ -138,6 +138,8 @@ export function useDiaryPage(): UseDiaryReturn {
     });
   };
 
+  const timeline = diaryTimeline(entries, selectedYear);
+
   return {
     entries,
     loading: !!userId && isPending,
@@ -146,8 +148,8 @@ export function useDiaryPage(): UseDiaryReturn {
     gameDialog,
     handleOpenDetail,
     handleSaveNotes,
-    selectedYear,
+    selectedYear: timeline.year,
     setSelectedYear,
-    timeline: diaryTimeline(entries, selectedYear),
+    timeline,
   };
 }

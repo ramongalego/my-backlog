@@ -18,6 +18,8 @@ interface DiaryYear<T> {
 }
 
 interface DiaryTimeline<T> {
+  /** The year shown, or ALL_YEARS: the one asked for, if any entry has it. */
+  year: string;
   /** Every year with a dated entry, newest first: what the year filter offers. */
   years: string[];
   /** The dated entries shown, by year then month, in the order they came. */
@@ -35,17 +37,21 @@ export const ALL_YEARS = 'all';
  * The Diary page's entries as it lays them out: grouped by the year and month
  * each game was finished, for every year or just one. Entries keep the order
  * they arrive in (the loader sends the most recently finished first).
+ *
+ * A year no entry has (an old link, or the year's last game given another
+ * date) shows every year, rather than an empty page under "0 games finished".
  */
 export function diaryTimeline<T extends Finished>(
   entries: T[],
-  year: string = ALL_YEARS,
+  asked: string = ALL_YEARS,
   now = new Date(),
 ): DiaryTimeline<T> {
-  const everyYear = year === ALL_YEARS;
   const dated = entries.filter((e) => e.finished_at);
   const years = [...new Set(dated.map((e) => e.finished_at!.slice(0, 4)))].sort((a, b) =>
     b.localeCompare(a),
   );
+  const year = years.includes(asked) ? asked : ALL_YEARS;
+  const everyYear = year === ALL_YEARS;
   const shown = everyYear ? dated : dated.filter((e) => e.finished_at!.startsWith(year));
 
   const groups: DiaryYear<T>[] = [];
@@ -83,5 +89,5 @@ export function diaryTimeline<T extends Finished>(
     if (thisYearCount > 0) summary = `${count} · ${thisYearCount} this year`;
   }
 
-  return { years, groups, undated, summary };
+  return { year, years, groups, undated, summary };
 }

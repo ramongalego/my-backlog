@@ -47,7 +47,17 @@ it('shows one year when asked for it', () => {
   expect(shape(diaryTimeline(entries, '2025', now))).toEqual([
     ['2025', [['2025-11', ['Portal 2']]]],
   ]);
-  expect(diaryTimeline(entries, '2019', now).groups).toEqual([]);
+  expect(diaryTimeline(entries, '2025', now).year).toBe('2025');
+});
+
+it('shows every year when asked for one no entry has: an old link, or junk in the address', () => {
+  for (const asked of ['2019', 'abc', '<script>', '']) {
+    const timeline = diaryTimeline(entries, asked, now);
+    expect(timeline.year).toBe(ALL_YEARS);
+    expect(timeline.groups.map((y) => y.year)).toEqual(['2026', '2025']);
+    expect(timeline.undated).toHaveLength(2);
+    expect(timeline.summary).toBe('6 games finished · 3 this year');
+  }
 });
 
 describe('the summary line', () => {

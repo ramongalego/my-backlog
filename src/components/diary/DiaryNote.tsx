@@ -90,7 +90,14 @@ export function DiaryNoteEditor({
   onCancel: () => void;
 }) {
   const [text, setText] = useState(initialText);
-  const save = () => onSave(text.trim());
+  // Saving closes the editor, from the next redraw: a second click on Save
+  // before then would save the note again.
+  const saved = useRef(false);
+  const save = () => {
+    if (saved.current) return;
+    saved.current = true;
+    onSave(text.trim());
+  };
 
   return (
     <div className="mt-2 max-w-[68ch]">
