@@ -1,6 +1,6 @@
 import { fetchGameMetadata } from '@/lib/server/metadata-fetch';
 import * as store from '@/lib/steam/store-api';
-import { getMainStoryHours, HLTBUnavailableError } from '@/lib/hltb/api';
+import { findMainStoryTimes, HLTBUnavailableError } from '@/lib/hltb/api';
 
 jest.mock('@/lib/steam/store-api', () => ({
   ...jest.requireActual('@/lib/steam/store-api'),
@@ -10,14 +10,15 @@ jest.mock('@/lib/steam/store-api', () => ({
 }));
 jest.mock('@/lib/hltb/api', () => ({
   ...jest.requireActual('@/lib/hltb/api'),
-  getMainStoryHours: jest.fn(),
+  findMainStoryTimes: jest.fn(),
 }));
 
-const details = (type: string) => ({
+const details = (type: string, date?: string) => ({
   success: true,
   data: {
     type,
     name: 'Steam Name',
+    ...(date ? { release_date: { coming_soon: false, date } } : {}),
     steam_appid: 1,
     short_description: '',
     header_image: 'https://cdn/header.jpg',
@@ -33,7 +34,7 @@ beforeEach(() => {
     reviews: { score: 90, count: 1000 },
   });
   jest.mocked(store.getSteamDeckCompat).mockResolvedValue(3);
-  jest.mocked(getMainStoryHours).mockResolvedValue(12);
+  jest.mocked(findMainStoryTimes).mockResolvedValue(() => 12);
 });
 
 it('starts every lookup without waiting for the Steam details', async () => {
@@ -45,7 +46,7 @@ it('starts every lookup without waiting for the Steam details', async () => {
   const pending = fetchGameMetadata(1, 'Library Name');
   await Promise.resolve();
 
-  expect(getMainStoryHours).toHaveBeenCalledWith('Library Name');
+  expect(findMainStoryTimes).toHaveBeenCalledWith('Library Name');
   expect(store.getStoreItemInfo).toHaveBeenCalledWith(1);
   expect(store.getSteamDeckCompat).toHaveBeenCalledWith(1);
 
@@ -71,7 +72,7 @@ it('lets "Steam is busy" through so the game is retried', async () => {
 
 it('marks the time as pending when HLTB is rate limiting', async () => {
   jest.mocked(store.getGameDetails).mockResolvedValue(details('game'));
-  jest.mocked(getMainStoryHours).mockRejectedValue(new HLTBUnavailableError());
+  jest.mocked(findMainStoryTimes).mockRejectedValue(new HLTBUnavailableError());
   const metadata = await fetchGameMetadata(1, 'Library Name');
   expect(metadata).toMatchObject({ main_story_hours: null, hltbUnavailable: true, deck_compat: 3 });
 });
@@ -79,20 +80,29 @@ it('marks the time as pending when HLTB is rate limiting', async () => {
 it("keeps a time only for Steam's own name, whatever name the request sent", async () => {
   jest.mocked(store.getGameDetails).mockResolvedValue(details('game'));
   jest
-    .mocked(getMainStoryHours)
-    .mockImplementation(async (name) => (name === 'Steam Name' ? 12 : 300));
+    .mocked(findMainStoryTimes)
+    .mockImplementation(async (name) => () => (name === 'Steam Name' ? 12 : 300));
 
   // A request naming a 300-hour game for this app id: the cache gets the
   // time for Steam's name for it.
   const metadata = await fetchGameMetadata(1, 'Some 300 Hour Game');
-  expect(getMainStoryHours).toHaveBeenCalledWith('Steam Name');
+  expect(findMainStoryTimes).toHaveBeenCalledWith('Steam Name');
   expect(metadata?.main_story_hours).toBe(12);
 });
 
+it("reads the time for the year Steam's details give, once they arrive", async () => {
+  jest.mocked(store.getGameDetails).mockResolvedValue(details('game', 'Jan 27, 2023'));
+  // A remake and its original under one title: 2023 and 2008.
+  jest.mocked(findMainStoryTimes).mockResolvedValue((year) => (year === 2023 ? 12.2 : 11));
+
+  const metadata = await fetchGameMetadata(1, 'Steam Name');
+  expect(metadata?.main_story_hours).toBe(12.2);
+});
+
 it('uses the early search when the name matches Steam, without searching twice', async () => {
-  jest.mocked(getMainStoryHours).mockClear();
+  jest.mocked(findMainStoryTimes).mockClear();
   jest.mocked(store.getGameDetails).mockResolvedValue(details('game'));
 
   await fetchGameMetadata(1, 'Steam Name');
-  expect(getMainStoryHours).toHaveBeenCalledTimes(1);
+  expect(findMainStoryTimes).toHaveBeenCalledTimes(1);
 });

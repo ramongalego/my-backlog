@@ -5,7 +5,8 @@ import {
   getStoreItemInfo,
   getSteamDeckCompat,
 } from '@/lib/steam/store-api';
-import { getMainStoryHours, HLTBUnavailableError } from '@/lib/hltb/api';
+import { findMainStoryTimes, HLTBUnavailableError, type MainStoryTimes } from '@/lib/hltb/api';
+import { releaseYear } from '@/lib/games/release-date';
 import { calculateBayesianScore } from '@/lib/games/scoring';
 import { classifyAppType } from '@/lib/games/software';
 import type { GameMetadata } from '@/lib/games/metadata-cache';
@@ -13,12 +14,16 @@ import type { GameMetadata } from '@/lib/games/metadata-cache';
 /** A fresh snapshot, plus whether HLTB was too busy to be asked (not stored). */
 export type FetchedMetadata = GameMetadata & { hltbUnavailable: boolean };
 
-/** HLTB's answer, with "rate limited" kept apart from "has no time". */
-async function lookUpHours(name: string): Promise<{ hours: number | null; unavailable: boolean }> {
+/**
+ * HLTB's answer, with "rate limited" kept apart from "has no time". The time
+ * itself is read once the release year is known, which tells a remake from
+ * the original it shares a title with.
+ */
+async function lookUpHours(name: string): Promise<{ times: MainStoryTimes; unavailable: boolean }> {
   try {
-    return { hours: await getMainStoryHours(name), unavailable: false };
+    return { times: await findMainStoryTimes(name), unavailable: false };
   } catch (err) {
-    if (err instanceof HLTBUnavailableError) return { hours: null, unavailable: true };
+    if (err instanceof HLTBUnavailableError) return { times: () => null, unavailable: true };
     throw err;
   }
 }
@@ -36,7 +41,7 @@ export async function fetchGameMetadata(
   // Steam's own name for the game: everything here goes into the cache every
   // user reads, and the hint comes from the request.
   const hintedHours = nameHint ? lookUpHours(nameHint) : null;
-  const noHours = { hours: null, unavailable: false };
+  const noHours = { times: () => null, unavailable: false };
   const hoursRequest = detailsRequest.then(
     (details) => {
       const steamName = details?.data?.name;
@@ -62,9 +67,7 @@ export async function fetchGameMetadata(
   if (!extracted) return null;
 
   const isGame = extracted.type === 'game';
-  const [hltb, storeItem, deckCompat] = isGame
-    ? await enrichment
-    : [{ hours: null, unavailable: false }, null, null];
+  const [hltb, storeItem, deckCompat] = isGame ? await enrichment : [noHours, null, null];
   const steamReviewData = storeItem?.reviews ?? null;
   const tags = storeItem?.tags ?? null;
 
@@ -86,7 +89,7 @@ export async function fetchGameMetadata(
     steam_review_score: steamReviewData?.score ?? null,
     steam_review_count: steamReviewData?.count ?? null,
     steam_review_weighted: weightedScore,
-    main_story_hours: hltb.hours,
+    main_story_hours: hltb.times(releaseYear(extracted.release_date)),
     deck_compat: deckCompat,
     tags,
     synced_at: new Date().toISOString(),

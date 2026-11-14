@@ -5,6 +5,7 @@ import { getMainStoryHours, hltbBlockedForMs, HLTBUnavailableError } from '@/lib
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { syncHltbRequestSchema } from '@/lib/validations/common';
+import { releaseYear } from '@/lib/games/release-date';
 
 /**
  * Looks up HowLongToBeat times for games whose other details are already
@@ -45,10 +46,14 @@ export async function POST(request: NextRequest) {
   // change: the hours found go into the cache every user reads.
   const [{ data: games, error: gamesError }, { data: cached, error: cacheError }] =
     await Promise.all([
-      supabase.from('games').select('app_id, name').eq('user_id', user.id).in('app_id', appIds),
+      supabase
+        .from('games')
+        .select('app_id, name, release_date')
+        .eq('user_id', user.id)
+        .in('app_id', appIds),
       supabase
         .from('game_metadata')
-        .select('app_id, name, main_story_hours, hltb_attempts')
+        .select('app_id, name, release_date, main_story_hours, hltb_attempts')
         .in('app_id', appIds),
     ]);
   if (gamesError || cacheError) {
@@ -68,7 +73,12 @@ export async function POST(request: NextRequest) {
     // Another user's sync may have found it in the meantime.
     if (hours === null) {
       try {
-        hours = await getMainStoryHours(row?.name ?? game.name);
+        // The release year tells a remake from the original it shares a
+        // title with.
+        hours = await getMainStoryHours(
+          row?.name ?? game.name,
+          releaseYear(row?.release_date ?? game.release_date),
+        );
       } catch (err) {
         if (!(err instanceof HLTBUnavailableError)) {
           console.error(err);

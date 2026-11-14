@@ -13,7 +13,7 @@ jest.mock('@/lib/hltb/api', () => ({
 const now = new Date('2026-11-10T12:00:00Z');
 
 /** The games the query returns, and what was asked of it and written. */
-function fakeSupabase(games: { id: number; name: string }[]) {
+function fakeSupabase(games: { id: number; name: string; release_date?: string }[]) {
   const filters: string[] = [];
   const updates: { id: unknown; values: Record<string, unknown> }[] = [];
   const client = {
@@ -57,11 +57,17 @@ beforeEach(() => jest.clearAllMocks());
 it('looks up hand-added games without a time that were not checked this week', async () => {
   jest.mocked(getMainStoryHours).mockResolvedValueOnce(12).mockResolvedValueOnce(null);
   const { client, filters, updates } = fakeSupabase([
-    { id: 1, name: 'Metroid Ravenous' },
+    { id: 1, name: 'Metroid Ravenous', release_date: 'Dec 4, 2026' },
     { id: 2, name: 'Persona 4 Revival' },
   ]);
 
   await expect(recheckMissingHours(client, 'u', now)).resolves.toBe(1);
+
+  // With the release year, which tells a remake from its original.
+  expect(jest.mocked(getMainStoryHours).mock.calls).toEqual([
+    ['Metroid Ravenous', 2026],
+    ['Persona 4 Revival', null],
+  ]);
 
   expect(filters).toEqual(
     expect.arrayContaining([

@@ -8,6 +8,7 @@ import { getMainStoryHours } from '@/lib/hltb/api';
 import { applyStatusChange } from '@/lib/server/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';
+import { releaseYear } from '@/lib/games/release-date';
 
 const STATUS_WORDS = {
   backlog: 'as backlog',
@@ -19,10 +20,10 @@ const STATUS_WORDS = {
 // HowLongToBeat can be slow or refusing; the game is added either way.
 const HLTB_WAIT_MS = 10_000;
 
-async function mainStoryHours(name: string): Promise<number | null> {
+async function mainStoryHours(name: string, year: number | null): Promise<number | null> {
   try {
     return await Promise.race([
-      getMainStoryHours(name),
+      getMainStoryHours(name, year),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), HLTB_WAIT_MS)),
     ]);
   } catch {
@@ -108,7 +109,10 @@ export async function POST(request: NextRequest) {
   }
   const existing = steamGame ?? manualGame;
 
-  const mainStory = existing ? null : await mainStoryHours(details.name);
+  // The year tells a remake from the original it shares a title with.
+  const mainStory = existing
+    ? null
+    : await mainStoryHours(details.name, releaseYear(details.release_date));
 
   const { data: game, error } = steamGame
     ? await supabase

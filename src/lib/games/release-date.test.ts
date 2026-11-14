@@ -1,4 +1,4 @@
-import { isReleased, nextPlayable, upcomingRelease } from '@/lib/games/release-date';
+import { isReleased, nextPlayable, releaseYear, upcomingRelease } from '@/lib/games/release-date';
 
 // Oct 27, 2026, mid-afternoon, local time.
 const NOW = new Date(2026, 9, 27, 15, 0).getTime();
@@ -125,5 +125,21 @@ describe('read in UTC, as the server renders it and the browser first repeats it
     const queue = [{ name: 'Out on the third', game: { release_date: 'Dec 3, 2026' } }];
     expect(nextPlayable(queue, lateOnTheSecond, 'utc')).toBeUndefined();
     expect(nextPlayable(queue, earlyOnTheThird, 'utc')?.name).toBe('Out on the third');
+  });
+});
+
+describe('releaseYear', () => {
+  it('reads the year from a date in either order, or a vague one', () => {
+    expect(releaseYear('Nov 5, 2026')).toBe(2026);
+    expect(releaseYear('28 Sep, 2010')).toBe(2010);
+    expect(releaseYear('Q2 2027')).toBe(2027);
+    expect(releaseYear('2027')).toBe(2027);
+  });
+
+  it('is null when there is no year', () => {
+    expect(releaseYear('Coming soon')).toBeNull();
+    expect(releaseYear('')).toBeNull();
+    expect(releaseYear(null)).toBeNull();
+    expect(releaseYear(undefined)).toBeNull();
   });
 });

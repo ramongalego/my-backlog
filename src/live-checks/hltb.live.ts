@@ -40,3 +40,13 @@ it.each(GAMES)(
   // scripts, each allowed 10s, before the searches themselves.
   120_000,
 );
+
+// Two games HLTB lists as "Prey": the 2017 one first (about 16h), the 2006
+// one about 7h. Only passes while HLTB still sends each result's release year
+// (`release_world`); without it the lookup quietly takes the first.
+it('tells games that share a title apart by release year', async () => {
+  const hours = await getMainStoryHours('Prey', 2006);
+  expect({ hours, errors }).toEqual({ hours: expect.any(Number), errors: [] });
+  expect(hours).toBeGreaterThanOrEqual(5);
+  expect(hours).toBeLessThanOrEqual(10);
+}, 120_000);

@@ -19,6 +19,7 @@ const userGames = [
 let cacheRows: {
   app_id: number;
   name: string | null;
+  release_date?: string | null;
   main_story_hours: number | null;
   hltb_attempts: number;
 }[];
@@ -111,8 +112,20 @@ it("searches by Steam's name, so renaming a game in your library can't set the s
 
   await call([1]);
 
-  expect(getMainStoryHours).toHaveBeenCalledWith('Celeste (Steam)');
-  expect(getMainStoryHours).not.toHaveBeenCalledWith('Celeste');
+  expect(jest.mocked(getMainStoryHours).mock.calls.map(([name]) => name)).toEqual([
+    'Celeste (Steam)',
+  ]);
+});
+
+it('searches with the release year, which tells a remake from its original', async () => {
+  cacheRows[0].release_date = 'Jan 25, 2018';
+  jest.mocked(getMainStoryHours).mockResolvedValue(9);
+
+  await call([1, 2]);
+
+  expect(getMainStoryHours).toHaveBeenCalledWith('Celeste', 2018);
+  // No date: HowLongToBeat's own pick.
+  expect(getMainStoryHours).toHaveBeenCalledWith('Hades', null);
 });
 
 it("doesn't write the shared cache without Steam's name to search by", async () => {
@@ -150,7 +163,7 @@ it('uses a time someone else already found without asking HLTB', async () => {
   const { body } = await call([1]);
 
   expect(body.results).toEqual([{ appId: 1, hours: 8.3 }]);
-  expect(getMainStoryHours).not.toHaveBeenCalledWith('Celeste');
+  expect(getMainStoryHours).not.toHaveBeenCalled();
   expect(userUpdates).toEqual([{ app_id: 1, main_story_hours: 8.3 }]);
 });
 

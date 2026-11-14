@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/games/manual/route';
 import { applyStatusChange } from '@/lib/server/apply-status';
 import { getGameDetails } from '@/lib/igdb/api';
+import { getMainStoryHours } from '@/lib/hltb/api';
 import { getStoreItemInfo } from '@/lib/steam/store-api';
 import { findWideArt } from '@/lib/steamgriddb/api';
 
@@ -125,6 +126,9 @@ it('adds the game with its IGDB details, console and hours', async () => {
     playtime_forever: 150,
     status: 'backlog',
   });
+  // Its time is looked up with its release year, which tells a remake from
+  // the original it shares a title with.
+  expect(getMainStoryHours).toHaveBeenCalledWith("Fire Emblem: Fortune's Weave", 2026);
   expect(applyStatusChange).not.toHaveBeenCalled();
 });
 

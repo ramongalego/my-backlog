@@ -198,18 +198,56 @@ interface SearchOptions {
 /** A title as search words, lowercased, for comparing with the terms. */
 const titleWords = (title: string) => toSearchTerms(title).map((w) => w.toLowerCase());
 
+interface HLTBResult {
+  game_name?: string;
+  /** "game", "dlc", "hack"... */
+  game_type?: string;
+  /** Main story, in seconds; 0 when nobody has submitted a time yet. */
+  comp_main: number;
+  /** The year it first came out; 0 when HLTB doesn't know. */
+  release_world?: number;
+}
+
+/** One search's answer, before choosing between games that share a title. */
+interface Found {
+  /** The time by HLTB's own ranking: its most popular match. */
+  hours: number | null;
+  /**
+   * Every game titled exactly as searched, with the year it came out: an
+   * original and its remake ("Dead Space" of 2008 and of 2023), which HLTB
+   * lists under one title. `hours` is null for one with no time yet.
+   */
+  editions: { year: number; hours: number | null }[];
+}
+
+/**
+ * The time for the game that came out in `year`, where several share the
+ * title: the one from that year, or failing that the newest one that isn't
+ * newer than the game (a port comes out after its original, never before).
+ * A remake too new to have a time gets none, not the original's. With no
+ * year, or only one game of that title, HLTB's ranking stands.
+ */
+function hoursIn(found: Found, year: number | null | undefined): number | null {
+  if (!year || found.editions.length < 2) return found.hours;
+  const edition =
+    found.editions.find((e) => e.year === year) ??
+    found.editions.filter((e) => e.year < year).sort((a, b) => b.year - a.year)[0];
+  return edition ? edition.hours : found.hours;
+}
+
 async function searchHLTB(
   config: HLTBConfig,
   gameName: string,
   { preferShortestTitle = false }: SearchOptions = {},
-): Promise<number | null> {
+): Promise<Found | null> {
   assertNotBlocked();
   const terms = toSearchTerms(gameName);
   const payload: Record<string, unknown> = {
     searchType: 'games',
     searchTerms: terms,
     searchPage: 1,
-    size: preferShortestTitle ? 8 : 2,
+    // Enough to see every game that shares the title, not only the top one.
+    size: 8,
     searchOptions: {
       games: {
         userId: 0,
@@ -257,11 +295,19 @@ async function searchHLTB(
   }
 
   const data = await res.json();
-  const results: { game_name?: string; comp_main: number }[] = data?.data ?? [];
+  const results: HLTBResult[] = data?.data ?? [];
   if (!results.length) return null;
 
+  const wanted = terms.map((t) => t.toLowerCase());
+  const editions = results
+    .filter((r) => r.game_name && r.release_world && (r.game_type ?? 'game') === 'game')
+    .filter((r) => titleWords(r.game_name!).join(' ') === wanted.join(' '))
+    .map((r) => ({
+      year: r.release_world!,
+      hours: r.comp_main > 0 ? secondsToHours(r.comp_main) : null,
+    }));
+
   if (preferShortestTitle) {
-    const wanted = terms.map((t) => t.toLowerCase());
     const original = results
       .filter((r) => r.comp_main > 0 && r.game_name)
       .filter((r) => {
@@ -269,7 +315,7 @@ async function searchHLTB(
         return wanted.every((w) => words.includes(w));
       })
       .sort((a, b) => a.game_name!.length - b.game_name!.length)[0];
-    if (original) return secondsToHours(original.comp_main);
+    if (original) return { hours: secondsToHours(original.comp_main), editions };
   }
 
   const ONE_HOUR_SECONDS = 3600;
@@ -284,11 +330,11 @@ async function searchHLTB(
       ? second
       : first;
 
-  return best.comp_main ? secondsToHours(best.comp_main) : null;
+  return { hours: best.comp_main ? secondsToHours(best.comp_main) : null, editions };
 }
 
 // Runs a search, refreshing the token once if HLTB rejects it as expired.
-async function searchWithRetry(gameName: string, options?: SearchOptions): Promise<number | null> {
+async function searchWithRetry(gameName: string, options?: SearchOptions): Promise<Found | null> {
   const config = await getHLTBConfig();
   if (!config) return null;
   try {
@@ -309,45 +355,93 @@ async function searchWithRetry(gameName: string, options?: SearchOptions): Promi
   }
 }
 
+/** The searches for a name, in the order tried, stopping at the first with a time. */
+async function searchAll(gameName: string): Promise<Found[]> {
+  const found: Found[] = [];
+  /** Runs one search; true once it has a time, so the next isn't needed. */
+  const search = async (name: string, options?: SearchOptions) => {
+    const result = await searchWithRetry(name, options);
+    if (!result) return false;
+    found.push(result);
+    return result.hours !== null || result.editions.some((e) => e.hours !== null);
+  };
+
+  if (await search(gameName)) return found;
+
+  // "Pokémon Ruby Version": HLTB lists the pair as one game ("Pokémon Ruby
+  // and Sapphire"), and its search needs every word in the title. Without
+  // "Version", and taking the original over a remake with the same words.
+  if (/\bversion\b/i.test(gameName)) {
+    const withoutVersion = gameName
+      .replace(/\bversion\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (await search(withoutVersion, { preferShortestTitle: true })) return found;
+  }
+
+  // Fallback: strip common edition/variant words and parenthesised years, then retry
+  const hasEditionWord = /\b(edition|enhanced|complete|ultimate|definitive)\b/i.test(gameName);
+  const hasYearInParens = /\(\d{4}\)/.test(gameName);
+
+  if (hasEditionWord || hasYearInParens) {
+    const stripped = gameName
+      .replace(/\b(edition|enhanced|complete|ultimate|definitive)\b/gi, '')
+      .replace(/\(\d{4}\)/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    await search(stripped);
+  }
+
+  return found;
+}
+
 /**
- * HLTB's main-story time in hours, or null when it has none or the lookup
- * failed. Throws HLTBUnavailableError while HLTB is rate limiting, so callers
- * can retry later instead of recording a miss.
+ * What HLTB has for a name, to be asked for the time once the game's release
+ * year is known. The search doesn't need the year, so it can start before the
+ * game's details have arrived (see fetchGameMetadata).
  */
-export async function getMainStoryHours(gameName: string): Promise<number | null> {
+export type MainStoryTimes = (releaseYear?: number | null) => number | null;
+
+/**
+ * Searches HLTB for a game. The year matters when HLTB lists an original and
+ * its remake under one title, as it does "The Legend of Zelda: Ocarina of
+ * Time" (1998 and 2026) or "Prey" (2006 and 2017): see hoursIn. Throws
+ * HLTBUnavailableError while HLTB is rate limiting.
+ */
+export async function findMainStoryTimes(gameName: string): Promise<MainStoryTimes> {
+  let found: Found[];
   try {
-    const result = await searchWithRetry(gameName);
-    if (result !== null) return result;
-
-    // "Pokémon Ruby Version": HLTB lists the pair as one game ("Pokémon Ruby
-    // and Sapphire"), and its search needs every word in the title. Without
-    // "Version", and taking the original over a remake with the same words.
-    if (/\bversion\b/i.test(gameName)) {
-      const withoutVersion = gameName
-        .replace(/\bversion\b/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      const paired = await searchWithRetry(withoutVersion, { preferShortestTitle: true });
-      if (paired !== null) return paired;
-    }
-
-    // Fallback: strip common edition/variant words and parenthesised years, then retry
-    const hasEditionWord = /\b(edition|enhanced|complete|ultimate|definitive)\b/i.test(gameName);
-    const hasYearInParens = /\(\d{4}\)/.test(gameName);
-
-    if (hasEditionWord || hasYearInParens) {
-      const stripped = gameName
-        .replace(/\b(edition|enhanced|complete|ultimate|definitive)\b/gi, '')
-        .replace(/\(\d{4}\)/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      return searchWithRetry(stripped);
-    }
-
-    return null;
+    found = await searchAll(gameName);
   } catch (error) {
     if (error instanceof HLTBUnavailableError) throw error;
     console.error(`[HLTB] Exception for "${gameName}":`, error);
-    return null;
+    found = [];
   }
+
+  // Steam names the older game by its year once a remake takes the title
+  // ("Dead Space (2008)"): that says which one it is better than the date it
+  // came to the store.
+  const named = /\((\d{4})\)/.exec(gameName);
+  const namedYear = named ? Number(named[1]) : null;
+
+  return (releaseYear) => {
+    for (const search of found) {
+      const hours = hoursIn(search, namedYear ?? releaseYear);
+      if (hours !== null) return hours;
+    }
+    return null;
+  };
+}
+
+/**
+ * HLTB's main-story time in hours, or null when it has none or the lookup
+ * failed. `releaseYear` picks between games that share the title (see
+ * findMainStoryTimes). Throws HLTBUnavailableError while HLTB is rate
+ * limiting, so callers can retry later instead of recording a miss.
+ */
+export async function getMainStoryHours(
+  gameName: string,
+  releaseYear?: number | null,
+): Promise<number | null> {
+  return (await findMainStoryTimes(gameName))(releaseYear);
 }

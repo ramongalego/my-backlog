@@ -14,6 +14,15 @@ export function parseReleaseDate(text: string | null | undefined): number | null
   return Number.isNaN(reordered) ? null : reordered;
 }
 
+/**
+ * The year in a stored release date, exact or not ("Nov 5, 2026", "28 Sep,
+ * 2010", "Q2 2027"), or null when it has none ("Coming soon").
+ */
+export function releaseYear(text: string | null | undefined): number | null {
+  const match = /\b(\d{4})\b/.exec(text ?? '');
+  return match ? Number(match[1]) : null;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 // In its last week, the tag counts down instead of giving the date.
 const COUNTDOWN_DAYS = 7;

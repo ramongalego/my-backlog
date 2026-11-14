@@ -1,6 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getMainStoryHours, HLTBUnavailableError } from '@/lib/hltb/api';
+import { releaseYear } from '@/lib/games/release-date';
 
 // A game HowLongToBeat has no time for is usually not out yet, or only just
 // out: worth asking again, but not often.
@@ -24,7 +25,7 @@ export async function recheckMissingHours(
   const checkedBefore = new Date(now.getTime() - RECHECK_DAYS * DAY_MS).toISOString();
   const { data: games, error } = await supabase
     .from('games')
-    .select('id, name')
+    .select('id, name, release_date')
     .eq('user_id', userId)
     .eq('source', 'manual')
     .is('main_story_hours', null)
@@ -37,7 +38,7 @@ export async function recheckMissingHours(
   for (const game of games ?? []) {
     let hours: number | null;
     try {
-      hours = await getMainStoryHours(game.name);
+      hours = await getMainStoryHours(game.name, releaseYear(game.release_date));
     } catch (err) {
       // Refusing requests says nothing about the game: the rest wait for the
       // next refresh, unmarked.
