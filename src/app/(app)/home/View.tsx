@@ -61,6 +61,7 @@ export default function HomeView() {
     handleConfirmStatusChange,
     handleCloseStatusModal,
     handleCloseSummary,
+    summarySaved,
   } = currentGame;
 
   const toGame = (suggested: SuggestionResult['game']) => ({
@@ -225,7 +226,12 @@ export default function HomeView() {
       )}
 
       {gameSummary && (
-        <GameSummaryModal isOpen={true} onClose={handleCloseSummary} {...gameSummary} />
+        <GameSummaryModal
+          isOpen={true}
+          onClose={handleCloseSummary}
+          whenSaved={summarySaved}
+          {...gameSummary}
+        />
       )}
 
       {carouselDialog && <GameDetailModal isOpen {...carouselDialog} />}

@@ -13,6 +13,11 @@ import { CompletionSummary } from './CompletionSummary';
 interface GameSummaryModalProps extends GameSummaryData {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Resolves once the finish is saved. The summary opens before that, and the
+   * share page is made from the saved game, so Share waits for it.
+   */
+  whenSaved?: () => Promise<unknown>;
 }
 
 function TwitterIcon({ className }: { className?: string }) {
@@ -47,6 +52,7 @@ export function GameSummaryModal({
   startedAt,
   finishedAt,
   finishedThisYear,
+  whenSaved,
 }: GameSummaryModalProps) {
   const [shareState, setShareState] = useState<'idle' | 'loading' | 'shared'>('idle');
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -59,8 +65,12 @@ export function GameSummaryModal({
     if (shareState === 'shared') copyRef.current?.focus();
   }, [shareState]);
 
+  // A share page on its way. The button shows it from the next redraw; this
+  // stops a second click before then from making a second page.
+  const sharing = useRef(false);
+
   const handleShare = async () => {
-    if (shareState === 'loading') return;
+    if (sharing.current) return;
 
     // If already shared, just reuse the URL
     if (shareUrl) {
@@ -68,15 +78,19 @@ export function GameSummaryModal({
       return;
     }
 
+    sharing.current = true;
     setShareState('loading');
 
     try {
+      await whenSaved?.();
       const url = await createSharePage(gameId);
       setShareUrl(`${window.location.origin}${url}`);
       setShareState('shared');
     } catch {
       setShareState('idle');
       toast.error("Couldn't create the share link. Try again.");
+    } finally {
+      sharing.current = false;
     }
   };
 

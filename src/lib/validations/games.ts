@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ADD_STATUSES, BULK_STATUSES, GAME_STATUSES, MAX_BULK_CHANGES } from '@/lib/games/status';
+import { MAX_HOURS_PLAYED } from '@/lib/games/playtime';
 import { safeText } from './common';
 
 // A calendar date ("2025-08-20") or a full timestamp as Postgres returns it.
@@ -70,7 +71,7 @@ export const gameArtSchema = z.object({
 // ─── Games added by hand ─────────────────────────────────────────────────────
 
 // Hours you've played, entered yourself (consoles don't report playtime).
-const hoursPlayed = z.number().min(0).max(100000);
+const hoursPlayed = z.number().min(0).max(MAX_HOURS_PLAYED);
 
 export const gameSearchSchema = z.string().trim().min(2).max(100);
 

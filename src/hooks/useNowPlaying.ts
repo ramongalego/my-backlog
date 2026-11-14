@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { celebrateGameFinished } from '@/lib/confetti';
@@ -55,6 +55,8 @@ export function useNowPlaying(userId: string | null) {
 
   const [statusModal, setStatusModal] = useState<{ action: CompletionStatus } | null>(null);
   const [gameSummary, setGameSummary] = useState<GameSummaryData | null>(null);
+  // The save behind the summary on screen, which opens before it's done.
+  const summarySave = useRef<Promise<unknown>>(Promise.resolve());
 
   const {
     data: currentlyPlaying = null,
@@ -316,6 +318,8 @@ export function useNowPlaying(userId: string | null) {
     openDrop: () => currentlyPlaying && setStatusModal({ action: 'dropped' }),
     closeStatusModal: () => setStatusModal(null),
     closeSummary: () => setGameSummary(null),
+    /** Resolves once the summary's game is saved as finished (its Share waits for it). */
+    summarySaved: () => summarySave.current,
     confirmStatusChange: (
       status: GameStatus,
       date: string,
@@ -348,7 +352,9 @@ export function useNowPlaying(userId: string | null) {
           );
           celebrateGameFinished();
         }
-        return completeMutation.mutateAsync({ game, status, date, notes, rating });
+        const saved = completeMutation.mutateAsync({ game, status, date, notes, rating });
+        summarySave.current = saved;
+        return saved;
       });
     },
 

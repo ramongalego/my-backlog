@@ -5,6 +5,7 @@ import { ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ADD_STATUSES, GAME_STATUSES, type AddStatus, type GameStatus } from '@/lib/games/status';
+import { MAX_HOURS_PLAYED } from '@/lib/games/playtime';
 import { todayIso } from '@/lib/diary/date-utils';
 import { GameMetaRow } from './GameCardInfo';
 import { ArtHeader } from './ArtHeader';
@@ -261,19 +262,28 @@ export function GameDetailModal({
   async function saveFields(): Promise<SaveState> {
     // Check every field before saving any of them, so a bad rating can't
     // leave the hours saved and the rest not.
-    const parsedRating = showDateField && rating !== '' ? parseInt(rating, 10) : null;
-    const ratingInvalid =
-      parsedRating !== null && (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 10);
+    // The whole number typed: 7.5 isn't quietly saved as 7.
+    const parsedRating = showDateField && rating.trim() !== '' ? Number(rating) : null;
+    const ratingError =
+      parsedRating === null
+        ? null
+        : !(parsedRating >= 0 && parsedRating <= 10)
+          ? 'Rating must be between 0 and 10'
+          : !Number.isInteger(parsedRating)
+            ? 'Rating must be a whole number, like 7 or 8'
+            : null;
     const parsedHours = hours.trim() === '' ? 0 : Number(hours);
-    const hoursInvalid = showHours && !(parsedHours >= 0);
-    if (ratingInvalid || hoursInvalid) {
+    const hoursError = !showHours
+      ? null
+      : !(parsedHours >= 0)
+        ? 'Hours played must be a number, like 12 or 3.5'
+        : parsedHours > MAX_HOURS_PLAYED
+          ? `Hours played can be ${MAX_HOURS_PLAYED.toLocaleString('en-US')} at most`
+          : null;
+    if (ratingError || hoursError) {
       return {
-        rating: ratingInvalid
-          ? { error: 'Rating must be between 0 and 10', value: rating }
-          : undefined,
-        hours: hoursInvalid
-          ? { error: 'Hours played must be a number, like 12 or 3.5', value: hours }
-          : undefined,
+        rating: ratingError ? { error: ratingError, value: rating } : undefined,
+        hours: hoursError ? { error: hoursError, value: hours } : undefined,
       };
     }
 

@@ -1,4 +1,4 @@
-import { syncSingleRequestSchema } from '@/lib/validations/common';
+import { safeText, syncSingleRequestSchema } from '@/lib/validations/common';
 import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
 
 // The sync route validates its input with `syncSingleRequestSchema` (zod) and
@@ -107,5 +107,32 @@ describe('sync route behavior (integration)', () => {
       const score = calculateBayesianScore(50, 0);
       expect(score).toBe(70);
     });
+  });
+});
+
+describe('safeText (notes, console names, support messages)', () => {
+  const clean = (text: string) => safeText.parse(text);
+
+  it('takes HTML tags out', () => {
+    expect(clean('<b>Loved</b> it<br/>')).toBe('Loved it');
+    expect(clean('<img src=x onerror=alert(1)> hi')).toBe('hi');
+    expect(clean('<script>alert(1)</script>')).toBe('alert(1)');
+    expect(clean('a <!-- hidden --> b')).toBe('a  b');
+  });
+
+  it("keeps a sentence's own < and >: a heart, a comparison", () => {
+    expect(clean('I <3 this. Arkham City > Asylum, fight me')).toBe(
+      'I <3 this. Arkham City > Asylum, fight me',
+    );
+    expect(clean('combat < story, and 2 > 1')).toBe('combat < story, and 2 > 1');
+    expect(clean('>>> best of the year <<<')).toBe('>>> best of the year <<<');
+  });
+
+  it("can't be left with a tag by nesting one in another", () => {
+    expect(clean('<scr<script>ipt>alert(1)</scr</script>ipt>')).not.toMatch(/<\/?[a-z]/i);
+  });
+
+  it('trims the ends', () => {
+    expect(clean('  Switch 2  ')).toBe('Switch 2');
   });
 });

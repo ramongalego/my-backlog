@@ -368,6 +368,18 @@ describe('GameDetailModal', () => {
       expect(screen.getByText('Rating must be between 0 and 10')).toBeInTheDocument();
     });
 
+    it("should block save for a rating that isn't a whole number, rather than round it", async () => {
+      render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
+
+      fireEvent.change(screen.getByLabelText(/your rating/i), { target: { value: '7.5' } });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      });
+
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(screen.getByText('Rating must be a whole number, like 7 or 8')).toBeInTheDocument();
+    });
+
     it('should clear the error when the rating is corrected', async () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" />);
 
@@ -1055,5 +1067,23 @@ describe('GameDetailModal saving once', () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(2);
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GameDetailModal hours played', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('stops at the most hours that can be saved, and says so', async () => {
+    const onSaveHours = jest.fn();
+    render(<GameDetailModal {...defaultProps} manual={{ platform: 'Switch', onSaveHours }} />);
+
+    fireEvent.change(screen.getByLabelText(/hours played/i), { target: { value: '999999' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+
+    expect(screen.getByText('Hours played can be 100,000 at most')).toBeInTheDocument();
+    expect(onSaveHours).not.toHaveBeenCalled();
+    expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
 });

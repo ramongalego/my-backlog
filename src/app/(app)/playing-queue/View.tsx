@@ -35,6 +35,7 @@ export default function PlayingQueueView() {
     confirmStatusChange,
     closeStatusModal,
     closeSummary,
+    summarySaved,
     removeFromQueue,
     pickFromQueue,
     reorder,
@@ -75,7 +76,12 @@ export default function PlayingQueueView() {
           )}
           {gameDialog && <GameDetailModal isOpen {...gameDialog} />}
           {gameSummary && (
-            <GameSummaryModal isOpen={true} onClose={closeSummary} {...gameSummary} />
+            <GameSummaryModal
+              isOpen={true}
+              onClose={closeSummary}
+              whenSaved={summarySaved}
+              {...gameSummary}
+            />
           )}
         </>
       }

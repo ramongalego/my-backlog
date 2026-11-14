@@ -101,3 +101,22 @@ it("never picks a game that isn't out yet", async () => {
 
   expect(pick).toHaveBeenCalledWith(hollowKnight);
 });
+
+it('picks one game, however many times Random is pressed before the page shows it', async () => {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useHomeActions('u'), { wrapper });
+
+  await act(async () => {
+    void result.current.handleRandomPick();
+    void result.current.handleRandomPick();
+    await result.current.handleRandomPick();
+  });
+
+  expect(pick).toHaveBeenCalledTimes(1);
+
+  // And again later, once that pick is done.
+  await act(() => result.current.handleRandomPick());
+  expect(pick).toHaveBeenCalledTimes(2);
+});

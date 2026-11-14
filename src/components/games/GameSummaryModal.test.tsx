@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, act } from '@testing-library/react';
 import { toast } from 'sonner';
 import { GameSummaryModal } from '@/components/games/GameSummaryModal';
 import { createSharePage } from '@/lib/client/share';
@@ -303,5 +303,53 @@ describe('GameSummaryModal', () => {
       expect(again).toBeEnabled();
       expect(within(again).getByText('Share')).toBeInTheDocument();
     });
+  });
+});
+
+describe('GameSummaryModal sharing once the finish is saved', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('makes one share page, however many times Share is pressed', async () => {
+    mockCreateSharePage.mockResolvedValue('/share/completion/abc');
+    render(<GameSummaryModal {...defaultProps} />);
+    const share = screen.getByRole('button', { name: 'Share' });
+
+    await act(async () => {
+      fireEvent.click(share);
+      fireEvent.click(share);
+      fireEvent.click(share);
+    });
+
+    expect(mockCreateSharePage).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('button', { name: /copy link/i })).toBeInTheDocument();
+  });
+
+  it('waits for the finish to be saved before making the page', async () => {
+    mockCreateSharePage.mockResolvedValue('/share/completion/abc');
+    let saved!: () => void;
+    const whenSaved = () => new Promise<void>((resolve) => (saved = resolve));
+    render(<GameSummaryModal {...defaultProps} whenSaved={whenSaved} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    });
+    expect(mockCreateSharePage).not.toHaveBeenCalled();
+
+    await act(async () => saved());
+    expect(mockCreateSharePage).toHaveBeenCalledWith(7);
+  });
+
+  it('can be tried again after it fails', async () => {
+    mockCreateSharePage.mockRejectedValueOnce(new Error('down')).mockResolvedValue('/s/abc');
+    render(<GameSummaryModal {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    });
+
+    expect(mockCreateSharePage).toHaveBeenCalledTimes(2);
   });
 });

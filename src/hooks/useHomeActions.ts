@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/client/random-pick';
@@ -88,9 +88,19 @@ export function useHomeActions(userId: string | null) {
     ...dialogFor(carouselModal.game, { onPlayInstead: handlePlayInstead }),
   };
 
+  // A random pick on its way. Nothing on the page says so until the next
+  // redraw, and a second click before it would pick, and start, a second game.
+  const rolling = useRef(false);
   const handleRandomPick = async () => {
-    if (!userId || nowPlaying.isStatusLoading || rollCovers) return;
-
+    if (!userId || nowPlaying.isStatusLoading || rollCovers || rolling.current) return;
+    rolling.current = true;
+    try {
+      await pickAtRandom(userId);
+    } finally {
+      rolling.current = false;
+    }
+  };
+  const pickAtRandom = async (userId: string) => {
     const covers = prefersReducedMotion()
       ? []
       : backlogCovers(
@@ -144,6 +154,7 @@ export function useHomeActions(userId: string | null) {
     handleConfirmStatusChange: nowPlaying.confirmStatusChange,
     handleCloseStatusModal: nowPlaying.closeStatusModal,
     handleCloseSummary: nowPlaying.closeSummary,
+    summarySaved: nowPlaying.summarySaved,
     handleCancelGame: nowPlaying.moveToBacklog,
     handleMoveCurrentToQueue: nowPlaying.moveToQueue,
     handleRandomPick,

@@ -4,7 +4,7 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { fieldClass } from '@/components/ui/Input';
-import { playedHours } from '@/lib/games/playtime';
+import { MAX_HOURS_PLAYED, playedHours } from '@/lib/games/playtime';
 
 /**
  * Hours played for a game on a console, edited where it's shown: the playing
@@ -40,7 +40,7 @@ export function HoursPlayedEdit({
   const save = (e: FormEvent) => {
     e.preventDefault();
     const parsed = value.trim() === '' ? 0 : Number(value);
-    if (!(parsed >= 0 && parsed <= 100000)) {
+    if (!(parsed >= 0 && parsed <= MAX_HOURS_PLAYED)) {
       setInvalid(true);
       return;
     }
