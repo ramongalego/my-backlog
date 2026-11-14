@@ -69,3 +69,18 @@ it('says what went wrong and offers to try again', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByRole('heading', { name: 'The profile' })).toBeInTheDocument();
 });
+
+it('asks once when Try again is pressed twice', async () => {
+  fetchMock.mockRejectedValueOnce(new Error('Try again tomorrow'));
+  show();
+  fireEvent.click(screen.getByRole('button', { name: 'Read my profile' }));
+  await screen.findByText('Try again tomorrow');
+
+  const again = screen.getByRole('button', { name: 'Try again' });
+  fireEvent.click(again);
+  fireEvent.click(again);
+
+  expect(await screen.findByRole('heading', { name: 'The profile' })).toBeInTheDocument();
+  // The failed ask, and one more.
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
