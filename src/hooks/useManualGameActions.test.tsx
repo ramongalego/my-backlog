@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { useManualGameActions } from '@/hooks/useManualGameActions';
-import { deleteManualGame } from '@/lib/client/manual-games';
+import { deleteManualGame, playOnSteam } from '@/lib/client/manual-games';
 import { queryKeys } from '@/lib/query-keys';
 
 const statusChanged = jest.fn();
@@ -20,6 +20,7 @@ jest.mock('@/hooks/useLibraryRefresh', () => ({
 jest.mock('@/lib/client/manual-games', () => ({
   ...jest.requireActual('@/lib/client/manual-games'),
   deleteManualGame: jest.fn(),
+  playOnSteam: jest.fn(),
 }));
 
 const diaryKey = queryKeys.games.diary('u');
@@ -50,6 +51,7 @@ function setup() {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(deleteManualGame).mockResolvedValue(undefined);
+  jest.mocked(playOnSteam).mockResolvedValue(undefined);
 });
 
 it('takes removed games off at once, and refreshes only after the last delete is sent', async () => {
@@ -160,4 +162,43 @@ it("takes the toast down once the delete has gone, so Undo can't pretend to rest
   // is gone on the server, so it mustn't reappear here.
   act(() => toastOptions(0).action.onClick());
   expect(diary()).toEqual(['Older game', 'Kept']);
+});
+
+it('removes a game once when Remove is pressed twice, so its Undo still brings it back for good', async () => {
+  const { result, diary, toastOptions } = setup();
+  act(() => {
+    result.current.remove(1, 'Old game');
+    result.current.remove(1, 'Old game');
+  });
+  // One toast: a second would delete the game when it went, Undo or not.
+  expect(toast).toHaveBeenCalledTimes(1);
+
+  act(() => toastOptions(0).action.onClick());
+  await act(() => toastOptions(0).onAutoClose());
+
+  expect(diary()).toEqual(['Old game', 'Older game', 'Kept']);
+  expect(deleteManualGame).not.toHaveBeenCalled();
+});
+
+it('can remove a game again after its removal was undone', async () => {
+  const { result, diary, toastOptions } = setup();
+  act(() => result.current.remove(1, 'Old game'));
+  act(() => toastOptions(0).action.onClick());
+
+  act(() => result.current.remove(1, 'Old game'));
+  expect(diary()).toEqual(['Older game', 'Kept']);
+  await act(() => toastOptions(1).onAutoClose());
+  expect(deleteManualGame).toHaveBeenCalledWith(1, false);
+});
+
+it('moves a game back to Steam once, however many times it is pressed', async () => {
+  const { result } = setup();
+
+  await act(async () => {
+    void result.current.moveToSteam(3, 'Kept');
+    await result.current.moveToSteam(3, 'Kept');
+  });
+
+  expect(playOnSteam).toHaveBeenCalledTimes(1);
+  expect(toast.success).toHaveBeenCalledTimes(1);
 });

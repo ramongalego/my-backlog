@@ -15,6 +15,7 @@ import {
   type GameSearchResult,
 } from '@/lib/client/manual-games';
 import { shortPlatformName } from '@/lib/games/consoles';
+import { GAME_SEARCH_MAX } from '@/lib/validations/games';
 import { GameDetailModal } from './GameDetailModal';
 import type { AddStatus } from '@/lib/games/status';
 import { defaultConsole, orderConsoles } from './ConsolePicker';
@@ -240,6 +241,7 @@ export function AddGameModal({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
+            maxLength={GAME_SEARCH_MAX}
             placeholder="Search for a game to add"
             aria-label="Search for a game"
             data-autofocus

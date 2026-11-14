@@ -73,11 +73,23 @@ export const gameArtSchema = z.object({
 // Hours you've played, entered yourself (consoles don't report playtime).
 const hoursPlayed = z.number().min(0).max(MAX_HOURS_PLAYED);
 
-export const gameSearchSchema = z.string().trim().min(2).max(100);
+/** The longest search the Add game dialog sends. */
+export const GAME_SEARCH_MAX = 100;
+
+export const gameSearchSchema = z
+  .string()
+  .trim()
+  .min(2, 'Search for at least 2 characters')
+  .max(GAME_SEARCH_MAX, `Search for ${GAME_SEARCH_MAX} characters at most`);
 
 export const addManualGameSchema = z.object({
   igdbId: z.number().int().positive(),
-  platform: safeText.pipe(z.string().min(1).max(60)),
+  platform: safeText.pipe(
+    z
+      .string()
+      .min(1, 'Pick the console you play it on')
+      .max(60, 'A console name can be 60 characters at most'),
+  ),
   // Finished and dropped log a game you've already played, with when and how it went.
   status: z.enum(ADD_STATUSES),
   hoursPlayed: hoursPlayed.optional(),

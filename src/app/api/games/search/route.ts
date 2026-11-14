@@ -34,7 +34,9 @@ export async function GET(request: NextRequest) {
     }
 
     const query = gameSearchSchema.safeParse(params.get('q') ?? '');
-    if (!query.success) return jsonError('Search for at least 2 characters', 400);
+    if (!query.success) {
+      return jsonError(query.error.issues[0]?.message ?? 'Search for at least 2 characters', 400);
+    }
     const results = await searchGames(query.data);
     // Mark the games already in your library, from Steam or added by hand:
     // adding one again moves that entry to the console you pick instead of

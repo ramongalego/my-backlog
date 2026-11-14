@@ -31,10 +31,17 @@ function destination(
       return { label: `Now playing ${name}`, href: '/home' };
     case 'queue':
       return { label: `Added ${name} to your queue`, href: '/playing-queue' };
+    // A game that was already in the library (movedTo) isn't added again.
     case 'finished':
-      return { label: `Added ${name} to your diary`, href: '/diary' };
+      return {
+        label: movedTo ? `Saved ${name} in your diary` : `Added ${name} to your diary`,
+        href: '/diary',
+      };
     case 'dropped':
-      return { label: `Added ${name} as dropped`, href: `/games?filter=dropped&q=${search}` };
+      return {
+        label: movedTo ? `Saved ${name} as dropped` : `Added ${name} as dropped`,
+        href: `/games?filter=dropped&q=${search}`,
+      };
     default:
       return { label: `Added ${name} to your backlog`, href: `/games?q=${search}` };
   }

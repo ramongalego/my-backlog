@@ -29,6 +29,8 @@ const deletedIds = new Set<number>();
 // in the background and is gone with the page, so a removal would quietly come
 // back after a reload or on leaving: these are sent as the page goes instead.
 const unsentDeletes = new Map<number, (keepalive: boolean) => void>();
+// Games on their way back to Steam: one request each, however fast it's pressed.
+const movingToSteam = new Set<number>();
 if (typeof window !== 'undefined') {
   const flush = () => unsentDeletes.forEach((send) => send(true));
   window.addEventListener('pagehide', flush);
@@ -162,6 +164,9 @@ export function useManualGameActions(userId: string | null) {
    * itself is sent when the toast goes, so undoing needs no re-adding.
    */
   const remove = (gameId: number, name: string) => {
+    // Already removed and waiting on its Undo (Remove pressed twice). A second
+    // toast would delete the game when it went, even after the first's Undo.
+    if (pendingRemovals.has(gameId)) return;
     const snapshot = snapshotCaches();
     pendingRemovals.add(gameId);
     hidePendingRemovals();
@@ -229,6 +234,15 @@ export function useManualGameActions(userId: string | null) {
 
   /** Moves a Steam game back from a console, then brings back its Steam playtime. */
   const moveToSteam = async (gameId: number, name: string) => {
+    if (movingToSteam.has(gameId)) return;
+    movingToSteam.add(gameId);
+    try {
+      await moveBackToSteam(gameId, name);
+    } finally {
+      movingToSteam.delete(gameId);
+    }
+  };
+  const moveBackToSteam = async (gameId: number, name: string) => {
     const previous = queryClient.getQueryData<GameItem[]>(keys.list);
     queryClient.setQueryData<GameItem[]>(keys.list, (old) =>
       old?.map((g) => (g.id === gameId ? { ...g, platform: STEAM_PLATFORM } : g)),

@@ -1,4 +1,4 @@
-import { gameStatusSchema } from '@/lib/validations/games';
+import { gameStatusSchema, gameSearchSchema } from '@/lib/validations/games';
 
 describe('gameStatusSchema', () => {
   const valid = { gameId: 730, status: 'playing' as const };
@@ -111,5 +111,15 @@ describe('gameStatusSchema dates', () => {
 
   it.each(['2024-13-99xyz', '2024-02-30', 'nope'])('rejects %s', (finishedAt) => {
     expect(gameStatusSchema.safeParse({ ...base, finishedAt }).success).toBe(false);
+  });
+});
+
+describe('gameSearchSchema (Add game search)', () => {
+  const message = (q: string) => gameSearchSchema.safeParse(q).error?.issues[0]?.message;
+
+  it('says which end a search is wrong at', () => {
+    expect(message('z')).toBe('Search for at least 2 characters');
+    expect(message('a'.repeat(101))).toBe('Search for 100 characters at most');
+    expect(gameSearchSchema.safeParse('  zelda  ').data).toBe('zelda');
   });
 });
