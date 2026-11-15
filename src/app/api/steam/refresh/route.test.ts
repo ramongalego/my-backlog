@@ -76,7 +76,7 @@ beforeEach(() => {
   jest
     .mocked(getOwnedGames)
     .mockReset()
-    .mockResolvedValue(OWNED as never);
+    .mockResolvedValue({ games: OWNED, isPrivate: false } as never);
   jest
     .mocked(syncOwnedGames)
     .mockReset()
@@ -200,4 +200,18 @@ describe('when Steam lets it down', () => {
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: 'Failed to update library' });
   });
+});
+
+it('says when Steam shared no library, so the app can tell the player why', async () => {
+  jest.mocked(getOwnedGames).mockResolvedValue({ games: [], isPrivate: true });
+  jest
+    .mocked(syncOwnedGames)
+    .mockResolvedValue({ newGames: 0, updatedPlaytime: 0, updatedGames: 0 });
+
+  const res = await refresh();
+
+  expect(res.status).toBe(200);
+  expect(res.body).toMatchObject({ success: true, steamPrivate: true, newGames: 0 });
+  // Nothing of the library that's already here is touched.
+  expect(syncOwnedGames).toHaveBeenCalledWith(expect.anything(), 'user-1', []);
 });

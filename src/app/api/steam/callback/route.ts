@@ -92,9 +92,9 @@ export async function GET(request: NextRequest) {
     return redirect('/?error=server_config');
   }
 
-  let playerSummary, games, previous;
+  let playerSummary, owned, previous;
   try {
-    [playerSummary, games, previous] = await Promise.all([
+    [playerSummary, owned, previous] = await Promise.all([
       getPlayerSummary(steamId, apiKey),
       getOwnedGames(steamId, apiKey),
       // Resolves with an error rather than throwing, like any Supabase query.
@@ -154,11 +154,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await syncOwnedGames(supabase, user.id, games);
+    await syncOwnedGames(supabase, user.id, owned.games);
   } catch (err) {
     console.error('Library import failed:', err);
     return redirect('/?error=games_insert_failed');
   }
 
-  return redirect('/');
+  // Linked, but Steam shared no games (game details private): say so, or it
+  // looks like connecting did nothing.
+  return redirect(owned.isPrivate ? '/?error=steam_private' : '/');
 }

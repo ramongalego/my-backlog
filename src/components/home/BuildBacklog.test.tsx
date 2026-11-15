@@ -48,3 +48,21 @@ it('offers Steam only while it is not connected', () => {
   rerender(<BuildBacklog {...props} isSteamConnected />);
   expect(screen.queryByRole('button', { name: 'Connect Steam' })).not.toBeInTheDocument();
 });
+
+it('says why a connected Steam account brought no games, with a link to the setting', () => {
+  render(<BuildBacklog {...props} steamEmpty isSteamConnected />);
+
+  expect(screen.getByText(/Steam is connected, but it sent back no games/)).toHaveTextContent(
+    /game details are private.*Game details.*Public.*Refresh library in your account menu/,
+  );
+  const link = screen.getByRole('link', { name: "Steam's privacy settings" });
+  expect(link).toHaveAttribute('href', 'https://steamcommunity.com/my/edit/settings');
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+});
+
+it('keeps the usual line when Steam has games, or is not connected', () => {
+  render(<BuildBacklog {...props} />);
+  expect(screen.queryByText(/sent back no games/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('link')).not.toBeInTheDocument();
+});

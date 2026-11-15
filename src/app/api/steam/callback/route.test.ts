@@ -32,7 +32,7 @@ jest.mock('@/lib/steam/auth', () => ({
 }));
 jest.mock('@/lib/steam/api', () => ({
   getPlayerSummary: async () => ({ personaname: 'Player', avatarfull: null }),
-  getOwnedGames: async () => [{ appid: 10 }],
+  getOwnedGames: jest.fn(async () => ({ games: [{ appid: 10 }], isPrivate: false })),
 }));
 jest.mock('@/lib/server/env', () => ({ getSteamApiKey: () => 'steam-key' }));
 jest.mock('@/lib/server/steam-library', () => ({
@@ -167,4 +167,14 @@ describe('before anything is asked of Steam', () => {
     expect(verifications).toBe(0);
     expect(steps).toEqual([]);
   });
+});
+
+it('links a Steam account that shares no games, and says why nothing came through', async () => {
+  const { getOwnedGames } = jest.requireMock('@/lib/steam/api') as { getOwnedGames: jest.Mock };
+  getOwnedGames.mockResolvedValueOnce({ games: [], isPrivate: true });
+
+  expect(await link()).toBe('https://mybacklog.test/?error=steam_private');
+  // Still linked, so a refresh works once the setting is changed.
+  expect(steps).toContain(`profile → ${NEW_STEAM_ID}`);
+  expect(syncOwnedGames).toHaveBeenCalledWith(expect.anything(), 'user-1', []);
 });

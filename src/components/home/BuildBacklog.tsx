@@ -6,6 +6,7 @@ import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { GameArt } from '@/components/games/GameArt';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
+import { STEAM_PRIVACY_URL } from '@/lib/steam/privacy';
 
 interface BuildBacklogProps {
   /** Art of the backlog games added so far, newest first. */
@@ -112,9 +113,23 @@ export function BuildBacklog({
           Build your backlog
         </h1>
         <p className="mt-3 text-ink-300 leading-relaxed">
-          {steamEmpty
-            ? "Your Steam library came back empty. If your Steam profile's game details are private, make them public and refresh from your account menu, or add games by hand."
-            : `Add the games you own and haven't played yet, on any console. Once you have ${MIN_GAMES_TO_PICK}, MyBacklog can pick what to play next.`}
+          {steamEmpty ? (
+            <>
+              Steam is connected, but it sent back no games. That happens when your Steam
+              profile&apos;s game details are private. Set &ldquo;Game details&rdquo; to Public in{' '}
+              <a
+                href={STEAM_PRIVACY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-100 underline decoration-ink-600 underline-offset-4 hover:text-ink-50"
+              >
+                Steam&apos;s privacy settings
+              </a>
+              , then choose Refresh library in your account menu. You can also add games by hand.
+            </>
+          ) : (
+            `Add the games you own and haven't played yet, on any console. Once you have ${MIN_GAMES_TO_PICK}, MyBacklog can pick what to play next.`
+          )}
         </p>
         <p className="mt-2 text-sm text-ink-400">
           {filled} of {MIN_GAMES_TO_PICK} games

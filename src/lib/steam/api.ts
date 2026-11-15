@@ -29,7 +29,19 @@ export type SteamGame = z.infer<typeof steamGameSchema>;
 
 type SteamPlayerSummary = z.infer<typeof steamPlayerSummarySchema>;
 
-export async function getOwnedGames(steamId: string, apiKey: string): Promise<SteamGame[]> {
+/** A player's library, as Steam shares it. */
+export interface OwnedGames {
+  games: SteamGame[];
+  /**
+   * Steam answered with no library at all, rather than an empty one: the
+   * profile's "Game details" aren't public. (A public library comes with a
+   * count, even of 0.) Now and then Steam answers like this by mistake; the
+   * next refresh puts that right.
+   */
+  isPrivate: boolean;
+}
+
+export async function getOwnedGames(steamId: string, apiKey: string): Promise<OwnedGames> {
   const url = new URL('https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/');
   url.searchParams.set('key', apiKey);
   url.searchParams.set('steamid', steamId);
@@ -52,7 +64,8 @@ export async function getOwnedGames(steamId: string, apiKey: string): Promise<St
     const parsed = steamGameSchema.safeParse(raw);
     if (parsed.success) games.push(parsed.data);
   }
-  return games;
+  const isPrivate = rawGames.length === 0 && typeof data?.response?.game_count !== 'number';
+  return { games, isPrivate };
 }
 
 export async function getPlayerSummary(

@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
   // Without Steam there's no library to sync, but the games added by hand
   // still get their review and critic scores refreshed below.
   let result: LibrarySyncResult = { newGames: 0, updatedPlaytime: 0, updatedGames: 0 };
+  // Steam shared no library: the profile's game details are private.
+  let steamPrivate = false;
   if (profile?.steam_id) {
     let apiKey: string;
     try {
@@ -53,7 +55,9 @@ export async function POST(request: NextRequest) {
 
     let steamGames;
     try {
-      steamGames = await getOwnedGames(profile.steam_id, apiKey);
+      const owned = await getOwnedGames(profile.steam_id, apiKey);
+      steamGames = owned.games;
+      steamPrivate = owned.isPrivate;
     } catch (error) {
       console.error('Steam API error:', error);
       return jsonError('Steam API failed', 502);
@@ -97,6 +101,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     ...result,
+    ...(steamPrivate ? { steamPrivate: true } : {}),
     updatedStoreData,
     updatedCriticScores,
     updatedHours,

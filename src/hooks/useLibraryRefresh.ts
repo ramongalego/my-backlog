@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { useSyncContext } from '@/components/sync/SyncProvider';
+import { steamPrivateToast } from '@/components/sync/steam-private-toast';
 import { useAuth } from './useAuth';
 
 // Playtime is one Steam call for the whole library, so it can be checked often.
@@ -21,6 +22,8 @@ export const refreshKeys = (userId: string | null | undefined) => {
     playtime: `playtime_refresh_at:${suffix}`,
     attempt: `playtime_refresh_attempt_at:${suffix}`,
     reviews: `reviews_refresh_at:${suffix}`,
+    /** Set once they've been told Steam is sharing no games, until it shares them again. */
+    toldPrivate: `steam_private_told:${suffix}`,
   };
 };
 
@@ -71,6 +74,23 @@ export function useLibraryRefresh() {
         }
 
         const data = await res.json();
+        // Steam shared no library (game details private). Not "up to date":
+        // a refresh you asked for says why. So does the first one in the
+        // background to find it, once: a profile made private after joining
+        // otherwise just stops updating, with nothing to say why. It isn't
+        // recorded as done either, so trying again once the setting is
+        // changed isn't held back.
+        if (data.steamPrivate) {
+          // The scores and art were still refreshed (they don't need the
+          // library), so those wait their day as usual: a profile that went
+          // private later would otherwise have them checked on every visit.
+          if (reviews) localStorage.setItem(keys.reviews, Date.now().toString());
+          if (manual || !localStorage.getItem(keys.toldPrivate)) steamPrivateToast();
+          localStorage.setItem(keys.toldPrivate, Date.now().toString());
+          return failedResult;
+        }
+        // Steam is sharing the library: if it stops again, that's news again.
+        localStorage.removeItem(keys.toldPrivate);
         const newGames: number = data.newGames ?? 0;
         const updatedPlaytime: number = data.updatedPlaytime ?? 0;
 
@@ -110,7 +130,7 @@ export function useLibraryRefresh() {
         return failedResult;
       }
     },
-    [invalidateGamesAndQueue, requestSyncCheck, keys.playtime, keys.reviews],
+    [invalidateGamesAndQueue, requestSyncCheck, keys.playtime, keys.reviews, keys.toldPrivate],
   );
 
   const refreshIfStale = useCallback(async () => {

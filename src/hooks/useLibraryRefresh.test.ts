@@ -28,7 +28,11 @@ afterAll(() => {
   global.fetch = originalFetch;
 });
 
-function mockSuccessResponse(payload: { newGames: number; updatedPlaytime: number }) {
+function mockSuccessResponse(payload: {
+  newGames: number;
+  updatedPlaytime: number;
+  steamPrivate?: boolean;
+}) {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => payload,
@@ -44,6 +48,101 @@ describe('useLibraryRefresh', () => {
       gamesAndQueue: mockGamesAndQueue,
       games: jest.fn(),
       queue: jest.fn(),
+    });
+  });
+
+  describe('when Steam shares no library (game details private)', () => {
+    const privateAnswer = { newGames: 0, updatedPlaytime: 0, steamPrivate: true };
+
+    it('says why, instead of "up to date", on a refresh you asked for', async () => {
+      mockSuccessResponse(privateAnswer);
+
+      const { result } = renderHook(() => useLibraryRefresh());
+      let outcome!: { success: boolean };
+      await act(async () => {
+        outcome = await result.current.refresh({ manual: true });
+      });
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        'Steam sent back no games',
+        // What it says, and its link, are checked in UrlErrorToast.test.tsx.
+        expect.objectContaining({ id: 'steam-private' }),
+      );
+      // Not a refresh: nothing recorded, so trying again isn't held back.
+      expect(outcome.success).toBe(false);
+      expect(localStorage.getItem(keys().playtime)).toBeNull();
+      expect(mockGamesAndQueue).not.toHaveBeenCalled();
+    });
+
+    it('says so once on a refresh in the background, then stays quiet', async () => {
+      mockSuccessResponse(privateAnswer);
+      const { result } = renderHook(() => useLibraryRefresh());
+      const background = () => act(async () => void (await result.current.refresh()));
+
+      // A profile made private after joining: the first refresh to find it.
+      await background();
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith(
+        'Steam sent back no games',
+        expect.objectContaining({ id: 'steam-private' }),
+      );
+      expect(localStorage.getItem(keys().playtime)).toBeNull();
+
+      // Every later one, on later visits too (it's remembered in the browser).
+      await background();
+      await background();
+      expect(toast.error).toHaveBeenCalledTimes(1);
+
+      // Asking for a refresh still says why, however often.
+      await act(async () => void (await result.current.refresh({ manual: true })));
+      expect(toast.error).toHaveBeenCalledTimes(2);
+    });
+
+    it('says so again if the profile is shared and then made private again', async () => {
+      const { result } = renderHook(() => useLibraryRefresh());
+      const background = () => act(async () => void (await result.current.refresh()));
+
+      mockSuccessResponse(privateAnswer);
+      await background();
+      mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
+      await background();
+      mockSuccessResponse(privateAnswer);
+      await background();
+
+      expect(toast.error).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps what one account was told apart from another's", async () => {
+      mockSuccessResponse(privateAnswer);
+      const first = renderHook(() => useLibraryRefresh());
+      await act(async () => void (await first.result.current.refresh()));
+      first.unmount();
+
+      mockUserId = 'user-2';
+      const second = renderHook(() => useLibraryRefresh());
+      await act(async () => void (await second.result.current.refresh()));
+
+      expect(toast.error).toHaveBeenCalledTimes(2);
+    });
+
+    it('still counts the daily scores check as done, so it is not repeated on every visit', async () => {
+      mockSuccessResponse(privateAnswer);
+
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh();
+      });
+      expect(localStorage.getItem(keys().reviews)).toBeTruthy();
+
+      // The next one, the same day, leaves the scores alone.
+      await act(async () => {
+        await result.current.refresh();
+      });
+      const bodies = jest
+        .mocked(global.fetch)
+        .mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+      expect(bodies).toEqual([{ reviews: true }, { reviews: false }]);
     });
   });
 

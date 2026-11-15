@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { steamPrivateToast } from '@/components/sync/steam-private-toast';
 
 // Error codes set by the Steam link callback and the auth email callback.
 const MESSAGES: Record<string, string> = {
@@ -27,10 +28,13 @@ export function UrlErrorToast() {
 
   useEffect(() => {
     if (!code) return;
+    // Steam connected but shared no games: its own toast, with what to change.
+    if (code === 'steam_private') steamPrivateToast();
     // Fixed id so a re-run of this effect can't stack a duplicate toast.
-    toast.error(MESSAGES[code] ?? 'Something went wrong. Please try again.', {
-      id: `url-error-${code}`,
-    });
+    else
+      toast.error(MESSAGES[code] ?? 'Something went wrong. Please try again.', {
+        id: `url-error-${code}`,
+      });
     const params = new URLSearchParams(searchParams);
     params.delete('error');
     const query = params.toString();
