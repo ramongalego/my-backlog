@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Check, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useGameArt } from '@/hooks/useGameArt';
+import type { ArtGame } from '@/lib/client/game-art';
 import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { GameArt } from '@/components/games/GameArt';
 
@@ -25,23 +26,24 @@ function Picked() {
  * Choose art: the game's original art and SteamGridDB's other images for it,
  * as tiles to pick from. Picking one shows it in the dialog's header
  * (`onPreview`) before anything is saved; "Use this art" saves it and hands
- * back what the game now shows (`onDone`).
+ * back what the game now shows (`onDone`). For a game being added, nothing
+ * is saved here: the pick is handed back to go with the game.
  */
 export function ArtPicker({
-  gameId,
+  game,
   shown,
   onPreview,
   onDone,
   onCancel,
 }: {
-  gameId: number;
+  game: ArtGame;
   /** The art the game shows now. */
   shown: string | null;
   onPreview: (url: string | null) => void;
   onDone: (art: string | null) => void;
   onCancel: () => void;
 }) {
-  const art = useGameArt(gameId, true);
+  const art = useGameArt(game, true);
   const [picked, setPicked] = useState(shown);
   const [saveError, setSaveError] = useState<string | null>(null);
   // The button that opened the picker is gone while it's open: focus moves to

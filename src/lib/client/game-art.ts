@@ -22,8 +22,15 @@ async function check(res: Response): Promise<Response> {
   throw new Error(body?.error ?? 'Something went wrong. Please try again.');
 }
 
-export async function fetchArtChoices(gameId: number): Promise<GameArtChoices> {
-  const res = await check(await fetch(`/api/games/art?gameId=${gameId}`));
+/**
+ * The game whose art is being chosen: one in the library, or one being added
+ * (by its IGDB id), which has nowhere to save a pick until it's added.
+ */
+export type ArtGame = { gameId: number } | { igdbId: number };
+
+export async function fetchArtChoices(game: ArtGame): Promise<GameArtChoices> {
+  const query = 'gameId' in game ? `gameId=${game.gameId}` : `igdbId=${game.igdbId}`;
+  const res = await check(await fetch(`/api/games/art?${query}`));
   return res.json();
 }
 

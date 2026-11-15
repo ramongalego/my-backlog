@@ -7,6 +7,7 @@ import { gameArtSchema } from '@/lib/validations/games';
 import { chooseArt, originalArt, type GameArtColumns } from '@/lib/games/art';
 import { parseReleaseDate } from '@/lib/games/release-date';
 import { listWideArt } from '@/lib/steamgriddb/api';
+import { getAddableGameDetails } from '@/lib/server/manual-details';
 
 interface ArtGame extends GameArtColumns {
   id: number;
@@ -20,9 +21,21 @@ interface ArtGame extends GameArtColumns {
 const ART_GAME_COLUMNS =
   'id, name, source, app_id, steam_app_id, release_date, header_image, art_chosen, default_header_image';
 
+/** What the choices are found by, and the art the game has without one. */
+interface ArtSubject {
+  name: string;
+  release_date: string | null;
+  /** A Steam game's own id, or the Steam id of a console game Steam also sells. */
+  steamAppId: number | null;
+  original: string | null;
+  current: string | null;
+}
+
 /**
- * The art a player can choose for one of their games: SteamGridDB's wide
- * images for it, and the art it has without a choice (`original`).
+ * The art a player can choose for a game: SteamGridDB's wide images for it,
+ * and the art it has without a choice (`original`). For one of their games
+ * (`?gameId=`), or one they're adding (`?igdbId=`), whose pick is saved with
+ * the game when it's added.
  */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -36,36 +49,63 @@ export async function GET(request: NextRequest) {
   const limit = await checkSharedRateLimit(`game-art:${user.id}`, RATE_LIMITS.gameArt);
   if (!limit.success) return rateLimited(limit);
 
-  const parsed = gameIdSchema.safeParse(Number(new URL(request.url).searchParams.get('gameId')));
-  if (!parsed.success) return jsonError('Invalid gameId', 400);
+  const params = new URL(request.url).searchParams;
+  const adding = params.has('igdbId');
+  const parsed = gameIdSchema.safeParse(Number(params.get(adding ? 'igdbId' : 'gameId')));
+  if (!parsed.success) return jsonError(adding ? 'Invalid igdbId' : 'Invalid gameId', 400);
 
-  const { data: game, error } = await supabase
-    .from('games')
-    .select(ART_GAME_COLUMNS)
-    .eq('user_id', user.id)
-    .eq('id', parsed.data)
-    .maybeSingle<ArtGame>();
-  if (error) {
-    console.error(error);
-    return jsonError('Failed to read the game', 500);
+  let subject: ArtSubject;
+  if (adding) {
+    // The same details the Add game dialog shows and the add route saves.
+    let details;
+    try {
+      details = await getAddableGameDetails(parsed.data);
+    } catch (err) {
+      console.error(err);
+      return jsonError('Game search is unavailable right now', 503);
+    }
+    if (!details) return jsonError('Game not found', 404);
+    subject = {
+      name: details.name,
+      release_date: details.release_date,
+      steamAppId: details.steam_app_id,
+      original: details.header_image,
+      current: details.header_image,
+    };
+  } else {
+    const { data: game, error } = await supabase
+      .from('games')
+      .select(ART_GAME_COLUMNS)
+      .eq('user_id', user.id)
+      .eq('id', parsed.data)
+      .maybeSingle<ArtGame>();
+    if (error) {
+      console.error(error);
+      return jsonError('Failed to read the game', 500);
+    }
+    if (!game) return jsonError('Game not found', 404);
+    subject = {
+      name: game.name,
+      release_date: game.release_date,
+      steamAppId: game.source === 'steam' ? game.app_id : game.steam_app_id,
+      original: originalArt(game),
+      current: game.header_image,
+    };
   }
-  if (!game) return jsonError('Game not found', 404);
 
-  const released = parseReleaseDate(game.release_date);
+  const released = parseReleaseDate(subject.release_date);
   const choices = await listWideArt({
-    name: game.name,
+    name: subject.name,
     year: released ? new Date(released).getUTCFullYear() : null,
-    // A Steam game's own id, or the Steam id of a console game Steam also sells.
-    steamAppId: game.source === 'steam' ? game.app_id : game.steam_app_id,
+    steamAppId: subject.steamAppId,
   });
   if (!choices) return jsonError("Couldn't reach SteamGridDB. Try again in a moment.", 502);
 
-  const original = originalArt(game);
   return NextResponse.json({
-    original,
-    current: game.header_image,
+    original: subject.original,
+    current: subject.current,
     // The original has its own tile, so it isn't listed twice.
-    choices: choices.filter((choice) => choice.url !== original),
+    choices: choices.filter((choice) => choice.url !== subject.original),
   });
 }
 

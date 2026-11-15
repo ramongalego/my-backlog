@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ArtPicker } from '@/components/games/detail/ArtPicker';
-import { fetchArtChoices, saveGameArt } from '@/lib/client/game-art';
+import { fetchArtChoices, saveGameArt, type ArtGame } from '@/lib/client/game-art';
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -42,13 +42,13 @@ const onPreview = jest.fn();
 const onDone = jest.fn();
 const onCancel = jest.fn();
 
-function open(shown: string | null = STEAM) {
+function open(shown: string | null = STEAM, game: ArtGame = { gameId: 7 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
   render(
     <QueryClientProvider client={queryClient}>
       <ArtPicker
-        gameId={7}
+        game={game}
         shown={shown}
         onPreview={onPreview}
         onDone={onDone}
@@ -78,7 +78,7 @@ it('shows placeholders while the choices load, then the original and each image'
   expect(await tile('Art 1 of 2')).toHaveAttribute('aria-pressed', 'false');
   expect(await tile('Art 2 of 2')).toBeInTheDocument();
   expect(screen.queryByTestId('art-loading')).not.toBeInTheDocument();
-  expect(fetchArtChoices).toHaveBeenCalledWith(7);
+  expect(fetchArtChoices).toHaveBeenCalledWith({ gameId: 7 });
   // SteamGridDB's small copies, loaded as they are.
   const thumb = document.querySelector(`img[src="${A.thumb}"]`);
   expect(thumb).toHaveAttribute('data-unoptimized', 'true');
@@ -156,4 +156,33 @@ it('cancels without saving', async () => {
 
   expect(onCancel).toHaveBeenCalled();
   expect(saveGameArt).not.toHaveBeenCalled();
+});
+
+describe('for a game being added, which has nowhere to save a pick yet', () => {
+  const adding = { igdbId: 31 };
+
+  it('asks for the choices by the game IGDB knows it as', async () => {
+    open(STEAM, adding);
+    expect(await tile('Art 1 of 2')).toBeInTheDocument();
+    expect(fetchArtChoices).toHaveBeenCalledWith(adding);
+  });
+
+  it('hands the pick back without saving it, or refreshing anything', async () => {
+    const { invalidate } = open(STEAM, adding);
+    fireEvent.click(await tile('Art 2 of 2'));
+    fireEvent.click(use());
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith(B.url));
+    expect(saveGameArt).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it('goes back to the original after a pick', async () => {
+    open(A.url, adding);
+    fireEvent.click(await tile('Original art'));
+    fireEvent.click(use());
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith(STEAM));
+    expect(saveGameArt).not.toHaveBeenCalled();
+  });
 });

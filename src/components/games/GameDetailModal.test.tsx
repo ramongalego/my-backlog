@@ -893,26 +893,66 @@ describe('GameDetailModal as a form', () => {
       expect(artButton()).toBeInTheDocument();
     });
 
-    it("isn't offered without the game's id, or for a game still being added", () => {
-      const { unmount } = render(<GameDetailModal {...defaultProps} />);
+    it("isn't offered without a game to choose it for", () => {
+      render(<GameDetailModal {...defaultProps} />);
       expect(artButton()).not.toBeInTheDocument();
-      unmount();
+    });
 
-      render(
-        <GameDetailModal
-          {...defaultProps}
-          art={{ gameId: 7 }}
-          adding={{
-            consoles: ['Switch'],
-            defaultConsole: 'Switch',
-            year: 2020,
-            playingName: null,
-            onAdd: jest.fn(),
-            onChangeGame: jest.fn(),
-          }}
-        />,
-      );
-      expect(artButton()).not.toBeInTheDocument();
+    describe('while adding a game', () => {
+      const PICK = 'https://cdn2.steamgriddb.com/grid/pick.png';
+      const onAdd = jest.fn();
+      const addingProps = {
+        ...defaultProps,
+        art: { igdbId: 31 },
+        adding: {
+          consoles: ['Switch'],
+          defaultConsole: 'Switch',
+          year: 2020,
+          playingName: null,
+          onAdd,
+          onChangeGame: jest.fn(),
+        },
+      };
+      const add = () => screen.getByRole('button', { name: 'Add to library' });
+      beforeEach(() => onAdd.mockReset().mockResolvedValue(undefined));
+
+      it('adds the game with the art picked for it', async () => {
+        render(<GameDetailModal {...addingProps} />);
+        fireEvent.click(artButton()!);
+        // The picker takes the place of the fields and "Not this game?".
+        expect(screen.getByTestId('art-picker')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Not this game?' })).not.toBeInTheDocument();
+
+        await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Done' })));
+        // Back on the fields, the header showing the pick.
+        expect(document.querySelector('img')).toHaveAttribute('src', PICK);
+        expect(screen.getByRole('button', { name: 'Not this game?' })).toBeInTheDocument();
+
+        await act(async () => fireEvent.click(add()));
+        expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ art: PICK }));
+      });
+
+      it('sends no art when none was picked, or the picker was cancelled', async () => {
+        render(<GameDetailModal {...addingProps} />);
+        fireEvent.click(artButton()!);
+        await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+        await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Cancel art' })));
+
+        await act(async () => fireEvent.click(add()));
+        expect(onAdd).toHaveBeenCalledTimes(1);
+        expect(onAdd.mock.calls[0][0].art).toBeUndefined();
+      });
+
+      it("sends no art when the pick is the game's own", async () => {
+        render(
+          <GameDetailModal {...addingProps} game={{ name: 'Dark Souls', header_image: PICK }} />,
+        );
+        fireEvent.click(artButton()!);
+        await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Done' })));
+
+        await act(async () => fireEvent.click(add()));
+        expect(onAdd.mock.calls[0][0].art).toBeUndefined();
+      });
     });
 
     it('swaps the fields for the picker, previews a pick in the header, and comes back', async () => {

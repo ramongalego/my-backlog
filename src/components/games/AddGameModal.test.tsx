@@ -105,6 +105,68 @@ it('logs a game you already finished, with its date and rating', async () => {
   expect(onClose).toHaveBeenCalled();
 });
 
+describe('choosing art before adding', () => {
+  const details = {
+    name: fortunesWeave.name,
+    platforms: ['Nintendo Switch 2'],
+    release_date: null,
+    header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
+    description: null,
+  };
+  const artButton = () => screen.queryByRole('button', { name: 'Choose art' });
+  const pick = async () => {
+    const input = screen.getByRole('combobox');
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+  };
+
+  it("is offered once the game's own art is known", async () => {
+    let arrive!: (d: typeof details) => void;
+    jest.mocked(getGameDetails).mockReturnValue(new Promise((resolve) => (arrive = resolve)));
+    setup();
+    await search('fire emblem');
+    await pick();
+    expect(artButton()).not.toBeInTheDocument();
+
+    await act(async () => {
+      arrive(details);
+      // React Query tells the dialog on a timer.
+      await jest.advanceTimersByTimeAsync(10);
+    });
+    expect(artButton()).toBeInTheDocument();
+  });
+
+  it('is left to its own dialog for a game already in the library', async () => {
+    jest.mocked(getGameDetails).mockResolvedValue(details);
+    jest.mocked(searchGames).mockResolvedValue([
+      {
+        ...fortunesWeave,
+        libraryGame: {
+          id: 5,
+          fromSteam: false,
+          status: 'backlog',
+          platform: 'Switch 2',
+          date: null,
+          notes: null,
+          rating: null,
+        },
+      },
+    ]);
+    setup();
+    await search('fire emblem');
+    await pick();
+    // Its details have arrived (the header shows their art), and still no button.
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(10);
+    });
+    expect(screen.getByRole('heading', { name: fortunesWeave.name })).toBeInTheDocument();
+    expect(getGameDetails).toHaveBeenCalledWith(1);
+    expect(screen.getByRole('button', { name: /Move to|Save changes/ })).toBeInTheDocument();
+    expect(artButton()).not.toBeInTheDocument();
+  });
+});
+
 it("makes you pick the console when it can't safely guess", async () => {
   setup();
   await search('link to the past');

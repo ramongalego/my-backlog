@@ -20,6 +20,7 @@ import { ReviewFields } from '@/components/games/detail/ReviewFields';
 import { ManualGameActions } from '@/components/games/detail/ManualGameActions';
 import { ArtPicker } from '@/components/games/detail/ArtPicker';
 import { Tooltip } from '@/components/ui/Tooltip';
+import type { ArtGame } from '@/lib/client/game-art';
 
 interface AddGameValues {
   status: AddStatus;
@@ -28,6 +29,8 @@ interface AddGameValues {
   date: string;
   notes: string;
   rating: number | null;
+  /** Art picked with Choose art, when it isn't the game's own. */
+  art?: string;
 }
 
 /**
@@ -92,10 +95,11 @@ interface GameDetailModalProps {
    */
   queued?: { onRemove: () => void };
   /**
-   * The game is in the library, so its art can be chosen: a button on the art
-   * swaps the dialog's fields for the images to pick from.
+   * The game's art can be chosen: a button on the art swaps the dialog's
+   * fields for the images to pick from. A library game's pick is saved there
+   * and then; a game being added (`igdbId`) takes its pick with it (`onAdd`).
    */
-  art?: { gameId: number };
+  art?: ArtGame;
   /** For games added by hand: their console, hours played you enter, and removal. */
   manual?: {
     platform: string | null;
@@ -296,6 +300,8 @@ export function GameDetailModal({
           date: showDateField && hasDate ? date : '',
           notes,
           rating: parsedRating,
+          // Picked here and not saved yet. The game's own art is no pick.
+          art: savedArt && savedArt !== game.header_image ? savedArt : undefined,
         });
       } else {
         if (manual && hours !== initialHours) await manual.onSaveHours(parsedHours);
@@ -364,7 +370,6 @@ export function GameDetailModal({
         onArtSettled={() => setPendingArt(null)}
         action={
           art &&
-          !adding &&
           !choosingArt && (
             <Tooltip content="Choose art">
               <button
@@ -391,7 +396,7 @@ export function GameDetailModal({
 
       {choosingArt && art ? (
         <ArtPicker
-          gameId={art.gameId}
+          game={art}
           shown={shownArt}
           onPreview={previewPick}
           onDone={(saved) => {

@@ -4,6 +4,7 @@
 import type { NextRequest } from 'next/server';
 import { GET, POST } from '@/app/api/games/art/route';
 import { listWideArt } from '@/lib/steamgriddb/api';
+import { getAddableGameDetails } from '@/lib/server/manual-details';
 
 type Row = Record<string, unknown>;
 
@@ -19,6 +20,7 @@ let game: Row | null = null;
 const updates: Row[] = [];
 
 jest.mock('@/lib/steamgriddb/api', () => ({ listWideArt: jest.fn() }));
+jest.mock('@/lib/server/manual-details', () => ({ getAddableGameDetails: jest.fn() }));
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user } }) },
@@ -132,6 +134,64 @@ describe('the choices', () => {
     const res = await choices();
     expect(res.status).toBe(502);
     expect((await res.json()).error).toMatch(/SteamGridDB/);
+  });
+});
+
+describe('the choices for a game being added', () => {
+  const KEY_ART = 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg';
+  const details = (overrides: Row = {}) =>
+    ({
+      name: 'Metroid Prime 4',
+      release_date: 'Dec 4, 2025',
+      header_image: KEY_ART,
+      steam_app_id: null,
+      ...overrides,
+    }) as unknown as Awaited<ReturnType<typeof getAddableGameDetails>>;
+  beforeEach(() => jest.mocked(getAddableGameDetails).mockReset().mockResolvedValue(details()));
+
+  it("finds them by IGDB's details, without the game being in the library", async () => {
+    game = null;
+    const res = await choices('?igdbId=31');
+
+    expect(res.status).toBe(200);
+    expect(getAddableGameDetails).toHaveBeenCalledWith(31);
+    expect(listWideArt).toHaveBeenCalledWith({
+      name: 'Metroid Prime 4',
+      year: 2025,
+      steamAppId: null,
+    });
+    expect(await res.json()).toEqual({
+      original: KEY_ART,
+      current: KEY_ART,
+      choices: [choice('a'), choice('b')],
+    });
+  });
+
+  it('uses the Steam id when Steam sells it too, and never lists its own art twice', async () => {
+    jest
+      .mocked(getAddableGameDetails)
+      .mockResolvedValue(details({ steam_app_id: 99, header_image: choice('a').url }));
+    const res = await choices('?igdbId=31');
+
+    expect(listWideArt).toHaveBeenCalledWith(expect.objectContaining({ steamAppId: 99 }));
+    expect((await res.json()).choices).toEqual([choice('b')]);
+  });
+
+  it("refuses a bad id, a game IGDB doesn't have, and a signed-out request", async () => {
+    expect((await choices('?igdbId=x')).status).toBe(400);
+    jest.mocked(getAddableGameDetails).mockResolvedValue(null);
+    expect((await choices('?igdbId=31')).status).toBe(404);
+    user = null;
+    expect((await choices('?igdbId=31')).status).toBe(401);
+    expect(listWideArt).not.toHaveBeenCalled();
+  });
+
+  it("says so when the game's details can't be read", async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.mocked(getAddableGameDetails).mockRejectedValue(new Error('IGDB is down'));
+    expect((await choices('?igdbId=31')).status).toBe(503);
+    expect(listWideArt).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
   });
 });
 

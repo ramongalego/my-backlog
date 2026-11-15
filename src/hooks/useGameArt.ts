@@ -1,7 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchArtChoices, saveGameArt, type GameArtChoices } from '@/lib/client/game-art';
+import {
+  fetchArtChoices,
+  saveGameArt,
+  type ArtGame,
+  type GameArtChoices,
+} from '@/lib/client/game-art';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from './useGameMutations';
 
@@ -10,16 +15,18 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 /**
  * Choose art for one game: the images to pick from (asked for once the picker
  * is open) and saving a pick. A saved pick shows everywhere the game does, so
- * everything that lists games is read again.
+ * everything that lists games is read again. A game being added has nothing
+ * to save to yet: its pick is only handed back, to be sent when it's added.
  */
-export function useGameArt(gameId: number, open: boolean) {
+export function useGameArt(game: ArtGame, open: boolean) {
   const queryClient = useQueryClient();
   const { gamesAndQueue } = useInvalidateQueries();
-  const key = queryKeys.gameArt(gameId);
+  const gameId = 'gameId' in game ? game.gameId : null;
+  const key = 'gameId' in game ? queryKeys.gameArt(game.gameId) : queryKeys.addingArt(game.igdbId);
 
   const choices = useQuery({
     queryKey: key,
-    queryFn: () => fetchArtChoices(gameId),
+    queryFn: () => fetchArtChoices(game),
     enabled: open,
     // Each ask goes to SteamGridDB: reopening the picker reuses the answer.
     staleTime: FIVE_MINUTES,
@@ -27,8 +34,10 @@ export function useGameArt(gameId: number, open: boolean) {
   });
 
   const save = useMutation({
-    mutationFn: (url: string | null) => saveGameArt(gameId, url),
+    mutationFn: async (url: string | null) =>
+      gameId === null ? (url ?? choices.data?.original ?? null) : saveGameArt(gameId, url),
     onSuccess: (art) => {
+      if (gameId === null) return;
       queryClient.setQueryData<GameArtChoices>(key, (old) => old && { ...old, current: art });
       gamesAndQueue();
     },

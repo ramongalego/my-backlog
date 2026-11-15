@@ -27,6 +27,8 @@ export const queryKeys = {
   // The images a game's art can be chosen from (Choose art). Not under games:
   // it's SteamGridDB's answer, which a change to the library doesn't change.
   gameArt: (gameId: number) => ['game-art', gameId] as const,
+  /** The choices for a game being added, which has no id of ours yet. */
+  addingArt: (igdbId: number) => ['game-art', 'adding', igdbId] as const,
   igdb: {
     game: (igdbId: number) => ['igdb', 'game', igdbId] as const,
   },

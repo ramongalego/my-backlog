@@ -63,6 +63,8 @@ export async function addManualGame(body: {
   date?: string;
   notes?: string;
   rating?: number | null;
+  /** Art picked before adding (Choose art), instead of the game's own. */
+  art?: string;
 }): Promise<{ id: number; name: string; warning?: string; moved?: boolean }> {
   const res = await check(
     await fetch('/api/games/manual', {

@@ -301,3 +301,41 @@ describe('a game you already added by hand', () => {
     );
   });
 });
+
+describe('art picked before adding', () => {
+  const PICK = 'https://cdn2.steamgriddb.com/grid/abc.png';
+  const add = (art: string) => post({ igdbId: 1, platform: 'Switch 2', status: 'backlog', art });
+
+  it("is saved as the player's choice, with the game's own art behind it", async () => {
+    expect((await add(PICK)).status).toBe(200);
+    expect(inserted[0]).toMatchObject({
+      header_image: PICK,
+      art_chosen: true,
+      default_header_image: details.header_image,
+    });
+  });
+
+  it("is no choice at all when it's the game's own art", async () => {
+    expect((await add(details.header_image)).status).toBe(200);
+    expect(inserted[0]).toMatchObject({
+      header_image: details.header_image,
+      art_chosen: false,
+      default_header_image: null,
+    });
+  });
+
+  it('must be one of SteamGridDB’s images, or nothing is added', async () => {
+    const { status, body } = await add('https://example.com/anything.png');
+    expect(status).toBe(400);
+    expect(body.error).toBe('That image can’t be used');
+    expect(inserted).toEqual([]);
+    expect(getMainStoryHours).not.toHaveBeenCalled();
+  });
+
+  it('leaves a game already in the library with the art it has', async () => {
+    manualRow = { id: 5, name: details.name, status: 'backlog' };
+    expect((await add(PICK)).status).toBe(200);
+    expect(inserted).toEqual([]);
+    expect(updated.some((row) => 'header_image' in row || 'art_chosen' in row)).toBe(false);
+  });
+});

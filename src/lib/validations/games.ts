@@ -96,6 +96,9 @@ export const addManualGameSchema = z.object({
   date: isoDate.optional(),
   notes: gameStatusSchema.shape.notes,
   rating: gameStatusSchema.shape.rating,
+  // Art picked in the dialog before adding (Choose art), instead of the
+  // game's own.
+  art: z.string().url().max(500).optional(),
 });
 
 // Either the hours played on the console, or moving a Steam game back to Steam.

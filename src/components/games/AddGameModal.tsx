@@ -185,6 +185,9 @@ export function AddGameModal({
           release_date: details?.release_date,
         }}
         headerLoading={detailsPending}
+        // Its art can be chosen before it's added. A game already in the
+        // library has art of its own, chosen from its own dialog.
+        art={details && !existing ? { igdbId: picked.igdbId } : undefined}
         initialStatus={existingStatus ?? 'backlog'}
         initialDate={existing?.date?.slice(0, 10) ?? null}
         initialNotes={existing?.notes}
@@ -199,7 +202,7 @@ export function AddGameModal({
           // Not when the game being moved is the one you're playing.
           playingName: existing && playing?.id === existing.id ? null : (playing?.name ?? null),
           onChangeGame: () => setPicked(null),
-          onAdd: async ({ status, platform, hours, date, notes, rating }) => {
+          onAdd: async ({ status, platform, hours, date, notes, rating, art }) => {
             const added = await addManualGame({
               igdbId: picked.igdbId,
               platform,
@@ -208,6 +211,7 @@ export function AddGameModal({
               date: date || undefined,
               notes: notes || undefined,
               rating,
+              art,
             });
             onAdded(added.name, status, added.warning, added.moved ? platform : undefined);
           },

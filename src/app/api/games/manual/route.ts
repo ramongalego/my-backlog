@@ -9,6 +9,7 @@ import { applyStatusChange } from '@/lib/server/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';
 import { releaseYear } from '@/lib/games/release-date';
+import { chooseArt } from '@/lib/games/art';
 
 const STATUS_WORDS = {
   backlog: 'as backlog',
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
   const parsed = addManualGameSchema.safeParse(body);
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
-  const { igdbId, platform, status, hoursPlayed, date, notes, rating } = parsed.data;
+  const { igdbId, platform, status, hoursPlayed, date, notes, rating, art } = parsed.data;
 
   let details;
   try {
@@ -109,6 +110,17 @@ export async function POST(request: NextRequest) {
   }
   const existing = steamGame ?? manualGame;
 
+  // A new game's art: its own, or the one picked in the dialog (kept as a
+  // choice, with its own behind it to go back to). A game already in the
+  // library keeps the art it has.
+  const ownArt = {
+    header_image: details.header_image,
+    art_chosen: false,
+    default_header_image: null,
+  };
+  const newArt = art && !existing ? chooseArt(ownArt, art) : ownArt;
+  if (!newArt) return jsonError('That image can’t be used', 400);
+
   // The year tells a remake from the original it shares a title with.
   const mainStory = existing
     ? null
@@ -156,7 +168,7 @@ export async function POST(request: NextRequest) {
             tags: details.tags,
             description: details.description,
             release_date: details.release_date,
-            header_image: details.header_image,
+            ...newArt,
             critic_score: details.critic_score,
             critic_count: details.critic_count,
             steam_app_id: details.steam_app_id,
