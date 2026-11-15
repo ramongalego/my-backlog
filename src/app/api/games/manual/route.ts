@@ -176,6 +176,9 @@ export async function POST(request: NextRequest) {
             steam_review_count: details.steam_review_count,
             steam_review_weighted: details.steam_review_weighted,
             main_story_hours: mainStory,
+            // Just looked up: a new release's time is checked again in a week
+            // (recheckManualHours). Without a time, it's tried again sooner.
+            ...(mainStory !== null ? { hltb_checked_at: new Date().toISOString() } : {}),
             playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
             metadata_synced: true,
             status: 'backlog',

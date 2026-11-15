@@ -339,3 +339,22 @@ describe('art picked before adding', () => {
     expect(updated.some((row) => 'header_image' in row || 'art_chosen' in row)).toBe(false);
   });
 });
+
+describe('when its time to beat was last looked up', () => {
+  const add = () => post({ igdbId: 1, platform: 'Switch 2', status: 'backlog' });
+
+  it('is saved with a game added with a time, so a new release waits its week for the next check', async () => {
+    const before = Date.now();
+    await add();
+    const checked = Date.parse(String(inserted[0].hltb_checked_at));
+    expect(checked).toBeGreaterThanOrEqual(before);
+    expect(checked).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('is left empty for a game added without one, so it is tried again at the next refresh', async () => {
+    jest.mocked(getMainStoryHours).mockResolvedValueOnce(null);
+    await add();
+    expect(inserted[0].main_story_hours).toBeNull();
+    expect('hltb_checked_at' in inserted[0]).toBe(false);
+  });
+});

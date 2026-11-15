@@ -110,7 +110,10 @@ export function useLibraryRefresh() {
         // Most refreshes change nothing (you haven't played since the last one),
         // and refetching every page's data then would be pure waste.
         const changed =
-          (data.updatedGames ?? updatedPlaytime) > 0 || (data.updatedStoreData ?? 0) > 0;
+          (data.updatedGames ?? updatedPlaytime) > 0 ||
+          (data.updatedStoreData ?? 0) > 0 ||
+          // A hand-added game's time to beat was found or has moved.
+          (data.updatedHours ?? 0) > 0;
         if (changed) invalidateGamesAndQueue();
 
         if (manual) {

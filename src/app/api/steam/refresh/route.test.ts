@@ -7,7 +7,7 @@ import { getOwnedGames } from '@/lib/steam/api';
 import { syncOwnedGames } from '@/lib/server/steam-library';
 import { refreshStoreData } from '@/lib/server/steam-store-data';
 import { refreshCriticScores } from '@/lib/server/critic-scores';
-import { recheckMissingHours } from '@/lib/server/manual-hours';
+import { recheckManualHours } from '@/lib/server/manual-hours';
 
 let user: { id: string } | null = { id: 'user-1' };
 let steamId: string | null = '76561198000000000';
@@ -46,7 +46,7 @@ jest.mock('@/lib/steam/api', () => ({ getOwnedGames: jest.fn() }));
 jest.mock('@/lib/server/steam-library', () => ({ syncOwnedGames: jest.fn() }));
 jest.mock('@/lib/server/steam-store-data', () => ({ refreshStoreData: jest.fn() }));
 jest.mock('@/lib/server/critic-scores', () => ({ refreshCriticScores: jest.fn() }));
-jest.mock('@/lib/server/manual-hours', () => ({ recheckMissingHours: jest.fn() }));
+jest.mock('@/lib/server/manual-hours', () => ({ recheckManualHours: jest.fn() }));
 
 const OWNED = [{ appid: 620, name: 'Portal 2', playtime_forever: 480 }];
 
@@ -64,7 +64,7 @@ const refresh = async (body?: unknown) => {
 const scoreRefreshes = () => [
   jest.mocked(refreshStoreData),
   jest.mocked(refreshCriticScores),
-  jest.mocked(recheckMissingHours),
+  jest.mocked(recheckManualHours),
 ];
 
 beforeEach(() => {
@@ -83,7 +83,7 @@ beforeEach(() => {
     .mockResolvedValue({ newGames: 1, updatedPlaytime: 2, updatedGames: 3 });
   jest.mocked(refreshStoreData).mockReset().mockResolvedValue(4);
   jest.mocked(refreshCriticScores).mockReset().mockResolvedValue(5);
-  jest.mocked(recheckMissingHours).mockReset().mockResolvedValue(6);
+  jest.mocked(recheckManualHours).mockReset().mockResolvedValue(6);
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 

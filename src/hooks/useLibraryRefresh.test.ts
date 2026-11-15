@@ -392,6 +392,24 @@ describe('useLibraryRefresh', () => {
     expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
   });
 
+  it("refetches after a hand-added game's time to beat was found or has moved", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        newGames: 0,
+        updatedPlaytime: 0,
+        updatedGames: 0,
+        updatedStoreData: 0,
+        updatedHours: 1,
+      }),
+    });
+    const { result } = renderHook(() => useLibraryRefresh());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
+  });
+
   it('refetches after new review scores too', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,

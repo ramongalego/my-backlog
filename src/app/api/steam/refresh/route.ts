@@ -4,7 +4,7 @@ import { getOwnedGames } from '@/lib/steam/api';
 import { syncOwnedGames, type LibrarySyncResult } from '@/lib/server/steam-library';
 import { refreshStoreData } from '@/lib/server/steam-store-data';
 import { refreshCriticScores } from '@/lib/server/critic-scores';
-import { recheckMissingHours } from '@/lib/server/manual-hours';
+import { recheckManualHours } from '@/lib/server/manual-hours';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
@@ -76,8 +76,9 @@ export async function POST(request: NextRequest) {
   // once a day ({ reviews: false } skips them). The same Steam calls bring
   // each game's current header art, which Steam swaps for launches and events. A failure here shouldn't fail
   // the refresh, since the library itself is already up to date.
-  // Games added by hand without a time to beat are looked up again in the same
-  // pass, each at most weekly (see recheckMissingHours).
+  // Games added by hand have their time to beat looked up again in the same
+  // pass: the ones without one, and recent releases, whose time is still
+  // moving (see recheckManualHours).
   // No body, or a body that isn't an object (`null`), means the default.
   const sent: unknown = await request.json().catch(() => null);
   const body: { reviews?: unknown } = sent && typeof sent === 'object' ? sent : {};
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     const [store, critics, hours] = await Promise.allSettled([
       refreshStoreData(supabase, user.id, tryCreateServiceClient()),
       refreshCriticScores(supabase, user.id),
-      recheckMissingHours(supabase, user.id),
+      recheckManualHours(supabase, user.id),
     ]);
     if (store.status === 'fulfilled') updatedStoreData = store.value;
     else console.error('Store data refresh failed:', store.reason);
