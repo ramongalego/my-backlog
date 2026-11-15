@@ -12,7 +12,10 @@ import {
   GAME_FILTERS,
   GAME_SORTS,
   countLibrary,
+  countPlatforms,
   filterLibrary,
+  libraryPlatforms,
+  onPlatform,
   searchLibrary,
   type FilterCounts,
   type GameFilter,
@@ -48,6 +51,13 @@ interface UseGamesPageReturn {
   counts: FilterCounts;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  /**
+   * The platform filter, or null when there's nothing to choose between: a
+   * library all on one platform (Steam only), or a status filter whose games
+   * are (every dropped game on PC). It stays while a platform is chosen,
+   * whatever is listed, since it's the way back to all of them.
+   */
+  platforms: GamesPlatforms | null;
   /** The detail dialog's props for the open game, or null when it's closed. */
   gameDialog: GameDialogProps | null;
   handleOpenDetail: (gameId: number) => void;
@@ -55,6 +65,21 @@ interface UseGamesPageReturn {
   /** Select mode's state and actions, or null when it's off. */
   selection: GamesSelection | null;
   toggleSelecting: () => void;
+}
+
+/** The Games page's platform filter. */
+interface GamesPlatforms {
+  /** The platform listed, or '' for all of them. */
+  value: string;
+  set: (platform: string) => void;
+  /**
+   * The platforms with games to list under the status filter and search that
+   * are on, with how many. The chosen one stays even at none, so the menu
+   * always has what it's set to.
+   */
+  options: { value: string; count: number }[];
+  /** How many games every platform together lists. */
+  allCount: number;
 }
 
 /** Select mode on the Games page: ticking games to move several at once. */
@@ -101,6 +126,11 @@ export function useGamesPage(): UseGamesPageReturn {
   const [sort, setSort] = useUrlState<GameSort>('sort', 'score', GAME_SORTS);
   const [order, setOrder] = useUrlState<SortOrder>('order', 'usual', SORT_ORDERS);
   const reversed = order === 'reversed';
+  // Only a platform the library has, and only when there's a choice: a
+  // bookmarked ?platform= for a console whose games are gone shows everything.
+  const allPlatforms = libraryPlatforms(games);
+  const platformChoices = allPlatforms.length > 1 ? allPlatforms : [];
+  const [platform, setPlatform] = useUrlState<string>('platform', '', platformChoices);
   const [urlSearch, setUrlSearch] = useUrlState<string>('q', '');
   const [searchQuery, setSearchQueryState] = useState(urlSearch);
   // The URL also changes from outside the box (Games in the header, View on a
@@ -169,11 +199,19 @@ export function useGamesPage(): UseGamesPageReturn {
   };
 
   // What the page shows, from the deferred search text so typing stays
-  // responsive. Counts follow the search, so each filter says how many of the
-  // matches it holds.
+  // responsive. Counts follow the search and the platform, so each status
+  // filter says how many of the matches it holds; each platform's count
+  // follows the search and the status filter the same way.
   const searched = searchLibrary(games, deferredSearchQuery);
-  const filteredGames = filterLibrary(searched, filter, sort, deferredSearchQuery, reversed);
-  const counts = countLibrary(searched);
+  const listed = onPlatform(searched, platform);
+  const filteredGames = filterLibrary(listed, filter, sort, deferredSearchQuery, reversed);
+  const counts = countLibrary(listed);
+  const perPlatform = countPlatforms(searched, filter);
+  // Whether there's a choice to offer: two platforms with games under this
+  // status filter. The search doesn't count, so the control beside the search
+  // field doesn't come and go as you type.
+  const platformsToChoose = countPlatforms(games, filter).size;
+  const showPlatforms = platformChoices.length > 0 && (platform !== '' || platformsToChoose > 1);
 
   const visibleGames = filteredGames.slice(0, visibleCount);
 
@@ -225,6 +263,11 @@ export function useGamesPage(): UseGamesPageReturn {
     setVisibleCount(BATCH_SIZE);
   };
 
+  const setPlatformAndReset = (p: string) => {
+    setPlatform(p);
+    setVisibleCount(BATCH_SIZE);
+  };
+
   const setSortAndReset = (s: GameSort) => {
     setSort(s);
     setOrder('usual');
@@ -260,6 +303,18 @@ export function useGamesPage(): UseGamesPageReturn {
     counts,
     searchQuery,
     setSearchQuery: setSearchQueryAndReset,
+    platforms: showPlatforms
+      ? {
+          value: platform,
+          set: setPlatformAndReset,
+          // A platform with nothing to list here would be a dead end: with
+          // Backlog on, most of a library's old consoles have none.
+          options: platformChoices
+            .map((value) => ({ value, count: perPlatform.get(value) ?? 0 }))
+            .filter((option) => option.count > 0 || option.value === platform),
+          allCount: countLibrary(searched)[filter],
+        }
+      : null,
     gameDialog,
     handleOpenDetail,
     queuedGameIds,

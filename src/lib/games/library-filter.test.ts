@@ -1,7 +1,10 @@
 import type { GameItem } from '@/lib/data/loaders';
 import {
   countLibrary,
+  countPlatforms,
   filterLibrary,
+  libraryPlatforms,
+  onPlatform,
   searchLibrary,
   type GameFilter,
   type GameSort,
@@ -648,5 +651,63 @@ describe('reversing the sort', () => {
       'Metroid Dread',
       'Hollow Knight',
     ]);
+  });
+});
+
+describe('platforms', () => {
+  const manual = (id: number, platform: string | null, overrides: Partial<GameItem> = {}) =>
+    createGame({ id, app_id: null, source: 'manual', platform, ...overrides });
+  const games = [
+    createGame({ id: 1, platform: 'PC' }),
+    createGame({ id: 2, platform: null, status: 'finished' }),
+    createGame({ id: 3, platform: 'PC', status: 'hidden' }),
+    manual(4, 'Switch 2'),
+    manual(5, 'Switch 2', { status: 'playing' }),
+    manual(6, 'PS5', { status: 'finished' }),
+    manual(7, '3DS', { status: 'dropped' }),
+  ];
+
+  it('lists the platforms the library is on, the one with the most games first, then by name', () => {
+    expect(libraryPlatforms(games)).toEqual(['PC', 'Switch 2', '3DS', 'PS5']);
+    expect(libraryPlatforms([])).toEqual([]);
+  });
+
+  it('counts hidden games toward a platform being there, so Hidden can be filtered too', () => {
+    expect(libraryPlatforms([createGame({ status: 'hidden' }), manual(2, 'PS5')])).toEqual([
+      'PC',
+      'PS5',
+    ]);
+  });
+
+  it('leaves a game with no platform out of the list', () => {
+    expect(libraryPlatforms([manual(1, null), manual(2, 'PS5')])).toEqual(['PS5']);
+  });
+
+  it('keeps the games on one platform, or every game when none is chosen', () => {
+    expect(onPlatform(games, 'Switch 2').map((g) => g.id)).toEqual([4, 5]);
+    // A Steam game with no platform saved is on PC.
+    expect(onPlatform(games, 'PC').map((g) => g.id)).toEqual([1, 2, 3]);
+    expect(onPlatform(games, '')).toBe(games);
+    expect(onPlatform(games, 'Dreamcast')).toEqual([]);
+  });
+
+  it('counts what each platform would list under a status filter', () => {
+    const count = (filter: GameFilter) => Object.fromEntries(countPlatforms(games, filter));
+    // All leaves hidden games out; Backlog includes the game being played.
+    expect(count('all')).toEqual({ PC: 2, 'Switch 2': 2, PS5: 1, '3DS': 1 });
+    expect(count('backlog')).toEqual({ PC: 1, 'Switch 2': 2 });
+    expect(count('finished')).toEqual({ PC: 1, PS5: 1 });
+    expect(count('hidden')).toEqual({ PC: 1 });
+  });
+
+  it("agrees with the page: a platform's count is how many games it then lists", () => {
+    for (const filter of ['all', 'backlog', 'finished', 'dropped', 'hidden'] as const) {
+      const counts = countPlatforms(games, filter);
+      for (const platform of libraryPlatforms(games)) {
+        expect(filterLibrary(onPlatform(games, platform), filter, 'score')).toHaveLength(
+          counts.get(platform) ?? 0,
+        );
+      }
+    }
   });
 });

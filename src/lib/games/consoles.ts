@@ -20,6 +20,15 @@ export function consoleOf(game: { source?: string; platform?: string | null }): 
 }
 
 /**
+ * The platform a game is listed under (the Games page's platform filter): its
+ * console, or PC for a game played on Steam, where the console tag would say
+ * nothing. A PC game added by hand (another store) is PC too.
+ */
+export function platformOf(game: { source?: string; platform?: string | null }): string | null {
+  return game.platform || (game.source === 'steam' ? STEAM_PLATFORM : null);
+}
+
+/**
  * The last-played date to show for a game: Steam's, for a game played on
  * Steam. A console game's date is still stored (it ranks Pick Up Where You
  * Left Off) but not shown: it only moves when hours are logged or play stops,

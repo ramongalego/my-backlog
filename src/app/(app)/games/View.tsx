@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Gamepad2, Plus } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 
@@ -16,6 +16,7 @@ import { GamesPageSkeleton } from './Skeleton';
 import { useCachedLibraryMeta } from '@/hooks/useLibraryMeta';
 import { GamesSearch } from '@/components/games/GamesSearch';
 import { GamesSort } from '@/components/games/GamesSort';
+import { GamesPlatform } from '@/components/games/GamesPlatform';
 import { useGamesPage } from '@/hooks/useGamesPage';
 import type { GameFilter } from '@/lib/games/library-filter';
 import { Page, PageHeader } from '@/components/layout/Page';
@@ -54,6 +55,7 @@ export default function GamesView() {
     counts,
     searchQuery,
     setSearchQuery,
+    platforms,
     gameDialog,
     handleOpenDetail,
     queuedGameIds,
@@ -69,6 +71,13 @@ export default function GamesView() {
   const showStatus = filter === 'all' || filter === 'backlog';
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Select, the view switch and Sort: where focus goes if the platform menu
+  // before them leaves the page while it has it.
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const focusControls = useCallback(
+    () => controlsRef.current?.querySelector('button')?.focus(),
+    [],
+  );
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -120,17 +129,25 @@ export default function GamesView() {
                       : filter === 'wont_play'
                         ? "you won't play"
                         : 'hidden'}
+              {/* Said here too: below md the platform menu is its icon alone. */}
+              {platforms?.value && ` on ${platforms.value}`}
             </span>
           </span>
         }
         actions={<GamesFilter filter={filter} counts={counts} onFilterChange={setFilter} />}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
+          {/* What's listed: the search, and the platform when there's more
+              than one to choose between. */}
+          <div className="flex min-w-0 items-center gap-2">
+            <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
+            <GamesPlatform platforms={platforms} onGone={focusControls} />
+          </div>
           {/* One row of controls on the same surface, 8px apart: what to act
               on, how it's laid out, what order it's in. On phones the sort
-              keeps the right edge. */}
-          <div className="flex items-center gap-2">
+              keeps the right edge. They keep their size when the row is tight:
+              the search field is what gives way. */}
+          <div ref={controlsRef} className="flex shrink-0 items-center gap-2">
             <GamesSelectToggle on={!!selection} onToggle={toggleSelecting} />
             <GamesViewToggle value={view} onChange={setView} />
             <div className="ml-auto sm:ml-0">
@@ -156,6 +173,19 @@ export default function GamesView() {
           >
             Try a different name or tag, or switch filters.
             {isSteamConnected && ' Not on Steam? Add it by hand.'}
+          </EmptyState>
+        ) : platforms?.value ? (
+          // The status filter may well have games: just none on this platform.
+          <EmptyState
+            icon={Gamepad2}
+            title={`No ${platforms.value} games here`}
+            action={
+              <Button variant="secondary" onClick={() => platforms.set('')}>
+                All platforms
+              </Button>
+            }
+          >
+            Switch filters, or show every platform.
           </EmptyState>
         ) : (
           <EmptyState

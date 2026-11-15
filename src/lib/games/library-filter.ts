@@ -2,6 +2,7 @@ import type { GameItem } from '@/lib/data/loaders';
 import { parseReleaseDate } from './release-date';
 import { ratingOf } from './rating';
 import { matchesSearch, nameMatchesSearch } from './search';
+import { platformOf } from './consoles';
 
 // What the Games page shows of the library: which games a search and a filter
 // leave, in what order, and how many each filter would show.
@@ -122,6 +123,45 @@ export function searchLibrary(games: GameItem[], query: string): GameItem[] {
   return games.filter((game) => matchesSearch(game, query));
 }
 
+/** Whether a status filter lists a game. */
+function inFilter(game: GameItem, filter: GameFilter): boolean {
+  if (filter === 'all') return game.status !== 'hidden';
+  if (filter === 'backlog') return game.status === 'backlog' || game.status === 'playing';
+  return game.status === filter;
+}
+
+/**
+ * The platforms the library's games are on, the one with the most games
+ * first (then by name), so the list doesn't reorder as you search or filter.
+ */
+export function libraryPlatforms(games: GameItem[]): string[] {
+  const totals = new Map<string, number>();
+  for (const game of games) {
+    const platform = platformOf(game);
+    if (platform) totals.set(platform, (totals.get(platform) ?? 0) + 1);
+  }
+  return [...totals.keys()].sort((a, b) => totals.get(b)! - totals.get(a)! || a.localeCompare(b));
+}
+
+/** The games on a platform: every game when none is chosen. */
+export function onPlatform(games: GameItem[], platform: string): GameItem[] {
+  if (!platform) return games;
+  return games.filter((game) => platformOf(game) === platform);
+}
+
+/**
+ * How many games each platform would list under a status filter, among those
+ * a search found: what picking it would show.
+ */
+export function countPlatforms(searched: GameItem[], filter: GameFilter): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const game of searched) {
+    const platform = platformOf(game);
+    if (platform && inFilter(game, filter)) counts.set(platform, (counts.get(platform) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /**
  * The games a filter shows, in order. All is everything but hidden games
  * (won't-play games are still part of the library). Backlog includes the game
@@ -136,11 +176,7 @@ export function filterLibrary(
   /** The other way from the sort's usual order. */
   reversed = false,
 ): GameItem[] {
-  const filtered = searched.filter((game) => {
-    if (filter === 'all') return game.status !== 'hidden';
-    if (filter === 'backlog') return game.status === 'backlog' || game.status === 'playing';
-    return game.status === filter;
-  });
+  const filtered = searched.filter((game) => inFilter(game, filter));
 
   if (!query) return filtered.sort((a, b) => orderGames(a, b, sort, reversed));
   const named = new Set(filtered.filter((g) => nameMatchesSearch(g, query)).map((g) => g.id));
