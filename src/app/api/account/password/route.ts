@@ -49,7 +49,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  // The current password goes to Supabase too: with "Require current password
+  // when updating" on (Auth settings), it refuses a new password without it.
+  // The check above stays, as it works whichever way that setting is.
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+    current_password: currentPassword,
+  });
   if (error) {
     const refusal = passwordRefusal(error.code, error.message);
     if (refusal.status >= 500) console.error('Password change failed:', error);

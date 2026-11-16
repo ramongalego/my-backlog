@@ -66,7 +66,8 @@ afterEach(() => jest.restoreAllMocks());
 it('checks the current password, sets the new one, and signs out every other device', async () => {
   expect(await change(valid)).toEqual({ status: 200, body: { ok: true } });
   expect(checkPassword).toHaveBeenCalledWith('player@example.com', 'Old-pass1');
-  expect(updates).toEqual([{ password: 'New-pass1' }]);
+  // The current one goes along: Supabase can be set to refuse a change without it.
+  expect(updates).toEqual([{ password: 'New-pass1', current_password: 'Old-pass1' }]);
   expect(signOuts).toEqual([{ scope: 'others' }]);
 });
 
@@ -120,6 +121,23 @@ it("says what Supabase wouldn't take, on the field it's about", async () => {
     body: { error: "That's your current password. Pick a new one", field: 'password' },
   });
   expect(signOuts).toEqual([]);
+
+  // Supabase's own check of the current password, on that field.
+  updateError = { code: 'current_password_invalid', message: 'Current password required' };
+  expect(await change(valid)).toEqual({
+    status: 400,
+    body: { error: "That isn't your current password", field: 'currentPassword' },
+  });
+
+  // A session over a day old, with "Secure password change" on.
+  updateError = {
+    code: 'reauthentication_needed',
+    message: 'Password update requires reauthentication',
+  };
+  expect(await change(valid)).toEqual({
+    status: 400,
+    body: { error: 'For your security, sign out and sign back in, then try again.' },
+  });
 
   updateError = { code: 'unexpected_failure', message: 'boom' };
   expect(await change(valid)).toEqual({

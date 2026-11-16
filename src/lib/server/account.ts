@@ -58,6 +58,15 @@ export function passwordRefusal(code: string | undefined, message: string): Acco
       };
     case 'weak_password':
       return { status: 400, error: message, field: 'password' };
+    // Supabase's own check of the current password ("Require current password
+    // when updating"). It was checked just before, so this is a rare race.
+    case 'current_password_invalid':
+    case 'current_password_required':
+      return {
+        status: 400,
+        error: "That isn't your current password",
+        field: 'currentPassword',
+      };
     case 'reauthentication_needed':
       return {
         status: 400,
