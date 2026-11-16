@@ -7,6 +7,7 @@ import { GET } from '@/app/api/steam/auth/route';
 let signedIn = true;
 let limited = false;
 let steamContacted = 0;
+let steamFails = false;
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
@@ -20,9 +21,14 @@ jest.mock('@/lib/server/rate-limit', () => ({
 jest.mock('@/lib/steam/auth', () => ({
   getSteamAuthUrl: () => 'https://steamcommunity.com/openid',
   createSteamRelyingParty: () => ({
-    authenticate: (_url: string, _immediate: boolean, done: (e: null, url: string) => void) => {
+    authenticate: (
+      _url: string,
+      _immediate: boolean,
+      done: (e: Error | null, url: string | null) => void,
+    ) => {
       steamContacted++;
-      done(null, 'https://steamcommunity.com/openid/login?x=1');
+      if (steamFails) done(new Error('Steam is down'), null);
+      else done(null, 'https://steamcommunity.com/openid/login?x=1');
     },
   }),
 }));
@@ -33,6 +39,15 @@ beforeEach(() => {
   signedIn = true;
   limited = false;
   steamContacted = 0;
+  steamFails = false;
+});
+
+it("goes back to the app, which says so, when Steam's page can't be reached", async () => {
+  steamFails = true;
+  const res = await start();
+  // Not a page of JSON: the browser itself came here.
+  expect(res.headers.get('location')).toBe('https://mybacklog.test/?error=steam_auth_failed');
+  expect(res.cookies.get('steam_auth_state')).toBeUndefined();
 });
 
 it('sends a signed-in player to Steam, with a one-time state cookie', async () => {

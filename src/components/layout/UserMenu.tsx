@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { ChevronDown, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
+import { ChevronDown, Loader2, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/layout/SupportModal';
 import { manualRefreshWait } from '@/hooks/useLibraryRefresh';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
 import type { User } from '@supabase/supabase-js';
 import { reloadAtTop } from '@/lib/reload';
 import { initialOf } from '@/lib/account/identity';
@@ -42,6 +43,8 @@ export function UserMenu({
   const [open, setOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [cooldownLabel, setCooldownLabel] = useState<string | null>(null);
+  // Connect Steam has been pressed (here or on the page): its item is busy.
+  const { connecting: connectingSteam } = useConnectSteam();
   // The picture that failed to load, if one did: a new one gets its own chance.
   const [brokenAvatar, setBrokenAvatar] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -230,9 +233,19 @@ export function UserMenu({
             <button
               role="menuitem"
               onClick={onConnectSteam}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer"
+              // Not `disabled`: it has the focus while Steam's page is on its way.
+              aria-disabled={connectingSteam || undefined}
+              aria-busy={connectingSteam || undefined}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer aria-disabled:cursor-default"
             >
-              <SteamIcon className="w-4 h-4" />
+              {connectingSteam ? (
+                <Loader2
+                  className="w-4 h-4 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              ) : (
+                <SteamIcon className="w-4 h-4" />
+              )}
               <span>Connect Steam</span>
             </button>
           )}

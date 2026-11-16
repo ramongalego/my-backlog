@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
   return new Promise<NextResponse>((resolve) => {
     relyingParty.authenticate(getSteamAuthUrl(), false, (error, authUrl) => {
       if (error || !authUrl) {
-        resolve(NextResponse.json({ error: 'Failed to create Steam auth URL' }, { status: 500 }));
+        // This is a page the browser has gone to, not a request the app
+        // made: back to the app, which says so, not a page of JSON.
+        resolve(NextResponse.redirect(`${baseUrl}/?error=steam_auth_failed`));
         return;
       }
 

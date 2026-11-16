@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
-import { SteamIcon } from '@/components/ui/SteamIcon';
+import { ConnectSteamButton } from '@/components/ui/ConnectSteamButton';
 import { SectionLabel } from '@/components/layout/Page';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 import { ExportDataMenu } from '@/components/profile/ExportDataMenu';
@@ -137,15 +137,10 @@ export function AccountPanel({
                 Disconnect
               </Button>
             ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onConnectSteam}
-                className="shrink-0 cursor-pointer"
-              >
-                <SteamIcon className="h-4 w-4" />
+              // "Connect" is what's shown: the row already says Steam.
+              <ConnectSteamButton size="sm" className="shrink-0" onClick={onConnectSteam}>
                 Connect
-              </Button>
+              </ConnectSteamButton>
             )
           }
         />

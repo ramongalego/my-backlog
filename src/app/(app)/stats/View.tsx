@@ -7,7 +7,7 @@ import { useStatsPage } from '@/hooks/useStatsPage';
 import { isStarting } from '@/lib/stats/compute';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { StatsStart, StatsStartButtons } from '@/components/stats/StatsStart';
-import { connectSteam } from '@/lib/client/steam-connect';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
 import { useAuth } from '@/hooks/useAuth';
 import { Page, PageHeader } from '@/components/layout/Page';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -28,6 +28,7 @@ export default function StatsView() {
   const { stats, loading, loadError, retry, profileReady, gameDialog, openGame } = useStatsPage();
   const libraryMeta = useCachedLibraryMeta();
   const { user, profile } = useAuth();
+  const { connect: connectSteam } = useConnectSteam();
   const isSteamConnected = profile?.steam_id != null;
   const { open: openAddGame } = useAddGame();
   // Which list a game's dialog was opened from. Saving can take the game out

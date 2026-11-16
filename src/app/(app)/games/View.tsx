@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { Gamepad2, Plus } from 'lucide-react';
-import { SteamIcon } from '@/components/ui/SteamIcon';
+import { ConnectSteamButton } from '@/components/ui/ConnectSteamButton';
 
 import { GameCard } from '@/components/games/GameCard';
 import { GameList } from '@/components/games/GameList';
@@ -25,7 +25,7 @@ import { LoadError } from '@/components/ui/LoadError';
 import { Button } from '@/components/ui/Button';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { useAuth } from '@/hooks/useAuth';
-import { connectSteam } from '@/lib/client/steam-connect';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
 
 const EMPTY_COPY: Record<GameFilter, string> = {
   all: 'Add the games you own, on any console, or connect Steam to bring in your whole library',
@@ -64,6 +64,7 @@ export default function GamesView() {
   } = useGamesPage();
   const { open: openAddGame } = useAddGame();
   const isSteamConnected = !!useAuth().profile?.steam_id;
+  const { connect: connectSteam } = useConnectSteam();
   const libraryMeta = useCachedLibraryMeta();
   const [view, setView] = useGamesView();
   // In All and Backlog the badge tells statuses apart (e.g. Playing); in a
@@ -200,12 +201,7 @@ export default function GamesView() {
                     <Plus className="w-4 h-4" aria-hidden="true" />
                     Add a game
                   </Button>
-                  {!isSteamConnected && (
-                    <Button variant="secondary" onClick={connectSteam}>
-                      <SteamIcon className="w-4 h-4" />
-                      Connect Steam
-                    </Button>
-                  )}
+                  {!isSteamConnected && <ConnectSteamButton onClick={connectSteam} />}
                 </div>
               )
             }

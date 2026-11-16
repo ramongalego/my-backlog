@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Figure, Lead } from '@/components/ui/Lead';
-import { SteamIcon } from '@/components/ui/SteamIcon';
+import { ConnectSteamButton } from '@/components/ui/ConnectSteamButton';
 
 interface StartProps {
   isSteamConnected: boolean;
@@ -21,15 +21,7 @@ export function StatsStartButtons({ isSteamConnected, onAddGame, onConnectSteam 
         <span>Add a game</span>
       </Button>
       {!isSteamConnected && (
-        <Button
-          variant="secondary"
-          size="lg"
-          className="w-full sm:w-auto cursor-pointer"
-          onClick={onConnectSteam}
-        >
-          <SteamIcon className="w-5 h-5" />
-          <span>Connect Steam</span>
-        </Button>
+        <ConnectSteamButton size="lg" className="w-full sm:w-auto" onClick={onConnectSteam} />
       )}
     </div>
   );

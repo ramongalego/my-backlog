@@ -16,11 +16,12 @@ import { RecentActivity } from '@/components/profile/RecentActivity';
 import { PlaysOn } from '@/components/profile/PlaysOn';
 import { AccountPanel } from '@/components/profile/AccountPanel';
 import { useProfilePage } from '@/hooks/useProfilePage';
-import { connectSteam } from '@/lib/client/steam-connect';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
 import { PROFILE_COLUMNS } from '@/components/profile/profile-layout';
 import { ProfilePageSkeleton } from './Skeleton';
 
 export default function ProfileView() {
+  const { connect: connectSteam } = useConnectSteam();
   const profile = useProfilePage();
   const [choosingFavorites, setChoosingFavorites] = useState(false);
   const [changing, setChanging] = useState<

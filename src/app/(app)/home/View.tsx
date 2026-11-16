@@ -17,7 +17,7 @@ import { useManualGameActions } from '@/hooks/useManualGameActions';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
 import { COMPLETION_STATUSES } from '@/lib/games/status';
-import { connectSteam } from '@/lib/client/steam-connect';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
 import type { SuggestionResult } from '@/lib/suggest/types';
 import { BuildBacklog } from '@/components/home/BuildBacklog';
 import { RandomRoll } from '@/components/home/RandomRoll';
@@ -33,6 +33,7 @@ export default function HomeView() {
 
   const { auth, meta, sync, carousels, currentGame, loadError, retry } = useHomePage();
   const { user, profile, isLoading } = auth;
+  const { connect: connectSteam } = useConnectSteam();
   const manualGames = useManualGameActions(user?.id ?? null);
   const { open: openAddGame } = useAddGame();
   const { gameCount, historyCount, backlogCount, queuedGameIds } = meta;

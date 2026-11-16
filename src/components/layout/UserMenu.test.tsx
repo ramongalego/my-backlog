@@ -1,6 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { User } from '@supabase/supabase-js';
 import { UserMenu } from '@/components/layout/UserMenu';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
+import { connectSteam } from '@/lib/client/steam-connect';
+
+jest.mock('@/lib/client/steam-connect', () => ({ connectSteam: jest.fn() }));
 
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 
@@ -117,4 +121,26 @@ it('says how long until Refresh library can be used again', () => {
   expect(screen.getByRole('menuitem', { name: 'Available in 1 minute' })).toBeDisabled();
   jest.useRealTimers();
   localStorage.clear();
+});
+
+it('marks Connect Steam busy once it has been pressed, and leaves for Steam once', () => {
+  function Menu() {
+    const { connect } = useConnectSteam();
+    return <UserMenu user={user} name="Player" avatar={null} onConnectSteam={connect} />;
+  }
+  render(<Menu />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+  const item = screen.getByRole('menuitem', { name: 'Connect Steam' });
+  expect(item).not.toHaveAttribute('aria-busy');
+
+  fireEvent.click(item);
+  fireEvent.click(item);
+  expect(item).toHaveAttribute('aria-busy', 'true');
+  expect(item.querySelector('.animate-spin')).toBeInTheDocument();
+  expect(item).toBeEnabled();
+  expect(connectSteam).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+  });
 });

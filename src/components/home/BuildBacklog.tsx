@@ -4,7 +4,7 @@ import { Gamepad2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { GameArt } from '@/components/games/GameArt';
-import { SteamIcon } from '@/components/ui/SteamIcon';
+import { ConnectSteamButton } from '@/components/ui/ConnectSteamButton';
 import { MIN_GAMES_TO_PICK } from '@/lib/data/loaders';
 import { STEAM_PRIVACY_URL } from '@/lib/steam/privacy';
 
@@ -144,15 +144,7 @@ export function BuildBacklog({
             <span>Add a game</span>
           </Button>
           {!isSteamConnected && (
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-full sm:w-auto cursor-pointer"
-              onClick={onConnectSteam}
-            >
-              <SteamIcon className="w-5 h-5" />
-              <span>Connect Steam</span>
-            </Button>
+            <ConnectSteamButton size="lg" className="w-full sm:w-auto" onClick={onConnectSteam} />
           )}
         </div>
         {!isSteamConnected && (

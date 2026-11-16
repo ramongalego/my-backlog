@@ -12,12 +12,13 @@ import { AddGameButton } from '@/components/games/AddGameButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, manualRefreshWait } from '@/hooks/useLibraryRefresh';
-import { connectSteam } from '@/lib/client/steam-connect';
+import { useConnectSteam } from '@/hooks/useConnectSteam';
 import { profileAvatar, profileName } from '@/lib/account/identity';
 import type { AuthMode } from '@/types/auth';
 
 export function Header() {
   const { user, profile, authResolved } = useAuth();
+  const { connect: connectSteam } = useConnectSteam();
   const { gameCount, loaded: libraryMetaLoaded } = useLibraryMeta(user?.id ?? null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
