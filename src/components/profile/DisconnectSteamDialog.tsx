@@ -3,6 +3,8 @@
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { DownloadData } from '@/components/profile/DownloadData';
+import type { ExportFormat } from '@/lib/account/export';
 import type { ApiResult } from '@/lib/client/request';
 
 type Result = ApiResult;
@@ -10,17 +12,20 @@ type Result = ApiResult;
 /**
  * Unlinks Steam, saying first, plainly, what's lost for good: the Steam games
  * and what was logged on them. Games on other consoles (added by hand, or
- * Steam games moved to one) stay. Once it's done the page reloads (the page's
- * part), so this stays saying "Disconnecting…" until then.
+ * Steam games moved to one) stay. A copy of it all can be downloaded first.
+ * Once it's done the page reloads (the page's part), so this stays saying
+ * "Disconnecting…" until then.
  */
 export function DisconnectSteamDialog({
   steamGames,
   onDisconnect,
+  onDownloadData,
   onClose,
 }: {
   /** How many games come out with it. */
   steamGames: number;
   onDisconnect: () => Promise<Result>;
+  onDownloadData: (format: ExportFormat) => Promise<ApiResult>;
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +63,9 @@ export function DisconnectSteamDialog({
           Connecting Steam again brings the games back, but not their ratings, notes or finish
           dates.
         </p>
+        {steamGames > 0 && (
+          <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
+        )}
 
         {error && (
           <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">

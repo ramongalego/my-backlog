@@ -3,8 +3,12 @@ import {
   changePassword,
   deleteAccount,
   disconnectSteam,
+  downloadData,
   sendPasswordReset,
 } from '@/lib/client/account';
+import { saveFile } from '@/lib/client/save-file';
+
+jest.mock('@/lib/client/save-file', () => ({ saveFile: jest.fn() }));
 
 const resetPasswordForEmail = jest.fn();
 jest.mock('@/lib/supabase/client', () => ({
@@ -125,5 +129,71 @@ describe('disconnectSteam', () => {
       '/api/steam/disconnect',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+});
+
+describe('downloadData', () => {
+  const file = { size: 12 } as Blob;
+  const fileAnswer = (disposition: string | null) =>
+    (global.fetch = jest.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          headers: { get: (name: string) => (name === 'Content-Disposition' ? disposition : null) },
+          blob: async () => file,
+        }) as unknown as Response,
+    ));
+
+  it('fetches the file asked for and saves it under the name the server gave it', async () => {
+    fileAnswer('attachment; filename="mybacklog-games-2026-11-16.csv"');
+    expect(await downloadData('csv')).toEqual({ ok: true });
+    expect(global.fetch).toHaveBeenCalledWith('/api/account/export?format=csv');
+    expect(saveFile).toHaveBeenCalledWith(file, 'mybacklog-games-2026-11-16.csv');
+  });
+
+  it('names the file itself when the server did not', async () => {
+    fileAnswer(null);
+    await downloadData('json');
+    expect(saveFile).toHaveBeenCalledWith(
+      file,
+      expect.stringMatching(/^mybacklog-data-\d{4}-\d{2}-\d{2}\.json$/),
+    );
+  });
+
+  it('saves nothing and says why when the server refuses', async () => {
+    answer(500, { error: "Couldn't prepare your data. Please try again." });
+    expect(await downloadData('json')).toEqual({
+      ok: false,
+      error: "Couldn't prepare your data. Please try again.",
+    });
+    answer(429, { error: 'Too many requests' });
+    expect(await downloadData('json')).toEqual({
+      ok: false,
+      error: 'Too many downloads. Please try again in an hour.',
+    });
+    expect(saveFile).not.toHaveBeenCalled();
+  });
+
+  it('says so when the app could not be reached, or the file stopped partway', async () => {
+    const offline = "Couldn't reach MyBacklog. Check your connection and try again.";
+    global.fetch = jest.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    expect(await downloadData('csv')).toEqual({ ok: false, error: offline });
+
+    global.fetch = jest.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          blob: async () => {
+            throw new TypeError('network error');
+          },
+        }) as unknown as Response,
+    );
+    expect(await downloadData('csv')).toEqual({ ok: false, error: offline });
+    expect(saveFile).not.toHaveBeenCalled();
   });
 });

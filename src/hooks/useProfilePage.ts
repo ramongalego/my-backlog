@@ -15,6 +15,7 @@ import {
   changePassword,
   deleteAccount,
   disconnectSteam,
+  downloadData,
   sendPasswordReset,
 } from '@/lib/client/account';
 import { playsOnConsole } from '@/lib/games/consoles';
@@ -147,6 +148,8 @@ export function useProfilePage() {
         if (result.ok) await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
         return result;
       },
+      /** Downloads a copy of the player's data, as a file the browser saves. */
+      downloadData,
       /** Deletes the account; then the page goes to the landing page. */
       deleteAccount: async (password: string) => {
         const result = await deleteAccount(password);

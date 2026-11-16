@@ -4,8 +4,12 @@ import type { AccountResult } from '@/lib/client/account';
 
 const onDelete = jest.fn<Promise<AccountResult>, [string]>();
 const onClose = jest.fn();
+const onDownloadData = jest.fn();
 
-const open = () => render(<DeleteAccountDialog onDelete={onDelete} onClose={onClose} />);
+const open = () =>
+  render(
+    <DeleteAccountDialog onDelete={onDelete} onDownloadData={onDownloadData} onClose={onClose} />,
+  );
 const password = () => screen.getByLabelText('Your password, to confirm');
 const submit = () => screen.getByRole('button', { name: /Delete account|Deleting/ });
 
@@ -69,4 +73,14 @@ it('closes on Cancel without deleting', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onClose).toHaveBeenCalledTimes(1);
   expect(onDelete).not.toHaveBeenCalled();
+});
+
+it('offers a copy of the data first, without deleting anything', async () => {
+  onDownloadData.mockResolvedValue({ ok: true });
+  open();
+  expect(screen.getByText('Want a copy first?')).toBeInTheDocument();
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Everything (JSON)' })));
+  expect(onDownloadData).toHaveBeenCalledWith('json');
+  expect(onDelete).not.toHaveBeenCalled();
+  expect(screen.getByRole('dialog', { name: 'Delete account' })).toBeInTheDocument();
 });

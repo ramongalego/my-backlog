@@ -88,6 +88,7 @@ export default function ProfileView() {
           {changing === 'delete-account' && (
             <DeleteAccountDialog
               onDelete={profile.account.deleteAccount}
+              onDownloadData={profile.account.downloadData}
               onClose={() => setChanging(null)}
             />
           )}
@@ -95,6 +96,7 @@ export default function ProfileView() {
             <DisconnectSteamDialog
               steamGames={profile.account.steamGames}
               onDisconnect={profile.account.disconnectSteam}
+              onDownloadData={profile.account.downloadData}
               onClose={() => setChanging(null)}
             />
           )}
@@ -142,6 +144,7 @@ export default function ProfileView() {
             onChangeEmail={() => setChanging('email')}
             onChangePassword={() => setChanging('password')}
             onDisconnectSteam={() => setChanging('disconnect-steam')}
+            onDownloadData={profile.account.downloadData}
             onDeleteAccount={() => setChanging('delete-account')}
           />
         </aside>

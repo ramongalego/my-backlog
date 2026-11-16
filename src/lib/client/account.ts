@@ -1,11 +1,13 @@
 // Client helpers for the profile's account settings: changing the password
-// and the email, deleting the account, unlinking Steam (/api/account/…,
-// /api/steam/disconnect), and emailing a password reset link. They never
-// throw: each says what happened, with the server's message for the player and
-// the form field it's about.
+// and the email, deleting the account, downloading a copy of its data,
+// unlinking Steam (/api/account/…, /api/steam/disconnect), and emailing a
+// password reset link. They never throw: each says what happened, with the
+// server's message for the player and the form field it's about.
 
 import { createClient } from '@/lib/supabase/client';
-import { apiRequest, json, type ApiResult } from './request';
+import { exportFileName, type ExportFormat } from '@/lib/account/export';
+import { apiDownload, apiRequest, json, type ApiResult } from './request';
+import { saveFile } from './save-file';
 
 type AccountField = 'currentPassword' | 'password' | 'email';
 
@@ -47,6 +49,20 @@ export function deleteAccount(password: string): Promise<AccountResult> {
     failed: FAILED,
     tooMany: TOO_MANY_TRIES,
   });
+}
+
+/**
+ * Downloads a copy of the player's data: everything as a JSON file, or the
+ * games as a CSV for a spreadsheet. The browser saves it as any download.
+ */
+export async function downloadData(format: ExportFormat): Promise<ApiResult> {
+  const result = await apiDownload(`/api/account/export?format=${format}`, {
+    failed: "Couldn't prepare your data. Please try again.",
+    tooMany: 'Too many downloads. Please try again in an hour.',
+  });
+  if (!result.ok) return result;
+  saveFile(result.blob, result.fileName ?? exportFileName(format));
+  return { ok: true };
 }
 
 /** Unlinks Steam; its games come out of the library. */

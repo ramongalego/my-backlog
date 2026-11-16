@@ -4,18 +4,24 @@ import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { DownloadData } from '@/components/profile/DownloadData';
+import type { ExportFormat } from '@/lib/account/export';
 import type { AccountResult } from '@/lib/client/account';
+import type { ApiResult } from '@/lib/client/request';
 
 /**
- * Deletes the account, for good: says what goes, and asks for the password
- * before doing it. Once it's done the page leaves for the landing page (the
- * page's part), so this stays saying "Deleting…" until then.
+ * Deletes the account, for good: says what goes, offers a copy of it to
+ * download first, and asks for the password before doing it. Once it's done
+ * the page leaves for the landing page (the page's part), so this stays
+ * saying "Deleting…" until then.
  */
 export function DeleteAccountDialog({
   onDelete,
+  onDownloadData,
   onClose,
 }: {
   onDelete: (password: string) => Promise<AccountResult>;
+  onDownloadData: (format: ExportFormat) => Promise<ApiResult>;
   onClose: () => void;
 }) {
   const [password, setPassword] = useState('');
@@ -51,6 +57,7 @@ export function DeleteAccountDialog({
           This deletes your account and everything in it: your library, diary, queue, favorites and
           profile picture. It can&apos;t be undone.
         </p>
+        <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
 
         {serverError && (
           <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">

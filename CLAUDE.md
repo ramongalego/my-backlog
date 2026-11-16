@@ -56,7 +56,7 @@ Playing, finishing and the queue go the same way through `hooks/useNowPlaying.ts
 | Something looks wrong on a page | `components/<page>/`, then the page's `View.tsx` |
 | The page shows the wrong data | its page hook in `hooks/`, then `lib/data/loaders.ts` (Games filter, search and counts: `lib/games/library-filter.ts`; Diary grouping: `lib/diary/timeline.ts`) |
 | A button does the wrong thing | the page hook's handler, then `lib/client/` and the matching `app/api/…/route.ts` |
-| A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them); the Profile page's name, figures and activity: `lib/account/` |
+| A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them); the Profile page's name, figures and activity, and what a data export holds: `lib/account/` |
 | Steam, IGDB or HowLongToBeat data is wrong | `lib/steam`, `lib/igdb`, `lib/hltb`, and `lib/server/steam-library.ts` for what's saved |
 
 ## UI and design

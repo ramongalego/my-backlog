@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { AccountPanel } from '@/components/profile/AccountPanel';
 
 const onConnectSteam = jest.fn();
@@ -6,6 +6,7 @@ const onChangeEmail = jest.fn();
 const onChangePassword = jest.fn();
 const onDisconnectSteam = jest.fn();
 const onDeleteAccount = jest.fn();
+const onDownloadData = jest.fn();
 const props = {
   email: 'player@example.com',
   steam: null,
@@ -14,6 +15,7 @@ const props = {
   onChangePassword,
   onDisconnectSteam,
   onDeleteAccount,
+  onDownloadData,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -92,4 +94,16 @@ it('lets a waiting email wrap, so the whole address can be checked', () => {
   const note = screen.getByText(/Changing to a\.very\.long/);
   expect(note).not.toHaveClass('truncate');
   expect(note).toHaveClass('[overflow-wrap:anywhere]');
+});
+
+it('keeps Export data behind More options too, as a menu of the two files', async () => {
+  onDownloadData.mockResolvedValue({ ok: true });
+  render(<AccountPanel {...props} />);
+  expect(screen.queryByRole('button', { name: 'Export data' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+  expect(screen.getByText('Download a copy of your data')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Export data' }));
+  await act(async () => fireEvent.click(screen.getByRole('menuitem', { name: 'Games (CSV)' })));
+  expect(onDownloadData).toHaveBeenCalledWith('csv');
 });

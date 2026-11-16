@@ -207,6 +207,8 @@ export const RATE_LIMITS = {
   avatarUpload: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Changing the email, per user: each one sends confirmation emails.
   accountEmail: { limit: 5, windowMs: 60 * 60 * 1000 },
+  // Downloading a copy of your data, per user: each one reads the whole library.
+  accountExport: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Starting to link a Steam account, and verifying the sign-in that comes
   // back: each makes this server contact Steam. Linking is done once, or a few
   // times when it goes wrong.

@@ -7,6 +7,9 @@ import { Panel } from '@/components/ui/Panel';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SectionLabel } from '@/components/layout/Page';
 import { TruncatedText } from '@/components/ui/TruncatedText';
+import { ExportDataMenu } from '@/components/profile/ExportDataMenu';
+import type { ExportFormat } from '@/lib/account/export';
+import type { ApiResult } from '@/lib/client/request';
 
 function Row({
   label,
@@ -59,8 +62,9 @@ const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
  * How the player signs in, and Steam: the private side of the profile, which
  * only they will see. Email and password are changed from here, each in a
  * dialog; an email waiting for its confirmation link is shown under the one
- * in use. Steam is connected or disconnected here. Deleting the account is
- * behind "More options", so it isn't always on show.
+ * in use. Steam is connected or disconnected here. Export data (a menu of
+ * the two files a copy of your data comes as) and Delete account are behind
+ * "More options", so they aren't always on show.
  */
 export function AccountPanel({
   email,
@@ -70,10 +74,13 @@ export function AccountPanel({
   onDisconnectSteam,
   onChangeEmail,
   onChangePassword,
+  onDownloadData,
   onDeleteAccount,
 }: {
   onDisconnectSteam: () => void;
   onDeleteAccount: () => void;
+  /** Fetches a copy of the player's data, as a file the browser saves. */
+  onDownloadData: (format: ExportFormat) => Promise<ApiResult>;
   email: string | null;
   /** The new email, until its confirmation link is opened. */
   pendingEmail?: string | null;
@@ -155,7 +162,11 @@ export function AccountPanel({
           aria-hidden="true"
         />
       </button>
-      <div id={moreId} hidden={!moreOpen} className="mt-3 border-t border-ink-800 pt-3">
+      <div id={moreId} hidden={!moreOpen} className="mt-3 space-y-3 border-t border-ink-800 pt-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 text-xs text-ink-400">Download a copy of your data</p>
+          <ExportDataMenu onDownload={onDownloadData} />
+        </div>
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 text-xs text-ink-400">Delete your account and everything in it</p>
           <Button

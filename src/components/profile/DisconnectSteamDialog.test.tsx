@@ -4,10 +4,16 @@ import { DisconnectSteamDialog } from '@/components/profile/DisconnectSteamDialo
 type Result = { ok: true } | { ok: false; error: string };
 const onDisconnect = jest.fn<Promise<Result>, []>();
 const onClose = jest.fn();
+const onDownloadData = jest.fn();
 
 const open = (steamGames = 151) =>
   render(
-    <DisconnectSteamDialog steamGames={steamGames} onDisconnect={onDisconnect} onClose={onClose} />,
+    <DisconnectSteamDialog
+      steamGames={steamGames}
+      onDisconnect={onDisconnect}
+      onDownloadData={onDownloadData}
+      onClose={onClose}
+    />,
   );
 const disconnect = () => screen.getByRole('button', { name: /Disconnect|Disconnecting/ });
 
@@ -68,4 +74,18 @@ it('closes on Cancel without disconnecting', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onClose).toHaveBeenCalledTimes(1);
   expect(onDisconnect).not.toHaveBeenCalled();
+});
+
+it('offers a copy of the data first, when there are games to lose', async () => {
+  onDownloadData.mockResolvedValue({ ok: true });
+  const { unmount } = open();
+  expect(screen.getByText('Want a copy first?')).toBeInTheDocument();
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Games (CSV)' })));
+  expect(onDownloadData).toHaveBeenCalledWith('csv');
+  expect(onDisconnect).not.toHaveBeenCalled();
+  unmount();
+
+  // Nothing comes out with it: nothing to keep a copy of.
+  open(0);
+  expect(screen.queryByText('Want a copy first?')).not.toBeInTheDocument();
 });
