@@ -15,6 +15,11 @@ describe('steamReturnPath', () => {
       'https://evil.test/profile',
       '//evil.test/profile',
       '/\\evil.test',
+      // On this site as written, another site once the dots are resolved.
+      '/.//evil.test',
+      '/%2e//evil.test',
+      '/x/..//evil.test/login',
+      '/./\\evil.test',
       'profile',
       'javascript:alert(1)',
       '',
@@ -34,6 +39,16 @@ describe('steamReturnPath', () => {
       '/profile?tab=1',
     );
   });
+});
+
+it('never answers with another site, whatever path it is handed', () => {
+  for (const path of ['//evil.test', '/.//evil.test', 'https://evil.test/x', '/\\evil.test']) {
+    expect(withSteamOutcome(path, ORIGIN, 'not_authenticated').origin).toBe(ORIGIN);
+  }
+  for (const from of ['/.//evil.test', '/%2e//evil.test', '/x/..//evil.test/login']) {
+    const back = withSteamOutcome(steamReturnPath(from, ORIGIN), ORIGIN, 'not_authenticated');
+    expect(back.toString()).toBe(`${ORIGIN}/?error=not_authenticated`);
+  }
 });
 
 it('adds how it went to the page, for the page to say', () => {
