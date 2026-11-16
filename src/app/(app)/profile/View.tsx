@@ -9,6 +9,8 @@ import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { FavoritesPicker } from '@/components/profile/FavoritesPicker';
 import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
 import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
+import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
+import { DisconnectSteamDialog } from '@/components/profile/DisconnectSteamDialog';
 import { RecentActivity } from '@/components/profile/RecentActivity';
 import { PlaysOn } from '@/components/profile/PlaysOn';
 import { AccountPanel } from '@/components/profile/AccountPanel';
@@ -20,7 +22,9 @@ import { ProfilePageSkeleton } from './Skeleton';
 export default function ProfileView() {
   const profile = useProfilePage();
   const [choosingFavorites, setChoosingFavorites] = useState(false);
-  const [changing, setChanging] = useState<'email' | 'password' | null>(null);
+  const [changing, setChanging] = useState<
+    'email' | 'password' | 'delete-account' | 'disconnect-steam' | null
+  >(null);
   const favoritesRow = useRef<FavoriteGamesHandle>(null);
 
   if (profile.loading) return <ProfilePageSkeleton />;
@@ -62,6 +66,19 @@ export default function ProfileView() {
               onClose={() => setChanging(null)}
             />
           )}
+          {changing === 'delete-account' && (
+            <DeleteAccountDialog
+              onDelete={profile.account.deleteAccount}
+              onClose={() => setChanging(null)}
+            />
+          )}
+          {changing === 'disconnect-steam' && (
+            <DisconnectSteamDialog
+              steamGames={profile.account.steamGames}
+              onDisconnect={profile.account.disconnectSteam}
+              onClose={() => setChanging(null)}
+            />
+          )}
         </>
       }
     >
@@ -97,6 +114,8 @@ export default function ProfileView() {
             onConnectSteam={connectSteam}
             onChangeEmail={() => setChanging('email')}
             onChangePassword={() => setChanging('password')}
+            onDisconnectSteam={() => setChanging('disconnect-steam')}
+            onDeleteAccount={() => setChanging('delete-account')}
           />
         </aside>
       </div>

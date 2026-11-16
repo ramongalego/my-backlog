@@ -1,4 +1,10 @@
-import { changeEmail, changePassword, sendPasswordReset } from '@/lib/client/account';
+import {
+  changeEmail,
+  changePassword,
+  deleteAccount,
+  disconnectSteam,
+  sendPasswordReset,
+} from '@/lib/client/account';
 
 const resetPasswordForEmail = jest.fn();
 jest.mock('@/lib/supabase/client', () => ({
@@ -82,5 +88,36 @@ describe('sendPasswordReset', () => {
   it('is false when it could not be sent', async () => {
     resetPasswordForEmail.mockResolvedValue({ error: { message: 'rate limit' } });
     expect(await sendPasswordReset('player@example.com')).toBe(false);
+  });
+});
+
+describe('deleteAccount', () => {
+  it('sends the password to confirm it', async () => {
+    answer(200, { ok: true });
+    expect(await deleteAccount('My-pass1')).toEqual({ ok: true });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/account/delete',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ password: 'My-pass1' }) }),
+    );
+  });
+
+  it("gives back a wrong password on the password's field", async () => {
+    answer(400, { error: "That isn't your password", field: 'password' });
+    expect(await deleteAccount('x')).toEqual({
+      ok: false,
+      error: "That isn't your password",
+      field: 'password',
+    });
+  });
+});
+
+describe('disconnectSteam', () => {
+  it('asks the server to unlink Steam', async () => {
+    answer(200, { ok: true });
+    expect(await disconnectSteam()).toEqual({ ok: true });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/steam/disconnect',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 });

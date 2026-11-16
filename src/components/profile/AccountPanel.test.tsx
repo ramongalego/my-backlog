@@ -4,12 +4,16 @@ import { AccountPanel } from '@/components/profile/AccountPanel';
 const onConnectSteam = jest.fn();
 const onChangeEmail = jest.fn();
 const onChangePassword = jest.fn();
+const onDisconnectSteam = jest.fn();
+const onDeleteAccount = jest.fn();
 const props = {
   email: 'player@example.com',
   steam: null,
   onConnectSteam,
   onChangeEmail,
   onChangePassword,
+  onDisconnectSteam,
+  onDeleteAccount,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -58,4 +62,27 @@ it('says who Steam is connected as, with nothing to connect', () => {
   // Steam gave no name.
   rerender(<AccountPanel {...props} steam={{ username: null }} />);
   expect(valueOf('Steam')).toHaveTextContent(/^Connected$/);
+});
+
+it('disconnects Steam from its row when it is connected', () => {
+  render(<AccountPanel {...props} steam={{ username: 'Ankrath' }} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Disconnect Steam' }));
+  expect(onDisconnectSteam).toHaveBeenCalledTimes(1);
+});
+
+it('keeps Delete account behind More options until it is asked for', () => {
+  render(<AccountPanel {...props} />);
+  const more = screen.getByRole('button', { name: 'More options' });
+  expect(more).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
+
+  fireEvent.click(more);
+  expect(more).toHaveAttribute('aria-expanded', 'true');
+  expect(document.getElementById(more.getAttribute('aria-controls')!)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+  expect(onDeleteAccount).toHaveBeenCalledTimes(1);
+
+  // And it folds away again.
+  fireEvent.click(more);
+  expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
 });

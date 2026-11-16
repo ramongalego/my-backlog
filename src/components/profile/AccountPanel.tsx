@@ -1,6 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { SteamIcon } from '@/components/ui/SteamIcon';
@@ -50,16 +51,21 @@ const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
  * How the player signs in, and Steam: the private side of the profile, which
  * only they will see. Email and password are changed from here, each in a
  * dialog; an email waiting for its confirmation link is shown under the one
- * in use.
+ * in use. Steam is connected or disconnected here. Deleting the account is
+ * behind "More options", so it isn't always on show.
  */
 export function AccountPanel({
   email,
   pendingEmail,
   steam,
   onConnectSteam,
+  onDisconnectSteam,
   onChangeEmail,
   onChangePassword,
+  onDeleteAccount,
 }: {
+  onDisconnectSteam: () => void;
+  onDeleteAccount: () => void;
   email: string | null;
   /** The new email, until its confirmation link is opened. */
   pendingEmail?: string | null;
@@ -69,6 +75,8 @@ export function AccountPanel({
   steam: { username: string | null } | null;
   onConnectSteam: () => void;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreId = useId();
   return (
     <Panel>
       <SectionLabel>Account</SectionLabel>
@@ -99,7 +107,18 @@ export function AccountPanel({
               : 'Not connected'
           }
           action={
-            !steam && (
+            steam ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onDisconnectSteam}
+                // "Disconnect" is what's shown; what from is said for a screen reader.
+                aria-label="Disconnect Steam"
+                className="shrink-0 cursor-pointer"
+              >
+                Disconnect
+              </Button>
+            ) : (
               <Button
                 variant="secondary"
                 size="sm"
@@ -113,6 +132,34 @@ export function AccountPanel({
           }
         />
       </ul>
+      {/* Rarely wanted, so out of the way until asked for. */}
+      <button
+        type="button"
+        onClick={() => setMoreOpen((was) => !was)}
+        aria-expanded={moreOpen}
+        aria-controls={moreId}
+        // py-1 -my-1: about 24px to hit without moving anything.
+        className="-my-1 mt-2 flex cursor-pointer items-center gap-1 py-1 text-xs font-medium text-ink-500 transition-colors hover:text-ink-200"
+      >
+        More options
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform motion-reduce:transition-none ${moreOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      <div id={moreId} hidden={!moreOpen} className="mt-3 border-t border-ink-800 pt-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 text-xs text-ink-400">Delete your account and everything in it</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDeleteAccount}
+            className="shrink-0 cursor-pointer text-rose-400 hover:text-rose-300"
+          >
+            Delete account
+          </Button>
+        </div>
+      </div>
     </Panel>
   );
 }

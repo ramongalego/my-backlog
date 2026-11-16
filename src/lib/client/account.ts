@@ -67,6 +67,26 @@ export async function changeEmail(email: string): Promise<EmailChangeResult> {
   );
 }
 
+/** Deletes the account and everything in it, checking the password first. */
+export async function deleteAccount(password: string): Promise<AccountResult> {
+  const result = await post<object>(
+    '/api/account/delete',
+    { password },
+    'Too many tries. Please wait 15 minutes and try again.',
+  );
+  return result.ok ? { ok: true } : result;
+}
+
+/** Unlinks Steam; its games come out of the library. */
+export async function disconnectSteam(): Promise<AccountResult> {
+  const result = await post<object>(
+    '/api/steam/disconnect',
+    {},
+    'Too many changes in a row. Try again in a minute.',
+  );
+  return result.ok ? { ok: true } : result;
+}
+
 /** Emails a link to set a new password, as Forgot password does when signed out. */
 export async function sendPasswordReset(email: string): Promise<boolean> {
   try {

@@ -10,7 +10,15 @@ import { recentActivity } from '@/lib/account/activity';
 import { countPlatforms, libraryPlatforms } from '@/lib/games/library-filter';
 import { pickedFavorites, toggleFavorite } from '@/lib/account/favorites';
 import { queryKeys } from '@/lib/query-keys';
-import { changeEmail, changePassword, sendPasswordReset } from '@/lib/client/account';
+import {
+  changeEmail,
+  changePassword,
+  deleteAccount,
+  disconnectSteam,
+  sendPasswordReset,
+} from '@/lib/client/account';
+import { playsOnConsole } from '@/lib/games/consoles';
+import { reloadAtTop } from '@/lib/reload';
 import {
   removeAvatar,
   saveProfileName,
@@ -125,6 +133,24 @@ export function useProfilePage() {
         const result = await changeEmail(email);
         // The account has a new email waiting (or a new email): read it again.
         if (result.ok) await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
+        return result;
+      },
+      /** Deletes the account; then the page goes to the landing page. */
+      deleteAccount: async (password: string) => {
+        const result = await deleteAccount(password);
+        // A full page load, not the router: the signed-in session and every cached
+        // list belonged to the account that's gone.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        if (result.ok) window.location.assign('/');
+        return result;
+      },
+      /** The Steam games that come out of the library when Steam is disconnected. */
+      steamGames: games.filter((game) => game.source === 'steam' && !playsOnConsole(game.platform))
+        .length,
+      /** Unlinks Steam; then the page reloads, with every list as it now is. */
+      disconnectSteam: async () => {
+        const result = await disconnectSteam();
+        if (result.ok) reloadAtTop();
         return result;
       },
       sendPasswordReset: () =>
