@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { UrlErrorToast } from '@/components/layout/UrlErrorToast';
 import { STEAM_PRIVACY_URL } from '@/lib/steam/privacy';
 
-jest.mock('sonner', () => ({ toast: { error: jest.fn() } }));
+jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }));
 
 let query = '';
 const replace = jest.fn();
@@ -53,4 +53,30 @@ it('says why Steam shared no games after connecting, with a way to the setting',
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   expect(replace).toHaveBeenCalledWith('/home', { scroll: false });
+});
+
+describe('good news from an email link', () => {
+  it('says the email is changed, then takes the notice out of the address', () => {
+    query = 'notice=email-changed';
+    render(<UrlErrorToast />);
+    expect(toast.success).toHaveBeenCalledWith('Your email is changed', { id: 'url-notice' });
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith('/home', { scroll: false });
+  });
+
+  it('says to open the other link when one of two is confirmed', () => {
+    query = 'notice=email-confirm-other';
+    render(<UrlErrorToast />);
+    expect(toast.success).toHaveBeenCalledWith('One link confirmed', {
+      id: 'url-notice',
+      description: 'Open the one we sent to your other address to finish changing your email.',
+    });
+  });
+
+  it('says nothing for a notice it does not know, but still tidies the address', () => {
+    query = 'notice=something-else&tab=1';
+    render(<UrlErrorToast />);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith('/home?tab=1', { scroll: false });
+  });
 });

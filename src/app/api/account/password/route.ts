@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { jsonError, rateLimited } from '@/lib/server/api-response';
+import { isCurrentPassword, passwordRefusal } from '@/lib/server/account';
+import { changePasswordBodySchema } from '@/lib/validations/auth';
+
+/**
+ * Changes the signed-in player's password, from their profile. The current
+ * password is asked for first, so someone at a computer left signed in can't
+ * take the account over, and tries are limited across every server, since
+ * each one is a guess at it. Every other device is signed out afterwards; this
+ * one stays signed in.
+ */
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return jsonError('Unauthorized', 401);
+
+  // Fails closed: without the shared counter, guesses would go unlimited.
+  const limit = await checkSharedRateLimit(
+    `account-password:${user.id}`,
+    RATE_LIMITS.accountPassword,
+    { failClosed: true },
+  );
+  if (!limit.success) return rateLimited(limit);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('Invalid JSON', 400);
+  }
+  const parsed = changePasswordBodySchema.safeParse(body);
+  if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
+  const { currentPassword, newPassword } = parsed.data;
+
+  if (!(await isCurrentPassword(user.email, currentPassword))) {
+    return NextResponse.json(
+      { error: "That isn't your current password", field: 'currentPassword' },
+      { status: 400 },
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    const refusal = passwordRefusal(error.code, error.message);
+    if (refusal.status >= 500) console.error('Password change failed:', error);
+    return NextResponse.json(
+      { error: refusal.error, field: refusal.field },
+      { status: refusal.status },
+    );
+  }
+
+  // The password is changed whatever happens here; a device left signed in is
+  // the lesser problem, so it's logged rather than reported as a failure.
+  const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' });
+  if (signOutError) console.error('Signing out other devices failed:', signOutError);
+
+  return NextResponse.json({ ok: true });
+}

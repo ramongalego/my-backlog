@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queries } from '@/lib/data/queries';
 import { useAuth } from '@/hooks/useAuth';
 import { displayName, memberSince } from '@/lib/account/identity';
@@ -8,6 +8,8 @@ import { profileFigures } from '@/lib/account/figures';
 import { recentActivity } from '@/lib/account/activity';
 import { countPlatforms, libraryPlatforms } from '@/lib/games/library-filter';
 import { pickedFavorites, toggleFavorite } from '@/lib/account/favorites';
+import { queryKeys } from '@/lib/query-keys';
+import { changeEmail, changePassword, sendPasswordReset } from '@/lib/client/account';
 import { useFavoriteGames } from './useFavoriteGames';
 
 /**
@@ -18,6 +20,7 @@ import { useFavoriteGames } from './useFavoriteGames';
 export function useProfilePage() {
   const { user, profile } = useAuth();
   const userId = user?.id ?? null;
+  const queryClient = useQueryClient();
   const {
     data: games = [],
     isPending,
@@ -65,6 +68,20 @@ export function useProfilePage() {
         favoriteGames.set(next);
         return next;
       },
+    },
+    /** Changing how the player signs in. */
+    account: {
+      /** A new email waiting for its confirmation link. */
+      pendingEmail: user?.new_email ?? null,
+      changePassword,
+      changeEmail: async (email: string) => {
+        const result = await changeEmail(email);
+        // The account has a new email waiting (or a new email): read it again.
+        if (result.ok) await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
+        return result;
+      },
+      sendPasswordReset: () =>
+        user?.email ? sendPasswordReset(user.email) : Promise.resolve(false),
     },
     activity: recentActivity(games, playing),
     // Where the library is played, most games first; a platform with only

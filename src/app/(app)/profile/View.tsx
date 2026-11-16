@@ -6,6 +6,8 @@ import { LoadError } from '@/components/ui/LoadError';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { FavoriteGames, type FavoriteGamesHandle } from '@/components/profile/FavoriteGames';
 import { FavoritesPicker } from '@/components/profile/FavoritesPicker';
+import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
+import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
 import { RecentActivity } from '@/components/profile/RecentActivity';
 import { PlaysOn } from '@/components/profile/PlaysOn';
 import { AccountPanel } from '@/components/profile/AccountPanel';
@@ -17,6 +19,7 @@ import { ProfilePageSkeleton } from './Skeleton';
 export default function ProfileView() {
   const profile = useProfilePage();
   const [choosingFavorites, setChoosingFavorites] = useState(false);
+  const [changing, setChanging] = useState<'email' | 'password' | null>(null);
   const favoritesRow = useRef<FavoriteGamesHandle>(null);
 
   if (profile.loading) return <ProfilePageSkeleton />;
@@ -34,13 +37,30 @@ export default function ProfileView() {
   return (
     <Page
       overlay={
-        choosingFavorites && (
-          <FavoritesPicker
-            {...profile.favoritePicker}
-            onClose={() => setChoosingFavorites(false)}
-            onOpenerGone={() => favoritesRow.current?.focus()}
-          />
-        )
+        <>
+          {choosingFavorites && (
+            <FavoritesPicker
+              {...profile.favoritePicker}
+              onClose={() => setChoosingFavorites(false)}
+              onOpenerGone={() => favoritesRow.current?.focus()}
+            />
+          )}
+          {changing === 'email' && profile.email && (
+            <ChangeEmailDialog
+              email={profile.email}
+              onSubmit={profile.account.changeEmail}
+              onClose={() => setChanging(null)}
+            />
+          )}
+          {changing === 'password' && profile.email && (
+            <ChangePasswordDialog
+              email={profile.email}
+              onSubmit={profile.account.changePassword}
+              onSendReset={profile.account.sendPasswordReset}
+              onClose={() => setChanging(null)}
+            />
+          )}
+        </>
       }
     >
       <ProfileHeader
@@ -66,7 +86,14 @@ export default function ProfileView() {
         </div>
         <aside className="space-y-6" aria-label="Platforms and account">
           <PlaysOn platforms={profile.platforms} />
-          <AccountPanel email={profile.email} steam={profile.steam} onConnectSteam={connectSteam} />
+          <AccountPanel
+            email={profile.email}
+            pendingEmail={profile.account.pendingEmail}
+            steam={profile.steam}
+            onConnectSteam={connectSteam}
+            onChangeEmail={() => setChanging('email')}
+            onChangePassword={() => setChanging('password')}
+          />
         </aside>
       </div>
     </Page>

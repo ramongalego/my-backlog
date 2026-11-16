@@ -129,3 +129,62 @@ describe('signUpSchema', () => {
     }
   });
 });
+
+describe('changePasswordSchema', () => {
+  const valid = {
+    currentPassword: 'Old-pass1',
+    password: 'New-pass1',
+    confirmPassword: 'New-pass1',
+  };
+  const { changePasswordSchema } = jest.requireActual('@/lib/validations/auth');
+  const messages = (data: object) =>
+    changePasswordSchema
+      .safeParse(data)
+      .error?.issues.map((issue: { message: string }) => issue.message) ?? [];
+
+  it('takes the current password and a new one, typed twice', () => {
+    expect(messages(valid)).toEqual([]);
+  });
+
+  it('needs the current password', () => {
+    expect(messages({ ...valid, currentPassword: '' })).toEqual(['Enter your current password']);
+  });
+
+  it('holds the new one to the sign-up rules, and to matching its confirmation', () => {
+    expect(messages({ ...valid, password: 'lowercase1', confirmPassword: 'lowercase1' })).toEqual([
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+    ]);
+    expect(messages({ ...valid, confirmPassword: 'New-pass2' })).toEqual([
+      'Passwords do not match',
+    ]);
+  });
+
+  it('refuses a new password that is the current one', () => {
+    expect(
+      messages({
+        currentPassword: 'Same-pass1',
+        password: 'Same-pass1',
+        confirmPassword: 'Same-pass1',
+      }),
+    ).toEqual(["That's your current password. Pick a new one"]);
+  });
+});
+
+describe('changeEmailSchema', () => {
+  const { changeEmailSchema } = jest.requireActual('@/lib/validations/auth');
+
+  it('takes an email, trimmed', () => {
+    expect(changeEmailSchema.parse({ email: '  new@example.com ' })).toEqual({
+      email: 'new@example.com',
+    });
+  });
+
+  it('refuses what is not one', () => {
+    expect(changeEmailSchema.safeParse({ email: '' }).error.issues[0].message).toBe(
+      'Email is required',
+    );
+    expect(changeEmailSchema.safeParse({ email: 'nope' }).error.issues[0].message).toBe(
+      'Please enter a valid email address',
+    );
+  });
+});

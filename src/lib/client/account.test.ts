@@ -1,0 +1,86 @@
+import { changeEmail, changePassword, sendPasswordReset } from '@/lib/client/account';
+
+const resetPasswordForEmail = jest.fn();
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({ auth: { resetPasswordForEmail } }),
+}));
+
+const answer = (status: number, body: unknown) =>
+  (global.fetch = jest.fn(
+    async () => ({ ok: status < 300, status, json: async () => body }) as unknown as Response,
+  ));
+
+beforeEach(() => jest.clearAllMocks());
+
+describe('changePassword', () => {
+  it('sends the current and new password', async () => {
+    answer(200, { ok: true });
+    expect(await changePassword('Old-pass1', 'New-pass1')).toEqual({ ok: true });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/account/password',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: 'Old-pass1', newPassword: 'New-pass1' }),
+      }),
+    );
+  });
+
+  it("gives back the server's message and the field it's about", async () => {
+    answer(400, { error: "That isn't your current password", field: 'currentPassword' });
+    expect(await changePassword('x', 'New-pass1')).toEqual({
+      ok: false,
+      error: "That isn't your current password",
+      field: 'currentPassword',
+    });
+  });
+
+  it("says how long to wait when the app's limit stops it", async () => {
+    answer(429, { error: 'Too many requests' });
+    expect(await changePassword('x', 'New-pass1')).toEqual({
+      ok: false,
+      error: 'Too many tries. Please wait 15 minutes and try again.',
+    });
+  });
+
+  it('says so when the server can not be reached', async () => {
+    global.fetch = jest.fn(async () => {
+      throw new TypeError('offline');
+    });
+    expect(await changePassword('x', 'New-pass1')).toEqual({
+      ok: false,
+      error: "Couldn't reach MyBacklog. Check your connection and try again.",
+    });
+  });
+});
+
+describe('changeEmail', () => {
+  it('gives back the email waiting for its link', async () => {
+    answer(200, { email: 'player@example.com', pendingEmail: 'new@example.com' });
+    expect(await changeEmail('new@example.com')).toEqual({
+      ok: true,
+      email: 'player@example.com',
+      pendingEmail: 'new@example.com',
+    });
+  });
+
+  it("keeps Supabase's own rate limit message, which says more than the app's", async () => {
+    const error = "We can't send another email right now. Please try again in an hour.";
+    answer(429, { error });
+    expect(await changeEmail('new@example.com')).toEqual({ ok: false, error });
+  });
+});
+
+describe('sendPasswordReset', () => {
+  it('emails a link that lands on the reset page', async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: null });
+    expect(await sendPasswordReset('player@example.com')).toBe(true);
+    expect(resetPasswordForEmail).toHaveBeenCalledWith('player@example.com', {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+    });
+  });
+
+  it('is false when it could not be sent', async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: { message: 'rate limit' } });
+    expect(await sendPasswordReset('player@example.com')).toBe(false);
+  });
+});

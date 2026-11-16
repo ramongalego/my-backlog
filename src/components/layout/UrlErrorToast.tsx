@@ -19,27 +19,45 @@ const MESSAGES: Record<string, string> = {
   invalid_link: 'That link is invalid or has expired',
 };
 
-/** Shows `?error=<code>` redirects as a toast, then removes the param from the URL. */
+// Good news set by the auth email callback (a link confirming a new email).
+const NOTICES: Record<string, () => void> = {
+  'email-changed': () => toast.success('Your email is changed', { id: 'url-notice' }),
+  'email-confirm-other': () =>
+    toast.success('One link confirmed', {
+      id: 'url-notice',
+      description: 'Open the one we sent to your other address to finish changing your email.',
+    }),
+};
+
+/**
+ * Shows `?error=<code>` redirects as a toast (and `?notice=<code>`, the
+ * good news), then removes the param from the URL.
+ */
 export function UrlErrorToast() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
   const code = searchParams.get('error');
+  const notice = searchParams.get('notice');
 
   useEffect(() => {
-    if (!code) return;
-    // Steam connected but shared no games: its own toast, with what to change.
-    if (code === 'steam_private') steamPrivateToast();
-    // Fixed id so a re-run of this effect can't stack a duplicate toast.
-    else
+    if (!code && !notice) return;
+    if (code === 'steam_private') {
+      // Steam connected but shared no games: its own toast, with what to change.
+      steamPrivateToast();
+    } else if (code) {
+      // Fixed id so a re-run of this effect can't stack a duplicate toast.
       toast.error(MESSAGES[code] ?? 'Something went wrong. Please try again.', {
         id: `url-error-${code}`,
       });
+    }
+    if (notice) NOTICES[notice]?.();
     const params = new URLSearchParams(searchParams);
     params.delete('error');
+    params.delete('notice');
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [code, searchParams, pathname, router]);
+  }, [code, notice, searchParams, pathname, router]);
 
   return null;
 }

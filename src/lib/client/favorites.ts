@@ -1,7 +1,7 @@
 // Client helper for the profile's favorite games (/api/profile/favorites). It
 // throws with the server's message, which the picker shows as is.
 
-/** Saves the picked games, in order; an empty list goes back to the highest rated. */
+/** Saves the picked games, in order; an empty list clears them. */
 export async function saveFavoriteGames(gameIds: number[]): Promise<void> {
   const res = await fetch('/api/profile/favorites', {
     method: 'PUT',

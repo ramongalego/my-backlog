@@ -49,3 +49,32 @@ it.each([
   const location = await callback(`?code=abc&next=${encodeURIComponent(next)}`);
   expect(new URL(location!).origin).toBe(ORIGIN);
 });
+
+it('sends a link Supabase refused on with an error, whatever it was for', async () => {
+  expect(await callback('?error=access_denied&error_code=otp_expired&next=/home')).toBe(
+    `${ORIGIN}/home?error=invalid_link`,
+  );
+  expect(await callback('?flow=email-change&error=access_denied&next=/profile')).toBe(
+    `${ORIGIN}/profile?error=invalid_link`,
+  );
+});
+
+describe('a link confirming a new email', () => {
+  const email = (query: string) => callback(`?flow=email-change&next=/profile${query}`);
+
+  it('says the email is changed once its code is exchanged', async () => {
+    expect(await email('&code=abc')).toBe(`${ORIGIN}/profile?notice=email-changed`);
+  });
+
+  it('says to open the other link when this was the first of two', async () => {
+    const message = encodeURIComponent('Confirmation link accepted. Please proceed');
+    expect(await email(`&message=${message}`)).toBe(`${ORIGIN}/profile?notice=email-confirm-other`);
+  });
+
+  it('goes to the profile without an error when only signing in here failed', async () => {
+    // Opened on another device: the email is changed, but there's no session to make.
+    exchangeError = new Error('code verifier missing');
+    expect(await email('&code=abc')).toBe(`${ORIGIN}/profile`);
+    expect(await email('')).toBe(`${ORIGIN}/profile`);
+  });
+});

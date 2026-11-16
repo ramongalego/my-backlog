@@ -40,3 +40,18 @@ export const rerollRequestSchema = z.object({
 export const queueReorderRequestSchema = z.object({
   order: z.array(gameIdSchema).min(1).max(MAX_BULK_APP_IDS),
 });
+
+/**
+ * A form's validation issues as one message per field, the first for each, as
+ * the form shows them under its fields.
+ */
+export function issuesByField<F extends string>(
+  issues: readonly { path: readonly PropertyKey[]; message: string }[],
+): Partial<Record<F, string>> {
+  const byField: Partial<Record<F, string>> = {};
+  for (const issue of issues) {
+    const field = issue.path[0] as F;
+    byField[field] ??= issue.message;
+  }
+  return byField;
+}
