@@ -40,7 +40,7 @@ export function Input({ className = '', label, error, id, ref, ...props }: Input
         id={inputId}
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId}
-        className={`${fieldClass(!!error)} px-4 py-2.5 ${className}`}
+        className={`${fieldClass(!!error)} h-10 px-3 text-sm ${className}`}
         {...props}
       />
       {error && (

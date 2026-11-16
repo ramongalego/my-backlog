@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthMessage } from '@/components/auth/AuthMessage';
+import { Panel } from '@/components/ui/Panel';
 
 export const metadata = {
   title: 'Reset password',
@@ -23,8 +24,10 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
 
   return (
     <main id="main-content" className="min-h-screen flex items-center justify-center px-4 pt-20">
-      <div className="w-full max-w-md bg-ink-900 rounded-2xl shadow-2xl border border-ink-800 p-6 sm:p-8">
-        <h1 className="text-xl font-semibold text-ink-100 mb-6">Reset your password</h1>
+      <Panel className="w-full max-w-md sm:p-8">
+        <h1 className="text-xl font-semibold tracking-tight text-ink-50 mb-6">
+          Reset your password
+        </h1>
         {linkInvalid ? (
           <div className="space-y-4">
             <AuthMessage
@@ -36,7 +39,8 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
             </AuthMessage>
             <Link
               href="/"
-              className="block w-full text-center px-4 py-2 rounded-lg bg-ink-800 text-ink-100 hover:bg-ink-700 border border-ink-700 transition-colors text-sm font-medium"
+              // The secondary button, as a link.
+              className="flex h-10 w-full items-center justify-center rounded-lg bg-ink-800 text-sm font-medium text-ink-100 transition-colors hover:bg-ink-700"
             >
               Back to home
             </Link>
@@ -44,7 +48,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
         ) : (
           <ResetPasswordForm />
         )}
-      </div>
+      </Panel>
     </main>
   );
 }

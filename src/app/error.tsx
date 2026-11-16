@@ -11,8 +11,10 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
 
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col items-center justify-center text-center px-6">
-      <Gamepad2 className="w-8 h-8 text-accent-400 mb-8" />
-      <h1 className="text-2xl font-bold text-ink-100 mb-2">Something went wrong</h1>
+      <Gamepad2 className="w-8 h-8 text-ink-600 mb-8" aria-hidden="true" />
+      <h1 className="text-2xl font-semibold tracking-tight text-ink-50 mb-2">
+        Something went wrong
+      </h1>
       <p className="text-ink-400 mb-8 max-w-md">
         An unexpected error occurred. Try refreshing the page.
       </p>

@@ -87,7 +87,7 @@ export function ArtHeader({
         </div>
       )}
       <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6">
-        <Heading className="text-2xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
+        <Heading className="text-xl font-semibold tracking-tight text-ink-50 leading-tight line-clamp-2">
           {title}
         </Heading>
         {subtitle && <p className="mt-1 text-sm text-ink-300">{subtitle}</p>}

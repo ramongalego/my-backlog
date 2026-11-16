@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getSharedCompletion } from '@/lib/server/shared-completions';
 import { ArtHeader } from '@/components/games/ArtHeader';
 import { CompletionSummary } from '@/components/games/CompletionSummary';
+import { Panel } from '@/components/ui/Panel';
 import type { Metadata } from 'next';
 
 interface PageProps {
@@ -56,7 +57,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
       <main id="main-content" className="pt-16 pb-16">
         <div className="max-w-lg mx-auto px-6">
           {/* The same summary the player saw when they finished it. */}
-          <div className="bg-ink-900 border border-ink-800 rounded-2xl overflow-hidden">
+          <Panel padding="none" className="overflow-hidden">
             <ArtHeader
               src={data.header_image}
               title={data.game_name}
@@ -76,7 +77,7 @@ export default async function SharedCompletionPage({ params }: PageProps) {
                 nextGameImage={data.next_game_image}
               />
             </div>
-          </div>
+          </Panel>
 
           {/* CTA */}
           <div className="text-center mt-8">

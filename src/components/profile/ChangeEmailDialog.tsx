@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
+import { DialogActions } from '@/components/ui/DialogActions';
 import { Modal } from '@/components/ui/Modal';
 import { changeEmailBodySchema } from '@/lib/validations/auth';
 import { issuesByField } from '@/lib/validations/common';
@@ -93,11 +95,7 @@ export function ChangeEmailDialog({
           We&apos;ll email links to confirm the change, and it&apos;s made once they&apos;re opened.
         </p>
 
-        {serverError && (
-          <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">
-            {serverError}
-          </div>
-        )}
+        {serverError && <FormError>{serverError}</FormError>}
 
         <Input
           label="New email"
@@ -121,20 +119,14 @@ export function ChangeEmailDialog({
           autoComplete="current-password"
         />
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="cursor-pointer"
-          >
+        <DialogActions>
+          <Button type="button" variant="secondary" onClick={onClose} className="cursor-pointer">
             Cancel
           </Button>
-          <Button type="submit" size="sm" isLoading={saving} className="cursor-pointer">
+          <Button type="submit" isLoading={saving} className="cursor-pointer">
             {saving ? 'Sending…' : 'Send confirmation'}
           </Button>
-        </div>
+        </DialogActions>
       </form>
     </Modal>
   );

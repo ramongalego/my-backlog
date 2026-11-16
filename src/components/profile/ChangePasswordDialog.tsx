@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
+import { DialogActions } from '@/components/ui/DialogActions';
 import { Modal } from '@/components/ui/Modal';
 import { changePasswordSchema, type ChangePasswordFormData } from '@/lib/validations/auth';
 import { issuesByField } from '@/lib/validations/common';
@@ -96,11 +98,7 @@ export function ChangePasswordDialog({
   return (
     <Modal isOpen onClose={onClose} title="Change password" size="md">
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        {serverError && (
-          <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">
-            {serverError}
-          </div>
-        )}
+        {serverError && <FormError>{serverError}</FormError>}
 
         <div>
           <Input
@@ -164,20 +162,14 @@ export function ChangePasswordDialog({
           autoComplete="new-password"
         />
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="cursor-pointer"
-          >
+        <DialogActions>
+          <Button type="button" variant="secondary" onClick={onClose} className="cursor-pointer">
             Cancel
           </Button>
-          <Button type="submit" size="sm" isLoading={saving} className="cursor-pointer">
+          <Button type="submit" isLoading={saving} className="cursor-pointer">
             {saving ? 'Changing…' : 'Change password'}
           </Button>
-        </div>
+        </DialogActions>
       </form>
     </Modal>
   );

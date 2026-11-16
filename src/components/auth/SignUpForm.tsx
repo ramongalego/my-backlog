@@ -5,6 +5,7 @@ import { MailCheck } from 'lucide-react';
 import { signUpSchema, type SignUpFormData } from '@/lib/validations/auth';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
 import { AuthMessage } from '@/components/auth/AuthMessage';
 import { reloadAtTop } from '@/lib/reload';
@@ -115,13 +116,9 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      {serverError && (
-        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
-          {serverError}
-        </div>
-      )}
+      {serverError && <FormError>{serverError}</FormError>}
       {accountExists && (
-        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
+        <FormError>
           That email already has an account.
           {onSwitchToLogin && (
             <>
@@ -135,7 +132,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
               </button>
             </>
           )}
-        </div>
+        </FormError>
       )}
 
       <Input

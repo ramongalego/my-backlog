@@ -172,11 +172,11 @@ export function UserMenu({
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-56 origin-top-right rounded-xl border border-ink-800 bg-ink-900 p-2 shadow-2xl animate-menu-in motion-reduce:animate-overlay-in"
+          className="absolute right-0 top-full mt-1 w-56 origin-top-right rounded-lg border border-ink-700 bg-ink-900 py-1 shadow-lg animate-menu-in motion-reduce:animate-overlay-in"
           role="menu"
           aria-label="Account"
         >
-          <div className="px-3 py-2 mb-1 border-b border-ink-800" role="none">
+          <div className="px-3 pt-1.5 pb-2.5 mb-1 border-b border-ink-800" role="none">
             <p className="text-sm font-medium text-ink-100 truncate">{name}</p>
             {gameCount != null && (
               <p className="text-xs text-ink-500 mt-0.5">
@@ -198,7 +198,7 @@ export function UserMenu({
                 e.currentTarget.click();
               }
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
           >
             <UserRound className="w-4 h-4" aria-hidden="true" />
             <span>Profile</span>
@@ -213,7 +213,7 @@ export function UserMenu({
                 onRefresh();
               }}
               disabled={isRefreshing || isRefreshDisabled}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw
                 className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
@@ -236,7 +236,7 @@ export function UserMenu({
               // Not `disabled`: it has the focus while Steam's page is on its way.
               aria-disabled={connectingSteam || undefined}
               aria-busy={connectingSteam || undefined}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer aria-disabled:cursor-default"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer aria-disabled:cursor-default"
             >
               {connectingSteam ? (
                 <Loader2
@@ -256,7 +256,7 @@ export function UserMenu({
               setOpen(false);
               setIsReportOpen(true);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors cursor-pointer"
           >
             <Bug className="w-4 h-4" aria-hidden="true" />
             <span>Report an issue</span>
@@ -265,7 +265,7 @@ export function UserMenu({
           <button
             role="menuitem"
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-400 hover:bg-ink-800 transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-400 hover:bg-ink-800 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" aria-hidden="true" />
             <span>Sign out</span>

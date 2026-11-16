@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
+import { DialogActions } from '@/components/ui/DialogActions';
 import { Modal } from '@/components/ui/Modal';
 import { DownloadData } from '@/components/profile/DownloadData';
 import type { ExportFormat } from '@/lib/account/export';
@@ -68,17 +70,12 @@ export function DisconnectSteamDialog({
           <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
         )}
 
-        {error && (
-          <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">
-            {error}
-          </div>
-        )}
+        {error && <FormError>{error}</FormError>}
 
-        <div className="flex justify-end gap-2 pt-1">
+        <DialogActions>
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
+            variant="secondary"
             onClick={onClose}
             disabled={working}
             // Where the dialog starts: the safe way out, not the action.
@@ -90,14 +87,13 @@ export function DisconnectSteamDialog({
           <Button
             type="button"
             variant="danger"
-            size="sm"
             onClick={disconnect}
             isLoading={working}
             className="cursor-pointer"
           >
             {working ? 'Disconnecting…' : 'Disconnect'}
           </Button>
-        </div>
+        </DialogActions>
       </div>
     </Modal>
   );

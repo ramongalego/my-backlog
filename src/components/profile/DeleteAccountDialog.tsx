@@ -2,7 +2,9 @@
 
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
+import { DialogActions } from '@/components/ui/DialogActions';
 import { Modal } from '@/components/ui/Modal';
 import { DownloadData } from '@/components/profile/DownloadData';
 import type { ExportFormat } from '@/lib/account/export';
@@ -62,11 +64,7 @@ export function DeleteAccountDialog({
           <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
         )}
 
-        {serverError && (
-          <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">
-            {serverError}
-          </div>
-        )}
+        {serverError && <FormError>{serverError}</FormError>}
 
         <Input
           label="Your password, to confirm"
@@ -84,27 +82,20 @@ export function DeleteAccountDialog({
           data-autofocus
         />
 
-        <div className="flex justify-end gap-2 pt-1">
+        <DialogActions>
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
+            variant="secondary"
             onClick={onClose}
             disabled={deleting}
             className="cursor-pointer"
           >
             Cancel
           </Button>
-          <Button
-            type="submit"
-            variant="danger"
-            size="sm"
-            isLoading={deleting}
-            className="cursor-pointer"
-          >
+          <Button type="submit" variant="danger" isLoading={deleting} className="cursor-pointer">
             {deleting ? 'Deleting…' : 'Delete account'}
           </Button>
-        </div>
+        </DialogActions>
       </form>
     </Modal>
   );

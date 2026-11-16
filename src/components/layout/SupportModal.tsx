@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
+import { DialogActions } from '@/components/ui/DialogActions';
 import { Modal } from '@/components/ui/Modal';
 import { sendSupportTicket, type TicketType } from '@/lib/client/support';
 import { SUPPORT_MESSAGE_MAX, SUPPORT_MESSAGE_MIN } from '@/lib/validations/support-limits';
@@ -119,14 +120,14 @@ export function SupportModal({ open, onClose }: SupportModalProps) {
           </p>
         </div>
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" onClick={handleClose} className="cursor-pointer">
+        <DialogActions>
+          <Button variant="secondary" onClick={handleClose} className="cursor-pointer">
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSubmit} isLoading={pending} className="cursor-pointer">
+          <Button onClick={handleSubmit} isLoading={pending} className="cursor-pointer">
             {pending ? 'Sending…' : 'Send'}
           </Button>
-        </div>
+        </DialogActions>
       </div>
     </Modal>
   );

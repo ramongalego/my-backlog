@@ -5,6 +5,7 @@ import { MailCheck } from 'lucide-react';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
 import { AuthMessage } from '@/components/auth/AuthMessage';
 
@@ -95,11 +96,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
         Enter your email and we&apos;ll send you a link to reset your password.
       </p>
 
-      {serverError && (
-        <div className="p-3 bg-rose-500/10 rounded-lg text-rose-300 text-sm" role="alert">
-          {serverError}
-        </div>
-      )}
+      {serverError && <FormError>{serverError}</FormError>}
 
       <Input
         label="Email"
