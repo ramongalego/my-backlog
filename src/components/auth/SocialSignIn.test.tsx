@@ -27,7 +27,23 @@ it('leaves for the site pressed, to come back through the callback to Home', asy
   await act(async () => fireEvent.click(discord()));
   expect(signInWithOAuth).toHaveBeenCalledWith({
     provider: 'discord',
-    options: { redirectTo: `${window.location.origin}/auth/callback?flow=sign-in&next=/home` },
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback?flow=sign-in&next=/home`,
+      // Discord's approval screen the first time only, not on every sign-in.
+      queryParams: { prompt: 'none' },
+    },
+  });
+});
+
+it('asks Google for nothing more than the usual', async () => {
+  render(<SocialSignIn />);
+  await act(async () => fireEvent.click(google()));
+  expect(signInWithOAuth).toHaveBeenCalledWith({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback?flow=sign-in&next=/home`,
+      queryParams: undefined,
+    },
   });
 });
 

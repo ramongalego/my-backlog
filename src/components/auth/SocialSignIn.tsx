@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/Button';
 import { ProviderIcon } from '@/components/auth/ProviderIcon';
 import { SIGN_IN_PROVIDERS, type SignInProvider } from '@/lib/account/sign-in';
 
+/**
+ * What a site is asked beyond the usual. Discord shows its "wants to access
+ * your account" screen on every sign-in unless told not to: with
+ * `prompt=none` it shows it the first time only, and after that comes
+ * straight back. Google already does.
+ */
+const ASKS: Partial<Record<SignInProvider, Record<string, string>>> = {
+  discord: { prompt: 'none' },
+};
+
 /** If the other site's page still hasn't come: the buttons can be pressed again. */
 const GIVE_UP_MS = 20_000;
 
@@ -58,7 +68,10 @@ export function SocialSignIn() {
     try {
       const { error } = await createClient().auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback?flow=sign-in&next=/home` },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?flow=sign-in&next=/home`,
+          queryParams: ASKS[provider],
+        },
       });
       started = !error;
     } catch {
