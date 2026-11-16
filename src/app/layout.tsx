@@ -6,6 +6,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { Footer } from '@/components/layout/Footer';
 import { UrlErrorToast } from '@/components/layout/UrlErrorToast';
 import { getBaseUrl } from '@/lib/url';
+import { SITE_DESCRIPTION } from '@/lib/site';
 import './globals.css';
 
 const sans = Schibsted_Grotesk({
@@ -20,8 +21,7 @@ export const metadata: Metadata = {
     template: '%s · MyBacklog',
     default: 'MyBacklog',
   },
-  description:
-    'Track your game backlog from Steam and any console, pick what to play next from the games you own, and log the ones you finish.',
+  description: SITE_DESCRIPTION,
 };
 
 export default function RootLayout({

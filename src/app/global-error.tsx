@@ -1,21 +1,20 @@
 'use client';
 
-import NextError from 'next/error';
-import { useEffect } from 'react';
+import { CrashScreen } from '@/components/layout/CrashScreen';
+import './globals.css';
 
-export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
+/**
+ * The last resort: the root layout itself failed, so this page stands in for
+ * it and has to bring its own <html>, <body> and styles. It draws the same
+ * screen as any other crash (the app's own typeface isn't loaded here, so the
+ * text falls back to the system's).
+ */
+export default function GlobalError(props: { error: unknown; retry: () => void }) {
   return (
-    <html lang="en">
-      <body>
-        {/* `NextError` is the default Next.js error page component. Its type
-        definition requires a `statusCode` prop. However, since the App Router
-        does not expose status codes for errors, we simply pass 0 to render a
-        generic error message. */}
-        <NextError statusCode={0} />
+    <html lang="en" className="dark">
+      <body className="font-sans antialiased bg-ink-950 text-ink-100">
+        <title>Something went wrong · MyBacklog</title>
+        <CrashScreen {...props} />
       </body>
     </html>
   );

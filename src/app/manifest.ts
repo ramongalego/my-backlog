@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next';
+import { SITE_DESCRIPTION } from '@/lib/site';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'MyBacklog',
     short_name: 'MyBacklog',
-    description:
-      'Track your Steam backlog, pick what to play next from the games you own, and log the ones you finish.',
+    description: SITE_DESCRIPTION,
     start_url: '/',
     display: 'standalone',
     background_color: '#0f0d0b',
