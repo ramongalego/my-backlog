@@ -158,6 +158,8 @@ describe('useLibraryRefresh', () => {
       expect(toast.success).toHaveBeenCalledWith('Updated playtime for 3 games');
       expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
       expect(localStorage.getItem(keys().playtime)).toBeTruthy();
+      // What the menu's cooldown counts from.
+      expect(localStorage.getItem(keys().manual)).toBeTruthy();
     });
 
     it('singularizes the toast for exactly one updated game', async () => {
@@ -276,6 +278,18 @@ describe('useLibraryRefresh', () => {
 
       expect(fetchMock).not.toHaveBeenCalled();
       expect(mockGamesAndQueue).not.toHaveBeenCalled();
+    });
+
+    it("doesn't start the menu's cooldown: the player didn't ask for it", async () => {
+      mockSuccessResponse({ newGames: 0, updatedPlaytime: 2 });
+
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refreshIfStale();
+      });
+
+      expect(localStorage.getItem(keys().playtime)).toBeTruthy();
+      expect(localStorage.getItem(keys().manual)).toBeNull();
     });
 
     it('fires the refresh when the timestamp is older than 15 minutes', async () => {

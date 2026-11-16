@@ -20,6 +20,12 @@ export const refreshKeys = (userId: string | null | undefined) => {
   const suffix = userId ?? 'signed-out';
   return {
     playtime: `playtime_refresh_at:${suffix}`,
+    /**
+     * The last refresh the player asked for, which the menu's cooldown counts
+     * from. Not `playtime`: that's set by the background refresh too, and a
+     * page loaded just after one would show Refresh as already used.
+     */
+    manual: `manual_refresh_at:${suffix}`,
     attempt: `playtime_refresh_attempt_at:${suffix}`,
     reviews: `reviews_refresh_at:${suffix}`,
     /** Set once they've been told Steam is sharing no games, until it shares them again. */
@@ -95,6 +101,7 @@ export function useLibraryRefresh() {
         const updatedPlaytime: number = data.updatedPlaytime ?? 0;
 
         localStorage.setItem(keys.playtime, Date.now().toString());
+        if (manual) localStorage.setItem(keys.manual, Date.now().toString());
         if (reviews) localStorage.setItem(keys.reviews, Date.now().toString());
 
         if (newGames > 0) {
@@ -133,7 +140,14 @@ export function useLibraryRefresh() {
         return failedResult;
       }
     },
-    [invalidateGamesAndQueue, requestSyncCheck, keys.playtime, keys.reviews, keys.toldPrivate],
+    [
+      invalidateGamesAndQueue,
+      requestSyncCheck,
+      keys.playtime,
+      keys.manual,
+      keys.reviews,
+      keys.toldPrivate,
+    ],
   );
 
   const refreshIfStale = useCallback(async () => {

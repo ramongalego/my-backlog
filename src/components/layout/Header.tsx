@@ -25,7 +25,8 @@ export function Header() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const last = localStorage.getItem(refreshKeys(user?.id).playtime);
+    // Only a refresh the player asked for: the background one isn't theirs.
+    const last = localStorage.getItem(refreshKeys(user?.id).manual);
     return !!last && Date.now() - Number(last) < REFRESH_COOLDOWN_MS;
   });
   const { refresh } = useLibraryRefresh();
@@ -38,7 +39,7 @@ export function Header() {
   // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
     if (!isRefreshDisabled) return;
-    const last = localStorage.getItem(refreshKeys(user?.id).playtime);
+    const last = localStorage.getItem(refreshKeys(user?.id).manual);
     if (!last) return;
     const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - Number(last)));
     const id = setTimeout(() => setIsRefreshDisabled(false), remaining);

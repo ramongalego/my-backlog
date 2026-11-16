@@ -19,14 +19,27 @@ jest.mock('@/hooks/useLibraryMeta', () => ({
 }));
 jest.mock('@/hooks/useLibraryRefresh', () => ({
   useLibraryRefresh: () => ({ refresh }),
-  refreshKeys: () => ({ playtime: 'playtime', attempt: 'attempt', reviews: 'reviews' }),
+  refreshKeys: () => ({
+    playtime: 'playtime',
+    manual: 'manual',
+    attempt: 'attempt',
+    reviews: 'reviews',
+  }),
 }));
 jest.mock('@/components/games/AddGameButton', () => ({ AddGameButton: () => null }));
 jest.mock('@/components/auth/AuthModal', () => ({ AuthModal: () => null }));
 // The menu has its own tests; here it's what Refresh library does.
 jest.mock('@/components/layout/UserMenu', () => ({
-  UserMenu: ({ onRefresh }: { onRefresh?: () => void }) => (
-    <button onClick={onRefresh}>Refresh library</button>
+  UserMenu: ({
+    onRefresh,
+    isRefreshDisabled,
+  }: {
+    onRefresh?: () => void;
+    isRefreshDisabled?: boolean;
+  }) => (
+    <button onClick={onRefresh} data-cooldown={isRefreshDisabled ? 'on' : 'off'}>
+      Refresh library
+    </button>
   ),
 }));
 
@@ -56,4 +69,27 @@ it('refreshes the library once, however many times Refresh is pressed', async ()
     fireEvent.click(button);
   });
   expect(refresh).toHaveBeenCalledTimes(2);
+});
+
+describe('the cooldown after a refresh', () => {
+  const button = () => screen.getByRole('button', { name: 'Refresh library' });
+
+  it('follows a refresh the player asked for', () => {
+    localStorage.setItem('manual', String(Date.now() - 30_000));
+    render(<Header />);
+    expect(button()).toHaveAttribute('data-cooldown', 'on');
+  });
+
+  it("isn't started by a background refresh: that one wasn't theirs", () => {
+    // The page loads half a minute after the app refreshed on its own.
+    localStorage.setItem('playtime', String(Date.now() - 30_000));
+    render(<Header />);
+    expect(button()).toHaveAttribute('data-cooldown', 'off');
+  });
+
+  it('is over two minutes after the last one', () => {
+    localStorage.setItem('manual', String(Date.now() - 3 * 60_000));
+    render(<Header />);
+    expect(button()).toHaveAttribute('data-cooldown', 'off');
+  });
 });

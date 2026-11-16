@@ -62,7 +62,7 @@ export function UserMenu({
   useEffect(() => {
     if (!isRefreshDisabled || !open) return;
 
-    const last = localStorage.getItem(refreshKeys(user.id).playtime);
+    const last = localStorage.getItem(refreshKeys(user.id).manual);
     if (!last) return;
 
     const remaining = Math.max(0, 2 * 60 * 1000 - (Date.now() - parseInt(last)));
