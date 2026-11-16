@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
 import { connectSteam } from '@/lib/client/steam-connect';
+import { profileAvatar } from '@/lib/account/identity';
 import type { AuthMode } from '@/types/auth';
 
 const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
@@ -33,8 +34,9 @@ export function Header() {
   const pathname = usePathname();
 
   const isLoading = !authResolved;
-  const steamUsername = profile?.steam_username ?? null;
-  const steamAvatar = profile?.steam_avatar ?? null;
+  // What the profile shows: the name and picture the player chose, or Steam's.
+  const name = profile?.display_name || profile?.steam_username || null;
+  const avatar = profileAvatar(profile?.avatar_url, profile?.steam_avatar);
 
   // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
@@ -142,8 +144,8 @@ export function Header() {
                 <AddGameButton />
                 <UserMenu
                   user={user}
-                  steamUsername={steamUsername}
-                  steamAvatar={steamAvatar}
+                  name={name}
+                  avatar={avatar}
                   gameCount={libraryMetaLoaded ? gameCount : undefined}
                   // Without Steam there's no library to refresh, only one to link.
                   onRefresh={profile?.steam_id ? handleRefreshLibrary : undefined}

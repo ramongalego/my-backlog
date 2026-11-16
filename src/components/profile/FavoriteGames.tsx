@@ -27,6 +27,7 @@ import { Rating } from '@/components/games/Rating';
 import { ProfileSection } from './ProfileSection';
 import { FAVORITE_GRID, FAVORITE_SLOTS } from './profile-layout';
 import { sameFavorites, type FavoriteGame } from '@/lib/account/favorites';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 const ART_SIZES = '(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px';
 
@@ -103,7 +104,9 @@ function PickedFavorite({
       </div>
       {/* Wrapped where the art is narrow: a long name cut short there is
           mostly its series. */}
-      <p className="mt-1.5 text-sm text-ink-200 lg:truncate">{game.name}</p>
+      <TruncatedText as="p" className="mt-1.5 text-sm text-ink-200 lg:truncate">
+        {game.name}
+      </TruncatedText>
     </li>
   );
 }

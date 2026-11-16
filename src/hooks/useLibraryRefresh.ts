@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { useSyncContext } from '@/components/sync/SyncProvider';
 import { steamPrivateToast } from '@/components/sync/steam-private-toast';
-import { useAuth } from './useAuth';
+import { useAuth, useUpdateSessionProfile } from './useAuth';
 
 // Playtime is one Steam call for the whole library, so it can be checked often.
 const LIBRARY_REFRESH_STALE_MS = 15 * 60 * 1000;
@@ -59,6 +59,7 @@ export function useLibraryRefresh() {
   const { gamesAndQueue: invalidateGamesAndQueue } = useInvalidateQueries();
   const { user } = useAuth();
   const { requestSyncCheck } = useSyncContext();
+  const updateProfile = useUpdateSessionProfile();
   const keys = refreshKeys(user?.id);
 
   const refresh = useCallback(
@@ -80,6 +81,14 @@ export function useLibraryRefresh() {
         }
 
         const data = await res.json();
+        // The Steam name or picture changed on Steam: the profile and the
+        // header's menu show the new ones (unless the player chose their own).
+        if (data.steamProfile) {
+          updateProfile({
+            steam_username: data.steamProfile.username,
+            steam_avatar: data.steamProfile.avatar,
+          });
+        }
         // Steam shared no library (game details private). Not "up to date":
         // a refresh you asked for says why. So does the first one in the
         // background to find it, once: a profile made private after joining
@@ -143,6 +152,7 @@ export function useLibraryRefresh() {
     [
       invalidateGamesAndQueue,
       requestSyncCheck,
+      updateProfile,
       keys.playtime,
       keys.manual,
       keys.reviews,

@@ -203,6 +203,8 @@ export const RATE_LIMITS = {
   // Changing the password, per user: each try checks the current password, so
   // this is what stops someone at an unlocked computer from guessing it.
   accountPassword: { limit: 5, windowMs: 15 * 60 * 1000 },
+  // Uploading a profile picture, per user: each one is stored.
+  avatarUpload: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Changing the email, per user: each one sends confirmation emails.
   accountEmail: { limit: 5, windowMs: 60 * 60 * 1000 },
   // Starting to link a Steam account, and verifying the sign-in that comes

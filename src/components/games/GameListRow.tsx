@@ -13,6 +13,7 @@ import { QueuedBadge } from './QueuedBadge';
 import { Rating } from './Rating';
 import { StatusBadge } from './StatusBadge';
 import { LIST_COLUMN, LIST_ROW, LIST_THUMB } from './game-list-columns';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 interface GameListRowProps {
   game: GameItem;
@@ -81,9 +82,9 @@ export function GameListRow({
             }
             aria-pressed={selection ? selection.selected : undefined}
             aria-disabled={selection && !selection.selectable ? true : undefined}
-            className="min-w-0 truncate text-left font-medium text-ink-100 cursor-pointer after:absolute after:inset-0 after:rounded-lg after:pointer-events-none focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-accent-400 focus-visible:after:-outline-offset-2"
+            className="min-w-0 text-left font-medium text-ink-100 cursor-pointer after:absolute after:inset-0 after:rounded-lg after:pointer-events-none focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-accent-400 focus-visible:after:-outline-offset-2"
           >
-            {game.name}
+            <TruncatedText className="block truncate">{game.name}</TruncatedText>
           </button>
           {/* Below lg the status rides beside the name; from lg it has a column. */}
           {badge && (

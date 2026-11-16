@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 const EDGE_GAP = 8;
@@ -38,39 +46,14 @@ export function Tooltip({
 }) {
   const id = useId();
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const bubbleRef = useRef<HTMLSpanElement>(null);
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const pointerType = useRef('mouse');
 
   const show = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setAnchor({ x: rect.left + rect.width / 2, y: rect.top });
+    if (rect) setAnchor(rect);
   };
   const hide = () => setAnchor(null);
-
-  // Center the bubble over the trigger, then keep it on screen.
-  useLayoutEffect(() => {
-    const bubble = bubbleRef.current;
-    if (!anchor || !bubble) return;
-    const width = bubble.offsetWidth;
-    const left = Math.min(
-      Math.max(anchor.x - width / 2, EDGE_GAP),
-      window.innerWidth - width - EDGE_GAP,
-    );
-    bubble.style.left = `${left}px`;
-    bubble.style.top = `${anchor.y - bubble.offsetHeight - EDGE_GAP}px`;
-  }, [anchor]);
-
-  // A fixed bubble would drift away from its trigger, so scrolling hides it.
-  useEffect(() => {
-    if (!anchor) return;
-    window.addEventListener('scroll', hide, true);
-    window.addEventListener('resize', hide);
-    return () => {
-      window.removeEventListener('scroll', hide, true);
-      window.removeEventListener('resize', hide);
-    };
-  }, [anchor]);
 
   return (
     <span
@@ -102,19 +85,66 @@ export function Tooltip({
           {content}
         </span>
       )}
-      {anchor &&
-        createPortal(
-          <span
-            ref={bubbleRef}
-            aria-hidden="true"
-            className="fixed z-50 w-max max-w-60 rounded-md border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-left text-xs leading-snug text-ink-300 shadow-lg shadow-black/40 pointer-events-none"
-            style={{ left: -9999, top: -9999 }}
-          >
-            {content}
-          </span>,
-          document.body,
-        )}
+      {anchor && (
+        <TooltipBubble anchor={anchor} onDismiss={hide}>
+          {content}
+        </TooltipBubble>
+      )}
     </span>
+  );
+}
+
+/**
+ * The bubble a tooltip draws: centered above what it's about (`anchor`, that
+ * element's box on screen), kept inside the viewport, at the page level with
+ * fixed positioning so a container that clips can't cut it off. Decorative
+ * (aria-hidden): what it says is given to a screen reader some other way.
+ * Scrolling or resizing dismisses it, since a fixed bubble would drift.
+ */
+export function TooltipBubble({
+  anchor,
+  onDismiss,
+  children,
+}: {
+  anchor: { left: number; top: number; width: number };
+  onDismiss: () => void;
+  children: ReactNode;
+}) {
+  const bubbleRef = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    const bubble = bubbleRef.current;
+    if (!bubble) return;
+    const width = bubble.offsetWidth;
+    const left = Math.min(
+      Math.max(anchor.left + anchor.width / 2 - width / 2, EDGE_GAP),
+      window.innerWidth - width - EDGE_GAP,
+    );
+    bubble.style.left = `${left}px`;
+    bubble.style.top = `${anchor.top - bubble.offsetHeight - EDGE_GAP}px`;
+  }, [anchor]);
+
+  const dismiss = useEffectEvent(onDismiss);
+  useEffect(() => {
+    const hide = () => dismiss();
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide);
+    return () => {
+      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('resize', hide);
+    };
+  }, []);
+
+  return createPortal(
+    <span
+      ref={bubbleRef}
+      aria-hidden="true"
+      className="fixed z-50 w-max max-w-60 rounded-md border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-left text-xs leading-snug text-ink-300 shadow-lg shadow-black/40 pointer-events-none"
+      style={{ left: -9999, top: -9999 }}
+    >
+      {children}
+    </span>,
+    document.body,
   );
 }
 

@@ -3,7 +3,7 @@
  */
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/steam/refresh/route';
-import { getOwnedGames } from '@/lib/steam/api';
+import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
 import { syncOwnedGames } from '@/lib/server/steam-library';
 import { refreshStoreData } from '@/lib/server/steam-store-data';
 import { refreshCriticScores } from '@/lib/server/critic-scores';
@@ -22,13 +22,32 @@ jest.mock('@/lib/supabase/server', () => ({
       const builder = {
         select: () => builder,
         eq: () => builder,
-        single: async () => ({ data: { steam_id: steamId }, error: null }),
+        single: async () => ({
+          data: {
+            steam_id: steamId,
+            steam_username: 'Ankrath',
+            steam_avatar: 'https://avatars.steamstatic.com/old.jpg',
+          },
+          error: null,
+        }),
       };
       return builder;
     },
   }),
 }));
-jest.mock('@/lib/supabase/service', () => ({ tryCreateServiceClient: () => null }));
+// The service client, which saves a changed Steam name and picture.
+const profileUpdates: Record<string, unknown>[] = [];
+const service = {
+  from: () => ({
+    update: (values: Record<string, unknown>) => ({
+      eq: async () => {
+        profileUpdates.push(values);
+        return { error: null };
+      },
+    }),
+  }),
+};
+jest.mock('@/lib/supabase/service', () => ({ tryCreateServiceClient: () => service }));
 jest.mock('@/lib/server/rate-limit', () => ({
   ...jest.requireActual('@/lib/server/rate-limit'),
   checkSharedRateLimit: async (key: string) => {
@@ -42,7 +61,7 @@ jest.mock('@/lib/server/env', () => ({
     return steamKey;
   },
 }));
-jest.mock('@/lib/steam/api', () => ({ getOwnedGames: jest.fn() }));
+jest.mock('@/lib/steam/api', () => ({ getOwnedGames: jest.fn(), getPlayerSummary: jest.fn() }));
 jest.mock('@/lib/server/steam-library', () => ({ syncOwnedGames: jest.fn() }));
 jest.mock('@/lib/server/steam-store-data', () => ({ refreshStoreData: jest.fn() }));
 jest.mock('@/lib/server/critic-scores', () => ({ refreshCriticScores: jest.fn() }));
@@ -73,6 +92,15 @@ beforeEach(() => {
   limited = false;
   steamKey = 'steam-key';
   limitKeys.length = 0;
+  profileUpdates.length = 0;
+  // Steam has the same name and picture as saved, unless a test says otherwise.
+  jest
+    .mocked(getPlayerSummary)
+    .mockReset()
+    .mockResolvedValue({
+      personaname: 'Ankrath',
+      avatarfull: 'https://avatars.steamstatic.com/old.jpg',
+    } as never);
   jest
     .mocked(getOwnedGames)
     .mockReset()
@@ -120,6 +148,49 @@ it("syncs the player's Steam library and refreshes scores, art and missing hours
   });
 });
 
+describe('the Steam name and picture', () => {
+  it('are saved and given back when they changed on Steam', async () => {
+    jest.mocked(getPlayerSummary).mockResolvedValue({
+      personaname: 'Big Boss',
+      avatarfull: 'https://avatars.steamstatic.com/new.jpg',
+    } as never);
+
+    const res = await refresh();
+
+    expect(getPlayerSummary).toHaveBeenCalledWith('76561198000000000', 'steam-key');
+    expect(profileUpdates).toEqual([
+      expect.objectContaining({
+        steam_username: 'Big Boss',
+        steam_avatar: 'https://avatars.steamstatic.com/new.jpg',
+      }),
+    ]);
+    expect(res.body.steamProfile).toEqual({
+      username: 'Big Boss',
+      avatar: 'https://avatars.steamstatic.com/new.jpg',
+    });
+  });
+
+  it('are left alone when Steam has the same ones', async () => {
+    const res = await refresh();
+    expect(profileUpdates).toEqual([]);
+    expect(res.body).not.toHaveProperty('steamProfile');
+  });
+
+  it("don't fail the refresh when Steam can't give them", async () => {
+    jest.mocked(getPlayerSummary).mockRejectedValue(new Error('Steam API error: 500'));
+    const res = await refresh();
+    expect(res.status).toBe(200);
+    expect(syncOwnedGames).toHaveBeenCalled();
+    expect(profileUpdates).toEqual([]);
+  });
+
+  it('keep the saved name when Steam gives none', async () => {
+    jest.mocked(getPlayerSummary).mockResolvedValue({ personaname: ' ', avatarfull: '' } as never);
+    await refresh();
+    expect(profileUpdates).toEqual([]);
+  });
+});
+
 it('skips Steam for a player without it, and still refreshes games added by hand', async () => {
   steamId = null;
   // No Steam key is needed for that either.
@@ -129,6 +200,7 @@ it('skips Steam for a player without it, and still refreshes games added by hand
 
   expect(res.status).toBe(200);
   expect(getOwnedGames).not.toHaveBeenCalled();
+  expect(getPlayerSummary).not.toHaveBeenCalled();
   expect(syncOwnedGames).not.toHaveBeenCalled();
   expect(res.body).toMatchObject({ newGames: 0, updatedPlaytime: 0, updatedGames: 0 });
   for (const fn of scoreRefreshes()) expect(fn.mock.calls[0][1]).toBe('user-1');

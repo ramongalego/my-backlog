@@ -4,6 +4,7 @@ import { Figure, Lead } from '@/components/ui/Lead';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { CoverThumb } from './CoverArt';
 import { Rating } from './Rating';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 interface Completion {
   playtimeMinutes: number;
@@ -227,7 +228,9 @@ export function CompletionSummary({
             <CoverThumb src={nextGameImage} alt="" className="w-24" />
             <p className="min-w-0 text-sm text-ink-400">
               Next up
-              <span className="line-clamp-2 font-medium text-ink-100">{nextGame}</span>
+              <TruncatedText className="line-clamp-2 font-medium text-ink-100">
+                {nextGame}
+              </TruncatedText>
             </p>
           </div>
         ) : (

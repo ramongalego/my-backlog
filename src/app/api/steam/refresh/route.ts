@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getOwnedGames } from '@/lib/steam/api';
+import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
+import { syncSteamIdentity, type SteamIdentity } from '@/lib/server/steam-profile';
 import { syncOwnedGames, type LibrarySyncResult } from '@/lib/server/steam-library';
 import { refreshStoreData } from '@/lib/server/steam-store-data';
 import { refreshCriticScores } from '@/lib/server/critic-scores';
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   // Get user's Steam ID from profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('steam_id')
+    .select('steam_id, steam_username, steam_avatar')
     .eq('id', user.id)
     .single();
 
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
   let result: LibrarySyncResult = { newGames: 0, updatedPlaytime: 0, updatedGames: 0 };
   // Steam shared no library: the profile's game details are private.
   let steamPrivate = false;
+  // The Steam name and picture, when they've changed on Steam since saved.
+  let steamProfile: SteamIdentity | null = null;
   if (profile?.steam_id) {
     let apiKey: string;
     try {
@@ -54,14 +57,31 @@ export async function POST(request: NextRequest) {
     }
 
     let steamGames;
+    let summary: Awaited<ReturnType<typeof getPlayerSummary>> = null;
     try {
-      const owned = await getOwnedGames(profile.steam_id, apiKey);
+      const [owned, player] = await Promise.all([
+        getOwnedGames(profile.steam_id, apiKey),
+        // The name and picture are a nicety: Steam failing to give them
+        // doesn't fail the refresh, and the saved ones stand.
+        getPlayerSummary(profile.steam_id, apiKey).catch((error) => {
+          console.error('Steam player summary failed:', error);
+          return null;
+        }),
+      ]);
       steamGames = owned.games;
       steamPrivate = owned.isPrivate;
+      summary = player;
     } catch (error) {
       console.error('Steam API error:', error);
       return jsonError('Steam API failed', 502);
     }
+
+    steamProfile = await syncSteamIdentity(
+      tryCreateServiceClient(),
+      user.id,
+      { username: profile.steam_username ?? null, avatar: profile.steam_avatar ?? null },
+      summary,
+    );
 
     try {
       result = await syncOwnedGames(supabase, user.id, steamGames);
@@ -103,6 +123,7 @@ export async function POST(request: NextRequest) {
     success: true,
     ...result,
     ...(steamPrivate ? { steamPrivate: true } : {}),
+    ...(steamProfile ? { steamProfile } : {}),
     updatedStoreData,
     updatedCriticScores,
     updatedHours,

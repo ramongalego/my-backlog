@@ -6,6 +6,7 @@ import { steamReviewLabel } from '@/lib/steam/review-label';
 import { MIN_CRITIC_REVIEWS, ratingOf } from '@/lib/games/rating';
 import { SteamDeckBadge } from './SteamDeckBadge';
 import { playedHours } from '@/lib/games/playtime';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /**
  * How a game rates, as one item in a meta row with a thumbs-up: the rating
@@ -269,19 +270,18 @@ export function GameCardInfo({
           href={storeUrl}
           target="_blank"
           rel="noopener noreferrer"
-          title={name}
           className="group/title flex items-center gap-1 text-ink-100 font-medium hover:text-ink-50 transition-colors cursor-pointer"
         >
-          <span className="truncate min-w-0">{name}</span>
+          <TruncatedText className="truncate min-w-0">{name}</TruncatedText>
           <ExternalLink
             className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
             aria-hidden="true"
           />
         </a>
       ) : (
-        <p title={name} className="truncate text-ink-100 font-medium">
+        <TruncatedText as="p" className="truncate text-ink-100 font-medium">
           {name}
-        </p>
+        </TruncatedText>
       )}
       <div className="mt-1">
         <GameMetaRow

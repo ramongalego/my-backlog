@@ -12,6 +12,7 @@ import type { QueueItem } from '@/types/games';
 import { isReleased, upcomingRelease } from '@/lib/games/release-date';
 import { withArtTags } from '@/lib/games/game-label';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 interface QueueItemRowProps {
   item: QueueItem;
@@ -118,9 +119,9 @@ export function QueueItemRow({
         <div className="flex-1 min-w-0">
           {/* Wraps below lg: beside the art and the buttons, one line cut most
               names short ("Final Fantasy Reso…") on a phone held sideways. */}
-          <p className="font-medium text-ink-100 lg:truncate mb-1">
+          <p className="font-medium text-ink-100 mb-1">
             <span className="sr-only">{index + 1}. </span>
-            {item.game.name}
+            <TruncatedText className="block lg:truncate">{item.game.name}</TruncatedText>
           </p>
           <GameMetaRow
             mainStoryHours={item.game.main_story_hours}

@@ -19,7 +19,10 @@ let session: {
     steam_avatar: string | null;
   } | null;
 };
-jest.mock('@/hooks/useAuth', () => ({ useAuth: () => session }));
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: () => session,
+  useUpdateSessionProfile: () => jest.fn(),
+}));
 
 const steamPlayer = {
   user: { id: 'user-1', email: 'player@example.com', created_at: '2026-01-18T10:00:00Z' },

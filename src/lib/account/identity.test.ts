@@ -1,4 +1,10 @@
-import { displayName, initialOf, memberSince } from '@/lib/account/identity';
+import {
+  displayName,
+  initialOf,
+  memberSince,
+  profileAvatar,
+  profileName,
+} from '@/lib/account/identity';
 
 describe('displayName', () => {
   it('is the Steam name when Steam is connected', () => {
@@ -39,5 +45,24 @@ describe('memberSince', () => {
     expect(memberSince(null)).toBeNull();
     expect(memberSince(undefined)).toBeNull();
     expect(memberSince('not a date')).toBeNull();
+  });
+});
+
+describe('profileName', () => {
+  it('is the name the player chose, when there is one', () => {
+    expect(profileName('Big Boss', 'Ankrath', 'player@example.com')).toBe('Big Boss');
+  });
+
+  it("is the account's name otherwise", () => {
+    expect(profileName(null, 'Ankrath', 'player@example.com')).toBe('Ankrath');
+    expect(profileName('  ', null, 'player@example.com')).toBe('player');
+  });
+});
+
+describe('profileAvatar', () => {
+  it('is the picture the player uploaded, else Steam’s, else none', () => {
+    expect(profileAvatar('https://x/mine.webp', 'https://steam/a.jpg')).toBe('https://x/mine.webp');
+    expect(profileAvatar(null, 'https://steam/a.jpg')).toBe('https://steam/a.jpg');
+    expect(profileAvatar(null, null)).toBeNull();
   });
 });

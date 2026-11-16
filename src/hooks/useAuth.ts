@@ -24,7 +24,7 @@ async function fetchAuthSession(): Promise<AuthSession> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('steam_id, steam_username, steam_avatar')
+    .select('steam_id, steam_username, steam_avatar, display_name, avatar_url')
     .eq('id', user.id)
     .single();
 
@@ -61,6 +61,31 @@ export function AuthStateListener() {
   }, [queryClient]);
 
   return null;
+}
+
+/**
+ * Changes the profile in the signed-in session the whole app reads (header,
+ * Profile page), for a change the server has just saved: no refetch needed.
+ */
+export function useUpdateSessionProfile() {
+  const queryClient = useQueryClient();
+  return (change: Partial<Profile>) =>
+    queryClient.setQueryData<AuthSession>(
+      queryKeys.auth.session(),
+      (session) =>
+        session && {
+          ...session,
+          profile: {
+            steam_id: null,
+            steam_username: null,
+            steam_avatar: null,
+            display_name: null,
+            avatar_url: null,
+            ...session.profile,
+            ...change,
+          },
+        },
+    );
 }
 
 export function useAuth() {

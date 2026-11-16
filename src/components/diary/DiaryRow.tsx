@@ -12,6 +12,7 @@ import { consoleOf } from '@/lib/games/consoles';
 import { withArtTags } from '@/lib/games/game-label';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { formatDay, shortDate } from '@/lib/diary/date-utils';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 interface DiaryRowProps {
   entry: DiaryEntry;
@@ -120,19 +121,18 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
               href={storeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              title={entry.name}
               className="group/title flex-1 min-w-0 inline-flex items-center gap-1 font-medium text-ink-100 hover:text-ink-50 transition-colors"
             >
-              <span className="lg:truncate min-w-0">{entry.name}</span>
+              <TruncatedText className="lg:truncate min-w-0">{entry.name}</TruncatedText>
               <ExternalLink
                 className="w-3 h-3 shrink-0 opacity-0 group-hover/title:opacity-100 transition-opacity mb-px"
                 aria-hidden="true"
               />
             </a>
           ) : (
-            <p title={entry.name} className="flex-1 min-w-0 font-medium text-ink-100 lg:truncate">
+            <TruncatedText as="p" className="flex-1 min-w-0 font-medium text-ink-100 lg:truncate">
               {entry.name}
-            </p>
+            </TruncatedText>
           )}
           <div className="lg:hidden flex items-center gap-1 shrink-0 -my-1 -mr-1.5">
             {entry.playtime_forever >= 60 && (

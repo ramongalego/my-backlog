@@ -8,6 +8,7 @@ import { STATUS_STYLE } from '@/lib/games/status-style';
 import { activityDay, type ActivityEntry } from '@/lib/account/activity';
 import { ProfileSection } from './ProfileSection';
 import { ACTIVITY_LIST, ACTIVITY_ROW } from './profile-layout';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /** What happened, in the past tense, or now. */
 const WHAT = { playing: 'Playing', finished: 'Finished', dropped: 'Dropped' } as const;
@@ -19,7 +20,9 @@ function Row({ entry }: { entry: ActivityEntry }) {
     <li className={ACTIVITY_ROW}>
       <CoverThumb src={entry.header_image} alt="" />
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-ink-100 lg:truncate">{entry.name}</p>
+        <TruncatedText as="p" className="font-medium text-ink-100 lg:truncate">
+          {entry.name}
+        </TruncatedText>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
           <span className={`inline-flex items-center gap-1 ${text}`}>
             <Icon className="h-3.5 w-3.5" aria-hidden="true" />

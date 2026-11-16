@@ -13,8 +13,10 @@ import { reloadAtTop } from '@/lib/reload';
 
 interface UserMenuProps {
   user: User;
-  steamUsername: string | null;
-  steamAvatar: string | null;
+  /** The name the profile shows, or null to show the email. */
+  name: string | null;
+  /** The picture the profile shows, or null for the initial. */
+  avatar: string | null;
   gameCount?: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -27,8 +29,8 @@ interface UserMenuProps {
 
 export function UserMenu({
   user,
-  steamUsername,
-  steamAvatar,
+  name,
+  avatar,
   gameCount,
   onRefresh,
   onConnectSteam,
@@ -142,17 +144,17 @@ export function UserMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        {steamAvatar ? (
+        {avatar ? (
           <Image
-            src={steamAvatar}
-            alt={steamUsername ?? 'Profile'}
+            src={avatar}
+            alt={name ?? 'Profile'}
             width={40}
             height={40}
             className="rounded transition-shadow group-hover:ring-2 group-hover:ring-ink-600"
           />
         ) : (
           <div className="w-10 h-10 bg-ink-700 rounded flex items-center justify-center text-ink-300 text-sm font-medium transition-shadow group-hover:ring-2 group-hover:ring-ink-600">
-            {(steamUsername ?? user.email)?.[0]?.toUpperCase() ?? '?'}
+            {(name ?? user.email)?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
         <ChevronDown
@@ -170,9 +172,7 @@ export function UserMenu({
           aria-label="Account"
         >
           <div className="px-3 py-2 mb-1 border-b border-ink-800" role="none">
-            <p className="text-sm font-medium text-ink-100 truncate">
-              {steamUsername ?? user.email}
-            </p>
+            <p className="text-sm font-medium text-ink-100 truncate">{name ?? user.email}</p>
             {gameCount != null && (
               <p className="text-xs text-ink-500 mt-0.5">
                 {gameCount} {gameCount === 1 ? 'game' : 'games'}

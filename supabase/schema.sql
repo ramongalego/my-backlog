@@ -11,6 +11,11 @@ create table profiles (
   steam_id text,
   steam_username text,
   steam_avatar text,
+  -- The name and picture the player chose on their Profile page, in place of
+  -- the Steam ones (or the email before its @, or their initial); null uses those.
+  display_name text check (display_name is null or char_length(display_name) between 1 and 40),
+  -- Public URL of the picture in the avatars storage bucket.
+  avatar_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -479,3 +484,10 @@ $$;
 
 revoke all on function public.consume_rate_limit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.consume_rate_limit(text, integer, integer) to service_role;
+
+-- Profile pictures: small squares made in the browser, public to read, written
+-- only by the server (no policies for players). See
+-- migrations/20261116_profile_name_and_avatar.sql.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 524288, array['image/webp', 'image/jpeg', 'image/png'])
+on conflict (id) do nothing;

@@ -13,7 +13,7 @@ const csp = [
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com https://cdn2.steamgriddb.com",
+  `img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com https://cdn2.steamgriddb.com https://${supabaseHost}`,
   "font-src 'self' data:",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://va.vercel-scripts.com`,
   "frame-ancestors 'none'",
@@ -70,6 +70,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'cdn2.steamgriddb.com',
+      },
+      // Profile pictures the player uploaded (the avatars storage bucket).
+      {
+        protocol: 'https',
+        hostname: supabaseHost,
+        pathname: '/storage/v1/object/public/avatars/**',
       },
     ],
   },

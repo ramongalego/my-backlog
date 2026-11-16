@@ -7,6 +7,7 @@ import type { Stats } from '@/lib/stats/compute';
 import { Panel } from '@/components/ui/Panel';
 import { plural } from '@/components/stats/format';
 import { SectionTitle } from '@/components/stats/SectionTitle';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /** Your best-rated games as art, beside how your ratings spread. */
 export function HighestRated({ stats }: { stats: Stats }) {
@@ -41,7 +42,9 @@ export function HighestRated({ stats }: { stats: Stats }) {
                       />
                     )}
                   </CoverArt>
-                  <p className="mt-1.5 text-sm text-ink-200 truncate">{game.name}</p>
+                  <TruncatedText as="p" className="mt-1.5 text-sm text-ink-200 truncate">
+                    {game.name}
+                  </TruncatedText>
                 </li>
               ))}
             </ul>

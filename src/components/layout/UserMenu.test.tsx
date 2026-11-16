@@ -8,7 +8,7 @@ const user = { id: 'u', email: 'player@example.com' } as User;
 
 it('closes as soon as a refresh starts', () => {
   const onRefresh = jest.fn();
-  render(<UserMenu user={user} steamUsername="Player" steamAvatar={null} onRefresh={onRefresh} />);
+  render(<UserMenu user={user} name="Player" avatar={null} onRefresh={onRefresh} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
   fireEvent.click(screen.getByRole('menuitem', { name: 'Refresh library' }));
@@ -19,7 +19,7 @@ it('closes as soon as a refresh starts', () => {
 
 it('tells the header when it opens, so the nav menu can close', () => {
   const onOpen = jest.fn();
-  render(<UserMenu user={user} steamUsername="Player" steamAvatar={null} onOpen={onOpen} />);
+  render(<UserMenu user={user} name="Player" avatar={null} onOpen={onOpen} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
   expect(onOpen).toHaveBeenCalledTimes(1);
@@ -31,7 +31,7 @@ it('tells the header when it opens, so the nav menu can close', () => {
 });
 
 it('leads to the profile, and closes on the way', () => {
-  render(<UserMenu user={user} steamUsername="Player" steamAvatar={null} />);
+  render(<UserMenu user={user} name="Player" avatar={null} />);
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
 
   const profile = screen.getByRole('menuitem', { name: 'Profile' });
@@ -44,7 +44,7 @@ it('leads to the profile, and closes on the way', () => {
 });
 
 it('moves through its items with the arrow keys, the link included', () => {
-  render(<UserMenu user={user} steamUsername="Player" steamAvatar={null} onRefresh={jest.fn()} />);
+  render(<UserMenu user={user} name="Player" avatar={null} onRefresh={jest.fn()} />);
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
   const menu = screen.getByRole('menu');
 
@@ -57,7 +57,7 @@ it('moves through its items with the arrow keys, the link included', () => {
 });
 
 it('has a chevron beside the avatar that turns over while the menu is open', () => {
-  render(<UserMenu user={user} steamUsername="Player" steamAvatar={null} />);
+  render(<UserMenu user={user} name="Player" avatar={null} />);
   const trigger = screen.getByRole('button', { name: 'Open user menu' });
   const chevron = trigger.querySelector('svg')!;
   // Decoration: the button already says what it opens.

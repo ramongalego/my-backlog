@@ -9,6 +9,7 @@ import { PAGE_CONTAINER } from '@/components/layout/Page';
 import { nextPlayable, upcomingRelease } from '@/lib/games/release-date';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
 import type { QueueItem } from '@/types/games';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 interface UpNextProps {
   queue: QueueItem[];
@@ -60,9 +61,9 @@ export function UpNext({
             className="w-20 sm:w-28 group-hover:brightness-110 transition-[filter]"
           />
           <span className="min-w-0">
-            <span className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
+            <TruncatedText className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
               {upNext.game.name}
-            </span>
+            </TruncatedText>
             <span className="block text-sm text-ink-400">
               {upNextRelease ? `Next in your queue · ${upNextRelease.label}` : 'Next in your queue'}
             </span>

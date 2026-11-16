@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       supabase.auth.getUser(),
       supabase
         .from('profiles')
-        .select('steam_id, steam_username, steam_avatar')
+        .select('steam_id, steam_username, steam_avatar, display_name, avatar_url')
         .eq('id', userId)
         .maybeSingle(),
       // The header's game count. Prefetched here rather than by pages: a query

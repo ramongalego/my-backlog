@@ -55,9 +55,10 @@ export const MIN_CAROUSEL_GAMES = 3;
 // The endless, arrow-driven loop is for a mouse on a wide screen. Touch
 // screens and phones swipe a native scroller instead, as Netflix does.
 const LOOP_MEDIA = '(min-width: 640px) and (pointer: fine)';
-// Short, as product motion should be, but long enough to read as a slide.
-const SLIDE_MS = 450;
-const SLIDE_EASING = 'cubic-bezier(0.25, 1, 0.5, 1)';
+// Long enough to follow the cards as they go, and eased at both ends: the
+// row sets off gently instead of jumping, and settles.
+const SLIDE_MS = 700;
+const SLIDE_EASING = 'cubic-bezier(0.45, 0, 0.2, 1)';
 
 // The same width from the row's container width, to size the arrows to the art.
 const CARD_WIDTH_CQ = '((100cqw - (var(--per-page) - 1) * 1rem) / var(--per-page))';

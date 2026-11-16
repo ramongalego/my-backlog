@@ -103,6 +103,8 @@ export function LoginForm({
 
       <Input
         label="Email"
+        // Where the dialog starts, so the email can be typed straight away.
+        data-autofocus
         type="email"
         name="email"
         value={formData.email}

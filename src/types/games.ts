@@ -2,6 +2,10 @@ export interface Profile {
   steam_id: string | null;
   steam_username: string | null;
   steam_avatar: string | null;
+  /** The name the player chose, in place of the Steam one (or their email's). */
+  display_name: string | null;
+  /** The picture the player uploaded, in place of Steam's (or their initial). */
+  avatar_url: string | null;
 }
 
 export interface Game {

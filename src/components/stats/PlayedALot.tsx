@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { SectionTitle } from '@/components/stats/SectionTitle';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /**
  * Backlog games that are probably not backlog any more (see playedALot), with
@@ -42,7 +43,9 @@ export function PlayedALot({
                 </CoverThumb>
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-ink-200 truncate">{name}</p>
+                <TruncatedText as="p" className="text-sm font-medium text-ink-200 truncate">
+                  {name}
+                </TruncatedText>
                 <p className="mt-0.5 text-xs text-ink-400">
                   <Playtime minutes={playtime_forever} lastPlayedAt={steamLastPlayed(game)} />
                   {main_story_hours ? ` · story is ${main_story_hours}h` : ''}

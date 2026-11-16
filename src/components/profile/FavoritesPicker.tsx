@@ -10,6 +10,7 @@ import { Rating } from '@/components/games/Rating';
 import { SelectTick } from '@/components/games/SelectTick';
 import type { GameItem } from '@/lib/data/loaders';
 import { MAX_FAVORITES, favoriteChoices } from '@/lib/account/favorites';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /**
  * A mouse or trackpad: the search can take focus as the picker opens, since
@@ -164,7 +165,9 @@ export function FavoritesPicker({
                   </CoverArt>{' '}
                   {/* Two lines: one cuts a long name down to its series, and
                       two games of a series then read the same. */}
-                  <span className="mt-1.5 line-clamp-2 text-sm text-ink-200">{game.name}</span>
+                  <TruncatedText className="mt-1.5 line-clamp-2 text-sm text-ink-200">
+                    {game.name}
+                  </TruncatedText>
                 </button>
               </li>
             );

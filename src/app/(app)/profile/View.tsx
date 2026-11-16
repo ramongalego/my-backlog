@@ -66,6 +66,7 @@ export default function ProfileView() {
       <ProfileHeader
         name={profile.name}
         avatar={profile.avatar}
+        identity={profile.identity}
         memberSince={profile.memberSince}
         figures={profile.figures}
       />

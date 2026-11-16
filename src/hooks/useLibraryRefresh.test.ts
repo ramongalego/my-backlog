@@ -13,7 +13,11 @@ jest.mock('sonner', () => ({
 jest.mock('@/hooks/useGameMutations');
 
 let mockUserId = 'user-1';
-jest.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: mockUserId } }) }));
+const mockUpdateProfile = jest.fn();
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: mockUserId } }),
+  useUpdateSessionProfile: () => mockUpdateProfile,
+}));
 const keys = () => refreshKeys(mockUserId);
 
 const mockRequestSyncCheck = jest.fn();
@@ -32,6 +36,7 @@ function mockSuccessResponse(payload: {
   newGames: number;
   updatedPlaytime: number;
   steamPrivate?: boolean;
+  steamProfile?: { username: string; avatar: string | null };
 }) {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
@@ -48,6 +53,33 @@ describe('useLibraryRefresh', () => {
       gamesAndQueue: mockGamesAndQueue,
       games: jest.fn(),
       queue: jest.fn(),
+    });
+  });
+
+  describe('a Steam name or picture changed on Steam', () => {
+    it('shows the new ones at once, from a refresh of either kind', async () => {
+      mockSuccessResponse({
+        newGames: 0,
+        updatedPlaytime: 0,
+        steamProfile: { username: 'Big Boss', avatar: 'https://avatars.steamstatic.com/new.jpg' },
+      });
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh();
+      });
+      expect(mockUpdateProfile).toHaveBeenCalledWith({
+        steam_username: 'Big Boss',
+        steam_avatar: 'https://avatars.steamstatic.com/new.jpg',
+      });
+    });
+
+    it('changes nothing when Steam has the same ones', async () => {
+      mockSuccessResponse({ newGames: 0, updatedPlaytime: 0 });
+      const { result } = renderHook(() => useLibraryRefresh());
+      await act(async () => {
+        await result.current.refresh({ manual: true });
+      });
+      expect(mockUpdateProfile).not.toHaveBeenCalled();
     });
   });
 

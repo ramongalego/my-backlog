@@ -1,6 +1,6 @@
-// Who a player is on their Profile page, from what the account already has:
-// a Steam name and avatar when Steam is connected, the email they signed up
-// with, and when they joined.
+// Who a player is on their Profile page: the name and picture they chose, or
+// else what the account already has (a Steam name and avatar when Steam is
+// connected, the email they signed up with), and when they joined.
 
 /**
  * The name the profile shows: the Steam name when Steam is connected,
@@ -15,6 +15,23 @@ export function displayName(
   if (steam) return steam;
   const local = email?.split('@')[0]?.trim();
   return local || 'Player';
+}
+
+/** The name a profile shows: the one the player chose, or else the account's (above). */
+export function profileName(
+  chosen: string | null | undefined,
+  steamUsername: string | null | undefined,
+  email: string | null | undefined,
+): string {
+  return chosen?.trim() || displayName(steamUsername, email);
+}
+
+/** The picture a profile shows: the one the player uploaded, or else Steam's. */
+export function profileAvatar(
+  uploaded: string | null | undefined,
+  steamAvatar: string | null | undefined,
+): string | null {
+  return uploaded || steamAvatar || null;
 }
 
 /** The letter drawn in place of an avatar. */

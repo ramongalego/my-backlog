@@ -71,7 +71,7 @@ function setup(props: Partial<Parameters<typeof GameList>[0]> = {}) {
       {...props}
     />,
   );
-  const row = (name: string) => screen.getByText(name, { selector: 'button' }).closest('li')!;
+  const row = (name: string) => screen.getByText(name, { selector: 'button span' }).closest('li')!;
   return { onOpenDetail, onSortChange, row };
 }
 

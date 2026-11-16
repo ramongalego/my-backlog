@@ -4,6 +4,7 @@ import { CoverArt } from '@/components/games/CoverArt';
 import { Figure, Lead } from '@/components/ui/Lead';
 import type { Stats } from '@/lib/stats/compute';
 import { count, plural } from '@/components/stats/format';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /** Where the hours went: the total, then the games that took most of them. */
 export function Hours({ stats }: { stats: Stats }) {
@@ -37,11 +38,12 @@ export function Hours({ stats }: { stats: Stats }) {
                   }
                   className="w-full"
                 />
-                <p
+                <TruncatedText
+                  as="p"
                   className={`mt-2 font-medium text-ink-100 truncate ${i === 0 ? 'text-lg' : 'text-sm'}`}
                 >
                   {game.name}
-                </p>
+                </TruncatedText>
                 <p className="text-sm text-ink-400 tabular-nums">
                   {count(game.hours)}h{share > 0 && ` · ${share}% of your hours`}
                 </p>

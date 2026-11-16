@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { AuthModal } from '@/components/auth/AuthModal';
 
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({ auth: {} }) }));
@@ -27,4 +27,17 @@ it('names the dialog by its title, and marks every field as required', () => {
   expect(screen.getByLabelText('Email')).toBeRequired();
   expect(screen.getByLabelText('Password')).toBeRequired();
   expect(screen.getByLabelText('Confirm Password')).toBeRequired();
+});
+
+it('starts in the email field, so it can be typed straight away', async () => {
+  render(<AuthModal isOpen onClose={() => {}} initialMode="login" />);
+  // The dialog moves focus in on the next frame.
+  await act(async () => new Promise((resolve) => requestAnimationFrame(() => resolve())));
+  expect(screen.getByLabelText('Email')).toHaveFocus();
+});
+
+it('starts in the email field for creating an account too', async () => {
+  render(<AuthModal isOpen onClose={() => {}} initialMode="signup" />);
+  await act(async () => new Promise((resolve) => requestAnimationFrame(() => resolve())));
+  expect(screen.getByLabelText('Email')).toHaveFocus();
 });

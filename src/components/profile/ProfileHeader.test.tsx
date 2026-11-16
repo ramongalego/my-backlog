@@ -8,7 +8,15 @@ jest.mock('next/image', () => ({
 }));
 
 const figures = { games: 217, finished: 44, finishedThisYear: 1, hours: 1065 };
-const props = { name: 'Ankrath', avatar: null, memberSince: 'January 2026', figures };
+const identity = {
+  chosenName: null,
+  accountName: 'Ankrath',
+  hasOwnPicture: false,
+  rename: jest.fn(async () => ({ ok: true as const })),
+  uploadPicture: jest.fn(async () => ({ ok: true as const })),
+  removePicture: jest.fn(async () => ({ ok: true as const })),
+};
+const props = { name: 'Ankrath', avatar: null, identity, memberSince: 'January 2026', figures };
 
 it('names the player as the page title, with when they joined', () => {
   render(<ProfileHeader {...props} />);
@@ -16,7 +24,7 @@ it('names the player as the page title, with when they joined', () => {
   expect(screen.getByText('Member since January 2026')).toBeInTheDocument();
 });
 
-it('shows the Steam avatar, or the initial without one', () => {
+it('shows the avatar, or the initial without one', () => {
   const { rerender, container } = render(
     <ProfileHeader {...props} avatar="https://avatars.steamstatic.com/a_full.jpg" />,
   );
@@ -30,6 +38,13 @@ it('shows the Steam avatar, or the initial without one', () => {
   rerender(<ProfileHeader {...props} />);
   expect(container.querySelector('img')).not.toBeInTheDocument();
   expect(screen.getByText('A')).toHaveAttribute('aria-hidden', 'true');
+});
+
+it('changes the name and the picture where they are, with no Edit profile button', () => {
+  render(<ProfileHeader {...props} />);
+  expect(screen.getByRole('button', { name: 'Change name' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Change picture' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
 });
 
 it('gives the library in four figures, each with its label', () => {
@@ -49,10 +64,7 @@ it('gives the library in four figures, each with its label', () => {
 it('keeps its height without a join date', () => {
   render(<ProfileHeader {...props} memberSince={null} />);
   expect(screen.queryByText(/Member since/)).not.toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 1 }).nextElementSibling).toHaveClass('min-h-5');
-});
-
-it('has Edit profile in place, not yet working', () => {
-  render(<ProfileHeader {...props} />);
-  expect(screen.getByRole('button', { name: 'Edit profile' })).toBeDisabled();
+  // The line under the name is there, empty.
+  const heading = screen.getByRole('heading', { level: 1 });
+  expect(heading.parentElement?.nextElementSibling).toHaveClass('min-h-5');
 });
