@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
 import type { AccountResult } from '@/lib/client/account';
@@ -164,4 +165,14 @@ it('marks the reset link as busy while it sends, without disabling what holds th
   expect(sending).toBeEnabled();
   expect(sending).toHaveFocus();
   await act(async () => done(true));
+});
+
+it('starts on its title, not in a field, with the first field one Tab on', async () => {
+  open();
+  // The dialog moves focus in on the next frame.
+  await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(screen.getByRole('heading', { name: 'Change password' })).toHaveFocus();
+
+  await userEvent.tab();
+  expect(screen.getByLabelText('Current password')).toHaveFocus();
 });

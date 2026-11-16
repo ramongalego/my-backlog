@@ -87,7 +87,7 @@ export function ChangeEmailDialog({
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="Change email" size="md">
+    <Modal isOpen onClose={onClose} title="Change email" size="md" startOnTitle>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <p className="text-sm text-ink-400">
           {/* An address has no spaces to wrap at: it breaks where it must. */}
@@ -106,7 +106,6 @@ export function ChangeEmailDialog({
           error={errors.email}
           required
           autoComplete="email"
-          data-autofocus
         />
         <Input
           label="Your password, to confirm"

@@ -7,8 +7,11 @@ const onChangePassword = jest.fn();
 const onDisconnectSteam = jest.fn();
 const onDeleteAccount = jest.fn();
 const onDownloadData = jest.fn();
+const onSetPassword = jest.fn<Promise<boolean>, []>();
 const props = {
   email: 'player@example.com',
+  signIn: { hasPassword: true, providers: [] },
+  onSetPassword,
   steam: null,
   onConnectSteam,
   onChangeEmail,
@@ -115,4 +118,74 @@ it('leaves Export data out when there is nothing to copy', () => {
   expect(screen.queryByText('Download a copy of your data')).not.toBeInTheDocument();
   // Delete account is still there.
   expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
+});
+
+describe('an account with no password (made with Google or Discord)', () => {
+  const noPassword = {
+    ...props,
+    signIn: { hasPassword: false, providers: ['google'] as const },
+  };
+
+  it('says there is none and how they sign in, with nothing to change', () => {
+    render(<AccountPanel {...noPassword} />);
+    expect(valueOf('Password')).toHaveTextContent('Not set');
+    expect(screen.getByText('You sign in with Google')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change password' })).not.toBeInTheDocument();
+  });
+
+  it('names both when they sign in with either', () => {
+    render(
+      <AccountPanel
+        {...noPassword}
+        signIn={{ hasPassword: false, providers: ['google', 'discord'] }}
+      />,
+    );
+    expect(screen.getByText('You sign in with Google or Discord')).toBeInTheDocument();
+  });
+
+  it("can't change the email until it has a password, and says so", () => {
+    render(<AccountPanel {...noPassword} />);
+    expect(valueOf('Email')).toHaveTextContent('player@example.com');
+    expect(screen.queryByRole('button', { name: 'Change email' })).not.toBeInTheDocument();
+    expect(screen.getByText('Set a password to change your email')).toBeInTheDocument();
+  });
+
+  it('emails the link that sets one, once, and says where it went', async () => {
+    let done!: (sent: boolean) => void;
+    onSetPassword.mockReturnValue(new Promise((resolve) => (done = resolve)));
+    render(<AccountPanel {...noPassword} />);
+    const button = screen.getByRole('button', { name: 'Set password' });
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+    expect(onSetPassword).toHaveBeenCalledTimes(1);
+    // Busy, not disabled: it keeps the focus while it sends.
+    expect(screen.getByRole('button', { name: 'Sending…' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    await act(async () => done(true));
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(
+      'We emailed a link to player@example.com. Open it to choose a password.',
+    );
+    // The button is gone: focus is on the line that says so, not lost.
+    expect(screen.queryByRole('button', { name: /Set password|Sending/ })).not.toBeInTheDocument();
+    expect(status).toHaveFocus();
+  });
+
+  it('says when the link could not be sent, and can be tried again', async () => {
+    onSetPassword.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    render(<AccountPanel {...noPassword} />);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Set password' })));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "Couldn't send the link. Please try again.",
+    );
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Set password' })));
+    expect(onSetPassword).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('status')).toHaveTextContent('We emailed a link');
+  });
 });

@@ -98,3 +98,30 @@ describe('a link confirming a new email', () => {
     expect(await email('')).toBe(`${ORIGIN}/profile`);
   });
 });
+
+describe('back from Google or Discord', () => {
+  const back = (query: string) => callback(`?flow=sign-in&next=/home${query}`);
+
+  it('goes on to Home once the code is exchanged', async () => {
+    expect(await back('&code=abc')).toBe(`${ORIGIN}/home`);
+  });
+
+  it('says nothing when it was canceled on their page', async () => {
+    expect(await back('&error=access_denied&error_description=The+user+denied')).toBe(`${ORIGIN}/`);
+  });
+
+  it('says to verify the email there when that is why Supabase refused', async () => {
+    expect(await back('&error=access_denied&error_code=provider_email_needs_verification')).toBe(
+      `${ORIGIN}/?error=sign_in_unverified`,
+    );
+  });
+
+  it("says it couldn't sign in for any other refusal, a missing code or a rejected one", async () => {
+    const failed = `${ORIGIN}/?error=sign_in_failed`;
+    expect(await back('&error=server_error&error_code=unexpected_failure')).toBe(failed);
+    expect(await back('&error=access_denied&error_code=signup_disabled')).toBe(failed);
+    expect(await back('')).toBe(failed);
+    exchangeError = new Error('bad code');
+    expect(await back('&code=abc')).toBe(failed);
+  });
+});

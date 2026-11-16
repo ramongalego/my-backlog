@@ -25,9 +25,11 @@ const TITLES: Record<AuthMode, string> = {
 function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
+  // The dialog opens with focus on its title, not in a field: nothing is
+  // outlined, no keyboard or saved-password list opens over the form before
+  // a way to sign in is chosen, and Tab goes on to the first button.
   // Switching form removes the link that was pressed, and focus with it: it
-  // moves to the new form's title, which is read out, with Tab going on to
-  // its first field.
+  // moves to the new form's title the same way.
   const title = useRef<HTMLHeadingElement>(null);
   const shown = useRef(mode);
   useEffect(() => {
@@ -42,6 +44,7 @@ function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps
         ref={title}
         id={TITLE_ID}
         tabIndex={-1}
+        data-autofocus
         className="text-xl font-semibold tracking-tight text-ink-50 mb-6 outline-none"
       >
         {TITLES[mode]}

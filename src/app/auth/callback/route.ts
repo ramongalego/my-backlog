@@ -19,6 +19,32 @@ export async function GET(request: NextRequest) {
   };
   const invalidLink = () => goOn(['error', 'invalid_link']);
 
+  // Back from Google or Discord (SocialSignIn). A failure lands on the landing
+  // page, where signing in is, with what to say; it isn't a bad link.
+  if (searchParams.get('flow') === 'sign-in') {
+    const landing = (error?: string) => {
+      const url = new URL('/', origin);
+      if (error) url.searchParams.set('error', error);
+      return NextResponse.redirect(url);
+    };
+    const refused = searchParams.get('error');
+    if (refused) {
+      // Their email with that site isn't verified, so Supabase won't take
+      // its word for whose account this is.
+      if (searchParams.get('error_code') === 'provider_email_needs_verification') {
+        return landing('sign_in_unverified');
+      }
+      // Canceled on the other site's page, which sends no code of Supabase's:
+      // nothing went wrong, so nothing is said.
+      if (refused === 'access_denied' && !searchParams.get('error_code')) return landing();
+      return landing('sign_in_failed');
+    }
+    if (!code) return landing('sign_in_failed');
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    return error ? landing('sign_in_failed') : goOn();
+  }
+
   // Supabase says it couldn't use the link (expired, already used).
   if (searchParams.get('error')) return invalidLink();
 

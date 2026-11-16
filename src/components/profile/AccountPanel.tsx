@@ -1,48 +1,17 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { ConnectSteamButton } from '@/components/ui/ConnectSteamButton';
 import { SectionLabel } from '@/components/layout/Page';
-import { TruncatedText } from '@/components/ui/TruncatedText';
+import { AccountRow } from '@/components/profile/AccountRow';
 import { ExportDataMenu } from '@/components/profile/ExportDataMenu';
+import { NoPasswordRow } from '@/components/profile/NoPasswordRow';
 import type { ExportFormat } from '@/lib/account/export';
+import type { SignInProvider } from '@/lib/account/sign-in';
 import type { ApiResult } from '@/lib/client/request';
-
-function Row({
-  label,
-  value,
-  note,
-  action,
-}: {
-  label: string;
-  value: ReactNode;
-  /** A line under the value. */
-  note?: ReactNode;
-  action?: ReactNode;
-}) {
-  return (
-    // A list, not a description list: a row also holds its button, which a
-    // description list has no place for.
-    <li className="flex items-center justify-between gap-3 py-3">
-      <div className="min-w-0">
-        <p className="text-xs text-ink-500">{label}</p>
-        {typeof value === 'string' ? (
-          <TruncatedText as="p" className="mt-0.5 truncate text-sm text-ink-100">
-            {value}
-          </TruncatedText>
-        ) : (
-          <p className="mt-0.5 truncate text-sm text-ink-100">{value}</p>
-        )}
-        {/* Wraps: it's read to check the address, so none of it is cut. */}
-        {note && <p className="mt-0.5 text-xs text-ink-400 [overflow-wrap:anywhere]">{note}</p>}
-      </div>
-      {action}
-    </li>
-  );
-}
 
 /** Opens the dialog that changes a setting. */
 const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
@@ -62,13 +31,18 @@ const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
  * How the player signs in, and Steam: the private side of the profile, which
  * only they will see. Email and password are changed from here, each in a
  * dialog; an email waiting for its confirmation link is shown under the one
- * in use. Steam is connected or disconnected here. Export data (a menu of
+ * in use. An account made with Google or Discord has no password: its
+ * Password row says so and offers Set password (`NoPasswordRow`), and its
+ * email can't be changed until it has one, since the password is what
+ * confirms that. Steam is connected or disconnected here. Export data (a menu of
  * the two files a copy of your data comes as) and Delete account are behind
  * "More options", so they aren't always on show.
  */
 export function AccountPanel({
   email,
   pendingEmail,
+  signIn,
+  onSetPassword,
   steam,
   onConnectSteam,
   onDisconnectSteam,
@@ -87,8 +61,12 @@ export function AccountPanel({
   email: string | null;
   /** The new email, until its confirmation link is opened. */
   pendingEmail?: string | null;
+  /** How the account signs in: with a password, with Google or Discord, or both. */
+  signIn: { hasPassword: boolean; providers: readonly SignInProvider[] };
   onChangeEmail: () => void;
   onChangePassword: () => void;
+  /** Emails a link that sets a password, for an account with none; whether it was sent. */
+  onSetPassword: () => Promise<boolean>;
   /** The linked Steam account, or null when there's none. */
   steam: { username: string | null } | null;
   onConnectSteam: () => void;
@@ -99,23 +77,33 @@ export function AccountPanel({
     <Panel>
       <SectionLabel>Account</SectionLabel>
       <ul className="mt-1 divide-y divide-ink-800">
-        <Row
+        <AccountRow
           label="Email"
           value={email ?? 'None'}
-          note={pendingEmail && <>Changing to {pendingEmail}, once confirmed</>}
-          action={<Change what="email" onClick={onChangeEmail} />}
-        />
-        <Row
-          label="Password"
-          value={
-            <>
-              <span aria-hidden="true">••••••••</span>
-              <span className="sr-only">Hidden</span>
-            </>
+          note={
+            pendingEmail ? (
+              <>Changing to {pendingEmail}, once confirmed</>
+            ) : (
+              !signIn.hasPassword && 'Set a password to change your email'
+            )
           }
-          action={<Change what="password" onClick={onChangePassword} />}
+          action={signIn.hasPassword && <Change what="email" onClick={onChangeEmail} />}
         />
-        <Row
+        {signIn.hasPassword ? (
+          <AccountRow
+            label="Password"
+            value={
+              <>
+                <span aria-hidden="true">••••••••</span>
+                <span className="sr-only">Hidden</span>
+              </>
+            }
+            action={<Change what="password" onClick={onChangePassword} />}
+          />
+        ) : (
+          <NoPasswordRow email={email} providers={signIn.providers} onSendLink={onSetPassword} />
+        )}
+        <AccountRow
           label="Steam"
           value={
             steam

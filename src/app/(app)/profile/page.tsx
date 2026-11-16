@@ -13,6 +13,8 @@ export default async function ProfilePage() {
     queries.favoriteGames(userId, supabase),
     // For the game dialog (a queued game shows as Queue), as Games and Stats do.
     queries.queue(userId, supabase),
+    // Whether the Account panel offers Change or Set password.
+    queries.hasPassword(userId, supabase),
   ]);
 
   return (

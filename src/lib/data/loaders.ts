@@ -209,6 +209,16 @@ export async function loadFavoriteGames(
   return (data ?? []).map((row) => row.game_id as number);
 }
 
+/**
+ * Whether the signed-in player's account has a password (one made with Google
+ * or Discord has none until they set one). Null when the database couldn't
+ * say: the caller goes by how the account was made (`signedUpWithPassword`).
+ */
+export async function loadHasPassword(supabase: SupabaseClient): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc('account_has_password');
+  return !error && typeof data === 'boolean' ? data : null;
+}
+
 // ─── Home ───────────────────────────────────────────────────────────────────
 
 export interface LibraryMeta {

@@ -3,7 +3,7 @@
  */
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/account/delete/route';
-import { checkPassword } from '@/lib/server/account';
+import { accountHasPassword, checkPassword } from '@/lib/server/account';
 
 let user: { id: string; email?: string } | null = { id: 'user-1', email: 'player@example.com' };
 let limited = false;
@@ -57,6 +57,7 @@ jest.mock('@/lib/server/rate-limit', () => ({
 jest.mock('@/lib/server/account', () => ({
   ...jest.requireActual('@/lib/server/account'),
   checkPassword: jest.fn(),
+  accountHasPassword: jest.fn(),
 }));
 
 const remove = async (body: unknown) => {
@@ -78,6 +79,7 @@ beforeEach(() => {
   calls.length = 0;
   removed.length = 0;
   jest.mocked(checkPassword).mockResolvedValue('right');
+  jest.mocked(accountHasPassword).mockResolvedValue(true);
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => jest.restoreAllMocks());
@@ -129,4 +131,32 @@ it('says so when the account could not be deleted, keeping its pictures and the 
     body: { error: "Couldn't delete your account. Please try again." },
   });
   expect(calls).toEqual(['deleteUser:user-1']);
+});
+
+describe('an account with no password (made with Google or Discord)', () => {
+  beforeEach(() => jest.mocked(accountHasPassword).mockResolvedValue(false));
+
+  it('is deleted once the word is typed, with no password checked', async () => {
+    expect(await remove({ confirm: ' Delete ' })).toEqual({ status: 200, body: { ok: true } });
+    expect(checkPassword).not.toHaveBeenCalled();
+    expect(calls).toEqual(['deleteUser:user-1', 'signOut']);
+  });
+
+  it('deletes nothing without the word, or with another', async () => {
+    const refused = { status: 400, body: { error: 'Enter the word "delete"', field: 'password' } };
+    expect(await remove({})).toEqual(refused);
+    expect(await remove({ confirm: 'yes' })).toEqual(refused);
+    // A password proves nothing here: there is none to match.
+    expect(await remove({ password: 'My-pass1' })).toEqual(refused);
+    expect(calls).toEqual([]);
+  });
+});
+
+it('never takes the word in place of a password the account has', async () => {
+  expect(await remove({ confirm: 'delete' })).toEqual({
+    status: 400,
+    body: { error: 'Your account has a password now. Reload the page and try again.' },
+  });
+  expect(checkPassword).not.toHaveBeenCalled();
+  expect(calls).toEqual([]);
 });

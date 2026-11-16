@@ -8,26 +8,33 @@ import { DialogActions } from '@/components/ui/DialogActions';
 import { Modal } from '@/components/ui/Modal';
 import { DownloadData } from '@/components/profile/DownloadData';
 import type { ExportFormat } from '@/lib/account/export';
-import type { AccountResult } from '@/lib/client/account';
+import { DELETE_CONFIRM_ERROR, DELETE_CONFIRM_WORD, confirmsDelete } from '@/lib/account/sign-in';
+import type { AccountResult, DeleteProof } from '@/lib/client/account';
 import type { ApiResult } from '@/lib/client/request';
 
 /**
  * Deletes the account, for good: says what goes, offers a copy of it to
- * download first, and asks for the password before doing it. Once it's done
+ * download first, and asks for the password before doing it. An account
+ * with no password (made with Google or Discord) types the word "delete"
+ * instead, so it still can't be done by a slip. Once it's done
  * the page leaves for the landing page (the page's part), so this stays
  * saying "Deleting…" until then.
  */
 export function DeleteAccountDialog({
+  hasPassword,
   onDelete,
   onDownloadData,
   onClose,
 }: {
-  onDelete: (password: string) => Promise<AccountResult>;
+  /** Whether there's a password to ask for. */
+  hasPassword: boolean;
+  onDelete: (proof: DeleteProof) => Promise<AccountResult>;
   /** Left out when there's nothing to copy (no games): the offer isn't made. */
   onDownloadData?: (format: ExportFormat) => Promise<ApiResult>;
   onClose: () => void;
 }) {
-  const [password, setPassword] = useState('');
+  // The password, or the word that stands in for one.
+  const [typed, setTyped] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -39,13 +46,13 @@ export function DeleteAccountDialog({
     e.preventDefault();
     if (submitting.current) return;
     setServerError(null);
-    if (!password) {
-      setError('Enter your password');
+    if (hasPassword ? !typed : !confirmsDelete(typed)) {
+      setError(hasPassword ? 'Enter your password' : DELETE_CONFIRM_ERROR);
       return;
     }
     submitting.current = true;
     setDeleting(true);
-    const result = await onDelete(password);
+    const result = await onDelete(hasPassword ? { password: typed } : { confirm: typed });
     if (result.ok) return; // The page is on its way to the landing page.
     submitting.current = false;
     setDeleting(false);
@@ -67,19 +74,22 @@ export function DeleteAccountDialog({
         {serverError && <FormError>{serverError}</FormError>}
 
         <Input
-          label="Your password, to confirm"
+          label={
+            hasPassword ? 'Your password, to confirm' : `Type "${DELETE_CONFIRM_WORD}" to confirm`
+          }
           id="delete-account-password"
-          type="password"
-          value={password}
+          // The word is typed as it is: not hidden, capitalized or corrected.
+          {...(hasPassword
+            ? { type: 'password', autoComplete: 'current-password' }
+            : { type: 'text', autoComplete: 'off', autoCapitalize: 'none', spellCheck: false })}
+          value={typed}
           onChange={(e) => {
-            setPassword(e.target.value);
+            setTyped(e.target.value);
             setError(null);
             setServerError(null);
           }}
           error={error ?? undefined}
           required
-          autoComplete="current-password"
-          data-autofocus
         />
 
         <DialogActions>
@@ -88,6 +98,9 @@ export function DeleteAccountDialog({
             variant="secondary"
             onClick={onClose}
             disabled={deleting}
+            // Where the dialog starts: the safe way out, not the field. On a
+            // phone a focused field opens the keyboard over what's being lost.
+            data-autofocus
             className="cursor-pointer"
           >
             Cancel

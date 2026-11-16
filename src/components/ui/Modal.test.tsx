@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Modal } from '@/components/ui/Modal';
 
 // The trap moves focus itself only where Tab would leave the dialog; anywhere
@@ -117,5 +117,39 @@ describe('when it closes', () => {
 
     view.rerender(<Opened open={false} opener={false} />);
     expect(onOpenerGone).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('where focus starts', () => {
+  const frame = () =>
+    act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+
+  it('is the control marked for it, or else the first one', async () => {
+    const { unmount } = render(
+      <Modal isOpen onClose={() => {}} title="Rename">
+        <input aria-label="Name" data-autofocus />
+      </Modal>,
+    );
+    await frame();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+    unmount();
+
+    render(
+      <Modal isOpen onClose={() => {}} title="Rename">
+        <input aria-label="Name" />
+      </Modal>,
+    );
+    await frame();
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+  });
+
+  it('is the title when asked, whatever is marked inside', async () => {
+    render(
+      <Modal isOpen onClose={() => {}} title="Rename" startOnTitle>
+        <input aria-label="Name" data-autofocus />
+      </Modal>,
+    );
+    await frame();
+    expect(screen.getByRole('heading', { name: 'Rename' })).toHaveFocus();
   });
 });

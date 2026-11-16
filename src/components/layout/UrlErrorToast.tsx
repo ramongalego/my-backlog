@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { steamPrivateToast } from '@/components/sync/steam-private-toast';
 
-// Error codes set by the Steam link callback and the auth email callback.
+// Error codes set by the Steam link callback and the auth callback (email links, Google and Discord).
 const MESSAGES: Record<string, string> = {
   invalid_state: 'Your Steam sign-in expired. Please try connecting again.',
   steam_auth_failed: 'Steam sign-in failed. Please try again.',
@@ -17,6 +17,9 @@ const MESSAGES: Record<string, string> = {
   profile_update_failed: "Couldn't import your Steam library. Please try again.",
   games_insert_failed: "Couldn't import your Steam library. Please try again.",
   invalid_link: 'That link is invalid or has expired',
+  // Back from Google or Discord without being signed in.
+  sign_in_failed: "Couldn't sign you in. Please try again.",
+  sign_in_unverified: "That account's email isn't verified. Verify it there, then sign in again.",
 };
 
 // Good news set by the auth email callback (a link confirming a new email).

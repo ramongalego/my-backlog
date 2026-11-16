@@ -104,16 +104,25 @@ describe('sendPasswordReset', () => {
 describe('deleteAccount', () => {
   it('sends the password to confirm it', async () => {
     answer(200, { ok: true });
-    expect(await deleteAccount('My-pass1')).toEqual({ ok: true });
+    expect(await deleteAccount({ password: 'My-pass1' })).toEqual({ ok: true });
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/account/delete',
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ password: 'My-pass1' }) }),
     );
   });
 
+  it('sends the word typed instead, for an account with no password', async () => {
+    answer(200, { ok: true });
+    expect(await deleteAccount({ confirm: 'delete' })).toEqual({ ok: true });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/account/delete',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ confirm: 'delete' }) }),
+    );
+  });
+
   it("gives back a wrong password on the password's field", async () => {
     answer(400, { error: "That isn't your password", field: 'password' });
-    expect(await deleteAccount('x')).toEqual({
+    expect(await deleteAccount({ password: 'x' })).toEqual({
       ok: false,
       error: "That isn't your password",
       field: 'password',

@@ -1,6 +1,19 @@
 import 'server-only';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
+import { signedUpWithPassword } from '@/lib/account/sign-in';
+import { loadHasPassword } from '@/lib/data/loaders';
+
+/**
+ * Whether the signed-in player's account has a password: one made by signing
+ * in with Google or Discord has none, and can't be asked for it. The database
+ * says (`account_has_password`); if it can't be asked, an account made with a
+ * password counts as having one, so nothing a password guards is opened by a
+ * failed lookup.
+ */
+export async function accountHasPassword(supabase: SupabaseClient, user: User): Promise<boolean> {
+  return (await loadHasPassword(supabase)) ?? signedUpWithPassword(user);
+}
 
 /** What checking a password found: it's right, it's wrong, or it couldn't be checked. */
 export type PasswordCheck = 'right' | 'wrong' | 'unavailable';

@@ -57,7 +57,7 @@ Playing, finishing and the queue go the same way through `hooks/useNowPlaying.ts
 | Something looks wrong on a page | `components/<page>/`, then the page's `View.tsx` |
 | The page shows the wrong data | its page hook in `hooks/`, then `lib/data/loaders.ts` (Games filter, search and counts: `lib/games/library-filter.ts`; Diary grouping: `lib/diary/timeline.ts`) |
 | A button does the wrong thing | the page hook's handler, then `lib/client/` and the matching `app/api/…/route.ts` |
-| A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them); the Profile page's name, figures and activity, and what a data export holds: `lib/account/` |
+| A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them); the Profile page's name, figures and activity, what a data export holds, and how an account signs in (password, Google, Discord): `lib/account/` |
 | Steam, IGDB or HowLongToBeat data is wrong | `lib/steam`, `lib/igdb`, `lib/hltb`, and `lib/server/steam-library.ts` for what's saved |
 
 ## UI and design
@@ -108,5 +108,6 @@ New or changed UI is checked at these widths before it's done, not only at a pho
 
 - Commits carry only the author's name: no `Co-Authored-By` or AI attribution lines.
 - Never print or commit secrets from `.env`.
+- An account may have no password: one made with Google or Discord (`SocialSignIn`) has none until it sets one by the reset link. Anything that confirms with the password asks `accountHasPassword` (`lib/server/account.ts`, the `account_has_password` database function) first and has another path for an account without one, as deleting the account does; never tell from `user.identities` alone, which doesn't change when a password is set that way.
 - Anything that sends a request when pressed (a button, a form, an Undo) sends once per press. Guard it with a ref, not only state: `disabled={isPending}` and `if (isLoading) return` only apply from the next redraw, so a second click before then gets through. In a hook, use `useInFlight` (`src/hooks/useInFlight.ts`), keyed per game where two games can be acted on at once. In a component, use a `useRef(false)` lock (see Save in `GameDetailModal`). Release it when the request settles, so it can be tried again after a failure. Give it a test that presses two or three times inside one `act` and expects one request.
 - Where a repeated request would change data (finishing, starting a game, adding to the queue), the server treats the repeat as already done instead of doing it again.

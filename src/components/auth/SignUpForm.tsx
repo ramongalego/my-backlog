@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
 import { AuthMessage } from '@/components/auth/AuthMessage';
+import { SocialSignIn } from '@/components/auth/SocialSignIn';
 import { reloadAtTop } from '@/lib/reload';
 
 interface SignUpFormProps {
@@ -116,6 +117,8 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <SocialSignIn />
+
       {serverError && <FormError>{serverError}</FormError>}
       {accountExists && (
         <FormError>
@@ -137,8 +140,6 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
 
       <Input
         label="Email"
-        // Where the dialog starts, so the email can be typed straight away.
-        data-autofocus
         type="email"
         name="email"
         value={formData.email}

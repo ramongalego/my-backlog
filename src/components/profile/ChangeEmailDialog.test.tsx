@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
 import type { EmailChangeResult } from '@/lib/client/account';
@@ -122,4 +123,14 @@ it('shows a refusal about no field above the form', async () => {
 it('lets a long address break, so it stays inside the dialog on a phone', () => {
   open();
   expect(screen.getByText('player@example.com')).toHaveClass('[overflow-wrap:anywhere]');
+});
+
+it('starts on its title, not in a field, with the first field one Tab on', async () => {
+  open();
+  // The dialog moves focus in on the next frame.
+  await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(screen.getByRole('heading', { name: 'Change email' })).toHaveFocus();
+
+  await userEvent.tab();
+  expect(screen.getByLabelText('New email')).toHaveFocus();
 });

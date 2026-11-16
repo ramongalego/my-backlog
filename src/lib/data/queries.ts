@@ -14,6 +14,7 @@ import {
   loadDiaryEntries,
   loadFavoriteGames,
   loadGamesList,
+  loadHasPassword,
   loadLibraryMeta,
   loadManualGames,
   loadOpenEndedCategories,
@@ -67,6 +68,18 @@ export const queries = {
     queryOptions({
       queryKey: queryKeys.games.favorites(userId ?? ''),
       queryFn: load(userId, supabase, loadFavoriteGames),
+      staleTime: 5 * MINUTE,
+    }),
+
+  /**
+   * Whether the account has a password, for the Profile page's Account panel
+   * (null when the database couldn't say). It changes only by the reset link,
+   * which loads the app afresh.
+   */
+  hasPassword: (userId: string | null, supabase?: SupabaseClient) =>
+    queryOptions({
+      queryKey: queryKeys.auth.hasPassword(userId ?? ''),
+      queryFn: load(userId, supabase, loadHasPassword),
       staleTime: 5 * MINUTE,
     }),
 

@@ -2,6 +2,7 @@ export const queryKeys = {
   auth: {
     all: ['auth'] as const,
     session: () => [...queryKeys.auth.all, 'session'] as const,
+    hasPassword: (userId: string) => [...queryKeys.auth.all, 'has-password', userId] as const,
   },
   games: {
     all: ['games'] as const,

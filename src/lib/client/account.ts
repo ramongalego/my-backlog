@@ -43,9 +43,15 @@ export function changeEmail(email: string, password: string): Promise<EmailChang
   });
 }
 
-/** Deletes the account and everything in it, checking the password first. */
-export function deleteAccount(password: string): Promise<AccountResult> {
-  return apiRequest('/api/account/delete', json('POST', { password }), {
+/**
+ * What confirms deleting the account: its password, or for one with no
+ * password (made with Google or Discord) the word it's asked to type.
+ */
+export type DeleteProof = { password: string } | { confirm: string };
+
+/** Deletes the account and everything in it, once the server has checked the proof. */
+export function deleteAccount(proof: DeleteProof): Promise<AccountResult> {
+  return apiRequest('/api/account/delete', json('POST', proof), {
     failed: FAILED,
     tooMany: TOO_MANY_TRIES,
   });

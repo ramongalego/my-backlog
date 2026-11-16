@@ -88,6 +88,7 @@ export default function ProfileView() {
           )}
           {changing === 'delete-account' && (
             <DeleteAccountDialog
+              hasPassword={profile.account.signIn.hasPassword}
               onDelete={profile.account.deleteAccount}
               onDownloadData={profile.account.downloadData}
               onClose={() => setChanging(null)}
@@ -140,6 +141,8 @@ export default function ProfileView() {
           <AccountPanel
             email={profile.email}
             pendingEmail={profile.account.pendingEmail}
+            signIn={profile.account.signIn}
+            onSetPassword={profile.account.sendPasswordReset}
             steam={profile.steam}
             onConnectSteam={connectSteam}
             onChangeEmail={() => setChanging('email')}

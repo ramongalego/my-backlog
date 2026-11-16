@@ -101,3 +101,19 @@ it("takes a code from the address only if it is one of its own: '__proto__' is n
     id: 'url-error-constructor',
   });
 });
+
+it('says when signing in with Google or Discord failed, and when the email there is unverified', () => {
+  query = 'error=sign_in_failed';
+  const { unmount } = render(<UrlErrorToast />);
+  expect(toast.error).toHaveBeenCalledWith("Couldn't sign you in. Please try again.", {
+    id: 'url-error-sign_in_failed',
+  });
+  unmount();
+
+  query = 'error=sign_in_unverified';
+  render(<UrlErrorToast />);
+  expect(toast.error).toHaveBeenCalledWith(
+    "That account's email isn't verified. Verify it there, then sign in again.",
+    { id: 'url-error-sign_in_unverified' },
+  );
+});

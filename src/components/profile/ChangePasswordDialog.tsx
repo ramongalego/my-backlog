@@ -96,7 +96,7 @@ export function ChangePasswordDialog({
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="Change password" size="md">
+    <Modal isOpen onClose={onClose} title="Change password" size="md" startOnTitle>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {serverError && <FormError>{serverError}</FormError>}
 
@@ -110,7 +110,6 @@ export function ChangePasswordDialog({
             error={errors.currentPassword}
             required
             autoComplete="current-password"
-            data-autofocus
           />
           {/* Said as it changes, in place of the button that asked for it. */}
           <p

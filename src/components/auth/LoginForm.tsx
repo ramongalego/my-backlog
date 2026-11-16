@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
+import { SocialSignIn } from '@/components/auth/SocialSignIn';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -96,12 +97,12 @@ export function LoginForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <SocialSignIn />
+
       {serverError && <FormError>{serverError}</FormError>}
 
       <Input
         label="Email"
-        // Where the dialog starts, so the email can be typed straight away.
-        data-autofocus
         type="email"
         name="email"
         value={formData.email}

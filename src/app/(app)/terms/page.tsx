@@ -36,8 +36,9 @@ const sections: LegalSection[] = [
           and the email address on your account must be one you control.
         </p>
         <p>
-          You are responsible for activity on your account and for keeping your password
-          confidential. If you think someone else has accessed your account, email {contact}.
+          You are responsible for activity on your account, and for keeping your password and any
+          Google or Discord account you sign in with secure. If you think someone else has accessed
+          your account, email {contact}.
         </p>
       </>
     ),
@@ -88,14 +89,14 @@ const sections: LegalSection[] = [
         <p>
           Game information, artwork and playtime data come from Steam, IGDB, HowLongToBeat and
           SteamGridDB. We do not control this data, and it may be inaccurate, incomplete or
-          unavailable. If you connect a Steam account, Valve&apos;s terms also apply. The Service
-          contains links to other websites, such as store pages, and we are not responsible for
-          their content.
+          unavailable. If you connect a Steam account, Valve&apos;s terms also apply. If you sign in
+          with Google or Discord, their terms apply to that account. The Service contains links to
+          other websites, such as store pages, and we are not responsible for their content.
         </p>
         <p>
-          MyBacklog is not affiliated with, endorsed by or sponsored by Valve, IGDB, HowLongToBeat
-          or SteamGridDB. Steam is a trademark of Valve Corporation. Game titles and artwork are the
-          property of their respective owners.
+          MyBacklog is not affiliated with, endorsed by or sponsored by Valve, Google, Discord,
+          IGDB, HowLongToBeat or SteamGridDB. Steam is a trademark of Valve Corporation. Game titles
+          and artwork are the property of their respective owners.
         </p>
       </>
     ),

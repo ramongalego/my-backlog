@@ -25,6 +25,14 @@ interface ModalProps {
    * drops in from the top while the page dims.
    */
   bare?: boolean;
+  /**
+   * Opens with focus on the title, not on a control: for a form that
+   * shouldn't open a phone's keyboard, or a saved-password list, before it's
+   * been read. Nothing is outlined, the title is read out, and Tab goes on to
+   * the first field. Without it focus starts on the control marked
+   * `data-autofocus`, or else the first one in the dialog.
+   */
+  startOnTitle?: boolean;
   /** Plays a bare dialog's exit; the parent unmounts it once that's done. */
   closing?: boolean;
   /**
@@ -67,6 +75,7 @@ export function Modal({
   size = 'md',
   align = 'center',
   bare = false,
+  startOnTitle = false,
   closing = false,
   onOpenerGone,
 }: ModalProps) {
@@ -202,7 +211,12 @@ export function Modal({
           )}
           {title && (
             <div className="p-4 sm:p-6 pb-0 sm:pb-0">
-              <h2 id={titleId} className="text-xl font-semibold tracking-tight text-ink-50">
+              <h2
+                id={titleId}
+                tabIndex={startOnTitle ? -1 : undefined}
+                data-autofocus={startOnTitle ? true : undefined}
+                className="text-xl font-semibold tracking-tight text-ink-50 outline-none"
+              >
                 {title}
               </h2>
             </div>

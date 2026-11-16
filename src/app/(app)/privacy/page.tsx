@@ -32,7 +32,11 @@ const sections: LegalSection[] = [
           rows={[
             [
               'Account',
-              'Your email address and password. The password is stored as a salted hash by our authentication provider, and we cannot read it.',
+              'Your email address and, if you set one, a password. The password is stored as a salted hash by our authentication provider, and we cannot read it.',
+            ],
+            [
+              'Google or Discord',
+              'If you sign in with Google or Discord, the email address, name, profile picture and ID of that account. Sign-in happens on their site, so we never receive your password for it.',
             ],
             [
               'Library',
@@ -136,7 +140,26 @@ const sections: LegalSection[] = [
               'Game details, time to beat and artwork',
               'The name or ID of a game. These requests contain nothing that identifies you.',
             ],
-            ['Our email delivery provider', 'Sending account emails', 'Your email address'],
+            [
+              <a key="resend" href="https://resend.com/legal/privacy-policy" {...EXTERNAL}>
+                Resend
+              </a>,
+              'Sending account emails',
+              'Your email address',
+            ],
+            [
+              <span key="sign-in">
+                <a href="https://policies.google.com/privacy" {...EXTERNAL}>
+                  Google
+                </a>{' '}
+                and{' '}
+                <a href="https://discord.com/privacy" {...EXTERNAL}>
+                  Discord
+                </a>
+              </span>,
+              'Signing you in, if you choose to sign in with one of them',
+              'The fact that you are signing in to MyBacklog. We send them nothing from your library.',
+            ],
           ]}
         />
         <p>

@@ -1,14 +1,19 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
-import type { AccountResult } from '@/lib/client/account';
+import type { AccountResult, DeleteProof } from '@/lib/client/account';
 
-const onDelete = jest.fn<Promise<AccountResult>, [string]>();
+const onDelete = jest.fn<Promise<AccountResult>, [DeleteProof]>();
 const onClose = jest.fn();
 const onDownloadData = jest.fn();
 
-const open = () =>
+const open = (hasPassword = true) =>
   render(
-    <DeleteAccountDialog onDelete={onDelete} onDownloadData={onDownloadData} onClose={onClose} />,
+    <DeleteAccountDialog
+      hasPassword={hasPassword}
+      onDelete={onDelete}
+      onDownloadData={onDownloadData}
+      onClose={onClose}
+    />,
   );
 const password = () => screen.getByLabelText('Your password, to confirm');
 const submit = () => screen.getByRole('button', { name: /Delete account|Deleting/ });
@@ -23,6 +28,20 @@ it('says what goes and that it can’t be undone', () => {
   expect(screen.getByRole('dialog', { name: 'Delete account' })).toHaveTextContent(
     "This deletes your account and everything in it: your library, diary, queue, favorites and profile picture. It can't be undone.",
   );
+});
+
+it('starts on Cancel, not in the field, with or without a password to ask for', async () => {
+  const frame = () =>
+    act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  const { unmount } = open();
+  // The dialog moves focus in on the next frame.
+  await frame();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  unmount();
+
+  open(false);
+  await frame();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
 });
 
 it('asks for the password before deleting anything', async () => {
@@ -43,7 +62,7 @@ it('deletes with the password, once, and stays saying so while the page leaves',
     fireEvent.click(submit());
   });
   expect(onDelete).toHaveBeenCalledTimes(1);
-  expect(onDelete).toHaveBeenCalledWith('My-pass1');
+  expect(onDelete).toHaveBeenCalledWith({ password: 'My-pass1' });
 
   await act(async () => done({ ok: true }));
   expect(submit()).toHaveTextContent('Deleting…');
@@ -86,7 +105,53 @@ it('offers a copy of the data first, without deleting anything', async () => {
 });
 
 it('makes no offer of a copy when there is nothing to copy', () => {
-  render(<DeleteAccountDialog onDelete={onDelete} onClose={onClose} />);
+  render(<DeleteAccountDialog hasPassword onDelete={onDelete} onClose={onClose} />);
   expect(screen.queryByText('Want a copy first?')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Your password, to confirm')).toBeInTheDocument();
+});
+
+describe('an account with no password (made with Google or Discord)', () => {
+  const word = () => screen.getByLabelText('Type "delete" to confirm');
+
+  it('asks for the word "delete", shown as typed, where the password would be', () => {
+    open(false);
+    expect(screen.queryByLabelText('Your password, to confirm')).not.toBeInTheDocument();
+    expect(word()).toHaveAttribute('type', 'text');
+    expect(word()).toHaveAttribute('autocomplete', 'off');
+  });
+
+  it('deletes nothing until the word is typed', async () => {
+    open(false);
+    await act(async () => fireEvent.click(submit()));
+    fireEvent.change(word(), { target: { value: 'delet' } });
+    await act(async () => fireEvent.click(submit()));
+    expect(word()).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Enter the word "delete"')).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes with the word, however it is capitalized, once', async () => {
+    onDelete.mockReturnValue(new Promise(() => {}));
+    open(false);
+    fireEvent.change(word(), { target: { value: 'Delete' } });
+    await act(async () => {
+      fireEvent.click(submit());
+      fireEvent.click(submit());
+    });
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith({ confirm: 'Delete' });
+  });
+
+  it('says so above the field when the server refuses it for another reason', async () => {
+    onDelete.mockResolvedValueOnce({
+      ok: false,
+      error: 'Your account has a password now. Reload the page and try again.',
+    });
+    open(false);
+    fireEvent.change(word(), { target: { value: 'delete' } });
+    await act(async () => fireEvent.click(submit()));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your account has a password now. Reload the page and try again.',
+    );
+  });
 });

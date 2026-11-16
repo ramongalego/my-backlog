@@ -4,15 +4,24 @@ import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
-import { checkPassword, passwordCheckRefusal } from '@/lib/server/account';
+import { accountHasPassword, checkPassword, passwordCheckRefusal } from '@/lib/server/account';
 import { deleteAvatars } from '@/lib/server/avatar';
+import { DELETE_CONFIRM_ERROR, confirmsDelete } from '@/lib/account/sign-in';
 
-const bodySchema = z.object({ password: z.string().min(1, 'Enter your password').max(200) });
+const bodySchema = z.object({
+  password: z.string().max(200).optional(),
+  confirm: z.string().max(50).optional(),
+});
 
 /**
  * Deletes the signed-in player's account and everything in it, for good. The
  * password is asked for first, so someone at a computer left signed in can't
  * do it, and tries count against the same limit as changing the password.
+ *
+ * An account made with Google or Discord has no password to ask for: it types
+ * the word "delete" instead, which only stops a slip. Which of the two is
+ * asked is the account's to decide, not the request's: one with a password
+ * is never deleted without it.
  *
  * Deleting the Supabase Auth user takes every row with it (the profile, its
  * games and so the diary, the queue, favorites, share pages, support tickets:
@@ -47,16 +56,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const check = await checkPassword(user.email, parsed.data.password);
-  if (check !== 'right') {
-    const refusal = passwordCheckRefusal(check, {
-      error: "That isn't your password",
-      field: 'password',
-    });
-    return NextResponse.json(
-      { error: refusal.error, field: refusal.field },
-      { status: refusal.status },
-    );
+  if (await accountHasPassword(supabase, user)) {
+    const { password } = parsed.data;
+    if (!password) {
+      // The page asked for the word: it was loaded before the password was set.
+      const error = parsed.data.confirm
+        ? 'Your account has a password now. Reload the page and try again.'
+        : 'Enter your password';
+      return NextResponse.json(parsed.data.confirm ? { error } : { error, field: 'password' }, {
+        status: 400,
+      });
+    }
+    const check = await checkPassword(user.email, password);
+    if (check !== 'right') {
+      const refusal = passwordCheckRefusal(check, {
+        error: "That isn't your password",
+        field: 'password',
+      });
+      return NextResponse.json(
+        { error: refusal.error, field: refusal.field },
+        { status: refusal.status },
+      );
+    }
+  } else if (!confirmsDelete(parsed.data.confirm)) {
+    return NextResponse.json({ error: DELETE_CONFIRM_ERROR, field: 'password' }, { status: 400 });
   }
 
   const service = tryCreateServiceClient();

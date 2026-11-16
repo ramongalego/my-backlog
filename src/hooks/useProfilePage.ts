@@ -9,6 +9,7 @@ import { profileFigures } from '@/lib/account/figures';
 import { recentActivity } from '@/lib/account/activity';
 import { countPlatforms } from '@/lib/games/library-filter';
 import { pickedFavorites, toggleFavorite } from '@/lib/account/favorites';
+import { linkedProviders, signedUpWithPassword } from '@/lib/account/sign-in';
 import { queryKeys } from '@/lib/query-keys';
 import {
   changeEmail,
@@ -17,6 +18,7 @@ import {
   disconnectSteam,
   downloadData,
   sendPasswordReset,
+  type DeleteProof,
 } from '@/lib/client/account';
 import { playsOnConsole } from '@/lib/games/consoles';
 import { reloadAtTop } from '@/lib/reload';
@@ -45,6 +47,8 @@ export function useProfilePage() {
     refetch,
   } = useQuery(queries.gamesList(userId));
   const { data: playing = null } = useQuery(queries.playing(userId));
+  // Until the database has said (or if it can't), how the account was made.
+  const { data: hasPassword } = useQuery(queries.hasPassword(userId));
 
   // The favorites are the player's to pick: none until they do.
   const favoriteGames = useFavoriteGames(userId);
@@ -139,6 +143,14 @@ export function useProfilePage() {
     },
     /** Changing how the player signs in. */
     account: {
+      /**
+       * How the account signs in. One made with Google or Discord has no
+       * password until it sets one, so nothing can ask for it.
+       */
+      signIn: {
+        hasPassword: hasPassword ?? signedUpWithPassword(user),
+        providers: linkedProviders(user),
+      },
       /** A new email waiting for its confirmation link. */
       pendingEmail: user?.new_email ?? null,
       changePassword,
@@ -155,8 +167,8 @@ export function useProfilePage() {
        */
       downloadData: games.length > 0 ? downloadData : undefined,
       /** Deletes the account; then the page goes to the landing page. */
-      deleteAccount: async (password: string) => {
-        const result = await deleteAccount(password);
+      deleteAccount: async (proof: DeleteProof) => {
+        const result = await deleteAccount(proof);
         // A full page load, not the router: the signed-in session and every cached
         // list belonged to the account that's gone.
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
