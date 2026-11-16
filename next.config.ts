@@ -13,7 +13,10 @@ const csp = [
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com https://cdn2.steamgriddb.com https://${supabaseHost}/storage/v1/object/public/avatars/`,
+  // The art hosts are here, though art is served resized from this site:
+  // a picture that fails that way is fetched straight from its source as a
+  // last try (GameArt), and the art picker shows SteamGridDB's own thumbnails.
+  `img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com https://cdn2.steamgriddb.com https://images.igdb.com https://${supabaseHost}/storage/v1/object/public/avatars/`,
   "font-src 'self' data:",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://va.vercel-scripts.com`,
   "frame-ancestors 'none'",

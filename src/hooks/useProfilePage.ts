@@ -148,8 +148,12 @@ export function useProfilePage() {
         if (result.ok) await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
         return result;
       },
-      /** Downloads a copy of the player's data, as a file the browser saves. */
-      downloadData,
+      /**
+       * Downloads a copy of the player's data, as a file the browser saves.
+       * Not offered with no games: there would be nothing in the file but the
+       * account's own email.
+       */
+      downloadData: games.length > 0 ? downloadData : undefined,
       /** Deletes the account; then the page goes to the landing page. */
       deleteAccount: async (password: string) => {
         const result = await deleteAccount(password);

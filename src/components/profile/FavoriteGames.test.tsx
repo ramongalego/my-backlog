@@ -324,10 +324,12 @@ describe('when the page puts focus on the row', () => {
   });
 });
 
-it('always says the row can be reordered, however many are picked', () => {
+it('says the row can be reordered only once there are two to reorder', () => {
   const { rerender } = render(<FavoriteGames {...actions} games={[]} />);
-  expect(screen.getByText('Drag to reorder')).toBeInTheDocument();
+  expect(screen.queryByText('Drag to reorder')).not.toBeInTheDocument();
   rerender(<FavoriteGames {...actions} games={four.slice(0, 1)} />);
+  expect(screen.queryByText('Drag to reorder')).not.toBeInTheDocument();
+  rerender(<FavoriteGames {...actions} games={four.slice(0, 2)} />);
   expect(screen.getByText('Drag to reorder')).toBeInTheDocument();
   rerender(<FavoriteGames {...actions} games={four} />);
   expect(screen.getByText('Drag to reorder')).toBeInTheDocument();

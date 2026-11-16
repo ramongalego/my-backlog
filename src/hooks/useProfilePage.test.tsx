@@ -50,6 +50,7 @@ jest.mock('@/lib/client/account', () => ({
   changeEmail: jest.fn(),
   deleteAccount: jest.fn(),
   disconnectSteam: jest.fn(),
+  downloadData: jest.fn(),
   sendPasswordReset: jest.fn(),
 }));
 const mockReload = jest.fn();
@@ -379,6 +380,11 @@ describe('the account', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     session = steamPlayer;
+  });
+
+  it('offers a copy of the data only when there are games to put in it', () => {
+    expect(open([]).account.downloadData).toBeUndefined();
+    expect(open([game({ id: 1 })]).account.downloadData).toEqual(expect.any(Function));
   });
 
   it('counts the Steam games disconnecting would remove: not the ones moved to a console', () => {

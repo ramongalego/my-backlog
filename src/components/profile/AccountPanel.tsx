@@ -79,8 +79,11 @@ export function AccountPanel({
 }: {
   onDisconnectSteam: () => void;
   onDeleteAccount: () => void;
-  /** Fetches a copy of the player's data, as a file the browser saves. */
-  onDownloadData: (format: ExportFormat) => Promise<ApiResult>;
+  /**
+   * Fetches a copy of the player's data, as a file the browser saves. Left
+   * out when there's nothing to copy (no games): Export data isn't shown.
+   */
+  onDownloadData?: (format: ExportFormat) => Promise<ApiResult>;
   email: string | null;
   /** The new email, until its confirmation link is opened. */
   pendingEmail?: string | null;
@@ -163,10 +166,12 @@ export function AccountPanel({
         />
       </button>
       <div id={moreId} hidden={!moreOpen} className="mt-3 space-y-3 border-t border-ink-800 pt-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 text-xs text-ink-400">Download a copy of your data</p>
-          <ExportDataMenu onDownload={onDownloadData} />
-        </div>
+        {onDownloadData && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="min-w-0 text-xs text-ink-400">Download a copy of your data</p>
+            <ExportDataMenu onDownload={onDownloadData} />
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 text-xs text-ink-400">Delete your account and everything in it</p>
           <Button

@@ -107,3 +107,12 @@ it('keeps Export data behind More options too, as a menu of the two files', asyn
   await act(async () => fireEvent.click(screen.getByRole('menuitem', { name: 'Games (CSV)' })));
   expect(onDownloadData).toHaveBeenCalledWith('csv');
 });
+
+it('leaves Export data out when there is nothing to copy', () => {
+  render(<AccountPanel {...props} onDownloadData={undefined} />);
+  fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+  expect(screen.queryByRole('button', { name: 'Export data' })).not.toBeInTheDocument();
+  expect(screen.queryByText('Download a copy of your data')).not.toBeInTheDocument();
+  // Delete account is still there.
+  expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
+});

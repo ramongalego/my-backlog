@@ -309,7 +309,8 @@ export function FavoriteGames({
           </ul>
         </SortableContext>
       </DndContext>
-      <p className="mt-3 text-sm text-ink-500">Drag to reorder</p>
+      {/* Only once there's an order to change: one favorite has nowhere to go. */}
+      {games.length >= 2 && <p className="mt-3 text-sm text-ink-500">Drag to reorder</p>}
     </ProfileSection>
   );
 }

@@ -1005,6 +1005,10 @@ describe('GameDetailModal as a form', () => {
       render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
       fireEvent.click(artButton()!);
       await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
+      // Art that fails is asked for twice more before it's given up on.
+      fireEvent.error(document.querySelector('img')!);
+      fireEvent.error(document.querySelector('img')!);
+      expect(screen.getByRole('status', { name: 'Loading the art' })).toBeInTheDocument();
       fireEvent.error(document.querySelector('img')!);
       expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
 

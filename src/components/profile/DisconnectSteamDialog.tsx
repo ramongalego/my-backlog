@@ -25,7 +25,8 @@ export function DisconnectSteamDialog({
   /** How many games come out with it. */
   steamGames: number;
   onDisconnect: () => Promise<Result>;
-  onDownloadData: (format: ExportFormat) => Promise<ApiResult>;
+  /** Left out when there's nothing to copy. */
+  onDownloadData?: (format: ExportFormat) => Promise<ApiResult>;
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export function DisconnectSteamDialog({
           Connecting Steam again brings the games back, but not their ratings, notes or finish
           dates.
         </p>
-        {steamGames > 0 && (
+        {steamGames > 0 && onDownloadData && (
           <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
         )}
 

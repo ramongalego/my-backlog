@@ -84,3 +84,9 @@ it('offers a copy of the data first, without deleting anything', async () => {
   expect(onDelete).not.toHaveBeenCalled();
   expect(screen.getByRole('dialog', { name: 'Delete account' })).toBeInTheDocument();
 });
+
+it('makes no offer of a copy when there is nothing to copy', () => {
+  render(<DeleteAccountDialog onDelete={onDelete} onClose={onClose} />);
+  expect(screen.queryByText('Want a copy first?')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Your password, to confirm')).toBeInTheDocument();
+});

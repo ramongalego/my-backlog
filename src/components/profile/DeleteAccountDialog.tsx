@@ -21,7 +21,8 @@ export function DeleteAccountDialog({
   onClose,
 }: {
   onDelete: (password: string) => Promise<AccountResult>;
-  onDownloadData: (format: ExportFormat) => Promise<ApiResult>;
+  /** Left out when there's nothing to copy (no games): the offer isn't made. */
+  onDownloadData?: (format: ExportFormat) => Promise<ApiResult>;
   onClose: () => void;
 }) {
   const [password, setPassword] = useState('');
@@ -57,7 +58,9 @@ export function DeleteAccountDialog({
           This deletes your account and everything in it: your library, diary, queue, favorites and
           profile picture. It can&apos;t be undone.
         </p>
-        <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
+        {onDownloadData && (
+          <DownloadData onDownload={onDownloadData}>Want a copy first?</DownloadData>
+        )}
 
         {serverError && (
           <div className="rounded-lg bg-rose-500/10 p-3 text-sm text-rose-300" role="alert">
