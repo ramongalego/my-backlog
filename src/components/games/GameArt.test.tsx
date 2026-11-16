@@ -81,6 +81,15 @@ it('stops asking as soon as a try loads', () => {
   expect(art(container)).toBe(second);
 });
 
+it('swaps to a new picture in place, so the one that is there stays until it has loaded', () => {
+  const { container, rerender } = render(<GameArt src={WIDE} alt="" sizes="180px" />);
+  const shown = art(container);
+  rerender(<GameArt src="https://cdn2.steamgriddb.com/grid/other.png" alt="" sizes="180px" />);
+  // The same image, pointed at the new file: not a new, empty one.
+  expect(art(container)).toBe(shown);
+  expect(art(container)).toHaveAttribute('src', 'https://cdn2.steamgriddb.com/grid/other.png');
+});
+
 it('gives a new picture its tries afresh', () => {
   const { container, rerender } = render(<GameArt src={WIDE} alt="" sizes="180px" />);
   fireEvent.error(art(container));

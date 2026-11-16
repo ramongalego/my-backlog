@@ -29,15 +29,14 @@ const RETRIES = 2;
  * without losing its top and bottom. Art that fails to load is tried again
  * (see RETRIES) before it's left blank.
  */
-export function GameArt(props: GameArtProps) {
-  // Keyed by the picture: a new one starts with its tries unused.
-  return <Art key={props.src} {...props} />;
-}
-
-function Art({ src, alt, sizes, preload, quality, onSettled }: GameArtProps) {
-  const [tries, setTries] = useState(0);
+export function GameArt({ src, alt, sizes, preload, quality, onSettled }: GameArtProps) {
+  // The tries are counted for one picture: a new one starts with them unused.
+  // Not by remounting on a new `src`: the picture that's there stays until
+  // the new one has loaded (the art picker's preview counts on it).
+  const [failures, setFailures] = useState({ src, tries: 0 });
+  const tries = failures.src === src ? failures.tries : 0;
   const failed = () => {
-    if (tries < RETRIES) setTries(tries + 1);
+    if (tries < RETRIES) setFailures({ src, tries: tries + 1 });
     else onSettled?.();
   };
   const shared = {
