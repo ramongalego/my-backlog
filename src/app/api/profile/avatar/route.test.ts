@@ -55,7 +55,17 @@ jest.mock('@/lib/server/rate-limit', () => ({
   }),
 }));
 
-const WEBP = new Uint8Array([...'RIFF\0\0\0\0WEBPVP8 '].map((c) => c.charCodeAt(0)));
+/** The start of a WebP (its extended header), saying it is this size. */
+const webpOf = (width: number, height: number) => {
+  const le24 = (n: number) => [n & 255, (n >> 8) & 255, (n >> 16) & 255];
+  return new Uint8Array([
+    ...[...'RIFF\0\0\0\0WEBPVP8X'].map((c) => c.charCodeAt(0)),
+    ...[10, 0, 0, 0, 0, 0, 0, 0],
+    ...le24(width - 1),
+    ...le24(height - 1),
+  ]);
+};
+const WEBP = webpOf(256, 256);
 const upload = async (file: Blob | string | null, headers?: Record<string, string>) => {
   const form = new FormData();
   if (file) form.append('file', file);
@@ -107,6 +117,26 @@ it('goes by the bytes, not by what the upload says it is', async () => {
     body: { error: 'Use a JPEG, PNG or WebP picture' },
   });
   expect(uploads).toEqual([]);
+});
+
+it('refuses a file that only starts like a picture, which would draw as a broken image', async () => {
+  const junk = new Uint8Array(40 * 1024).map((_, i) => (i * 31) % 251);
+  junk.set([0xff, 0xd8, 0xff, 0xe0]);
+  expect(await upload(new Blob([junk], { type: 'image/jpeg' }))).toEqual({
+    status: 400,
+    body: { error: 'Use a JPEG, PNG or WebP picture' },
+  });
+  expect(uploads).toEqual([]);
+});
+
+it('refuses a small file that claims to be a huge picture', async () => {
+  expect(await upload(new Blob([webpOf(16000, 16000)]))).toEqual({
+    status: 413,
+    body: { error: 'That picture is too large' },
+  });
+  // Up to 1024px a side is taken: the browser sends 256.
+  expect((await upload(new Blob([webpOf(1024, 1024)]))).status).toBe(200);
+  expect(uploads).toHaveLength(1);
 });
 
 it('refuses a picture over 512 KB, and a request with none', async () => {

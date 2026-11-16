@@ -143,3 +143,9 @@ it('wraps a long name on a phone and cuts it beside the figures on a desktop', (
   expect(heading).toHaveClass('lg:truncate', '[overflow-wrap:anywhere]');
   expect(heading).not.toHaveClass('truncate');
 });
+
+it('keeps the page its heading while the name is a field', () => {
+  open();
+  fireEvent.click(pencil());
+  expect(screen.getByRole('heading', { level: 1, name: 'Ankrath' })).toHaveClass('sr-only');
+});

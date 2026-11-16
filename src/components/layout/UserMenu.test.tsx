@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { User } from '@supabase/supabase-js';
 import { UserMenu } from '@/components/layout/UserMenu';
 
@@ -92,4 +92,29 @@ it('gives focus back to its button when Profile is chosen, wherever that leads',
 it('draws the whole first character of a name as the initial, an emoji included', () => {
   render(<UserMenu user={user} name="🎮 Ramon" avatar={null} />);
   expect(screen.getByRole('button', { name: 'Open user menu' })).toHaveTextContent('🎮');
+});
+
+it('draws the initial when the picture will not load', () => {
+  const { container } = render(
+    <UserMenu user={user} name="Player" avatar="https://avatars.steamstatic.com/gone.jpg" />,
+  );
+  fireEvent.error(container.querySelector('img')!);
+  expect(container.querySelector('img')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open user menu' })).toHaveTextContent('P');
+});
+
+it('says how long until Refresh library can be used again', () => {
+  jest.useFakeTimers();
+  localStorage.setItem('manual_refresh_at:u', String(Date.now() - 30_000));
+  render(
+    <UserMenu user={user} name="Player" avatar={null} onRefresh={jest.fn()} isRefreshDisabled />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+  act(() => jest.advanceTimersByTime(1));
+  expect(screen.getByRole('menuitem', { name: 'Available in 2 minutes' })).toBeDisabled();
+  // Thirty seconds on, a minute and a half is left... then a minute.
+  act(() => jest.advanceTimersByTime(31_000));
+  expect(screen.getByRole('menuitem', { name: 'Available in 1 minute' })).toBeDisabled();
+  jest.useRealTimers();
+  localStorage.clear();
 });

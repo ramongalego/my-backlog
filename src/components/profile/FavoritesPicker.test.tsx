@@ -279,3 +279,13 @@ it('says what to do with an empty library', () => {
   render(<FavoritesPicker games={[]} pickedIds={[]} onToggle={onToggle} onClose={onClose} />);
   expect(screen.getByText('Add games to your library to pick favorites')).toBeInTheDocument();
 });
+
+it('lets a long search that matches nothing break, so it cannot widen the dialog', () => {
+  open();
+  const search = screen.getByRole('textbox', { name: 'Search your games' });
+  expect(search).toHaveAttribute('maxlength', '100');
+  fireEvent.change(search, { target: { value: 'x'.repeat(100) } });
+  expect(screen.getByText(/^No games match/, { selector: 'p:not(.sr-only)' })).toHaveClass(
+    '[overflow-wrap:anywhere]',
+  );
+});

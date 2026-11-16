@@ -125,6 +125,8 @@ export function FavoritesPicker({
           onChange={(e) => search(e.target.value)}
           placeholder="Search by name or tag…"
           aria-label="Search your games"
+          // No game's name is this long; it's echoed back when nothing matches.
+          maxLength={100}
           data-autofocus={searchFirst ? true : undefined}
           className={`${fieldClass()} h-10 pl-9 pr-3 text-sm`}
         />
@@ -187,7 +189,8 @@ export function FavoritesPicker({
           {hasMore && <li ref={gridEnd} aria-hidden="true" className="col-span-full -mt-4 h-px" />}
         </ul>
       ) : (
-        <p className="mt-4 text-sm text-ink-400">
+        // An unbroken search breaks where it must, rather than widen the dialog.
+        <p className="mt-4 text-sm text-ink-400 [overflow-wrap:anywhere]">
           {searched
             ? `No games match “${searched}”`
             : 'Add games to your library to pick favorites'}

@@ -57,6 +57,11 @@ interface DialogGame {
 interface GameDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Called on close when what opened the dialog is gone (its row left the
+   * list with the change just saved), for the page to put focus somewhere.
+   */
+  onOpenerGone?: () => void;
   onConfirm?: (
     status: GameStatus,
     date: string,
@@ -159,6 +164,7 @@ function submitLabel(adding: GameDetailModalProps['adding'], platform: string, s
 export function GameDetailModal({
   isOpen,
   onClose,
+  onOpenerGone,
   onConfirm,
   game,
   headerLoading = false,
@@ -357,6 +363,7 @@ export function GameDetailModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      onOpenerGone={onOpenerGone}
       size="xl"
       ariaLabel={adding ? `Add ${game.name}` : game.name}
       align={adding ? 'top' : 'center'}

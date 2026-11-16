@@ -11,12 +11,10 @@ import { UserMenu } from '@/components/layout/UserMenu';
 import { AddGameButton } from '@/components/games/AddGameButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useLibraryMeta } from '@/hooks/useLibraryMeta';
-import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
+import { useLibraryRefresh, manualRefreshWait } from '@/hooks/useLibraryRefresh';
 import { connectSteam } from '@/lib/client/steam-connect';
 import { profileAvatar, profileName } from '@/lib/account/identity';
 import type { AuthMode } from '@/types/auth';
-
-const REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
 
 export function Header() {
   const { user, profile, authResolved } = useAuth();
@@ -27,8 +25,7 @@ export function Header() {
   const [isRefreshDisabled, setIsRefreshDisabled] = useState(() => {
     if (typeof window === 'undefined') return false;
     // Only a refresh the player asked for: the background one isn't theirs.
-    const last = localStorage.getItem(refreshKeys(user?.id).manual);
-    return !!last && Date.now() - Number(last) < REFRESH_COOLDOWN_MS;
+    return manualRefreshWait(user?.id) > 0;
   });
   const { refresh } = useLibraryRefresh();
   const pathname = usePathname();
@@ -41,10 +38,7 @@ export function Header() {
   // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
     if (!isRefreshDisabled) return;
-    const last = localStorage.getItem(refreshKeys(user?.id).manual);
-    if (!last) return;
-    const remaining = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - Number(last)));
-    const id = setTimeout(() => setIsRefreshDisabled(false), remaining);
+    const id = setTimeout(() => setIsRefreshDisabled(false), manualRefreshWait(user?.id));
     return () => clearTimeout(id);
   }, [isRefreshDisabled, user?.id]);
 

@@ -24,11 +24,14 @@ export function Page({ children, overlay }: { children: ReactNode; overlay?: Rea
  */
 export function PageHeader({
   title,
+  id,
   description,
   actions,
   children,
 }: {
   title: string;
+  /** Lets the title take focus from script, for when what had focus is gone. */
+  id?: string;
   description?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
@@ -37,7 +40,11 @@ export function PageHeader({
     <div className="mb-8 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-ink-50">
+          <h1
+            id={id}
+            tabIndex={id ? -1 : undefined}
+            className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-ink-50 outline-none"
+          >
             {title}
           </h1>
           {/* Rendered (empty) while a description is still loading, so the header keeps its height. */}
@@ -55,10 +62,21 @@ export function PageHeader({
 /** Heading for a group of content inside a page (stats cards, queue sections). */
 export function SectionLabel({
   children,
+  id,
   className = '',
 }: {
   children: ReactNode;
+  /** Lets the heading take focus from script, for when what had focus is gone. */
+  id?: string;
   className?: string;
 }) {
-  return <h2 className={`text-sm font-semibold text-ink-200 ${className}`}>{children}</h2>;
+  return (
+    <h2
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      className={`text-sm font-semibold text-ink-200 outline-none ${className}`}
+    >
+      {children}
+    </h2>
+  );
 }

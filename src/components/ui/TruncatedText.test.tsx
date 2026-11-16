@@ -72,3 +72,41 @@ it('shows nothing for a tap: a touchscreen sends mouse events too, and the bubbl
   expect(bubble()).not.toBeInTheDocument();
   delete (window as { matchMedia?: unknown }).matchMedia;
 });
+
+describe('where the bubble goes', () => {
+  // A long name's bubble runs to several lines. jsdom lays nothing out.
+  beforeEach(() =>
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 96 }),
+  );
+  afterEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 0 });
+    jest.restoreAllMocks();
+  });
+  const topWhenNameIsAt = (top: number) => {
+    render(<TruncatedText className="truncate">{NAME}</TruncatedText>);
+    const text = screen.getByText(NAME);
+    sized(text, { cut: true });
+    jest
+      .spyOn(text, 'getBoundingClientRect')
+      .mockReturnValue({ left: 100, width: 120, top, bottom: top + 20 } as DOMRect);
+    fireEvent.mouseEnter(text);
+    return (bubble() as HTMLElement).style.top;
+  };
+
+  it('sits above the name when there is room', () => {
+    expect(topWhenNameIsAt(300)).toBe('196px');
+  });
+
+  it('goes below the name when it would start off the top of the screen', () => {
+    // 60 - 96 is off screen: 8px under the name instead.
+    expect(topWhenNameIsAt(60)).toBe('88px');
+  });
+});
+
+it('breaks a name with no spaces, so it cannot run out of the bubble', () => {
+  render(<TruncatedText className="truncate">{'a'.repeat(80) + '@example.com'}</TruncatedText>);
+  const text = screen.getByText(/@example\.com$/);
+  sized(text, { cut: true });
+  fireEvent.mouseEnter(text);
+  expect(bubble()).toHaveClass('[overflow-wrap:anywhere]');
+});

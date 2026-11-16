@@ -23,7 +23,7 @@ export function PlayedALot({
 }) {
   return (
     <Panel>
-      <SectionTitle>Played a lot, still in your backlog</SectionTitle>
+      <SectionTitle id="stats-played-a-lot">Played a lot, still in your backlog</SectionTitle>
       <p className="-mt-2 mb-4 text-sm text-ink-400 max-w-md">
         If you&apos;ve finished these, or they&apos;re games you play rather than finish, update
         them so your backlog count and pace stay accurate

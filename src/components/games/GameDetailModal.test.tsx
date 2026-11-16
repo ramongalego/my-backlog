@@ -1127,3 +1127,20 @@ describe('GameDetailModal hours played', () => {
     expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
 });
+
+it('tells the page when what opened it is gone, so focus can go somewhere', () => {
+  const onOpenerGone = jest.fn();
+  const Page = ({ row, open }: { row: boolean; open: boolean }) => (
+    <>
+      {row && <button>Hades Finished</button>}
+      {open && <GameDetailModal {...defaultProps} isOpen onOpenerGone={onOpenerGone} />}
+    </>
+  );
+  const view = render(<Page row open={false} />);
+  screen.getByRole('button', { name: 'Hades Finished' }).focus();
+  view.rerender(<Page row open />);
+  // Saving took the game out of the list it was opened from.
+  view.rerender(<Page row={false} open />);
+  view.rerender(<Page row={false} open={false} />);
+  expect(onOpenerGone).toHaveBeenCalledTimes(1);
+});

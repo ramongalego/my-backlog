@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ChevronDown, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/layout/SupportModal';
-import { refreshKeys } from '@/hooks/useLibraryRefresh';
+import { manualRefreshWait } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
 import { reloadAtTop } from '@/lib/reload';
 import { initialOf } from '@/lib/account/identity';
@@ -42,6 +42,8 @@ export function UserMenu({
   const [open, setOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [cooldownLabel, setCooldownLabel] = useState<string | null>(null);
+  // The picture that failed to load, if one did: a new one gets its own chance.
+  const [brokenAvatar, setBrokenAvatar] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -65,10 +67,7 @@ export function UserMenu({
   useEffect(() => {
     if (!isRefreshDisabled || !open) return;
 
-    const last = localStorage.getItem(refreshKeys(user.id).manual);
-    if (!last) return;
-
-    const remaining = Math.max(0, 2 * 60 * 1000 - (Date.now() - parseInt(last)));
+    const remaining = manualRefreshWait(user.id);
     if (remaining <= 0) return;
 
     const initialLabel = remaining > 60_000 ? '2 minutes' : '1 minute';
@@ -145,12 +144,14 @@ export function UserMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        {avatar ? (
+        {avatar && brokenAvatar !== avatar ? (
           <Image
             src={avatar}
             alt={name}
             width={40}
             height={40}
+            // A picture that won't load gives way to the initial.
+            onError={() => setBrokenAvatar(avatar)}
             className="rounded transition-shadow group-hover:ring-2 group-hover:ring-ink-600"
           />
         ) : (

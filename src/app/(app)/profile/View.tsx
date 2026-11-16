@@ -27,6 +27,22 @@ export default function ProfileView() {
     'email' | 'password' | 'delete-account' | 'disconnect-steam' | null
   >(null);
   const favoritesRow = useRef<FavoriteGamesHandle>(null);
+  // Which section a game's dialog was opened from. If the change it saves
+  // takes that game out of the section (a favorite hidden, a finished game
+  // put back in the backlog), focus goes to the section, not to the page.
+  const openedFrom = useRef<'favorites' | 'activity'>('favorites');
+  const openFavorite = (gameId: number) => {
+    openedFrom.current = 'favorites';
+    profile.openGame(gameId);
+  };
+  const openActivity = (gameId: number) => {
+    openedFrom.current = 'activity';
+    profile.openGame(gameId);
+  };
+  const focusOpenedFrom = () => {
+    if (openedFrom.current === 'favorites') favoritesRow.current?.focus();
+    else document.getElementById('profile-activity')?.focus();
+  };
 
   if (profile.loading) return <ProfilePageSkeleton />;
 
@@ -51,7 +67,9 @@ export default function ProfileView() {
               onOpenerGone={() => favoritesRow.current?.focus()}
             />
           )}
-          {profile.gameDialog && <GameDetailModal isOpen {...profile.gameDialog} />}
+          {profile.gameDialog && (
+            <GameDetailModal isOpen {...profile.gameDialog} onOpenerGone={focusOpenedFrom} />
+          )}
           {changing === 'email' && profile.email && (
             <ChangeEmailDialog
               email={profile.email}
@@ -97,7 +115,7 @@ export default function ProfileView() {
             <FavoriteGames
               ref={favoritesRow}
               games={profile.favorites}
-              onOpen={profile.openGame}
+              onOpen={openFavorite}
               onChoose={() => {
                 profile.favoriteActions.forgetUndo();
                 setChoosingFavorites(true);
@@ -111,7 +129,7 @@ export default function ProfileView() {
               onRetry={profile.retryFavorites}
             />
           )}
-          <RecentActivity entries={profile.activity} onOpen={profile.openGame} />
+          <RecentActivity entries={profile.activity} onOpen={openActivity} />
         </div>
         {/* min-w-0: its one-line values are cut to fit, not allowed to widen the page. */}
         <aside className="min-w-0 space-y-6" aria-label="Platforms and account">

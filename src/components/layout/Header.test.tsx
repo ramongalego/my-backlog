@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { toast } from 'sonner';
 import { Header } from '@/components/layout/Header';
+import { refreshKeys } from '@/hooks/useLibraryRefresh';
 
 const refresh = jest.fn();
 jest.mock('next/navigation', () => ({ usePathname: () => '/home' }));
@@ -17,15 +18,13 @@ jest.mock('@/hooks/useAuth', () => ({
 jest.mock('@/hooks/useLibraryMeta', () => ({
   useLibraryMeta: () => ({ gameCount: 3, loaded: true }),
 }));
+jest.mock('@/hooks/useGameMutations', () => ({ useInvalidateQueries: () => ({}) }));
+jest.mock('@/components/sync/SyncProvider', () => ({ useSyncContext: () => ({}) }));
 jest.mock('@/hooks/useLibraryRefresh', () => ({
+  ...jest.requireActual('@/hooks/useLibraryRefresh'),
   useLibraryRefresh: () => ({ refresh }),
-  refreshKeys: () => ({
-    playtime: 'playtime',
-    manual: 'manual',
-    attempt: 'attempt',
-    reviews: 'reviews',
-  }),
 }));
+const keys = refreshKeys('u');
 jest.mock('@/components/games/AddGameButton', () => ({ AddGameButton: () => null }));
 jest.mock('@/components/auth/AuthModal', () => ({ AuthModal: () => null }));
 // The menu has its own tests; here it's what Refresh library does.
@@ -75,20 +74,26 @@ describe('the cooldown after a refresh', () => {
   const button = () => screen.getByRole('button', { name: 'Refresh library' });
 
   it('follows a refresh the player asked for', () => {
-    localStorage.setItem('manual', String(Date.now() - 30_000));
+    localStorage.setItem(keys.manual, String(Date.now() - 30_000));
     render(<Header />);
     expect(button()).toHaveAttribute('data-cooldown', 'on');
   });
 
   it("isn't started by a background refresh: that one wasn't theirs", () => {
     // The page loads half a minute after the app refreshed on its own.
-    localStorage.setItem('playtime', String(Date.now() - 30_000));
+    localStorage.setItem(keys.playtime, String(Date.now() - 30_000));
     render(<Header />);
     expect(button()).toHaveAttribute('data-cooldown', 'off');
   });
 
   it('is over two minutes after the last one', () => {
-    localStorage.setItem('manual', String(Date.now() - 3 * 60_000));
+    localStorage.setItem(keys.manual, String(Date.now() - 3 * 60_000));
+    render(<Header />);
+    expect(button()).toHaveAttribute('data-cooldown', 'off');
+  });
+
+  it("isn't held by a saved time still to come: the clock was wrong when it was saved", () => {
+    localStorage.setItem(keys.manual, String(Date.now() + 24 * 60 * 60_000));
     render(<Header />);
     expect(button()).toHaveAttribute('data-cooldown', 'off');
   });

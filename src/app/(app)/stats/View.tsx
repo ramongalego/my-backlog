@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { useStatsPage } from '@/hooks/useStatsPage';
@@ -29,15 +30,37 @@ export default function StatsView() {
   const { user, profile } = useAuth();
   const isSteamConnected = profile?.steam_id != null;
   const { open: openAddGame } = useAddGame();
+  // Which list a game's dialog was opened from. Saving can take the game out
+  // of that list (a top-rated game put back in the backlog, a played-a-lot
+  // game marked finished): focus then goes to the list's heading, or to the
+  // page's title when the whole section went with the game, not to the page.
+  const openedFrom = useRef('stats-highest-rated');
+  const openRated = (gameId: number) => {
+    openedFrom.current = 'stats-highest-rated';
+    openGame(gameId);
+  };
+  const openPlayedALot = (gameId: number) => {
+    openedFrom.current = 'stats-played-a-lot';
+    openGame(gameId);
+  };
+  const focusOpenedFrom = () =>
+    (
+      document.getElementById(openedFrom.current) ?? document.getElementById('stats-title')
+    )?.focus();
   const start = {
     isSteamConnected,
     onAddGame: () => openAddGame(),
     onConnectSteam: connectSteam,
   };
   return (
-    <Page overlay={gameDialog && <GameDetailModal isOpen {...gameDialog} />}>
+    <Page
+      overlay={
+        gameDialog && <GameDetailModal isOpen {...gameDialog} onOpenerGone={focusOpenedFrom} />
+      }
+    >
       <PageHeader
         title="Stats"
+        id="stats-title"
         description={<>Your whole library, except games you&apos;ve hidden or won&apos;t play</>}
       />
 
@@ -64,7 +87,7 @@ export default function StatsView() {
             <Hours stats={stats} />
           </div>
           <BacklogPace stats={stats} />
-          <HighestRated stats={stats} onOpen={openGame} />
+          <HighestRated stats={stats} onOpen={openRated} />
           <TagCompletion stats={stats} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TopTags stats={stats} syncs={isSteamConnected} />
@@ -72,7 +95,7 @@ export default function StatsView() {
           </div>
           {stats.playedALot.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PlayedALot stats={stats} onEdit={openGame} />
+              <PlayedALot stats={stats} onEdit={openPlayedALot} />
             </div>
           )}
           {profileReady && user && <PlayerProfile userId={user.id} />}

@@ -33,9 +33,31 @@ export const refreshKeys = (userId: string | null | undefined) => {
   };
 };
 
+/**
+ * How long ago a saved time was, or null when there's nothing to go by:
+ * none saved, not a time, or a time still to come (the device's clock was
+ * wrong when it was saved, or has been moved back since). Counting from one
+ * of those would hold a refresh back for as long as the clock was out.
+ */
+function ageOf(key: string): number | null {
+  const saved = localStorage.getItem(key);
+  if (!saved) return null;
+  const age = Date.now() - Number(saved);
+  return age >= 0 ? age : null;
+}
+
 function isStale(key: string, maxAgeMs: number) {
-  const last = localStorage.getItem(key);
-  return !last || Date.now() - Number(last) > maxAgeMs;
+  const age = ageOf(key);
+  return age === null || age > maxAgeMs;
+}
+
+/** How long the menu's Refresh library waits after a refresh the player asked for. */
+const MANUAL_REFRESH_COOLDOWN_MS = 2 * 60 * 1000;
+
+/** What's left of that wait, in milliseconds: 0 when they can refresh again. */
+export function manualRefreshWait(userId: string | null | undefined): number {
+  const age = ageOf(refreshKeys(userId).manual);
+  return age === null ? 0 : Math.max(0, MANUAL_REFRESH_COOLDOWN_MS - age);
 }
 
 interface RefreshOptions {

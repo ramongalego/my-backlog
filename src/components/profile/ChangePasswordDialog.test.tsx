@@ -18,6 +18,14 @@ const open = () =>
       onClose={onClose}
     />,
   );
+/**
+ * Opened, and past the moment the dialog puts focus on its first field (a
+ * frame later): a test that then moves focus itself isn't overtaken by it.
+ */
+const openAndSettle = async () => {
+  open();
+  await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+};
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const fill = (current = 'Old-pass1', next = 'New-pass1', confirm = next) => {
@@ -136,7 +144,7 @@ it('closes on Cancel without sending', () => {
 });
 
 it('keeps focus in the form when the reset link is sent, on the line that says so', async () => {
-  open();
+  await openAndSettle();
   const button = screen.getByRole('button', { name: 'Email me a reset link' });
   button.focus();
   await act(async () => fireEvent.click(button));
@@ -147,7 +155,7 @@ it('keeps focus in the form when the reset link is sent, on the line that says s
 it('marks the reset link as busy while it sends, without disabling what holds the focus', async () => {
   let done!: (sent: boolean) => void;
   onSendReset.mockReturnValue(new Promise((resolve) => (done = resolve)));
-  open();
+  await openAndSettle();
   const button = screen.getByRole('button', { name: 'Email me a reset link' });
   button.focus();
   await act(async () => fireEvent.click(button));

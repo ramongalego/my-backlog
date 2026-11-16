@@ -48,6 +48,8 @@ export function useFavoriteGames(userId: string | null) {
       waiting.current = null;
       latest.current = null;
       queryClient.setQueryData(key, saved.current);
+      // The row is back as it was: "Removed … Undo" would no longer be true.
+      toast.dismiss(UNDO_TOAST);
       toast.error((err as Error).message);
     } finally {
       sending.current = false;

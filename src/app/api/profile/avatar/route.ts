@@ -6,9 +6,10 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import {
   AVATAR_BUCKET,
   MAX_AVATAR_BYTES,
+  MAX_AVATAR_SIDE,
   deleteAvatars,
-  imageTypeOf,
   newAvatarPath,
+  readImage,
 } from '@/lib/server/avatar';
 
 /** The signed-in player, and the service client their profile is written with. */
@@ -22,8 +23,8 @@ async function signedIn() {
 
 /**
  * Sets the player's profile picture: the small square the browser made, sent
- * as the form field `file`. Checked by its own bytes (WebP, PNG or JPEG, at
- * most 512 KB), stored under a new name in the player's folder, and whatever
+ * as the form field `file`. Checked by its own bytes (WebP, PNG or JPEG with
+ * a header that reads, at most 512 KB and 1024px a side), stored under a new name in the player's folder, and whatever
  * else is in the folder deleted.
  */
 export async function POST(request: NextRequest) {
@@ -48,8 +49,14 @@ export async function POST(request: NextRequest) {
   if (file.size > MAX_AVATAR_BYTES) return jsonError('That picture is too large', 413);
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const type = imageTypeOf(bytes);
-  if (!type) return jsonError('Use a JPEG, PNG or WebP picture', 400);
+  const image = readImage(bytes);
+  if (!image) return jsonError('Use a JPEG, PNG or WebP picture', 400);
+  // A few kilobytes can declare a picture of thousands of pixels a side,
+  // which whatever draws it would have to hold in memory.
+  if (image.width > MAX_AVATAR_SIDE || image.height > MAX_AVATAR_SIDE) {
+    return jsonError('That picture is too large', 413);
+  }
+  const { type } = image;
 
   if (!service) return jsonError("Couldn't save your picture. Please try again.", 500);
 

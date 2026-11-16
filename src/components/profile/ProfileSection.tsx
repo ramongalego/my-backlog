@@ -20,7 +20,12 @@ export function ProfileSection({
   return (
     <section aria-labelledby={id}>
       <div className={SECTION_HEADING}>
-        <h2 id={id} className="text-lg sm:text-xl font-semibold tracking-tight text-ink-50">
+        {/* Takes focus when what had it in the section is gone (tabIndex -1). */}
+        <h2
+          id={id}
+          tabIndex={-1}
+          className="text-lg sm:text-xl font-semibold tracking-tight text-ink-50 outline-none"
+        >
           {title}
         </h2>
         {action}

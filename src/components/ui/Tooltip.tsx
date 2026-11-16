@@ -96,8 +96,9 @@ export function Tooltip({
 
 /**
  * The bubble a tooltip draws: centered above what it's about (`anchor`, that
- * element's box on screen), kept inside the viewport, at the page level with
- * fixed positioning so a container that clips can't cut it off. Decorative
+ * element's box on screen), or below it when there's no room above. Kept
+ * inside the viewport, at the page level with fixed positioning so a
+ * container that clips can't cut it off. Decorative
  * (aria-hidden): what it says is given to a screen reader some other way.
  * Scrolling or resizing dismisses it, since a fixed bubble would drift.
  */
@@ -106,7 +107,7 @@ export function TooltipBubble({
   onDismiss,
   children,
 }: {
-  anchor: { left: number; top: number; width: number };
+  anchor: { left: number; top: number; bottom: number; width: number };
   onDismiss: () => void;
   children: ReactNode;
 }) {
@@ -121,7 +122,10 @@ export function TooltipBubble({
       window.innerWidth - width - EDGE_GAP,
     );
     bubble.style.left = `${left}px`;
-    bubble.style.top = `${anchor.top - bubble.offsetHeight - EDGE_GAP}px`;
+    const above = anchor.top - bubble.offsetHeight - EDGE_GAP;
+    // A tall bubble (a long name) over something near the top of the screen
+    // would start off screen: it goes below instead.
+    bubble.style.top = `${above >= EDGE_GAP ? above : anchor.bottom + EDGE_GAP}px`;
   }, [anchor]);
 
   const dismiss = useEffectEvent(onDismiss);
@@ -139,7 +143,7 @@ export function TooltipBubble({
     <span
       ref={bubbleRef}
       aria-hidden="true"
-      className="fixed z-50 w-max max-w-60 rounded-md border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-left text-xs leading-snug text-ink-300 shadow-lg shadow-black/40 pointer-events-none"
+      className="fixed z-50 w-max max-w-60 rounded-md border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-left text-xs leading-snug text-ink-300 shadow-lg shadow-black/40 pointer-events-none [overflow-wrap:anywhere]"
       style={{ left: -9999, top: -9999 }}
     >
       {children}

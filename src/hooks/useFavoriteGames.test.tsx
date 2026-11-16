@@ -283,3 +283,18 @@ it('removes from the picks the page shows, leaving out one it no longer lists', 
   act(() => favorites().remove(1, 'Hades', (ids) => ids.filter((id) => id !== 99)));
   expect(saveFavoriteGames).toHaveBeenCalledWith([3]);
 });
+
+it('takes the Undo away when the removal it offered to undo did not happen', async () => {
+  const held = heldSaves();
+  const { favorites } = setup([3, 1, 4]);
+  act(() => favorites().remove(1, 'Hades'));
+  expect(toast).toHaveBeenCalledWith(
+    'Removed Hades from your favorites',
+    expect.objectContaining({ id: 'favorites-undo' }),
+  );
+
+  await act(async () => held[0].fail("Couldn't save your favorites. Please try again."));
+  // The row is back as it was, so "Removed … Undo" is no longer true.
+  expect(toast.dismiss).toHaveBeenCalledWith('favorites-undo');
+  expect(favorites().current()).toEqual([3, 1, 4]);
+});

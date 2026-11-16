@@ -10,9 +10,14 @@ import type { ApiResult } from '@/lib/client/request';
 /** What a change answered: done, or why not. */
 type Result = ApiResult;
 
-/** The picture itself: theirs, Steam's, or their initial. */
+/**
+ * The picture itself: theirs, Steam's, or their initial. A picture that won't
+ * load (a file that isn't one, storage or Steam not answering) gives way to
+ * the initial rather than the browser's broken-image mark.
+ */
 function Picture({ src, name }: { src: string | null; name: string }) {
-  return src ? (
+  const [broken, setBroken] = useState(false);
+  return src && !broken ? (
     <Image
       src={src}
       // The name is right beside it.
@@ -20,6 +25,7 @@ function Picture({ src, name }: { src: string | null; name: string }) {
       width={80}
       height={80}
       preload
+      onError={() => setBroken(true)}
       className={`${AVATAR_SIZE} rounded-xl bg-ink-800 object-cover`}
     />
   ) : (
@@ -83,7 +89,8 @@ export function ProfileAvatar({
         aria-label="Change picture"
         className={`${AVATAR_SIZE} relative block overflow-hidden rounded-xl ${busy ? 'cursor-wait' : 'cursor-pointer'}`}
       >
-        <Picture src={src} name={name} />
+        {/* Keyed by the picture: a new one gets its own chance to load. */}
+        <Picture key={src} src={src} name={name} />
         {/* The camera, over the picture while it's hovered or focused. */}
         <span
           aria-hidden="true"

@@ -3,8 +3,10 @@ import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  // eslint-disable-next-line @next/next/no-img-element
-  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+  default: ({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} onError={onError} />
+  ),
 }));
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -93,4 +95,22 @@ it('shows the X on hover or for the keyboard, and always under a finger', () => 
     'focus-visible:opacity-100',
     'pointer-coarse:opacity-100',
   );
+});
+
+it('gives way to the initial when the picture will not load, and tries a new one afresh', () => {
+  const { rerender, container } = draw(true, 'https://x/storage/v1/object/public/avatars/u/a.webp');
+  fireEvent.error(container.querySelector('img')!);
+  expect(container.querySelector('img')).not.toBeInTheDocument();
+  expect(screen.getByText('A')).toBeInTheDocument();
+
+  rerender(
+    <ProfileAvatar
+      src="https://x/storage/v1/object/public/avatars/u/b.webp"
+      name="Ankrath"
+      hasOwnPicture
+      onUpload={onUpload}
+      onRemove={onRemove}
+    />,
+  );
+  expect(container.querySelector('img')).toBeInTheDocument();
 });

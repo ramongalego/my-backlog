@@ -110,6 +110,8 @@ export function ProfileName({
 
   return (
     <form onSubmit={save} noValidate className="min-w-0 max-w-full">
+      {/* The page's heading, kept for a screen reader while the field stands in for it. */}
+      <h1 className="sr-only">{name}</h1>
       <div className="flex min-w-0 items-center gap-1">
         <input
           ref={input}

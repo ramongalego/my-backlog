@@ -34,7 +34,7 @@ export function HighestRated({
         className={`grid gap-8 ${highestRated.length > 0 && showBars ? 'lg:grid-cols-[minmax(0,1fr)_18rem]' : ''}`}
       >
         <div>
-          <SectionTitle>Your highest rated games</SectionTitle>
+          <SectionTitle id="stats-highest-rated">Your highest rated games</SectionTitle>
           {highestRated.length > 0 && (
             <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4 content-start">
               {highestRated.map((game) => (

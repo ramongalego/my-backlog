@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { toast } from 'sonner';
-import { useLibraryRefresh, refreshKeys } from '@/hooks/useLibraryRefresh';
+import { useLibraryRefresh, manualRefreshWait, refreshKeys } from '@/hooks/useLibraryRefresh';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
 
 jest.mock('sonner', () => ({
@@ -467,4 +467,45 @@ describe('useLibraryRefresh', () => {
     });
     expect(mockGamesAndQueue).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("the menu's wait after a refresh the player asked for", () => {
+  beforeEach(() => localStorage.clear());
+  const saved = (value: string) => localStorage.setItem(refreshKeys('user-1').manual, value);
+
+  it('is what is left of two minutes', () => {
+    expect(manualRefreshWait('user-1')).toBe(0);
+    saved(String(Date.now() - 30_000));
+    const wait = manualRefreshWait('user-1');
+    expect(wait).toBeGreaterThan(89_000);
+    expect(wait).toBeLessThanOrEqual(90_000);
+    saved(String(Date.now() - 3 * 60_000));
+    expect(manualRefreshWait('user-1')).toBe(0);
+  });
+
+  it('is nothing when the saved time is not one, or is still to come', () => {
+    saved('not-a-time');
+    expect(manualRefreshWait('user-1')).toBe(0);
+    // Saved while the clock was a day fast: not a day's wait.
+    saved(String(Date.now() + 24 * 60 * 60_000));
+    expect(manualRefreshWait('user-1')).toBe(0);
+  });
+});
+
+it('refreshes in the background when the last time saved cannot be counted from', async () => {
+  for (const value of ['not-a-time', String(Date.now() + 24 * 60 * 60_000)]) {
+    localStorage.clear();
+    localStorage.setItem(refreshKeys('user-1').playtime, value);
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ newGames: 0, updatedPlaytime: 0 }),
+    });
+    global.fetch = fetchMock;
+
+    const { result } = renderHook(() => useLibraryRefresh());
+    await act(async () => {
+      await result.current.refreshIfStale();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  }
 });
