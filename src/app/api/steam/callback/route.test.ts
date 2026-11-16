@@ -105,7 +105,7 @@ beforeEach(() => {
 });
 
 it('replaces the library when a different Steam account is linked: clear, re-point, import', async () => {
-  expect(await link()).toBe('https://mybacklog.test/');
+  expect(await link()).toBe('https://mybacklog.test/home');
   expect(steps).toEqual(['clear library', `profile → ${NEW_STEAM_ID}`, 'import games']);
 });
 
@@ -179,7 +179,7 @@ it('links a Steam account that shares no games, and says why nothing came throug
   expect(syncOwnedGames).toHaveBeenCalledWith(expect.anything(), 'user-1', []);
 });
 
-describe('back to the page Connect Steam was pressed on', () => {
+describe('where it goes once Steam is done', () => {
   const linkFrom = async (from: string) => {
     const res = await GET(
       new NextRequest('https://mybacklog.test/api/steam/callback?state=abc', {
@@ -189,10 +189,12 @@ describe('back to the page Connect Steam was pressed on', () => {
     return res;
   };
 
-  it('once linked, and with what went wrong when it did not work', async () => {
+  it('to Home once the library came through, wherever it started: the import shows there', async () => {
     const linked = await linkFrom('/profile');
-    expect(linked.headers.get('location')).toBe('https://mybacklog.test/profile');
+    expect(linked.headers.get('location')).toBe('https://mybacklog.test/home');
+  });
 
+  it('back where it started, with what went wrong, when it did not work', async () => {
     limited = true;
     expect((await linkFrom('/stats')).headers.get('location')).toBe(
       'https://mybacklog.test/stats?error=steam_link_limited',
@@ -206,9 +208,18 @@ describe('back to the page Connect Steam was pressed on', () => {
     expect(cleared).toMatch(/steam_auth_state=;/);
   });
 
-  it('goes to the site root for a cookie that names another site', async () => {
+  it('back where it started when Steam shared no games: there is no import to watch', async () => {
+    const { getOwnedGames } = jest.requireMock('@/lib/steam/api') as { getOwnedGames: jest.Mock };
+    getOwnedGames.mockResolvedValueOnce({ games: [], isPrivate: true });
+    expect((await linkFrom('/profile')).headers.get('location')).toBe(
+      'https://mybacklog.test/profile?error=steam_private',
+    );
+  });
+
+  it('to the site root, for a failure, when the cookie names another site', async () => {
+    limited = true;
     expect((await linkFrom('https://evil.test/')).headers.get('location')).toBe(
-      'https://mybacklog.test/',
+      'https://mybacklog.test/?error=steam_link_limited',
     );
   });
 });

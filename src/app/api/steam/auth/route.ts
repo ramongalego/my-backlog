@@ -12,8 +12,8 @@ import { STEAM_RETURN_COOKIE, steamReturnPath, withSteamOutcome } from '@/lib/st
  * end. (The callback needs a signed-in player anyway, to link the account to.)
  *
  * `?from=` is the page it was started from: a refusal goes back there, and
- * it's kept in a cookie so the callback goes back there too, once Steam is
- * done.
+ * it's kept in a cookie so a failure on the way back from Steam does too.
+ * (A library that came through goes to Home, to watch it import.)
  */
 export async function GET(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;

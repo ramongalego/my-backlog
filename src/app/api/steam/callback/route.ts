@@ -33,12 +33,13 @@ export async function GET(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
   const params = request.nextUrl.searchParams;
 
-  // Every exit goes back to the page Connect Steam was pressed on (the start
-  // kept it in a cookie), with how it went for that page to say, and clears
-  // the one-time cookies.
+  // A library that came through goes to Home, where its import shows as it
+  // happens. Anything else goes back to the page Connect Steam was pressed on
+  // (the start kept it in a cookie), with what went wrong for that page to
+  // say. Every exit clears the one-time cookies.
   const from = steamReturnPath(request.cookies.get(STEAM_RETURN_COOKIE)?.value, baseUrl);
-  const redirect = (error?: string) => {
-    const response = NextResponse.redirect(withSteamOutcome(from, baseUrl, error));
+  const redirect = (error?: string, to = from) => {
+    const response = NextResponse.redirect(withSteamOutcome(to, baseUrl, error));
     response.cookies.delete('steam_auth_state');
     response.cookies.delete(STEAM_RETURN_COOKIE);
     return response;
@@ -165,7 +166,9 @@ export async function GET(request: NextRequest) {
     return redirect('games_insert_failed');
   }
 
-  // Linked, but Steam shared no games (game details private): say so, or it
-  // looks like connecting did nothing.
-  return redirect(owned.isPrivate ? 'steam_private' : undefined);
+  // Linked, but Steam shared no games (game details private): say so where
+  // they were, or it looks like connecting did nothing. There's no import to
+  // watch on Home.
+  if (owned.isPrivate) return redirect('steam_private');
+  return redirect(undefined, '/home');
 }
