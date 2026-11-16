@@ -36,6 +36,10 @@ export async function PUT(request: NextRequest) {
     if (error.code === '22023') {
       return jsonError('One of those games is no longer in your library', 400);
     }
+    // Two saves at once (another tab): the other one's rows were in the way.
+    if (error.code === '23505') {
+      return jsonError('Your favorites changed somewhere else. Try again.', 409);
+    }
     console.error(error);
     return jsonError("Couldn't save your favorites. Please try again.", 500);
   }

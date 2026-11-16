@@ -60,3 +60,15 @@ it('keeps the name as plain text for a screen reader, with no title attribute', 
   expect(text.tagName).toBe('P');
   expect(text).not.toHaveAttribute('title');
 });
+
+it('shows nothing for a tap: a touchscreen sends mouse events too, and the bubble would stay', () => {
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(hover: none)',
+  })) as unknown as typeof window.matchMedia;
+  render(<TruncatedText className="truncate">{NAME}</TruncatedText>);
+  const text = screen.getByText(NAME);
+  sized(text, { cut: true });
+  fireEvent.mouseEnter(text);
+  expect(bubble()).not.toBeInTheDocument();
+  delete (window as { matchMedia?: unknown }).matchMedia;
+});

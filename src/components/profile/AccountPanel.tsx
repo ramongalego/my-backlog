@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SectionLabel } from '@/components/layout/Page';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 function Row({
   label,
@@ -25,8 +26,15 @@ function Row({
     <li className="flex items-center justify-between gap-3 py-3">
       <div className="min-w-0">
         <p className="text-xs text-ink-500">{label}</p>
-        <p className="mt-0.5 truncate text-sm text-ink-100">{value}</p>
-        {note && <p className="mt-0.5 truncate text-xs text-ink-400">{note}</p>}
+        {typeof value === 'string' ? (
+          <TruncatedText as="p" className="mt-0.5 truncate text-sm text-ink-100">
+            {value}
+          </TruncatedText>
+        ) : (
+          <p className="mt-0.5 truncate text-sm text-ink-100">{value}</p>
+        )}
+        {/* Wraps: it's read to check the address, so none of it is cut. */}
+        {note && <p className="mt-0.5 text-xs text-ink-400 [overflow-wrap:anywhere]">{note}</p>}
       </div>
       {action}
     </li>

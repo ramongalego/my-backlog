@@ -81,7 +81,7 @@ export interface Stats {
 }
 
 const MOST_PLAYED = 5;
-const FAVORITES = 8;
+const HIGHEST_RATED = 8;
 // A finish rate over fewer games says more about chance than taste.
 const CONTRAST_MIN_GAMES = 8;
 const CONTRAST_MIN_GAP = 20;
@@ -210,7 +210,7 @@ export function computeStats(
   const topRated = ratedGames.filter((g) => g.rating! >= 9);
   const highestRated = (topRated.length >= 3 ? topRated : ratedGames.filter((g) => g.rating! >= 8))
     .sort(byBest)
-    .slice(0, FAVORITES)
+    .slice(0, HIGHEST_RATED)
     .map(statGame);
 
   // Finished by year

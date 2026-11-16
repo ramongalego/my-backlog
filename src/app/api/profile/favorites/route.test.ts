@@ -90,3 +90,11 @@ it('stops a player past the limit', async () => {
   for (let i = 0; i < 61; i++) last = (await save({ gameIds: [1] })).status;
   expect(last).toBe(429);
 });
+
+it('says the favorites changed elsewhere when two saves land at once', async () => {
+  rpcError = { code: '23505', message: 'duplicate key value violates unique constraint' };
+  expect(await save({ gameIds: [1, 2] })).toEqual({
+    status: 409,
+    body: { error: 'Your favorites changed somewhere else. Try again.' },
+  });
+});

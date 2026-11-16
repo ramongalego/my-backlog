@@ -69,3 +69,27 @@ it('has a chevron beside the avatar that turns over while the menu is open', () 
   fireEvent.click(trigger);
   expect(chevron).not.toHaveClass('rotate-180');
 });
+
+it('activates the Profile link with Space, as the buttons beside it do', () => {
+  render(<UserMenu user={user} name="Player" avatar={null} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+  const profile = screen.getByRole('menuitem', { name: 'Profile' });
+  const clicked = jest.fn((e: Event) => e.preventDefault());
+  profile.addEventListener('click', clicked);
+  fireEvent.keyDown(profile, { key: ' ' });
+  expect(clicked).toHaveBeenCalledTimes(1);
+});
+
+it('gives focus back to its button when Profile is chosen, wherever that leads', () => {
+  render(<UserMenu user={user} name="Player" avatar={null} />);
+  const trigger = screen.getByRole('button', { name: 'Open user menu' });
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }));
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
+});
+
+it('draws the whole first character of a name as the initial, an emoji included', () => {
+  render(<UserMenu user={user} name="🎮 Ramon" avatar={null} />);
+  expect(screen.getByRole('button', { name: 'Open user menu' })).toHaveTextContent('🎮');
+});

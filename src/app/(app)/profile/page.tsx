@@ -11,6 +11,8 @@ export default async function ProfilePage() {
     { ...queries.gamesList(userId, supabase), stream: true },
     queries.playing(userId, supabase),
     queries.favoriteGames(userId, supabase),
+    // For the game dialog (a queued game shows as Queue), as Games and Stats do.
+    queries.queue(userId, supabase),
   ]);
 
   return (

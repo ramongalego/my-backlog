@@ -12,7 +12,7 @@ interface ModalProps {
   ariaLabel?: string;
   /** Id of a heading inside the content that names the dialog, when it renders its own. */
   labelledBy?: string;
-  size?: 'md' | 'lg' | 'xl' | '2xl';
+  size?: 'md' | 'lg' | 'xl' | '3xl';
   /**
    * `top` pins the dialog near the top so it grows downward, for content that
    * changes height as you use it (search results); centered dialogs re-center
@@ -42,7 +42,7 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   lg: 'max-w-lg',
   xl: 'max-w-[34rem]',
   // For a grid of game art to pick from (the favorites picker).
-  '2xl': 'max-w-3xl',
+  '3xl': 'max-w-3xl',
 };
 
 // What Tab can land on. Disabled controls and hidden inputs are left out: the

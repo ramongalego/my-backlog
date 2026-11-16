@@ -2,7 +2,7 @@ import type { GameItem } from '@/lib/data/loaders';
 import { filterLibrary, searchLibrary } from '@/lib/games/library-filter';
 
 // The favorite games on a player's Profile page: the ones they picked, in
-// their order, or their highest rated until they pick.
+// their order. None until they pick.
 
 /** As many favorites as the profile's row holds. */
 export const MAX_FAVORITES = 4;
@@ -17,7 +17,7 @@ export interface FavoriteGame {
 }
 
 /** A rating only means something on a finished or dropped game (as on its card). */
-const shownRating = (game: GameItem) =>
+export const shownRating = (game: Pick<GameItem, 'status' | 'rating'>) =>
   game.status === 'finished' || game.status === 'dropped' ? game.rating : null;
 
 /**

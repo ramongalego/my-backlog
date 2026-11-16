@@ -7,7 +7,7 @@ import { useAuth, useUpdateSessionProfile } from '@/hooks/useAuth';
 import { displayName, memberSince, profileAvatar, profileName } from '@/lib/account/identity';
 import { profileFigures } from '@/lib/account/figures';
 import { recentActivity } from '@/lib/account/activity';
-import { countPlatforms, libraryPlatforms } from '@/lib/games/library-filter';
+import { countPlatforms } from '@/lib/games/library-filter';
 import { pickedFavorites, toggleFavorite } from '@/lib/account/favorites';
 import { queryKeys } from '@/lib/query-keys';
 import {
@@ -48,7 +48,8 @@ export function useProfilePage() {
   // The favorites are the player's to pick: none until they do.
   const favoriteGames = useFavoriteGames(userId);
   const picked = pickedFavorites(games, favoriteGames.pickedIds);
-  const perPlatform = countPlatforms(games, 'all');
+  /** The picks the page shows: one hidden since, or gone from the library, drops out. */
+  const shownPicks = (ids: readonly number[]) => pickedFavorites(games, ids).map((game) => game.id);
   // A game's dialog, opened from a favorite or an activity row.
   const { gameDialog, openGame } = useLibraryGameDialog(userId);
 
@@ -73,8 +74,8 @@ export function useProfilePage() {
       hasOwnPicture: !!profile?.avatar_url,
       rename: async (name: string | null) => {
         const result = await saveProfileName(name);
+        // A failure is said beside the field, where the name is being typed.
         if (result.ok) updateProfile({ display_name: result.name });
-        else toast.error(result.error);
         return result;
       },
       uploadPicture: async (file: File) => {
@@ -102,13 +103,25 @@ export function useProfilePage() {
     figures: profileFigures(games),
     favorites: picked,
     /**
+     * Whether the picks are known. Until they've loaded the row can't be
+     * changed, and if they couldn't be, it says so: a row drawn empty would
+     * invite picking over the saved ones.
+     */
+    favoritesState: favoriteGames.ready
+      ? ('ready' as const)
+      : favoriteGames.failed
+        ? ('failed' as const)
+        : ('loading' as const),
+    retryFavorites: favoriteGames.retry,
+    /**
      * Changing the favorites, each saved as it's made. They work from the
      * picks the page shows, so one that was hidden or removed since drops out
      * of what's saved next.
      */
     favoriteActions: {
       reorder: favoriteGames.set,
-      remove: (game: { id: number; name: string }) => favoriteGames.remove(game.id, game.name),
+      remove: (game: { id: number; name: string }) =>
+        favoriteGames.remove(game.id, game.name, shownPicks),
       forgetUndo: favoriteGames.forgetUndo,
     },
     /** What the picker needs: the library, the picks, and picking one on or off. */
@@ -118,8 +131,7 @@ export function useProfilePage() {
       // From the picks as they are this instant, not as last drawn: three
       // quick clicks pick three games, not just the last.
       onToggle: (gameId: number): number[] => {
-        const now = pickedFavorites(games, favoriteGames.current()).map((game) => game.id);
-        const next = toggleFavorite(now, gameId);
+        const next = toggleFavorite(shownPicks(favoriteGames.current()), gameId);
         favoriteGames.set(next);
         return next;
       },
@@ -129,8 +141,8 @@ export function useProfilePage() {
       /** A new email waiting for its confirmation link. */
       pendingEmail: user?.new_email ?? null,
       changePassword,
-      changeEmail: async (email: string) => {
-        const result = await changeEmail(email);
+      changeEmail: async (email: string, password: string) => {
+        const result = await changeEmail(email, password);
         // The account has a new email waiting (or a new email): read it again.
         if (result.ok) await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
         return result;
@@ -160,10 +172,11 @@ export function useProfilePage() {
     /** Opens a game's dialog, by its id. */
     openGame,
     activity: recentActivity(games, playing),
-    // Where the library is played, most games first; a platform with only
-    // hidden games isn't listed.
-    platforms: libraryPlatforms(games)
-      .map((name) => ({ name, count: perPlatform.get(name) ?? 0 }))
-      .filter((platform) => platform.count > 0),
+    // Where the library is played, most games first (then by name), counting
+    // what the Games page would list: hidden games aren't counted, and a
+    // platform with only hidden games isn't listed.
+    platforms: [...countPlatforms(games, 'all')]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
   };
 }

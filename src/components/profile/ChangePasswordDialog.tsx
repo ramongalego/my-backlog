@@ -40,6 +40,7 @@ export function ChangePasswordDialog({
   // stop a second press before then from sending again.
   const submitting = useRef(false);
   const sendingReset = useRef(false);
+  const resetStatus = useRef<HTMLParagraphElement>(null);
 
   const change = (field: Field) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -82,7 +83,11 @@ export function ChangePasswordDialog({
     sendingReset.current = true;
     setReset('sending');
     try {
-      setReset((await onSendReset()) ? 'sent' : 'failed');
+      const sent = await onSendReset();
+      // The button goes when the link is sent: focus moves to the line that
+      // says so (which reads it out) rather than falling out of the form.
+      if (sent) resetStatus.current?.focus();
+      setReset(sent ? 'sent' : 'failed');
     } finally {
       sendingReset.current = false;
     }
@@ -110,7 +115,12 @@ export function ChangePasswordDialog({
             data-autofocus
           />
           {/* Said as it changes, in place of the button that asked for it. */}
-          <p className="mt-1.5 text-xs text-ink-400" role="status">
+          <p
+            ref={resetStatus}
+            tabIndex={-1}
+            role="status"
+            className="mt-1.5 text-xs text-ink-400 outline-none"
+          >
             {reset === 'sent' ? (
               <>Reset link sent to {email}</>
             ) : (
@@ -122,8 +132,9 @@ export function ChangePasswordDialog({
                 <button
                   type="button"
                   onClick={handleSendReset}
-                  disabled={reset === 'sending'}
-                  className="-my-1 cursor-pointer py-1 font-medium text-ink-200 underline underline-offset-2 hover:text-ink-50 disabled:cursor-default disabled:text-ink-500"
+                  // Not `disabled`: it has the focus while it sends (the ref guards it).
+                  aria-disabled={reset === 'sending' || undefined}
+                  className="-my-1 cursor-pointer py-1 font-medium text-ink-200 underline underline-offset-2 hover:text-ink-50 aria-disabled:cursor-default aria-disabled:text-ink-500"
                 >
                   {reset === 'sending' ? 'Sending…' : 'Email me a reset link'}
                 </button>

@@ -86,3 +86,10 @@ it('keeps Delete account behind More options until it is asked for', () => {
   fireEvent.click(more);
   expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
 });
+
+it('lets a waiting email wrap, so the whole address can be checked', () => {
+  render(<AccountPanel {...props} pendingEmail="a.very.long.address@example-domain.com" />);
+  const note = screen.getByText(/Changing to a\.very\.long/);
+  expect(note).not.toHaveClass('truncate');
+  expect(note).toHaveClass('[overflow-wrap:anywhere]');
+});

@@ -3,6 +3,8 @@
 // the skeleton is drawn on the server, which can't read a client file's
 // constants.
 
+import { MAX_FAVORITES } from '@/lib/account/favorites';
+
 /** The header: who it is, then the figures, side by side from `lg`. */
 export const PROFILE_HEADER =
   'mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10';
@@ -17,8 +19,8 @@ export const FIGURE_CELL = 'px-3 first:pl-0 last:pr-0 max-[359px]:px-2 sm:px-5 l
 /** The two columns under the header: what the profile shows, then the account. */
 export const PROFILE_COLUMNS = 'grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12';
 
-/** How many favorites the row holds, and its grid. */
-export const FAVORITE_SLOTS = 4;
+/** How many favorites the row holds (as many as can be picked), and its grid. */
+export const FAVORITE_SLOTS = MAX_FAVORITES;
 export const FAVORITE_GRID = 'grid grid-cols-2 sm:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-4';
 
 /** A section's heading row: its title, with room for an action beside it. */

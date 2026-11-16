@@ -2,20 +2,42 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
 
+/** What checking a password found: it's right, it's wrong, or it couldn't be checked. */
+export type PasswordCheck = 'right' | 'wrong' | 'unavailable';
+
 /**
  * Whether this is the account's password, checked by signing in with it on a
  * client of its own that keeps nothing: the player's own session (in their
  * cookies) is left as it is. The session the check makes is ended at once, so
  * it doesn't linger as another signed-in device.
+ *
+ * Only Supabase refusing the credentials is "wrong". Supabase being down, or
+ * limiting sign-ins, is "unavailable": the player typed nothing wrong and
+ * shouldn't be told they did.
  */
-export async function isCurrentPassword(email: string, password: string): Promise<boolean> {
+export async function checkPassword(email: string, password: string): Promise<PasswordCheck> {
   const check = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   const { data, error } = await check.auth.signInWithPassword({ email, password });
-  if (error || !data.session) return false;
+  if (error) {
+    if (error.code === 'invalid_credentials' || error.status === 400) return 'wrong';
+    console.error('Checking the password failed:', error);
+    return 'unavailable';
+  }
+  if (!data.session) return 'wrong';
   await check.auth.signOut({ scope: 'local' }).catch(() => {});
-  return true;
+  return 'right';
+}
+
+/** What a route answers when the password given isn't right, or couldn't be checked. */
+export function passwordCheckRefusal(
+  check: Exclude<PasswordCheck, 'right'>,
+  wrong: { error: string; field: AccountRefusal['field'] },
+): AccountRefusal {
+  return check === 'wrong'
+    ? { status: 400, ...wrong }
+    : { status: 503, error: "Couldn't check your password right now. Please try again." };
 }
 
 /** A Supabase Auth refusal, by its code, as the player reads it and the field it's about. */

@@ -31,7 +31,7 @@ import { TruncatedText } from '@/components/ui/TruncatedText';
 
 const ART_SIZES = '(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px';
 
-/** A favorite's art, rating and name: the same drawn whether or not it can be moved. */
+/** A favorite's art, which is also what opens and moves it. */
 function FavoriteArt({ game }: { game: FavoriteGame }) {
   return <CoverArt src={game.header_image} alt="" sizes={ART_SIZES} interactive />;
 }
@@ -54,8 +54,8 @@ function RatingChip({ rating }: { rating: number | null }) {
  * up and the arrow keys move it), and the X in its corner takes it off.
  * The X shows on hover, and while the keyboard is on the favorite; a
  * click on the art gives it focus too, but that isn't a reason to keep the X
- * there until the next click elsewhere. A touchscreen has no hover, so there
- * it always shows.
+ * there until the next click elsewhere. Under a finger there's no hover, so
+ * there it always shows.
  */
 function PickedFavorite({
   game,
@@ -119,7 +119,7 @@ function PickedFavorite({
           aria-label={`Remove ${game.name} from your favorites`}
           // The close button's small twin: a dark disc, 24px to hit. Under a
           // finger it takes the 8px around it too (40px), the disc no bigger.
-          className="absolute top-1.5 right-1.5 cursor-pointer rounded-full bg-ink-950/80 p-1 text-ink-200 opacity-0 transition-[opacity,color,background-color] hover:bg-ink-950 hover:text-ink-50 focus-visible:opacity-100 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100 [@media(hover:none)]:before:absolute [@media(hover:none)]:before:-inset-2 [@media(hover:none)]:before:content-['']"
+          className="absolute top-1.5 right-1.5 cursor-pointer rounded-full bg-ink-950/80 p-1 text-ink-200 opacity-0 transition-[opacity,color,background-color] hover:bg-ink-950 hover:text-ink-50 focus-visible:opacity-100 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 pointer-coarse:opacity-100 pointer-coarse:before:absolute pointer-coarse:before:-inset-2 pointer-coarse:before:content-['']"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -166,9 +166,9 @@ export interface FavoriteGamesHandle {
  * Four games the player loves, as art, picked by them: the row starts as four
  * empty places and is theirs to fill and arrange where it is. An empty place
  * opens the picker, a favorite opens its game, dragging reorders, and the X
- * takes one off. A row with
- * fewer than four keeps its empty places. (With four, one comes off before
- * another goes on: there's no other way into the picker, and none is needed.)
+ * takes one off. A row with fewer than four keeps its empty places. (With
+ * four, one comes off before another goes on: there's no other way into the
+ * picker, and none is needed.)
  */
 export function FavoriteGames({
   games: saved,

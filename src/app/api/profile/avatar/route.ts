@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { checkRateLimit, checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import {
   AVATAR_BUCKET,
   MAX_AVATAR_BYTES,
-  avatarPathOf,
+  deleteAvatars,
   imageTypeOf,
   newAvatarPath,
 } from '@/lib/server/avatar';
@@ -21,25 +20,11 @@ async function signedIn() {
   return { user, service: tryCreateServiceClient() };
 }
 
-/** The picture the profile has now, to delete once it's replaced. */
-async function currentAvatar(service: SupabaseClient, userId: string): Promise<string | null> {
-  const { data } = await service.from('profiles').select('avatar_url').eq('id', userId).single();
-  return data?.avatar_url ?? null;
-}
-
-/** Deletes a picture that's no longer used. A file left behind is only clutter. */
-async function deleteAvatar(service: SupabaseClient, url: string | null, userId: string) {
-  const path = avatarPathOf(url, userId);
-  if (!path) return;
-  const { error } = await service.storage.from(AVATAR_BUCKET).remove([path]);
-  if (error) console.error('Deleting the old profile picture failed:', error);
-}
-
 /**
  * Sets the player's profile picture: the small square the browser made, sent
  * as the form field `file`. Checked by its own bytes (WebP, PNG or JPEG, at
- * most 512 KB), stored under a new name in the player's folder, and the old
- * one deleted.
+ * most 512 KB), stored under a new name in the player's folder, and whatever
+ * else is in the folder deleted.
  */
 export async function POST(request: NextRequest) {
   const { user, service } = await signedIn();
@@ -47,6 +32,11 @@ export async function POST(request: NextRequest) {
 
   const limit = await checkSharedRateLimit(`avatar-upload:${user.id}`, RATE_LIMITS.avatarUpload);
   if (!limit.success) return rateLimited(limit);
+
+  // Refused by its declared size before any of it is read. (The form adds a
+  // little around the file, hence the allowance.)
+  const declared = Number(request.headers.get('content-length'));
+  if (declared > MAX_AVATAR_BYTES + 4096) return jsonError('That picture is too large', 413);
 
   let file: FormDataEntryValue | null;
   try {
@@ -62,7 +52,6 @@ export async function POST(request: NextRequest) {
   if (!type) return jsonError('Use a JPEG, PNG or WebP picture', 400);
 
   if (!service) return jsonError("Couldn't save your picture. Please try again.", 500);
-  const before = await currentAvatar(service, user.id);
 
   const path = newAvatarPath(user.id, type);
   const { error: uploadError } = await service.storage
@@ -81,11 +70,14 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id);
   if (error) {
     console.error('Saving the profile picture failed:', error);
-    await deleteAvatar(service, avatarUrl, user.id);
+    const { error: undoError } = await service.storage.from(AVATAR_BUCKET).remove([path]);
+    if (undoError) console.error('Deleting the unsaved picture failed:', undoError);
     return jsonError("Couldn't save your picture. Please try again.", 500);
   }
 
-  await deleteAvatar(service, before, user.id);
+  // Everything else in the folder: the picture this replaces, and any left
+  // behind by two uploads at once.
+  await deleteAvatars(service, user.id, path);
   return NextResponse.json({ avatarUrl });
 }
 
@@ -93,9 +85,10 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   const { user, service } = await signedIn();
   if (!user) return jsonError('Unauthorized', 401);
+  const limit = checkRateLimit(`profile-write:${user.id}`, RATE_LIMITS.profileWrite);
+  if (!limit.success) return rateLimited(limit);
   if (!service) return jsonError("Couldn't remove your picture. Please try again.", 500);
 
-  const before = await currentAvatar(service, user.id);
   const { error } = await service
     .from('profiles')
     .update({ avatar_url: null, updated_at: new Date().toISOString() })
@@ -105,6 +98,6 @@ export async function DELETE() {
     return jsonError("Couldn't remove your picture. Please try again.", 500);
   }
 
-  await deleteAvatar(service, before, user.id);
+  await deleteAvatars(service, user.id);
   return NextResponse.json({ avatarUrl: null });
 }

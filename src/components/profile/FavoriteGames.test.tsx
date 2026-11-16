@@ -189,9 +189,9 @@ describe('with favorites picked', () => {
     expect(x).toHaveClass('group-has-[:focus-visible]:opacity-100', 'focus-visible:opacity-100');
     // A click on the art focuses it; that alone must not hold the X there.
     expect(x).not.toHaveClass('group-focus-within:opacity-100');
-    // No hover on a touchscreen: always there, with more room to hit.
-    expect(x).toHaveClass('[@media(hover:none)]:opacity-100');
-    expect(x).toHaveClass('[@media(hover:none)]:before:-inset-2');
+    // No hover under a finger: always there, with more room to hit.
+    expect(x).toHaveClass('pointer-coarse:opacity-100');
+    expect(x).toHaveClass('pointer-coarse:before:-inset-2');
   });
 
   it('wraps a long name where the art is narrow, and cuts it only on a desktop', () => {

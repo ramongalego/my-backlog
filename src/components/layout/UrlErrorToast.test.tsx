@@ -80,3 +80,15 @@ describe('good news from an email link', () => {
     expect(replace).toHaveBeenCalledWith('/home?tab=1', { scroll: false });
   });
 });
+
+it("takes a code from the address only if it is one of its own: '__proto__' is not one of its codes", () => {
+  query = 'notice=__proto__';
+  expect(() => render(<UrlErrorToast />)).not.toThrow();
+  expect(toast.success).not.toHaveBeenCalled();
+
+  query = 'error=constructor';
+  render(<UrlErrorToast />);
+  expect(toast.error).toHaveBeenLastCalledWith('Something went wrong. Please try again.', {
+    id: 'url-error-constructor',
+  });
+});

@@ -81,3 +81,9 @@ it('says so when it could not be saved', async () => {
     body: { error: "Couldn't save your name. Please try again." },
   });
 });
+
+it('refuses a name that draws nothing: zero-width and direction marks are taken out first', async () => {
+  // Only invisible characters: the same as leaving it empty.
+  expect((await save({ name: '\u200b\u202e\u3164' })).body).toEqual({ name: null });
+  expect((await save({ name: 'Big\u200b Boss\u202e' })).body).toEqual({ name: 'Big Boss' });
+});

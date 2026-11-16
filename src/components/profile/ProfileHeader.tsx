@@ -4,8 +4,9 @@ import type { ProfileFigures } from '@/lib/account/figures';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileName } from './ProfileName';
 import { FIGURE_CELL, FIGURE_STRIP, PROFILE_HEADER } from './profile-layout';
+import type { ApiResult } from '@/lib/client/request';
 
-type Result = { ok: true } | { ok: false; error: string };
+type Result = ApiResult;
 
 // `short` is the label on the narrowest phones (320px), where four figures
 // leave each about 56px.
@@ -53,7 +54,8 @@ export function ProfileHeader({
           onUpload={identity.uploadPicture}
           onRemove={identity.removePicture}
         />
-        <div className="min-w-0 flex-1 lg:flex-none">
+        {/* From `lg` it takes its own width but can still give way to the figures. */}
+        <div className="min-w-0 flex-1 lg:flex-initial">
           <ProfileName
             name={name}
             fallback={identity.accountName}

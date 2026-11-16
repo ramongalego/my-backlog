@@ -61,7 +61,7 @@ export function ProfilePageSkeleton() {
               ))}
             </div>
             <div className="mt-3 flex h-5 items-center">
-              <Skeleton className="h-4 w-72 max-w-full" />
+              <Skeleton className="h-4 w-28" />
             </div>
           </div>
           <div>
@@ -70,9 +70,14 @@ export function ProfilePageSkeleton() {
               {Array.from({ length: 6 }, (_, i) => (
                 <div key={i} className={ACTIVITY_ROW}>
                   <Skeleton className={`w-16 sm:w-28 ${COVER_ASPECT} shrink-0 rounded-md`} />
+                  {/* A 24px name line over a 20px line, as the row's text is. */}
                   <div className="min-w-0 flex-1">
-                    <Skeleton className="h-5 w-2/5" />
-                    <Skeleton className="mt-1.5 h-4 w-1/3" />
+                    <div className="flex h-6 items-center">
+                      <Skeleton className="h-5 w-2/5" />
+                    </div>
+                    <div className="mt-0.5 flex h-5 items-center">
+                      <Skeleton className="h-4 w-1/3" />
+                    </div>
                   </div>
                 </div>
               ))}

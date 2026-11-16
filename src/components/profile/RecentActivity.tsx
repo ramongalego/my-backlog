@@ -83,7 +83,9 @@ export function RecentActivity({
       {entries.length > 0 ? (
         <ul className={ACTIVITY_LIST}>
           {entries.map((entry) => (
-            <Row key={`${entry.kind}-${entry.id}`} entry={entry} onOpen={onOpen} />
+            // By the game, which is listed once: its row (and the focus on
+            // it) stays when its dialog changes what happened to it.
+            <Row key={entry.id} entry={entry} onOpen={onOpen} />
           ))}
         </ul>
       ) : (

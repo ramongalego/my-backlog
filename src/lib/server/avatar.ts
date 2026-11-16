@@ -1,4 +1,5 @@
 import 'server-only';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** The storage bucket profile pictures go in (see the 20261116 migration). */
 export const AVATAR_BUCKET = 'avatars';
@@ -30,15 +31,26 @@ export function newAvatarPath(userId: string, type: AvatarType): string {
 }
 
 /**
- * The stored file behind a profile's picture URL, so the old one can be
- * deleted when it's replaced: only a file in this player's own folder of the
- * avatars bucket, never anything else a URL might point at.
+ * Deletes every picture in a player's folder but the one to keep (none, when
+ * the picture is taken off or the account deleted). By the folder, not by the
+ * URL the profile had: a picture left behind by two uploads at once, or by a
+ * failed delete, goes with the next change. A failure is logged and left: a
+ * file nothing points at is only clutter.
  */
-export function avatarPathOf(url: string | null | undefined, userId: string): string | null {
-  if (!url) return null;
-  const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
-  const at = url.indexOf(marker);
-  if (at === -1) return null;
-  const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
-  return path.startsWith(`${userId}/`) && !path.includes('..') ? path : null;
+export async function deleteAvatars(
+  service: SupabaseClient,
+  userId: string,
+  keep?: string,
+): Promise<void> {
+  const pictures = service.storage.from(AVATAR_BUCKET);
+  // A folder holds one picture, or a few after a failure: far under the limit.
+  const { data: files, error: listError } = await pictures.list(userId, { limit: 1000 });
+  if (listError) {
+    console.error('Listing profile pictures failed:', listError);
+    return;
+  }
+  const paths = (files ?? []).map((file) => `${userId}/${file.name}`).filter((p) => p !== keep);
+  if (paths.length === 0) return;
+  const { error } = await pictures.remove(paths);
+  if (error) console.error('Deleting profile pictures failed:', error);
 }

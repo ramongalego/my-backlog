@@ -1,7 +1,8 @@
 /**
  * @jest-environment node
  */
-import { avatarPathOf, imageTypeOf, newAvatarPath } from '@/lib/server/avatar';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { deleteAvatars, imageTypeOf, newAvatarPath } from '@/lib/server/avatar';
 
 const bytes = (...values: (number | string)[]) =>
   new Uint8Array(
@@ -32,17 +33,57 @@ it("stores each new picture under a name of its own in the player's folder", () 
   expect(newAvatarPath('user-1', 'image/webp')).not.toBe(first);
 });
 
-describe('avatarPathOf', () => {
-  const base = 'https://abc.supabase.co/storage/v1/object/public/avatars/';
+describe('deleteAvatars', () => {
+  let stored: { name: string }[];
+  let listError: { message: string } | null;
+  const listed: unknown[][] = [];
+  const removed: string[][] = [];
+  const service = {
+    storage: {
+      from: () => ({
+        list: async (...args: unknown[]) => {
+          listed.push(args);
+          return { data: listError ? null : stored, error: listError };
+        },
+        remove: async (paths: string[]) => {
+          removed.push(paths);
+          return { error: null };
+        },
+      }),
+    },
+  } as unknown as SupabaseClient;
 
-  it("finds the stored file behind the player's own picture", () => {
-    expect(avatarPathOf(`${base}user-1/a.webp`, 'user-1')).toBe('user-1/a.webp');
+  beforeEach(() => {
+    stored = [{ name: 'old.webp' }, { name: 'left-behind.webp' }, { name: 'new.webp' }];
+    listError = null;
+    listed.length = 0;
+    removed.length = 0;
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("deletes everything in the player's own folder but the picture to keep", async () => {
+    await deleteAvatars(service, 'user-1', 'user-1/new.webp');
+    // By the folder: a picture two uploads at once left behind goes too.
+    expect(listed[0][0]).toBe('user-1');
+    expect(removed).toEqual([['user-1/old.webp', 'user-1/left-behind.webp']]);
   });
 
-  it("never names a file outside the player's own folder, or anything else", () => {
-    expect(avatarPathOf(`${base}user-2/a.webp`, 'user-1')).toBeNull();
-    expect(avatarPathOf(`${base}user-1/../user-2/a.webp`, 'user-1')).toBeNull();
-    expect(avatarPathOf('https://avatars.steamstatic.com/a_full.jpg', 'user-1')).toBeNull();
-    expect(avatarPathOf(null, 'user-1')).toBeNull();
+  it('deletes all of them when there is none to keep', async () => {
+    await deleteAvatars(service, 'user-1');
+    expect(removed[0]).toHaveLength(3);
+  });
+
+  it('asks for nothing to be deleted when only the kept picture is there', async () => {
+    stored = [{ name: 'new.webp' }];
+    await deleteAvatars(service, 'user-1', 'user-1/new.webp');
+    expect(removed).toEqual([]);
+  });
+
+  it('logs a folder it could not read, and deletes nothing', async () => {
+    listError = { message: 'storage down' };
+    await deleteAvatars(service, 'user-1');
+    expect(removed).toEqual([]);
+    expect(console.error).toHaveBeenCalled();
   });
 });

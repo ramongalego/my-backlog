@@ -17,6 +17,8 @@ export interface SteamIdentity {
 export async function syncSteamIdentity(
   service: SupabaseClient | null,
   userId: string,
+  /** The Steam account the name and picture were read from. */
+  steamId: string,
   saved: SteamIdentity,
   summary: { personaname: string; avatarfull: string } | null,
 ): Promise<SteamIdentity | null> {
@@ -37,7 +39,10 @@ export async function syncSteamIdentity(
       steam_avatar: current.avatar,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', userId);
+    .eq('id', userId)
+    // Only while that account is still the one linked: a refresh that started
+    // before Steam was disconnected, or switched, must not write its name back.
+    .eq('steam_id', steamId);
   if (error) {
     console.error('Saving the Steam name and picture failed:', error);
     return null;

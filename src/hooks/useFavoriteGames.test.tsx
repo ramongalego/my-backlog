@@ -31,12 +31,16 @@ function heldSaves() {
   return held;
 }
 
+/** The cache of the hook last set up, for a test to put a refetch's result in. */
+let favoritesCache: () => QueryClient;
+
 function setup(saved: number[] = [3, 1]) {
   // What the server has, as a refetch would read it.
   let onServer = saved;
   jest.mocked(loadFavoriteGames).mockImplementation(async () => onServer);
   const client = new QueryClient();
   client.setQueryData(key, saved);
+  favoritesCache = () => client;
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
@@ -210,4 +214,72 @@ describe('removing a favorite', () => {
     expect(saveFavoriteGames).not.toHaveBeenCalled();
     expect(toast).not.toHaveBeenCalled();
   });
+});
+
+describe('before the picks have loaded', () => {
+  /** A hook whose favorites never arrive: the read fails. */
+  function unloaded() {
+    jest.mocked(loadFavoriteGames).mockRejectedValue(new Error('offline'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    return renderHook(() => useFavoriteGames('user-1'), { wrapper });
+  }
+
+  it('saves nothing: a pick now would replace the saved favorites with a list built on none', async () => {
+    const hook = unloaded();
+    expect(hook.result.current.ready).toBe(false);
+
+    act(() => hook.result.current.set([5]));
+    act(() => hook.result.current.remove(5, 'Hades'));
+
+    expect(saveFavoriteGames).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("says they couldn't be loaded, and can try again", async () => {
+    const hook = unloaded();
+    await waitFor(() => expect(hook.result.current.failed).toBe(true));
+    expect(hook.result.current.ready).toBe(false);
+
+    jest.mocked(loadFavoriteGames).mockResolvedValue([3, 1]);
+    act(() => hook.result.current.retry());
+    await waitFor(() => expect(hook.result.current.ready).toBe(true));
+    expect(hook.result.current.failed).toBe(false);
+    expect(hook.result.current.pickedIds).toEqual([3, 1]);
+  });
+
+  it('is ready, and not failed, once they are known', () => {
+    const { favorites } = setup([3, 1]);
+    expect(favorites().ready).toBe(true);
+    expect(favorites().failed).toBe(false);
+  });
+});
+
+it('builds the next change on the list it showed, even if a refetch put the old one back meanwhile', async () => {
+  const held = heldSaves();
+  const { favorites } = setup([3, 1, 4]);
+
+  act(() => favorites().remove(1, 'Hades'));
+  expect(held[0].ids).toEqual([3, 4]);
+  // A refetch that read the rows before the save committed lands now.
+  act(() => {
+    // The same cache the hook reads.
+    favoritesCache().setQueryData(key, [3, 1, 4]);
+  });
+
+  // The next change still starts from [3, 4], not from the stale [3, 1, 4].
+  expect(favorites().current()).toEqual([3, 4]);
+  act(() => favorites().set([...favorites().current(), 9]));
+  await act(async () => held[0].finish());
+  expect(held[1].ids).toEqual([3, 4, 9]);
+  await act(async () => held[1].finish());
+});
+
+it('removes from the picks the page shows, leaving out one it no longer lists', () => {
+  const { favorites } = setup([3, 1, 99]);
+  // 99 was hidden or deleted since: the page shows only 3 and 1.
+  act(() => favorites().remove(1, 'Hades', (ids) => ids.filter((id) => id !== 99)));
+  expect(saveFavoriteGames).toHaveBeenCalledWith([3]);
 });

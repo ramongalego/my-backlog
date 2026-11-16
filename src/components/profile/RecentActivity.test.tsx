@@ -110,3 +110,20 @@ it('opens the game from its row, to fix a date or a rating where it is seen', ()
   fireEvent.click(screen.getByRole('button', { name: /^Celeste/ }));
   expect(onOpen).toHaveBeenLastCalledWith(8);
 });
+
+it('keeps a row, and the focus on it, when its game goes from playing to finished', () => {
+  const playing = entry({ id: 7, kind: 'playing', name: 'Hades', day: '2026-11-13' });
+  const { rerender } = render(<RecentActivity onOpen={onOpen} entries={[playing]} />);
+  const row = screen.getByRole('button', { name: /^Hades Playing/ });
+  row.focus();
+
+  rerender(
+    <RecentActivity
+      onOpen={onOpen}
+      entries={[{ ...playing, kind: 'finished', day: '2026-11-16', rating: 9 }]}
+    />,
+  );
+  const finished = screen.getByRole('button', { name: /^Hades Finished/ });
+  expect(finished).toBe(row);
+  expect(finished).toHaveFocus();
+});

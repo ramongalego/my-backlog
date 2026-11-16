@@ -7,6 +7,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { FavoriteGames, type FavoriteGamesHandle } from '@/components/profile/FavoriteGames';
 import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { FavoritesPicker } from '@/components/profile/FavoritesPicker';
+import { FavoritesUnavailable } from '@/components/profile/FavoritesUnavailable';
 import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
 import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
@@ -92,20 +93,28 @@ export default function ProfileView() {
       {/* What a profile shows of you, then the account behind it. */}
       <div className={PROFILE_COLUMNS}>
         <div className="min-w-0 space-y-10">
-          <FavoriteGames
-            ref={favoritesRow}
-            games={profile.favorites}
-            onOpen={profile.openGame}
-            onChoose={() => {
-              profile.favoriteActions.forgetUndo();
-              setChoosingFavorites(true);
-            }}
-            onReorder={profile.favoriteActions.reorder}
-            onRemove={profile.favoriteActions.remove}
-          />
+          {profile.favoritesState === 'ready' ? (
+            <FavoriteGames
+              ref={favoritesRow}
+              games={profile.favorites}
+              onOpen={profile.openGame}
+              onChoose={() => {
+                profile.favoriteActions.forgetUndo();
+                setChoosingFavorites(true);
+              }}
+              onReorder={profile.favoriteActions.reorder}
+              onRemove={profile.favoriteActions.remove}
+            />
+          ) : (
+            <FavoritesUnavailable
+              failed={profile.favoritesState === 'failed'}
+              onRetry={profile.retryFavorites}
+            />
+          )}
           <RecentActivity entries={profile.activity} onOpen={profile.openGame} />
         </div>
-        <aside className="space-y-6" aria-label="Platforms and account">
+        {/* min-w-0: its one-line values are cut to fit, not allowed to widen the page. */}
+        <aside className="min-w-0 space-y-6" aria-label="Platforms and account">
           <PlaysOn platforms={profile.platforms} />
           <AccountPanel
             email={profile.email}

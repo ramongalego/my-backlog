@@ -47,11 +47,13 @@ export function UrlErrorToast() {
       steamPrivateToast();
     } else if (code) {
       // Fixed id so a re-run of this effect can't stack a duplicate toast.
-      toast.error(MESSAGES[code] ?? 'Something went wrong. Please try again.', {
+      // hasOwn: the code comes from the address, and "__proto__" is not a message.
+      const message = Object.hasOwn(MESSAGES, code) ? MESSAGES[code] : null;
+      toast.error(message ?? 'Something went wrong. Please try again.', {
         id: `url-error-${code}`,
       });
     }
-    if (notice) NOTICES[notice]?.();
+    if (notice && Object.hasOwn(NOTICES, notice)) NOTICES[notice]();
     const params = new URLSearchParams(searchParams);
     params.delete('error');
     params.delete('notice');

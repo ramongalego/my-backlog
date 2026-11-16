@@ -121,3 +121,25 @@ it('refuses a name that is too long, without sending it', async () => {
   expect(screen.getByRole('alert')).toHaveTextContent('Keep it to 40 characters');
   expect(onSave).not.toHaveBeenCalled();
 });
+
+it('ignores Escape while it is saving: the name would still change behind a field that looked canceled', async () => {
+  let done!: (result: Result) => void;
+  onSave.mockReturnValue(new Promise((resolve) => (done = resolve)));
+  open();
+  fireEvent.click(pencil());
+  type('Snake');
+  await act(async () => fireEvent.submit(field()));
+
+  fireEvent.keyDown(field(), { key: 'Escape' });
+  expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+
+  await act(async () => done({ ok: true }));
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+});
+
+it('wraps a long name on a phone and cuts it beside the figures on a desktop', () => {
+  open();
+  const heading = screen.getByRole('heading', { level: 1 });
+  expect(heading).toHaveClass('lg:truncate', '[overflow-wrap:anywhere]');
+  expect(heading).not.toHaveClass('truncate');
+});

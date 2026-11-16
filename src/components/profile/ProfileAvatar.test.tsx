@@ -49,10 +49,16 @@ it('uploads the picture picked, once, and says it is working meanwhile', async (
   });
   expect(onUpload).toHaveBeenCalledTimes(1);
   expect(onUpload).toHaveBeenCalledWith(photo);
-  expect(screen.getByRole('button', { name: 'Change picture' })).toBeDisabled();
+  // Marked as busy, not disabled: it may hold the focus.
+  const change = screen.getByRole('button', { name: 'Change picture' });
+  expect(change).toHaveAttribute('aria-disabled', 'true');
+  expect(change).toBeEnabled();
+  const click = jest.spyOn(fileInput(), 'click');
+  fireEvent.click(change);
+  expect(click).not.toHaveBeenCalled();
 
   await act(async () => done({ ok: true }));
-  expect(screen.getByRole('button', { name: 'Change picture' })).toBeEnabled();
+  expect(change).not.toHaveAttribute('aria-disabled');
 });
 
 it('takes a picture of their own off with its X', async () => {
@@ -61,17 +67,30 @@ it('takes a picture of their own off with its X', async () => {
   expect(onRemove).toHaveBeenCalledTimes(1);
 });
 
+it('moves focus to the picture when its X is pressed, since the X goes', async () => {
+  let done!: (result: Result) => void;
+  onRemove.mockReturnValue(new Promise((resolve) => (done = resolve)));
+  draw(true, 'https://example.supabase.co/storage/v1/object/public/avatars/u/a.webp');
+  const x = screen.getByRole('button', { name: 'Remove picture' });
+  x.focus();
+  await act(async () => fireEvent.click(x));
+
+  expect(screen.queryByRole('button', { name: 'Remove picture' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Change picture' })).toHaveFocus();
+  await act(async () => done({ ok: true }));
+});
+
 it('has no X for a picture that is not theirs to take off', () => {
   draw(false, 'https://avatars.steamstatic.com/a_full.jpg');
   expect(screen.queryByRole('button', { name: 'Remove picture' })).not.toBeInTheDocument();
 });
 
-it('shows the X on hover or for the keyboard, and always on a touchscreen', () => {
+it('shows the X on hover or for the keyboard, and always under a finger', () => {
   draw(true, 'https://example.supabase.co/storage/v1/object/public/avatars/u/a.webp');
   expect(screen.getByRole('button', { name: 'Remove picture' })).toHaveClass(
     'opacity-0',
     'group-hover:opacity-100',
     'focus-visible:opacity-100',
-    '[@media(hover:none)]:opacity-100',
+    'pointer-coarse:opacity-100',
   );
 });

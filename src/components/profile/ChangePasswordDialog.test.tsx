@@ -134,3 +134,26 @@ it('closes on Cancel without sending', () => {
   expect(onClose).toHaveBeenCalledTimes(1);
   expect(onSubmit).not.toHaveBeenCalled();
 });
+
+it('keeps focus in the form when the reset link is sent, on the line that says so', async () => {
+  open();
+  const button = screen.getByRole('button', { name: 'Email me a reset link' });
+  button.focus();
+  await act(async () => fireEvent.click(button));
+  expect(screen.getByRole('status')).toHaveFocus();
+  expect(screen.getByRole('status')).toHaveTextContent('Reset link sent to player@example.com');
+});
+
+it('marks the reset link as busy while it sends, without disabling what holds the focus', async () => {
+  let done!: (sent: boolean) => void;
+  onSendReset.mockReturnValue(new Promise((resolve) => (done = resolve)));
+  open();
+  const button = screen.getByRole('button', { name: 'Email me a reset link' });
+  button.focus();
+  await act(async () => fireEvent.click(button));
+  const sending = screen.getByRole('button', { name: 'Sending…' });
+  expect(sending).toHaveAttribute('aria-disabled', 'true');
+  expect(sending).toBeEnabled();
+  expect(sending).toHaveFocus();
+  await act(async () => done(true));
+});

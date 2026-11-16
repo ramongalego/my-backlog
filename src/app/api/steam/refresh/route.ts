@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
 import { syncSteamIdentity, type SteamIdentity } from '@/lib/server/steam-profile';
-import { syncOwnedGames, type LibrarySyncResult } from '@/lib/server/steam-library';
+import { clearLibrary, syncOwnedGames, type LibrarySyncResult } from '@/lib/server/steam-library';
 import { refreshStoreData } from '@/lib/server/steam-store-data';
 import { refreshCriticScores } from '@/lib/server/critic-scores';
 import { recheckManualHours } from '@/lib/server/manual-hours';
@@ -76,12 +76,18 @@ export async function POST(request: NextRequest) {
       return jsonError('Steam API failed', 502);
     }
 
-    steamProfile = await syncSteamIdentity(
-      tryCreateServiceClient(),
-      user.id,
-      { username: profile.steam_username ?? null, avatar: profile.steam_avatar ?? null },
-      summary,
-    );
+    // Steam took seconds to answer, and the account may have been disconnected
+    // (or switched to another Steam account) meanwhile: then this library is no
+    // longer the player's, and importing it would put it back.
+    const stillLinked = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('steam_id')
+        .eq('id', user.id)
+        .single();
+      return data?.steam_id === profile.steam_id;
+    };
+    if (!(await stillLinked())) return NextResponse.json({ success: true, ...result });
 
     try {
       result = await syncOwnedGames(supabase, user.id, steamGames);
@@ -89,6 +95,23 @@ export async function POST(request: NextRequest) {
       console.error('Library refresh failed:', error);
       return jsonError('Failed to update library', 500);
     }
+
+    // Disconnected while the games were being written: take them out again, as
+    // the disconnect meant to.
+    if (!(await stillLinked())) {
+      await clearLibrary(supabase, user.id).catch((error) =>
+        console.error('Clearing a library imported after disconnecting failed:', error),
+      );
+      return NextResponse.json({ success: true, newGames: 0, updatedPlaytime: 0, updatedGames: 0 });
+    }
+
+    steamProfile = await syncSteamIdentity(
+      tryCreateServiceClient(),
+      user.id,
+      profile.steam_id,
+      { username: profile.steam_username ?? null, avatar: profile.steam_avatar ?? null },
+      summary,
+    );
   }
 
   // Review and critic scores drift slowly, and checking them costs a Steam

@@ -10,11 +10,12 @@ import { SupportModal } from '@/components/layout/SupportModal';
 import { refreshKeys } from '@/hooks/useLibraryRefresh';
 import type { User } from '@supabase/supabase-js';
 import { reloadAtTop } from '@/lib/reload';
+import { initialOf } from '@/lib/account/identity';
 
 interface UserMenuProps {
   user: User;
-  /** The name the profile shows, or null to show the email. */
-  name: string | null;
+  /** The name the profile shows. */
+  name: string;
   /** The picture the profile shows, or null for the initial. */
   avatar: string | null;
   gameCount?: number;
@@ -147,14 +148,14 @@ export function UserMenu({
         {avatar ? (
           <Image
             src={avatar}
-            alt={name ?? 'Profile'}
+            alt={name}
             width={40}
             height={40}
             className="rounded transition-shadow group-hover:ring-2 group-hover:ring-ink-600"
           />
         ) : (
           <div className="w-10 h-10 bg-ink-700 rounded flex items-center justify-center text-ink-300 text-sm font-medium transition-shadow group-hover:ring-2 group-hover:ring-ink-600">
-            {(name ?? user.email)?.[0]?.toUpperCase() ?? '?'}
+            {initialOf(name)}
           </div>
         )}
         <ChevronDown
@@ -172,7 +173,7 @@ export function UserMenu({
           aria-label="Account"
         >
           <div className="px-3 py-2 mb-1 border-b border-ink-800" role="none">
-            <p className="text-sm font-medium text-ink-100 truncate">{name ?? user.email}</p>
+            <p className="text-sm font-medium text-ink-100 truncate">{name}</p>
             {gameCount != null && (
               <p className="text-xs text-ink-500 mt-0.5">
                 {gameCount} {gameCount === 1 ? 'game' : 'games'}
@@ -183,7 +184,16 @@ export function UserMenu({
           <Link
             href="/profile"
             role="menuitem"
-            onClick={() => setOpen(false)}
+            // Focus back to the menu's button: already on Profile, nothing else
+            // takes it.
+            onClick={() => closeMenu(true)}
+            // A link only follows Enter; in a menu, Space activates too.
+            onKeyDown={(e) => {
+              if (e.key === ' ') {
+                e.preventDefault();
+                e.currentTarget.click();
+              }
+            }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
           >
             <UserRound className="w-4 h-4" aria-hidden="true" />

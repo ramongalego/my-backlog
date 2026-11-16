@@ -6,6 +6,14 @@ import type { GameItem } from '@/lib/data/loaders';
 import { libraryGame as game } from '@/lib/account/test-games';
 import { queryKeys } from '@/lib/query-keys';
 import { saveFavoriteGames } from '@/lib/client/favorites';
+import { toast } from 'sonner';
+import {
+  removeAvatar,
+  saveProfileName,
+  squareAvatar,
+  uploadAvatar,
+} from '@/lib/client/profile-identity';
+import { changeEmail, disconnectSteam } from '@/lib/client/account';
 
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 // The game dialog has its own tests (it's the Games page's); here it's only handed on.
@@ -22,12 +30,30 @@ let session: {
     steam_id: string | null;
     steam_username: string | null;
     steam_avatar: string | null;
+    display_name?: string | null;
+    avatar_url?: string | null;
   } | null;
 };
+const mockUpdateProfile = jest.fn();
 jest.mock('@/hooks/useAuth', () => ({
   useAuth: () => session,
-  useUpdateSessionProfile: () => jest.fn(),
+  useUpdateSessionProfile: () => mockUpdateProfile,
 }));
+jest.mock('@/lib/client/profile-identity', () => ({
+  saveProfileName: jest.fn(),
+  uploadAvatar: jest.fn(),
+  removeAvatar: jest.fn(),
+  squareAvatar: jest.fn(),
+}));
+jest.mock('@/lib/client/account', () => ({
+  changePassword: jest.fn(),
+  changeEmail: jest.fn(),
+  deleteAccount: jest.fn(),
+  disconnectSteam: jest.fn(),
+  sendPasswordReset: jest.fn(),
+}));
+const mockReload = jest.fn();
+jest.mock('@/lib/reload', () => ({ reloadAtTop: () => mockReload() }));
 
 const steamPlayer = {
   user: { id: 'user-1', email: 'player@example.com', created_at: '2026-01-18T10:00:00Z' },
@@ -237,5 +263,152 @@ it('is an empty profile, not an error, for an empty library', () => {
     favorites: [],
     activity: [],
     platforms: [],
+  });
+});
+
+it('lists where the library is played by the games it counts, most first, then by name', () => {
+  session = steamPlayer;
+  const profile = open([
+    // PC has the most games, but nearly all are hidden Steam tools.
+    ...Array.from({ length: 5 }, (_, i) => game({ id: 10 + i, status: 'hidden' })),
+    game({ id: 1 }),
+    game({ id: 2, source: 'manual', platform: 'Switch' }),
+    game({ id: 3, source: 'manual', platform: 'Switch' }),
+    game({ id: 4, source: 'manual', platform: 'GBA' }),
+  ]);
+  expect(profile.platforms).toEqual([
+    { name: 'Switch', count: 2 },
+    { name: 'GBA', count: 1 },
+    { name: 'PC', count: 1 },
+  ]);
+});
+
+describe('the favorites, before they are known', () => {
+  it('are loading, then ready once they arrive', () => {
+    session = steamPlayer;
+    expect(open([game({ id: 1 })]).favoritesState).toBe('ready');
+  });
+
+  it("are loading while only the library has arrived, so the row isn't drawn empty", () => {
+    session = steamPlayer;
+    const client = new QueryClient();
+    client.setQueryData(queryKeys.games.list('user-1'), [game({ id: 1 })]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const profile = renderHook(() => useProfilePage(), { wrapper }).result.current;
+    expect(profile.favoritesState).toBe('loading');
+  });
+});
+
+describe('the name and picture', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    session = steamPlayer;
+  });
+
+  it("are the player's own when chosen, with Steam's to go back to", () => {
+    session = {
+      ...steamPlayer,
+      profile: {
+        ...steamPlayer.profile,
+        display_name: 'Big Boss',
+        avatar_url: 'https://x/storage/v1/object/public/avatars/u/a.webp',
+      },
+    };
+    const profile = open([]);
+    expect(profile.name).toBe('Big Boss');
+    expect(profile.avatar).toBe('https://x/storage/v1/object/public/avatars/u/a.webp');
+    expect(profile.identity).toMatchObject({
+      chosenName: 'Big Boss',
+      accountName: 'Ankrath',
+      hasOwnPicture: true,
+    });
+  });
+
+  it('saves a new name and shows it everywhere at once', async () => {
+    jest.mocked(saveProfileName).mockResolvedValue({ ok: true, name: 'Big Boss' });
+    const result = await open([]).identity.rename('Big Boss');
+    expect(result.ok).toBe(true);
+    expect(mockUpdateProfile).toHaveBeenCalledWith({ display_name: 'Big Boss' });
+  });
+
+  it('leaves a failed rename to the field to report, once', async () => {
+    jest
+      .mocked(saveProfileName)
+      .mockResolvedValue({ ok: false, error: "Couldn't save your name. Please try again." });
+    const result = await open([]).identity.rename('Big Boss');
+    expect(result).toEqual({ ok: false, error: "Couldn't save your name. Please try again." });
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('shrinks a picture, uploads it and shows it', async () => {
+    const square = new Blob(['x'], { type: 'image/webp' });
+    jest.mocked(squareAvatar).mockResolvedValue(square);
+    jest.mocked(uploadAvatar).mockResolvedValue({ ok: true, avatarUrl: 'https://x/new.webp' });
+    const file = new File(['big'], 'me.jpg', { type: 'image/jpeg' });
+
+    expect((await open([]).identity.uploadPicture(file)).ok).toBe(true);
+    expect(squareAvatar).toHaveBeenCalledWith(file);
+    expect(uploadAvatar).toHaveBeenCalledWith(square);
+    expect(mockUpdateProfile).toHaveBeenCalledWith({ avatar_url: 'https://x/new.webp' });
+  });
+
+  it('says so when a picture cannot be read, without uploading anything', async () => {
+    jest.mocked(squareAvatar).mockResolvedValue(null);
+    const result = await open([]).identity.uploadPicture(new File(['?'], 'x.heic'));
+    expect(result.ok).toBe(false);
+    expect(uploadAvatar).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("Couldn't read that picture. Try a JPEG or PNG.");
+  });
+
+  it('says why an upload or a removal failed, since the picture has no field to say it in', async () => {
+    jest.mocked(squareAvatar).mockResolvedValue(new Blob(['x']));
+    jest.mocked(uploadAvatar).mockResolvedValue({ ok: false, error: 'That picture is too large' });
+    await open([]).identity.uploadPicture(new File(['x'], 'x.png'));
+    expect(toast.error).toHaveBeenCalledWith('That picture is too large');
+
+    jest.mocked(removeAvatar).mockResolvedValue({ ok: true, avatarUrl: null });
+    await open([]).identity.removePicture();
+    expect(mockUpdateProfile).toHaveBeenLastCalledWith({ avatar_url: null });
+  });
+});
+
+describe('the account', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    session = steamPlayer;
+  });
+
+  it('counts the Steam games disconnecting would remove: not the ones moved to a console', () => {
+    const profile = open([
+      game({ id: 1 }),
+      game({ id: 2 }),
+      game({ id: 3, platform: 'Switch' }),
+      game({ id: 4, source: 'manual', platform: 'PS5' }),
+    ]);
+    expect(profile.account.steamGames).toBe(2);
+  });
+
+  it('reloads the page once Steam is disconnected, and not when it fails', async () => {
+    jest.mocked(disconnectSteam).mockResolvedValueOnce({ ok: false, error: 'nope' });
+    await open([]).account.disconnectSteam();
+    expect(mockReload).not.toHaveBeenCalled();
+
+    jest.mocked(disconnectSteam).mockResolvedValueOnce({ ok: true });
+    await open([]).account.disconnectSteam();
+    expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for an email change with the password', async () => {
+    jest.mocked(changeEmail).mockResolvedValue({
+      ok: true,
+      email: 'player@example.com',
+      pendingEmail: 'new@example.com',
+    });
+    const result = await open([]).account.changeEmail('new@example.com', 'My-pass1');
+    expect(changeEmail).toHaveBeenCalledWith('new@example.com', 'My-pass1');
+    expect(result.ok).toBe(true);
   });
 });

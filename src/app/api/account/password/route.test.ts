@@ -3,7 +3,7 @@
  */
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/account/password/route';
-import { isCurrentPassword } from '@/lib/server/account';
+import { checkPassword } from '@/lib/server/account';
 
 let user: { id: string; email?: string } | null = { id: 'user-1', email: 'player@example.com' };
 let limited = false;
@@ -37,7 +37,7 @@ jest.mock('@/lib/server/rate-limit', () => ({
 }));
 jest.mock('@/lib/server/account', () => ({
   ...jest.requireActual('@/lib/server/account'),
-  isCurrentPassword: jest.fn(),
+  checkPassword: jest.fn(),
 }));
 
 const change = async (body: unknown) => {
@@ -58,20 +58,20 @@ beforeEach(() => {
   updateError = null;
   updates.length = 0;
   signOuts.length = 0;
-  jest.mocked(isCurrentPassword).mockResolvedValue(true);
+  jest.mocked(checkPassword).mockResolvedValue('right');
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => jest.restoreAllMocks());
 
 it('checks the current password, sets the new one, and signs out every other device', async () => {
   expect(await change(valid)).toEqual({ status: 200, body: { ok: true } });
-  expect(isCurrentPassword).toHaveBeenCalledWith('player@example.com', 'Old-pass1');
+  expect(checkPassword).toHaveBeenCalledWith('player@example.com', 'Old-pass1');
   expect(updates).toEqual([{ password: 'New-pass1' }]);
   expect(signOuts).toEqual([{ scope: 'others' }]);
 });
 
 it('changes nothing when the current password is wrong, and says which field', async () => {
-  jest.mocked(isCurrentPassword).mockResolvedValue(false);
+  jest.mocked(checkPassword).mockResolvedValue('wrong');
   expect(await change(valid)).toEqual({
     status: 400,
     body: { error: "That isn't your current password", field: 'currentPassword' },
@@ -80,23 +80,37 @@ it('changes nothing when the current password is wrong, and says which field', a
   expect(signOuts).toEqual([]);
 });
 
+it("changes nothing, and doesn't blame the password, when it couldn't be checked", async () => {
+  jest.mocked(checkPassword).mockResolvedValue('unavailable');
+  expect(await change(valid)).toEqual({
+    status: 503,
+    body: { error: "Couldn't check your password right now. Please try again." },
+  });
+  expect(updates).toEqual([]);
+});
+
+it('refuses a new password longer than Supabase takes, with words of its own', async () => {
+  const res = await change({ currentPassword: 'Old-pass1', newPassword: `Aa1${'x'.repeat(70)}` });
+  expect(res).toEqual({ status: 400, body: { error: 'Password must be at most 72 characters' } });
+});
+
 it('refuses a signed-out request', async () => {
   user = null;
   expect((await change(valid)).status).toBe(401);
-  expect(isCurrentPassword).not.toHaveBeenCalled();
+  expect(checkPassword).not.toHaveBeenCalled();
 });
 
 it('stops once the tries are used up, before checking the password', async () => {
   limited = true;
   expect((await change(valid)).status).toBe(429);
-  expect(isCurrentPassword).not.toHaveBeenCalled();
+  expect(checkPassword).not.toHaveBeenCalled();
 });
 
 it('holds a new password to the sign-up rules', async () => {
   const res = await change({ currentPassword: 'Old-pass1', newPassword: 'short' });
   expect(res.status).toBe(400);
   expect(res.body.error).toBe('Password must be at least 8 characters');
-  expect(isCurrentPassword).not.toHaveBeenCalled();
+  expect(checkPassword).not.toHaveBeenCalled();
 });
 
 it("says what Supabase wouldn't take, on the field it's about", async () => {

@@ -47,11 +47,15 @@ export const resetPasswordSchema = z
     path: ['confirmPassword'],
   });
 
-/** A new password, by the same rules as signing up. */
+/**
+ * A new password, by the same rules as signing up, and no longer than Supabase
+ * Auth takes (72 characters, its hashing limit).
+ */
 const newPassword = z
   .string()
   .min(1, 'Password is required')
   .min(8, 'Password must be at least 8 characters')
+  .max(72, 'Password must be at most 72 characters')
   .regex(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     'Password must contain at least one uppercase letter, one lowercase letter, and one number',
@@ -76,7 +80,18 @@ export const changePasswordSchema = z
 /** What the browser sends to change the password (the confirmation stays in the form). */
 export const changePasswordBodySchema = z.object({
   currentPassword: z.string().min(1, 'Enter your current password').max(200),
-  newPassword: newPassword.max(200),
+  newPassword,
+});
+
+/** What the browser sends to change the email: the new one, and the password to confirm it. */
+export const changeEmailBodySchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .max(254)
+    .email('Please enter a valid email address'),
+  password: z.string().min(1, 'Enter your password').max(200),
 });
 
 /** Changing the email from the profile. */

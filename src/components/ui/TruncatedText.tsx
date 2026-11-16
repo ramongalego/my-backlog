@@ -29,6 +29,9 @@ export function TruncatedText({
   const show = () => {
     const text = ref.current;
     if (!text) return;
+    // A tap sends mouse events too, and the bubble would stay until the next
+    // scroll: only for a pointer that can hover.
+    if (window.matchMedia?.('(hover: none)').matches) return;
     const cut =
       text.scrollWidth > text.clientWidth + 1 || text.scrollHeight > text.clientHeight + 1;
     if (cut) setAnchor(text.getBoundingClientRect());

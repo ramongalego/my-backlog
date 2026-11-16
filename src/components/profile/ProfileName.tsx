@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
 import { fieldClass } from '@/components/ui/Input';
 import { MAX_NAME_LENGTH } from '@/lib/validations/profile';
+import type { ApiResult } from '@/lib/client/request';
 
-type Result = { ok: true } | { ok: false; error: string };
+type Result = ApiResult;
 
 const ICON_BUTTON =
   'shrink-0 cursor-pointer rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-50 disabled:cursor-wait disabled:opacity-60';
@@ -88,7 +89,8 @@ export function ProfileName({
     return (
       <div className="min-w-0 max-w-full">
         <div className="flex min-w-0 items-center gap-1">
-          <h1 className="truncate text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-ink-50">
+          {/* Wraps below `lg`, as names do; beside the figures it's cut instead. */}
+          <h1 className="min-w-0 text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-ink-50 [overflow-wrap:anywhere] lg:truncate">
             {name}
           </h1>
           <button
@@ -119,7 +121,9 @@ export function ProfileName({
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault();
-              close();
+              // Not while it's saving: the name would still change, behind a
+              // field that looked canceled.
+              if (!submitting.current) close();
             }
           }}
           aria-label="Name"

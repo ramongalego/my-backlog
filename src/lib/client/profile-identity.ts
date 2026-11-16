@@ -3,61 +3,40 @@
 // picture that's uploaded. They never throw: each says what happened, with a
 // message the page can show as is.
 
-export type IdentityResult<T> = ({ ok: true } & T) | { ok: false; error: string };
+import { apiRequest, json, type ApiResult } from './request';
 
 /** The side of the square picture that's uploaded: twice the largest it's drawn (80px). */
 const AVATAR_SIDE = 256;
+/** What shows through a see-through picture where it's saved as JPEG: the avatar tile's own (ink-800). */
+const AVATAR_BACKDROP = '#2a2622';
 
-const OFFLINE = "Couldn't reach MyBacklog. Check your connection and try again.";
-
-async function send<T>(
-  url: string,
-  init: RequestInit,
-  fallback: string,
-): Promise<IdentityResult<T>> {
-  let res: Response;
-  try {
-    res = await fetch(url, init);
-  } catch {
-    return { ok: false, error: OFFLINE };
-  }
-  const data = await res.json().catch(() => null);
-  if (res.ok) return { ok: true, ...(data as T) };
-  if (res.status === 429)
-    return { ok: false, error: 'Too many changes in a row. Try again later.' };
-  return { ok: false, error: data?.error ?? fallback };
-}
+const TOO_MANY = 'Too many changes in a row. Try again later.';
 
 /** Sets the profile's name, or clears it (null) to go back to the one the account has. */
-export function saveProfileName(name: string | null) {
-  return send<{ name: string | null }>(
-    '/api/profile/name',
-    {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    },
-    "Couldn't save your name. Please try again.",
-  );
+export function saveProfileName(name: string | null): Promise<ApiResult<{ name: string | null }>> {
+  return apiRequest('/api/profile/name', json('PUT', { name }), {
+    failed: "Couldn't save your name. Please try again.",
+    tooMany: TOO_MANY,
+  });
 }
 
 /** Uploads a profile picture already made square (see squareAvatar). */
-export function uploadAvatar(picture: Blob) {
+export function uploadAvatar(picture: Blob): Promise<ApiResult<{ avatarUrl: string }>> {
   const form = new FormData();
   form.append('file', picture);
-  return send<{ avatarUrl: string }>(
+  return apiRequest(
     '/api/profile/avatar',
     { method: 'POST', body: form },
-    "Couldn't save your picture. Please try again.",
+    { failed: "Couldn't save your picture. Please try again.", tooMany: TOO_MANY },
   );
 }
 
 /** Takes the profile picture off. */
-export function removeAvatar() {
-  return send<{ avatarUrl: null }>(
+export function removeAvatar(): Promise<ApiResult<{ avatarUrl: null }>> {
+  return apiRequest(
     '/api/profile/avatar',
     { method: 'DELETE' },
-    "Couldn't remove your picture. Please try again.",
+    { failed: "Couldn't remove your picture. Please try again.", tooMany: TOO_MANY },
   );
 }
 
@@ -79,25 +58,38 @@ export async function squareAvatar(file: Blob): Promise<Blob | null> {
   canvas.width = AVATAR_SIDE;
   canvas.height = AVATAR_SIDE;
   const context = canvas.getContext('2d');
-  if (!context) return null;
+  if (!context) {
+    bitmap.close();
+    return null;
+  }
   context.imageSmoothingQuality = 'high';
-  context.drawImage(
-    bitmap,
-    (bitmap.width - side) / 2,
-    (bitmap.height - side) / 2,
-    side,
-    side,
-    0,
-    0,
-    AVATAR_SIDE,
-    AVATAR_SIDE,
-  );
-  bitmap.close();
+  const draw = () =>
+    context.drawImage(
+      bitmap,
+      (bitmap.width - side) / 2,
+      (bitmap.height - side) / 2,
+      side,
+      side,
+      0,
+      0,
+      AVATAR_SIDE,
+      AVATAR_SIDE,
+    );
+  draw();
 
   const encode = (type: string) =>
     new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
-  // Safari makes a PNG when asked for WebP; JPEG is smaller then.
+  // Safari makes a PNG when asked for WebP; JPEG is smaller then. JPEG has no
+  // transparency, and clear parts would come out black: drawn again over the
+  // avatar tile's own color first.
   const webp = await encode('image/webp');
-  if (webp?.type === 'image/webp') return webp;
+  if (webp?.type === 'image/webp') {
+    bitmap.close();
+    return webp;
+  }
+  context.fillStyle = AVATAR_BACKDROP;
+  context.fillRect(0, 0, AVATAR_SIDE, AVATAR_SIDE);
+  draw();
+  bitmap.close();
   return (await encode('image/jpeg')) ?? webp;
 }

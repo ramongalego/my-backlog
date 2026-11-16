@@ -124,12 +124,12 @@ it("stays open when the last place is filled: closing is the player's to do", ()
   expect(picks).toEqual([1, 2, 3, 4]);
   expect(onClose).not.toHaveBeenCalled();
   redraw();
-  expect(status()).toHaveTextContent('All four picked. Take one off to pick another.');
+  expect(status()).toHaveTextContent('All 4 picked. Take one off to pick another.');
 });
 
 it('holds four: the rest are dimmed until one is taken off', () => {
   const { redraw } = open([1, 2, 3, 4]);
-  expect(status()).toHaveTextContent('All four picked. Take one off to pick another.');
+  expect(status()).toHaveTextContent('All 4 picked. Take one off to pick another.');
   expect(tile(/Outer Wilds/)).toHaveAttribute('aria-disabled', 'true');
 
   fireEvent.click(tile(/Outer Wilds/));
@@ -147,7 +147,9 @@ it('searches the library by name', () => {
   expect(tiles()).toHaveLength(1);
 
   fireEvent.change(search, { target: { value: 'zzz' } });
-  expect(screen.getByText('No games match “zzz”')).toBeInTheDocument();
+  expect(
+    screen.getByText('No games match “zzz”', { selector: 'p:not(.sr-only)' }),
+  ).toBeInTheDocument();
 });
 
 it('starts in the search with a mouse, where typing straight away costs nothing', () => {
@@ -194,6 +196,21 @@ it('says so on closing when the place that opened it was filled', () => {
   view.rerender(<Page place={false} picking />);
   view.rerender(<Page place={false} picking={false} />);
   expect(onOpenerGone).toHaveBeenCalledTimes(1);
+});
+
+it('says what a search found, since focus stays in the field', () => {
+  open();
+  const search = screen.getByRole('textbox', { name: 'Search your games' });
+  const said = () => document.querySelector('[aria-live="polite"].sr-only');
+  // Nothing to say until something is searched for.
+  expect(said()).toBeEmptyDOMElement();
+
+  fireEvent.change(search, { target: { value: 'pers' } });
+  expect(said()).toHaveTextContent('1 game found');
+  fireEvent.change(search, { target: { value: 'a' } });
+  expect(said()).toHaveTextContent(/^\d games found$/);
+  fireEvent.change(search, { target: { value: 'zzz' } });
+  expect(said()).toHaveTextContent('No games match “zzz”');
 });
 
 it('closes on Done', () => {

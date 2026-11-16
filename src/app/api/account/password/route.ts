@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
-import { isCurrentPassword, passwordRefusal } from '@/lib/server/account';
+import { checkPassword, passwordCheckRefusal, passwordRefusal } from '@/lib/server/account';
 import { changePasswordBodySchema } from '@/lib/validations/auth';
 
 /**
@@ -37,10 +37,15 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
   const { currentPassword, newPassword } = parsed.data;
 
-  if (!(await isCurrentPassword(user.email, currentPassword))) {
+  const check = await checkPassword(user.email, currentPassword);
+  if (check !== 'right') {
+    const refusal = passwordCheckRefusal(check, {
+      error: "That isn't your current password",
+      field: 'currentPassword',
+    });
     return NextResponse.json(
-      { error: "That isn't your current password", field: 'currentPassword' },
-      { status: 400 },
+      { error: refusal.error, field: refusal.field },
+      { status: refusal.status },
     );
   }
 

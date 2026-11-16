@@ -68,9 +68,6 @@ export const queries = {
       queryKey: queryKeys.games.favorites(userId ?? ''),
       queryFn: load(userId, supabase, loadFavoriteGames),
       staleTime: 5 * MINUTE,
-      // The page shows the highest rated games without it, so it isn't worth
-      // holding on for.
-      retry: 1,
     }),
 
   /** The games added by hand, for the Add game dialog. */

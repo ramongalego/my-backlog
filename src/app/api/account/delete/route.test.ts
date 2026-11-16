@@ -3,7 +3,7 @@
  */
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/account/delete/route';
-import { isCurrentPassword } from '@/lib/server/account';
+import { checkPassword } from '@/lib/server/account';
 
 let user: { id: string; email?: string } | null = { id: 'user-1', email: 'player@example.com' };
 let limited = false;
@@ -27,7 +27,7 @@ jest.mock('@/lib/supabase/service', () => ({
   tryCreateServiceClient: () => ({
     storage: {
       from: () => ({
-        list: async () => ({ data: stored }),
+        list: async () => ({ data: stored, error: null }),
         remove: async (paths: string[]) => {
           calls.push('removePictures');
           removed.push(paths);
@@ -56,7 +56,7 @@ jest.mock('@/lib/server/rate-limit', () => ({
 }));
 jest.mock('@/lib/server/account', () => ({
   ...jest.requireActual('@/lib/server/account'),
-  isCurrentPassword: jest.fn(),
+  checkPassword: jest.fn(),
 }));
 
 const remove = async (body: unknown) => {
@@ -77,24 +77,35 @@ beforeEach(() => {
   stored = [];
   calls.length = 0;
   removed.length = 0;
-  jest.mocked(isCurrentPassword).mockResolvedValue(true);
+  jest.mocked(checkPassword).mockResolvedValue('right');
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => jest.restoreAllMocks());
 
-it('deletes the pictures, then the account, then clears the session', async () => {
+it('deletes the account, then its pictures, then clears the session', async () => {
   stored = [{ name: 'a.webp' }, { name: 'b.webp' }];
   expect(await remove({ password: 'My-pass1' })).toEqual({ status: 200, body: { ok: true } });
-  expect(isCurrentPassword).toHaveBeenCalledWith('player@example.com', 'My-pass1');
+  expect(checkPassword).toHaveBeenCalledWith('player@example.com', 'My-pass1');
   expect(removed).toEqual([['user-1/a.webp', 'user-1/b.webp']]);
-  expect(calls).toEqual(['removePictures', 'deleteUser:user-1', 'signOut']);
+  // The account first: a failure after it can't leave a profile pointing at a
+  // deleted picture.
+  expect(calls).toEqual(['deleteUser:user-1', 'removePictures', 'signOut']);
 });
 
 it('deletes nothing with the wrong password, and says which field', async () => {
-  jest.mocked(isCurrentPassword).mockResolvedValue(false);
+  jest.mocked(checkPassword).mockResolvedValue('wrong');
   expect(await remove({ password: 'wrong' })).toEqual({
     status: 400,
     body: { error: "That isn't your password", field: 'password' },
+  });
+  expect(calls).toEqual([]);
+});
+
+it("deletes nothing, and doesn't blame the password, when it couldn't be checked", async () => {
+  jest.mocked(checkPassword).mockResolvedValue('unavailable');
+  expect(await remove({ password: 'My-pass1' })).toEqual({
+    status: 503,
+    body: { error: "Couldn't check your password right now. Please try again." },
   });
   expect(calls).toEqual([]);
 });
@@ -106,15 +117,16 @@ it('deletes nothing without a password, signed out, or past the limit', async ()
   user = { id: 'user-1', email: 'player@example.com' };
   limited = true;
   expect((await remove({ password: 'My-pass1' })).status).toBe(429);
-  expect(isCurrentPassword).not.toHaveBeenCalled();
+  expect(checkPassword).not.toHaveBeenCalled();
   expect(calls).toEqual([]);
 });
 
-it('says so when the account could not be deleted, and keeps the session', async () => {
+it('says so when the account could not be deleted, keeping its pictures and the session', async () => {
+  stored = [{ name: 'a.webp' }];
   deleteError = { message: 'boom' };
   expect(await remove({ password: 'My-pass1' })).toEqual({
     status: 500,
     body: { error: "Couldn't delete your account. Please try again." },
   });
-  expect(calls).not.toContain('signOut');
+  expect(calls).toEqual(['deleteUser:user-1']);
 });

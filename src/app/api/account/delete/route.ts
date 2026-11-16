@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
-import { isCurrentPassword } from '@/lib/server/account';
-import { AVATAR_BUCKET } from '@/lib/server/avatar';
+import { checkPassword, passwordCheckRefusal } from '@/lib/server/account';
+import { deleteAvatars } from '@/lib/server/avatar';
 
 const bodySchema = z.object({ password: z.string().min(1, 'Enter your password').max(200) });
 
@@ -17,7 +17,7 @@ const bodySchema = z.object({ password: z.string().min(1, 'Enter your password')
  * Deleting the Supabase Auth user takes every row with it (the profile, its
  * games and so the diary, the queue, favorites, share pages, support tickets:
  * all cascade from it). The profile pictures aren't rows, so they're deleted
- * from storage first. The session's cookies are cleared on the way out.
+ * from storage after it. The session's cookies are cleared on the way out.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -47,29 +47,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!(await isCurrentPassword(user.email, parsed.data.password))) {
+  const check = await checkPassword(user.email, parsed.data.password);
+  if (check !== 'right') {
+    const refusal = passwordCheckRefusal(check, {
+      error: "That isn't your password",
+      field: 'password',
+    });
     return NextResponse.json(
-      { error: "That isn't your password", field: 'password' },
-      { status: 400 },
+      { error: refusal.error, field: refusal.field },
+      { status: refusal.status },
     );
   }
 
   const service = tryCreateServiceClient();
   if (!service) return jsonError("Couldn't delete your account. Please try again.", 500);
 
-  // The pictures first: once the account is gone, nothing points at them.
-  const pictures = service.storage.from(AVATAR_BUCKET);
-  const { data: files } = await pictures.list(user.id);
-  if (files?.length) {
-    const { error } = await pictures.remove(files.map((file) => `${user.id}/${file.name}`));
-    if (error) console.error('Deleting profile pictures failed:', error);
-  }
-
   const { error } = await service.auth.admin.deleteUser(user.id);
   if (error) {
     console.error('Deleting the account failed:', error);
     return jsonError("Couldn't delete your account. Please try again.", 500);
   }
+
+  // Then the pictures, which aren't rows and so didn't go with it. After the
+  // account, so a failure here can't leave a profile pointing at a deleted
+  // file; it's logged, since nothing will look in this folder again.
+  await deleteAvatars(service, user.id);
 
   // The session belonged to the account just deleted: clear its cookies.
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});

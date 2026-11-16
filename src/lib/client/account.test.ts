@@ -62,7 +62,7 @@ describe('changePassword', () => {
 describe('changeEmail', () => {
   it('gives back the email waiting for its link', async () => {
     answer(200, { email: 'player@example.com', pendingEmail: 'new@example.com' });
-    expect(await changeEmail('new@example.com')).toEqual({
+    expect(await changeEmail('new@example.com', 'My-pass1')).toEqual({
       ok: true,
       email: 'player@example.com',
       pendingEmail: 'new@example.com',
@@ -72,7 +72,13 @@ describe('changeEmail', () => {
   it("keeps Supabase's own rate limit message, which says more than the app's", async () => {
     const error = "We can't send another email right now. Please try again in an hour.";
     answer(429, { error });
-    expect(await changeEmail('new@example.com')).toEqual({ ok: false, error });
+    expect(await changeEmail('new@example.com', 'My-pass1')).toEqual({ ok: false, error });
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/account/email',
+      expect.objectContaining({
+        body: JSON.stringify({ email: 'new@example.com', password: 'My-pass1' }),
+      }),
+    );
   });
 });
 

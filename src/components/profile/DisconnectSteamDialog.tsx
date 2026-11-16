@@ -3,8 +3,9 @@
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import type { ApiResult } from '@/lib/client/request';
 
-type Result = { ok: true } | { ok: false; error: string };
+type Result = ApiResult;
 
 /**
  * Unlinks Steam, saying first, plainly, what's lost for good: the Steam games

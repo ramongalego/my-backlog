@@ -4,7 +4,7 @@
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/steam/refresh/route';
 import { getOwnedGames, getPlayerSummary } from '@/lib/steam/api';
-import { syncOwnedGames } from '@/lib/server/steam-library';
+import { clearLibrary, syncOwnedGames } from '@/lib/server/steam-library';
 import { refreshStoreData } from '@/lib/server/steam-store-data';
 import { refreshCriticScores } from '@/lib/server/critic-scores';
 import { recheckManualHours } from '@/lib/server/manual-hours';
@@ -40,10 +40,13 @@ const profileUpdates: Record<string, unknown>[] = [];
 const service = {
   from: () => ({
     update: (values: Record<string, unknown>) => ({
-      eq: async () => {
-        profileUpdates.push(values);
-        return { error: null };
-      },
+      // By the player, and by the Steam account the name was read from.
+      eq: () => ({
+        eq: async (_column: string, linkedTo: string) => {
+          profileUpdates.push({ ...values, linkedTo });
+          return { error: null };
+        },
+      }),
     }),
   }),
 };
@@ -62,7 +65,10 @@ jest.mock('@/lib/server/env', () => ({
   },
 }));
 jest.mock('@/lib/steam/api', () => ({ getOwnedGames: jest.fn(), getPlayerSummary: jest.fn() }));
-jest.mock('@/lib/server/steam-library', () => ({ syncOwnedGames: jest.fn() }));
+jest.mock('@/lib/server/steam-library', () => ({
+  syncOwnedGames: jest.fn(),
+  clearLibrary: jest.fn(),
+}));
 jest.mock('@/lib/server/steam-store-data', () => ({ refreshStoreData: jest.fn() }));
 jest.mock('@/lib/server/critic-scores', () => ({ refreshCriticScores: jest.fn() }));
 jest.mock('@/lib/server/manual-hours', () => ({ recheckManualHours: jest.fn() }));
@@ -109,6 +115,7 @@ beforeEach(() => {
     .mocked(syncOwnedGames)
     .mockReset()
     .mockResolvedValue({ newGames: 1, updatedPlaytime: 2, updatedGames: 3 });
+  jest.mocked(clearLibrary).mockReset().mockResolvedValue(undefined);
   jest.mocked(refreshStoreData).mockReset().mockResolvedValue(4);
   jest.mocked(refreshCriticScores).mockReset().mockResolvedValue(5);
   jest.mocked(recheckManualHours).mockReset().mockResolvedValue(6);
@@ -162,6 +169,8 @@ describe('the Steam name and picture', () => {
       expect.objectContaining({
         steam_username: 'Big Boss',
         steam_avatar: 'https://avatars.steamstatic.com/new.jpg',
+        // Only while that Steam account is still the one linked.
+        linkedTo: '76561198000000000',
       }),
     ]);
     expect(res.body.steamProfile).toEqual({
@@ -188,6 +197,46 @@ describe('the Steam name and picture', () => {
     jest.mocked(getPlayerSummary).mockResolvedValue({ personaname: ' ', avatarfull: '' } as never);
     await refresh();
     expect(profileUpdates).toEqual([]);
+  });
+});
+
+describe('when Steam is disconnected while a refresh is running', () => {
+  it('imports nothing if it happened while Steam was answering', async () => {
+    jest.mocked(getOwnedGames).mockImplementation(async () => {
+      steamId = null;
+      return { games: OWNED, isPrivate: false } as never;
+    });
+
+    const res = await refresh();
+
+    expect(res.status).toBe(200);
+    expect(syncOwnedGames).not.toHaveBeenCalled();
+    expect(profileUpdates).toEqual([]);
+    expect(res.body).toMatchObject({ newGames: 0, updatedPlaytime: 0 });
+  });
+
+  it('takes the games out again if it happened while they were being written', async () => {
+    jest.mocked(syncOwnedGames).mockImplementation(async () => {
+      steamId = null;
+      return { newGames: 210, updatedPlaytime: 0, updatedGames: 0 };
+    });
+
+    const res = await refresh();
+
+    expect(clearLibrary).toHaveBeenCalledWith(expect.anything(), 'user-1');
+    // Nothing is reported as added, and the old Steam name isn't written back.
+    expect(res.body).toMatchObject({ newGames: 0 });
+    expect(profileUpdates).toEqual([]);
+  });
+
+  it('leaves another Steam account alone, when the player switched to it meanwhile', async () => {
+    jest.mocked(getOwnedGames).mockImplementation(async () => {
+      steamId = '76561198999999999';
+      return { games: OWNED, isPrivate: false } as never;
+    });
+    await refresh();
+    expect(syncOwnedGames).not.toHaveBeenCalled();
+    expect(clearLibrary).not.toHaveBeenCalled();
   });
 });
 

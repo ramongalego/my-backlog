@@ -7,6 +7,7 @@ import { clearLibrary } from '@/lib/server/steam-library';
 let user: { id: string } | null = { id: 'user-1' };
 let steamId: string | null = '76561198000000000';
 let updateError: { message: string } | null = null;
+let readError: { message: string } | null = null;
 const profileUpdates: Record<string, unknown>[] = [];
 
 jest.mock('@/lib/supabase/server', () => ({
@@ -16,7 +17,10 @@ jest.mock('@/lib/supabase/server', () => ({
       const builder = {
         select: () => builder,
         eq: () => builder,
-        single: async () => ({ data: { steam_id: steamId }, error: null }),
+        single: async () =>
+          readError
+            ? { data: null, error: readError }
+            : { data: { steam_id: steamId }, error: null },
       };
       return builder;
     },
@@ -45,6 +49,7 @@ beforeEach(() => {
   user = { id: `user-${Math.random()}` };
   steamId = '76561198000000000';
   updateError = null;
+  readError = null;
   profileUpdates.length = 0;
   jest.mocked(clearLibrary).mockReset().mockResolvedValue(undefined);
   jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -73,6 +78,12 @@ it('keeps Steam linked when the games could not be cleared, to try again', async
     body: { error: "Couldn't disconnect Steam. Please try again." },
   });
   expect(profileUpdates).toEqual([]);
+});
+
+it("says it failed when the profile couldn't be read, rather than that Steam was already off", async () => {
+  readError = { message: 'boom' };
+  expect((await disconnect()).status).toBe(500);
+  expect(clearLibrary).not.toHaveBeenCalled();
 });
 
 it('refuses a signed-out request', async () => {

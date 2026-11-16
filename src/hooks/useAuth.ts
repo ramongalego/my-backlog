@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
@@ -69,23 +69,33 @@ export function AuthStateListener() {
  */
 export function useUpdateSessionProfile() {
   const queryClient = useQueryClient();
-  return (change: Partial<Profile>) =>
-    queryClient.setQueryData<AuthSession>(
-      queryKeys.auth.session(),
-      (session) =>
-        session && {
-          ...session,
-          profile: {
-            steam_id: null,
-            steam_username: null,
-            steam_avatar: null,
-            display_name: null,
-            avatar_url: null,
-            ...session.profile,
-            ...change,
+  // Memoized by hand: it's a dependency of the library refresh's callback,
+  // which an effect re-runs on, and that shouldn't hang on the compiler.
+  return useCallback(
+    (change: Partial<Profile>) => {
+      const key = queryKeys.auth.session();
+      // A read of the session on its way was made before this change, and
+      // would put the old profile back over it.
+      void queryClient.cancelQueries({ queryKey: key }, { revert: false });
+      queryClient.setQueryData<AuthSession>(
+        key,
+        (session) =>
+          session && {
+            ...session,
+            profile: {
+              steam_id: null,
+              steam_username: null,
+              steam_avatar: null,
+              display_name: null,
+              avatar_url: null,
+              ...session.profile,
+              ...change,
+            },
           },
-        },
-    );
+      );
+    },
+    [queryClient],
+  );
 }
 
 export function useAuth() {

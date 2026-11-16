@@ -24,11 +24,15 @@ export async function POST() {
   const limit = checkRateLimit(`profile-write:${user.id}`, RATE_LIMITS.profileWrite);
   if (!limit.success) return rateLimited(limit);
 
-  const { data: profile } = await supabase
+  const { data: profile, error: readError } = await supabase
     .from('profiles')
     .select('steam_id')
     .eq('id', user.id)
     .single();
+  if (readError) {
+    console.error('Reading the profile failed:', readError);
+    return jsonError("Couldn't disconnect Steam. Please try again.", 500);
+  }
   // Already disconnected (pressed twice, another tab): done.
   if (!profile?.steam_id) return NextResponse.json({ ok: true });
 

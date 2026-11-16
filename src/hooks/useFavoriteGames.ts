@@ -23,14 +23,20 @@ const UNDO_TOAST = 'favorites-undo';
 export function useFavoriteGames(userId: string | null) {
   const queryClient = useQueryClient();
   const key = queryKeys.games.favorites(userId ?? '');
-  const { data: pickedIds = NONE } = useQuery(queries.favoriteGames(userId));
+  const query = useQuery(queries.favoriteGames(userId));
+  const pickedIds = query.data ?? NONE;
 
   // What the server has, the save on its way, and the change waiting for it.
   const saved = useRef<number[]>(NONE);
   const sending = useRef(false);
   const waiting = useRef<number[] | null>(null);
+  // The list the page means to show while a save is out. A refetch landing in
+  // that time puts the server's older list in the cache for a moment; the next
+  // change must still build on this one, or it would save the old list back.
+  const latest = useRef<number[] | null>(null);
 
-  const shown = () => queryClient.getQueryData<number[]>(key) ?? NONE;
+  const cached = () => queryClient.getQueryData<number[]>(key);
+  const shown = () => latest.current ?? cached() ?? NONE;
 
   const send = async (gameIds: number[]) => {
     sending.current = true;
@@ -40,6 +46,7 @@ export function useFavoriteGames(userId: string | null) {
     } catch (err) {
       // What was waiting was built on the change that failed.
       waiting.current = null;
+      latest.current = null;
       queryClient.setQueryData(key, saved.current);
       toast.error((err as Error).message);
     } finally {
@@ -47,12 +54,21 @@ export function useFavoriteGames(userId: string | null) {
       const next = waiting.current;
       waiting.current = null;
       if (next && !sameFavorites(next, saved.current)) void send(next);
-      else void queryClient.invalidateQueries({ queryKey: key });
+      else {
+        // Settled: the cache holds what was saved (over anything a refetch put
+        // there meanwhile), then is read again to be sure.
+        latest.current = null;
+        queryClient.setQueryData(key, saved.current);
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
     }
   };
 
   /** Shows the new favorites and saves them. The same list again changes nothing. */
   const set = (gameIds: number[]) => {
+    // Not loaded (still on its way, or it failed): the picks aren't known, and
+    // saving now would replace the saved ones with a list built on none.
+    if (cached() === undefined) return;
     const current = shown();
     if (sameFavorites(current, gameIds)) return;
     // With nothing on its way, what's shown is what the server has.
@@ -62,12 +78,18 @@ export function useFavoriteGames(userId: string | null) {
     // the old list back over the one set on the next line.
     void queryClient.cancelQueries({ queryKey: key }, { revert: false });
     queryClient.setQueryData(key, gameIds);
+    latest.current = gameIds;
     if (sending.current) waiting.current = gameIds;
     else void send(gameIds);
   };
 
   return {
     pickedIds,
+    /** The picks have loaded: until then the row can't be changed. */
+    ready: query.data !== undefined,
+    /** They couldn't be loaded: say so, rather than show a row with none. */
+    failed: query.isError && query.data === undefined,
+    retry: () => void query.refetch(),
     /**
      * The picks as they are this instant, ahead of the next redraw: what a
      * change has to build on, since two clicks can land before the page has
@@ -80,9 +102,13 @@ export function useFavoriteGames(userId: string | null) {
      * over its Done button, and there the game can just be picked again.
      */
     forgetUndo: () => void toast.dismiss(UNDO_TOAST),
-    /** Takes a game off the favorites, with an Undo that puts the row back as it was. */
-    remove: (gameId: number, name: string) => {
-      const before = shown();
+    /**
+     * Takes a game off the favorites, with an Undo that puts the row back as
+     * it was. `clean` drops picks the page no longer shows (hidden since, or
+     * gone from the library), which the server would refuse.
+     */
+    remove: (gameId: number, name: string, clean: (ids: number[]) => number[] = (ids) => ids) => {
+      const before = clean(shown());
       if (!before.includes(gameId)) return;
       set(before.filter((id) => id !== gameId));
       // One Undo per removal, however many times it's pressed.

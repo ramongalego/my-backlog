@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -9,7 +9,7 @@ import { CoverArt } from '@/components/games/CoverArt';
 import { Rating } from '@/components/games/Rating';
 import { SelectTick } from '@/components/games/SelectTick';
 import type { GameItem } from '@/lib/data/loaders';
-import { MAX_FAVORITES, favoriteChoices } from '@/lib/account/favorites';
+import { MAX_FAVORITES, favoriteChoices, shownRating } from '@/lib/account/favorites';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /**
@@ -33,7 +33,7 @@ const BATCH = 48;
 /** How many places are left, as the line under the title says it. */
 function placesLeft(picked: number): string {
   const left = MAX_FAVORITES - picked;
-  if (left === 0) return 'All four picked. Take one off to pick another.';
+  if (left === 0) return `All ${MAX_FAVORITES} picked. Take one off to pick another.`;
   if (picked === 0) return `Pick up to ${MAX_FAVORITES}`;
   return `${left} ${left === 1 ? 'place' : 'places'} left`;
 }
@@ -69,7 +69,10 @@ export function FavoritesPicker({
   const gridEnd = useRef<HTMLLIElement>(null);
 
   const full = pickedIds.length >= MAX_FAVORITES;
-  const choices = favoriteChoices(games, query);
+  // Filtered and sorted when the library or the search changes, not on every
+  // pick or batch: it's the one cost here that grows with the library.
+  const choices = useMemo(() => favoriteChoices(games, query), [games, query]);
+  const searched = query.trim();
   const listed = choices.slice(0, drawn);
   const hasMore = drawn < choices.length;
 
@@ -103,7 +106,7 @@ export function FavoritesPicker({
       onClose={onClose}
       onOpenerGone={onOpenerGone}
       title="Favorite games"
-      size="2xl"
+      size="3xl"
       align="top"
     >
       {/* Said as it changes: the row it describes is behind the dialog. */}
@@ -120,12 +123,20 @@ export function FavoritesPicker({
           type="text"
           value={query}
           onChange={(e) => search(e.target.value)}
-          placeholder="Search your games…"
+          placeholder="Search by name or tag…"
           aria-label="Search your games"
           data-autofocus={searchFirst ? true : undefined}
           className={`${fieldClass()} h-10 pl-9 pr-3 text-sm`}
         />
       </div>
+
+      {/* What a search found, said as it changes: focus stays in the field. */}
+      <p className="sr-only" aria-live="polite">
+        {searched &&
+          (choices.length > 0
+            ? `${choices.length} ${choices.length === 1 ? 'game' : 'games'} found`
+            : `No games match “${searched}”`)}
+      </p>
 
       {listed.length > 0 ? (
         // The padding keeps a picked game's ring inside the scrolling box.
@@ -137,8 +148,7 @@ export function FavoritesPicker({
           {listed.map((game) => {
             const picked = pickedIds.includes(game.id);
             const blocked = full && !picked;
-            const rating =
-              game.status === 'finished' || game.status === 'dropped' ? game.rating : null;
+            const rating = shownRating(game);
             return (
               <li key={game.id} className="min-w-0">
                 <button
@@ -158,11 +168,11 @@ export function FavoritesPicker({
                     className={picked ? 'ring-2 ring-ink-50 ring-offset-2 ring-offset-ink-900' : ''}
                   >
                     <SelectTick selected={picked} className="absolute top-1.5 left-1.5" />
-                    {/* A space, so the rating isn't read as part of the name. */}{' '}
                     {rating != null && (
                       <Rating rating={rating} onArt className="absolute bottom-1.5 right-1.5" />
                     )}
-                  </CoverArt>{' '}
+                  </CoverArt>
+                  {/* A space, so the rating isn't read as part of the name. */}{' '}
                   {/* Two lines: one cuts a long name down to its series, and
                       two games of a series then read the same. */}
                   <TruncatedText className="mt-1.5 line-clamp-2 text-sm text-ink-200">
@@ -178,8 +188,8 @@ export function FavoritesPicker({
         </ul>
       ) : (
         <p className="mt-4 text-sm text-ink-400">
-          {query.trim()
-            ? `No games match “${query.trim()}”`
+          {searched
+            ? `No games match “${searched}”`
             : 'Add games to your library to pick favorites'}
         </p>
       )}

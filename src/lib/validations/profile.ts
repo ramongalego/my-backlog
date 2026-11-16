@@ -12,7 +12,14 @@ export const MAX_NAME_LENGTH = 40;
  */
 export const profileNameSchema = z.object({
   name: safeText
-    .transform((name) => name.replace(/\s+/g, ' ').trim())
+    // Characters that draw nothing (zero-width, direction marks, the Hangul
+    // filler) go first, so a name can't be made only of them.
+    .transform((name) =>
+      name
+        .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\u3164\uFEFF]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
     .refine((name) => !/[\u0000-\u001f\u007f]/.test(name), 'That name has characters it can’t show')
     .refine((name) => name.length <= MAX_NAME_LENGTH, `Keep it to ${MAX_NAME_LENGTH} characters`)
     .nullable()
