@@ -31,10 +31,18 @@ export async function GET(request: NextRequest) {
     }
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    // Supabase has changed the email by the time it sends the code; what
-    // can fail is only signing in here, as when the link is opened on another
-    // device. The profile shows the email as it stands, so it's left to say.
-    return error ? goOn() : goOn(['notice', 'email-changed']);
+    if (!error) return goOn(['notice', 'email-changed']);
+    // Supabase had changed the email before it sent this code, so it's changed
+    // whether or not this browser could be signed in with it. It can't be
+    // where the link is opened in another one than asked for the change (a
+    // phone's mail app, for a change made on a laptop), which is most of the
+    // time: said there too, or the link looks like it did nothing.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) return goOn(['notice', 'email-changed']);
+    // Nobody signed in here: the landing page, with how to get back in.
+    return NextResponse.redirect(new URL('/?notice=email-changed-sign-in', origin));
   }
 
   if (!code) return invalidLink();

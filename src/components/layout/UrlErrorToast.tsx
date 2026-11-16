@@ -22,6 +22,12 @@ const MESSAGES: Record<string, string> = {
 // Good news set by the auth email callback (a link confirming a new email).
 const NOTICES: Record<string, () => void> = {
   'email-changed': () => toast.success('Your email is changed', { id: 'url-notice' }),
+  // The link was opened where nobody is signed in (another device or browser).
+  'email-changed-sign-in': () =>
+    toast.success('Your email is changed', {
+      id: 'url-notice',
+      description: 'Sign in with your new address',
+    }),
   'email-confirm-other': () =>
     toast.success('One link confirmed', {
       id: 'url-notice',

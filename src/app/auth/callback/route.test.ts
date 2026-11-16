@@ -5,9 +5,14 @@ import { NextRequest } from 'next/server';
 import { GET } from '@/app/auth/callback/route';
 
 let exchangeError: Error | null = null;
+/** Who is signed in on the device the link is opened on. */
+let user: { id: string } | null = null;
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
-    auth: { exchangeCodeForSession: async () => ({ error: exchangeError }) },
+    auth: {
+      exchangeCodeForSession: async () => ({ error: exchangeError }),
+      getUser: async () => ({ data: { user } }),
+    },
   }),
 }));
 
@@ -19,6 +24,7 @@ const callback = async (query: string) => {
 
 beforeEach(() => {
   exchangeError = null;
+  user = null;
 });
 
 it('goes on to the page asked for once the code is exchanged', async () => {
@@ -71,10 +77,24 @@ describe('a link confirming a new email', () => {
     expect(await email(`&message=${message}`)).toBe(`${ORIGIN}/profile?notice=email-confirm-other`);
   });
 
-  it('goes to the profile without an error when only signing in here failed', async () => {
-    // Opened on another device: the email is changed, but there's no session to make.
-    exchangeError = new Error('code verifier missing');
-    expect(await email('&code=abc')).toBe(`${ORIGIN}/profile`);
+  describe('opened on another device than asked for the change', () => {
+    // The email is changed by the time the code is sent; only signing in
+    // with it here fails.
+    beforeEach(() => {
+      exchangeError = new Error('code verifier missing');
+    });
+
+    it('still says the email is changed, on the profile, where that device is signed in', async () => {
+      user = { id: 'user-1' };
+      expect(await email('&code=abc')).toBe(`${ORIGIN}/profile?notice=email-changed`);
+    });
+
+    it('says it on the landing page, with how to get back in, where nobody is', async () => {
+      expect(await email('&code=abc')).toBe(`${ORIGIN}/?notice=email-changed-sign-in`);
+    });
+  });
+
+  it('goes to the profile and says nothing for a link with nothing in it', async () => {
     expect(await email('')).toBe(`${ORIGIN}/profile`);
   });
 });

@@ -64,6 +64,15 @@ describe('good news from an email link', () => {
     expect(replace).toHaveBeenCalledWith('/home', { scroll: false });
   });
 
+  it('says how to get back in when the link was opened where nobody is signed in', () => {
+    query = 'notice=email-changed-sign-in';
+    render(<UrlErrorToast />);
+    expect(toast.success).toHaveBeenCalledWith('Your email is changed', {
+      id: 'url-notice',
+      description: 'Sign in with your new address',
+    });
+  });
+
   it('says to open the other link when one of two is confirmed', () => {
     query = 'notice=email-confirm-other';
     render(<UrlErrorToast />);
