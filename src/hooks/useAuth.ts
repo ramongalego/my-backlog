@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
+import { leaveDeadSession } from '@/lib/client/dead-session';
 import { queryKeys } from '@/lib/query-keys';
 import type { Profile } from '@/types/games';
 
@@ -18,9 +19,16 @@ async function fetchAuthSession(): Promise<AuthSession> {
   const supabase = createClient();
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
-  if (!user) return EMPTY_SESSION;
+  if (!user) {
+    // Signed in as far as this browser's cookies go, but not to Supabase
+    // (the account was deleted or signed out elsewhere): the cookies are
+    // cleared and a signed-in page leaves for the landing page.
+    if (error) await leaveDeadSession(supabase, error);
+    return EMPTY_SESSION;
+  }
 
   const { data: profile } = await supabase
     .from('profiles')

@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
+import { isProtectedPath } from '@/lib/routes';
 
-const protectedRoutes = ['/home', '/games', '/diary', '/stats', '/playing-queue', '/profile'];
 const publicOnlyRoutes = ['/'];
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
@@ -75,8 +75,7 @@ export async function proxy(request: NextRequest) {
   };
 
   // Redirect unauthenticated users away from protected routes
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-  if (isProtectedRoute && !user) return redirectTo('/');
+  if (isProtectedPath(pathname) && !user) return redirectTo('/');
 
   // Redirect authenticated users away from public-only routes (landing page)
   const isPublicOnlyRoute = publicOnlyRoutes.some((route) => pathname === route);
