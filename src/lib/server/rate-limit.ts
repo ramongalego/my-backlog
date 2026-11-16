@@ -212,7 +212,10 @@ export const RATE_LIMITS = {
   // Starting to link a Steam account, and verifying the sign-in that comes
   // back: each makes this server contact Steam. Linking is done once, or a few
   // times when it goes wrong.
-  steamLink: { limit: 10, windowMs: 60 * 60 * 1000 },
+  // 30, not 10: every press of Connect Steam counts, finished or not (Back
+  // from Steam's page, a second try), and connecting, disconnecting and
+  // connecting again used to run out of tries.
+  steamLink: { limit: 30, windowMs: 60 * 60 * 1000 },
   // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Support tickets, per user: generous for real use, tight enough to stop spam.

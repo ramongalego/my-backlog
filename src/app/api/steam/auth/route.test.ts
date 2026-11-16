@@ -71,3 +71,36 @@ it("doesn't contact Steam for a player past the limit", async () => {
   expect(res.headers.get('location')).toBe('https://mybacklog.test/?error=steam_link_limited');
   expect(steamContacted).toBe(0);
 });
+
+describe('the page it was started from', () => {
+  const startFrom = (from: string) =>
+    GET(new NextRequest(`https://mybacklog.test/api/steam/auth?from=${encodeURIComponent(from)}`));
+
+  it('is where a refusal goes back to, with what went wrong', async () => {
+    limited = true;
+    expect((await startFrom('/profile')).headers.get('location')).toBe(
+      'https://mybacklog.test/profile?error=steam_link_limited',
+    );
+    limited = false;
+    signedIn = false;
+    expect((await startFrom('/stats')).headers.get('location')).toBe(
+      'https://mybacklog.test/stats?error=not_authenticated',
+    );
+  });
+
+  it('is kept for the way back from Steam, alongside the state', async () => {
+    const res = await startFrom('/games?status=backlog');
+    expect(res.headers.get('location')).toBe('https://steamcommunity.com/openid/login?x=1');
+    const from = res.cookies.get('steam_auth_from');
+    expect(from?.value).toBe('/games?status=backlog');
+    expect(from?.httpOnly).toBe(true);
+    expect(from?.maxAge).toBe(300);
+  });
+
+  it('is never another site', async () => {
+    limited = true;
+    expect((await startFrom('//evil.test/x')).headers.get('location')).toBe(
+      'https://mybacklog.test/?error=steam_link_limited',
+    );
+  });
+});

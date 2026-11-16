@@ -7,6 +7,7 @@ import { clearLibrary, syncOwnedGames } from '@/lib/server/steam-library';
 import { getSteamApiKey } from '@/lib/server/env';
 import { constantTimeCompare } from '@/lib/server/constant-time-compare';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { STEAM_RETURN_COOKIE, steamReturnPath, withSteamOutcome } from '@/lib/steam/return-path';
 
 // Linking imports the whole library, with art for each new game.
 export const maxDuration = 60;
@@ -32,10 +33,14 @@ export async function GET(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
   const params = request.nextUrl.searchParams;
 
-  // Every exit clears the one-time state cookie.
-  const redirect = (path: string) => {
-    const response = NextResponse.redirect(`${baseUrl}${path}`);
+  // Every exit goes back to the page Connect Steam was pressed on (the start
+  // kept it in a cookie), with how it went for that page to say, and clears
+  // the one-time cookies.
+  const from = steamReturnPath(request.cookies.get(STEAM_RETURN_COOKIE)?.value, baseUrl);
+  const redirect = (error?: string) => {
+    const response = NextResponse.redirect(withSteamOutcome(from, baseUrl, error));
     response.cookies.delete('steam_auth_state');
+    response.cookies.delete(STEAM_RETURN_COOKIE);
     return response;
   };
 
@@ -43,13 +48,13 @@ export async function GET(request: NextRequest) {
   const cookieState = request.cookies.get('steam_auth_state')?.value;
   const urlState = params.get('state');
   if (!cookieState || !urlState || !constantTimeCompare(cookieState, urlState)) {
-    return redirect('/?error=invalid_state');
+    return redirect('invalid_state');
   }
 
   // Reject anything not issued by Steam before the openid library runs
   // discovery on the (attacker-controllable) claimed_id.
   if (!isSteamAssertion(params)) {
-    return redirect('/?error=steam_auth_failed');
+    return redirect('steam_auth_failed');
   }
 
   // Who it's being linked to, before anything is asked of Steam: verifying the
@@ -63,11 +68,11 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     console.error('No authenticated user found');
-    return redirect('/?error=not_authenticated');
+    return redirect('not_authenticated');
   }
 
   const limit = await checkSharedRateLimit(`steam-link-verify:${user.id}`, RATE_LIMITS.steamLink);
-  if (!limit.success) return redirect('/?error=steam_link_limited');
+  if (!limit.success) return redirect('steam_link_limited');
 
   // Reconstruct the exact returnUrl used during auth (with state) so OpenID verification passes
   const assertion = await verifyAssertion(
@@ -75,13 +80,13 @@ export async function GET(request: NextRequest) {
     request.url,
   );
   if (!assertion?.authenticated || !assertion.claimedIdentifier) {
-    return redirect('/?error=steam_auth_failed');
+    return redirect('steam_auth_failed');
   }
 
   const steamId = extractSteamId(assertion.claimedIdentifier);
   if (!steamId) {
     console.error('Could not extract Steam ID');
-    return redirect('/?error=invalid_steam_id');
+    return redirect('invalid_steam_id');
   }
 
   let apiKey: string;
@@ -89,7 +94,7 @@ export async function GET(request: NextRequest) {
     apiKey = getSteamApiKey();
   } catch {
     console.error('STEAM_API_KEY not configured');
-    return redirect('/?error=server_config');
+    return redirect('server_config');
   }
 
   let playerSummary, owned, previous;
@@ -102,13 +107,13 @@ export async function GET(request: NextRequest) {
     ]);
   } catch (err) {
     console.error('Steam API request failed:', err);
-    return redirect('/?error=steam_api_failed');
+    return redirect('steam_api_failed');
   }
   if (previous.error) {
     // Without it there's no telling whether this is a different Steam account,
     // whose library has to replace the one that's there.
     console.error('Profile read failed:', previous.error);
-    return redirect('/?error=profile_update_failed');
+    return redirect('profile_update_failed');
   }
   // Re-linking the same account keeps statuses, ratings and notes; only a
   // different Steam account starts from an empty library.
@@ -120,7 +125,7 @@ export async function GET(request: NextRequest) {
   const service = tryCreateServiceClient();
   if (!service) {
     console.error('SUPABASE_SECRET_KEY not configured; cannot link Steam');
-    return redirect('/?error=profile_update_failed');
+    return redirect('profile_update_failed');
   }
 
   // The order matters: clear, point the profile at the new account, import.
@@ -134,7 +139,7 @@ export async function GET(request: NextRequest) {
       await clearLibrary(supabase, user.id);
     } catch (err) {
       console.error('Clearing the previous library failed:', err);
-      return redirect('/?error=games_insert_failed');
+      return redirect('games_insert_failed');
     }
   }
 
@@ -150,17 +155,17 @@ export async function GET(request: NextRequest) {
 
   if (profileError) {
     console.error('Profile update failed:', profileError);
-    return redirect('/?error=profile_update_failed');
+    return redirect('profile_update_failed');
   }
 
   try {
     await syncOwnedGames(supabase, user.id, owned.games);
   } catch (err) {
     console.error('Library import failed:', err);
-    return redirect('/?error=games_insert_failed');
+    return redirect('games_insert_failed');
   }
 
   // Linked, but Steam shared no games (game details private): say so, or it
   // looks like connecting did nothing.
-  return redirect(owned.isPrivate ? '/?error=steam_private' : '/');
+  return redirect(owned.isPrivate ? 'steam_private' : undefined);
 }

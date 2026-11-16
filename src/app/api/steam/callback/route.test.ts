@@ -178,3 +178,37 @@ it('links a Steam account that shares no games, and says why nothing came throug
   expect(steps).toContain(`profile → ${NEW_STEAM_ID}`);
   expect(syncOwnedGames).toHaveBeenCalledWith(expect.anything(), 'user-1', []);
 });
+
+describe('back to the page Connect Steam was pressed on', () => {
+  const linkFrom = async (from: string) => {
+    const res = await GET(
+      new NextRequest('https://mybacklog.test/api/steam/callback?state=abc', {
+        headers: { cookie: `steam_auth_state=abc; steam_auth_from=${encodeURIComponent(from)}` },
+      }),
+    );
+    return res;
+  };
+
+  it('once linked, and with what went wrong when it did not work', async () => {
+    const linked = await linkFrom('/profile');
+    expect(linked.headers.get('location')).toBe('https://mybacklog.test/profile');
+
+    limited = true;
+    expect((await linkFrom('/stats')).headers.get('location')).toBe(
+      'https://mybacklog.test/stats?error=steam_link_limited',
+    );
+  });
+
+  it('clears the cookie that carried it, with the state', async () => {
+    const res = await linkFrom('/profile');
+    const cleared = res.headers.getSetCookie().join('; ');
+    expect(cleared).toMatch(/steam_auth_from=;/);
+    expect(cleared).toMatch(/steam_auth_state=;/);
+  });
+
+  it('goes to the site root for a cookie that names another site', async () => {
+    expect((await linkFrom('https://evil.test/')).headers.get('location')).toBe(
+      'https://mybacklog.test/',
+    );
+  });
+});
