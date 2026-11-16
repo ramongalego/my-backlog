@@ -6,17 +6,33 @@
     <meta name="color-scheme" content="dark" />
     <meta name="supported-color-schemes" content="dark" />
     <title>Confirm your email</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      /* Phones: less room round the panel and inside it. */
+      @media (max-width: 480px) {
+        .outer {
+          padding: 28px 12px !important;
+        }
+        .panel {
+          padding: 24px 20px !important;
+        }
+      }
+    </style>
   </head>
   <body
     style="
       margin: 0;
       padding: 0;
-      background-color: #09090b;
+      background-color: #0f0d0b;
       font-family:
         -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      color: #f4f4f5;
+      color: #eae7e4;
+      -webkit-font-smoothing: antialiased;
     "
   >
+    <!-- The line a mail app shows beside the subject. -->
     <span
       style="
         display: none !important;
@@ -29,7 +45,7 @@
         opacity: 0;
         overflow: hidden;
       "
-      >Confirm your email to start building your backlog.</span
+      >One click and your account is ready.</span
     >
     <table
       role="presentation"
@@ -37,90 +53,113 @@
       cellspacing="0"
       cellpadding="0"
       border="0"
-      style="background-color: #09090b"
+      bgcolor="#0f0d0b"
+      style="background-color: #0f0d0b"
     >
       <tr>
-        <td align="center" style="padding: 40px 16px">
+        <td class="outer" align="center" style="padding: 44px 16px">
           <table
             role="presentation"
             width="100%"
             cellspacing="0"
             cellpadding="0"
             border="0"
-            style="max-width: 560px"
+            style="max-width: 520px"
           >
             <tr>
-              <td align="left" style="padding: 0 4px 24px 4px">
+              <td align="left" style="padding: 0 4px 20px 4px">
                 <span
-                  style="font-size: 18px; font-weight: 600; color: #a78bfa; letter-spacing: -0.01em"
+                  style="
+                    font-size: 18px;
+                    font-weight: 600;
+                    letter-spacing: -0.01em;
+                    color: #f7f5f2;
+                  "
                   >MyBacklog</span
                 >
               </td>
             </tr>
             <tr>
               <td
+                class="panel"
+                bgcolor="#1c1916"
                 style="
-                  background-color: #18181b;
-                  border: 1px solid #27272a;
-                  border-radius: 16px;
+                  background-color: #1c1916;
+                  border: 1px solid #2c2824;
+                  border-radius: 12px;
                   padding: 32px;
                 "
               >
                 <h1
                   style="
-                    margin: 0 0 16px 0;
+                    margin: 0 0 12px 0;
                     font-size: 22px;
                     font-weight: 600;
-                    color: #f4f4f5;
+                    letter-spacing: -0.015em;
                     line-height: 1.3;
+                    color: #f7f5f2;
                   "
                 >
                   Confirm your email
                 </h1>
-                <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #a1a1aa">
-                  Welcome to MyBacklog. Click the button below to confirm your email and activate
-                  your account.
+                <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #bdbab6">
+                  Welcome to MyBacklog. Confirm this is your email address and your account is
+                  ready to use.
                 </p>
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td style="border-radius: 10px; background-color: #7c3aed">
+                    <td
+                      align="center"
+                      bgcolor="#f97934"
+                      style="
+                        background-color: #f97934;
+                        border-radius: 8px;
+                        mso-padding-alt: 12px 22px;
+                      "
+                    >
                       <a
                         href="{{ .ConfirmationURL }}"
                         style="
                           display: inline-block;
-                          padding: 12px 24px;
+                          padding: 12px 22px;
                           font-family:
                             -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
                             sans-serif;
                           font-size: 15px;
                           font-weight: 600;
-                          color: #ffffff;
+                          line-height: 1.2;
+                          color: #0f0d0b;
                           text-decoration: none;
-                          border-radius: 10px;
+                          border-radius: 8px;
                         "
                         >Confirm email</a
                       >
                     </td>
                   </tr>
                 </table>
-                <p style="margin: 24px 0 8px 0; font-size: 13px; line-height: 1.6; color: #71717a">
-                  Or copy and paste this link into your browser:
+                <p
+                  style="
+                    margin: 28px 0 0 0;
+                    padding-top: 20px;
+                    border-top: 1px solid #2c2824;
+                    font-size: 13px;
+                    line-height: 1.6;
+                    color: #8d8884;
+                  "
+                >
+                  If the button doesn&rsquo;t work, paste this link into your browser:
                 </p>
-                <p style="margin: 0; font-size: 13px; line-height: 1.6; word-break: break-all">
-                  <a
-                    href="{{ .ConfirmationURL }}"
-                    style="color: #a78bfa; text-decoration: underline"
+                <p style="margin: 6px 0 0 0; font-size: 13px; line-height: 1.6; word-break: break-all">
+                  <a href="{{ .ConfirmationURL }}" style="color: #bdbab6; text-decoration: underline"
                     >{{ .ConfirmationURL }}</a
                   >
                 </p>
               </td>
             </tr>
             <tr>
-              <td
-                style="padding: 24px 4px 0 4px; font-size: 12px; line-height: 1.6; color: #71717a"
-              >
+              <td style="padding: 20px 4px 0 4px; font-size: 12px; line-height: 1.6; color: #8d8884">
                 <p style="margin: 0">
-                  Didn&rsquo;t sign up for MyBacklog? You can safely ignore this email.
+                  Didn&rsquo;t sign up for MyBacklog? You can ignore this email.
                 </p>
               </td>
             </tr>
