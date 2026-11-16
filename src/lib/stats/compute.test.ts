@@ -39,13 +39,13 @@ describe('mostPlayed', () => {
   });
 });
 
-describe('favourites', () => {
+describe('highest rated', () => {
   const finished = (rating: number, finished_at = '2025-01-01') =>
     game({ name: `${rating} on ${finished_at}`, status: 'finished', rating, finished_at });
 
   it('shows 9s and 10s, best then newest first', () => {
     const games = [finished(9, '2024-01-01'), finished(10), finished(9, '2025-06-01'), finished(8)];
-    expect(stats(games).favourites.map((g) => g.name)).toEqual([
+    expect(stats(games).highestRated.map((g) => g.name)).toEqual([
       '10 on 2025-01-01',
       '9 on 2025-06-01',
       '9 on 2024-01-01',
@@ -53,12 +53,12 @@ describe('favourites', () => {
   });
 
   it('takes 8s too when there are fewer than three 9s and 10s', () => {
-    const names = stats([finished(9), finished(8), finished(7)]).favourites.map((g) => g.rating);
+    const names = stats([finished(9), finished(8), finished(7)]).highestRated.map((g) => g.rating);
     expect(names).toEqual([9, 8]);
   });
 
   it("doesn't count ratings on games that aren't finished", () => {
-    expect(stats([game({ status: 'dropped', rating: 10 })]).favourites).toEqual([]);
+    expect(stats([game({ status: 'dropped', rating: 10 })]).highestRated).toEqual([]);
   });
 });
 

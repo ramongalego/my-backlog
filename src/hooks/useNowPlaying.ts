@@ -145,7 +145,7 @@ export function useNowPlaying(userId: string | null) {
     mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
       completeGame(game.id, status, { date, notes, rating }),
     onSuccess: ({ counts, promoted, promoteFailed }, { game, status, date, notes, rating }) => {
-      if (promoteFailed) toast.error("Couldn't start the next game from your queue.");
+      if (promoteFailed) toast.error("Couldn't start the next game from your queue");
       gamesList.patch(
         statusChangeFrom({ gameId: game.id, status, date, notes, rating }),
         ...(promoted ? [{ gameId: promoted.id, status: 'playing' as const }] : []),

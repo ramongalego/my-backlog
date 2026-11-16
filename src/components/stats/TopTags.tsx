@@ -13,7 +13,7 @@ export function TopTags({ stats, syncs }: { stats: Stats; syncs: boolean }) {
         <p className="text-sm text-ink-500">
           {syncs
             ? 'No tags yet. They’re added the next time your library syncs.'
-            : 'None of your games have tags yet.'}
+            : 'None of your games have tags yet'}
         </p>
       </Panel>
     );

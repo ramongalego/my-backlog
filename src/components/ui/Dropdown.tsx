@@ -28,7 +28,7 @@ interface DropdownProps<T extends string> {
   /** Added to the trigger: its padding and hover fill when it's part of a toolbar control. */
   triggerClassName?: string;
   /**
-   * The trigger's text colours, in place of the usual quiet ones: for a
+   * The trigger's text colors, in place of the usual quiet ones: for a
    * control that's lit while its choice narrows the page.
    */
   triggerTone?: string;

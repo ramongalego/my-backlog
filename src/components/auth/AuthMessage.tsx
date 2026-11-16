@@ -9,7 +9,7 @@ const TONE = {
 
 /**
  * Where an auth form ends up: "Check your email", "Password updated", a bad
- * link. The icon stands alone in its meaning's colour, not on a tinted disc.
+ * link. The icon stands alone in its meaning's color, not on a tinted disc.
  */
 export function AuthMessage({
   icon: Icon,

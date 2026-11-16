@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
 
-const protectedRoutes = ['/home', '/games', '/diary', '/stats', '/playing-queue'];
+const protectedRoutes = ['/home', '/games', '/diary', '/stats', '/playing-queue', '/profile'];
 const publicOnlyRoutes = ['/'];
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 

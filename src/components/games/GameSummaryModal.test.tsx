@@ -222,7 +222,7 @@ describe('GameSummaryModal', () => {
 
     it('says that sharing makes a public page', () => {
       render(<GameSummaryModal {...defaultProps} />);
-      expect(screen.getByText('Makes a public page with this summary.')).toBeInTheDocument();
+      expect(screen.getByText('Makes a public page with this summary')).toBeInTheDocument();
     });
 
     it('offers the places to share to once the page is made, with focus on Copy link', async () => {
@@ -236,7 +236,7 @@ describe('GameSummaryModal', () => {
       expect(screen.getByRole('button', { name: /Reddit/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Twitter/ })).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Share link ready');
-      expect(screen.queryByText('Makes a public page with this summary.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Makes a public page with this summary')).not.toBeInTheDocument();
     });
 
     it('copies the link and says so', async () => {
@@ -287,7 +287,7 @@ describe('GameSummaryModal', () => {
       share();
       fireEvent.click(await screen.findByRole('button', { name: 'Copy link' }));
 
-      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't copy the link."));
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't copy the link"));
       expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
     });
 

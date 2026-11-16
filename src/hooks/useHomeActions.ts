@@ -128,7 +128,7 @@ export function useHomeActions(userId: string | null) {
   const findRandomGame = async (userId: string): Promise<GameWithImage | null> => {
     const found = await findRandomBacklogGame(userId);
     if ('game' in found) return found.game;
-    if (found.error === 'none') toast.info('No eligible backlog games to pick from.');
+    if (found.error === 'none') toast.info('No eligible backlog games to pick from');
     else toast.error('Could not pick a random game. Please try again.');
     return null;
   };

@@ -12,6 +12,7 @@ import {
   loadCarouselPools,
   loadCurrentlyPlaying,
   loadDiaryEntries,
+  loadFavoriteGames,
   loadGamesList,
   loadLibraryMeta,
   loadManualGames,
@@ -59,6 +60,17 @@ export const queries = {
       queryKey: queryKeys.games.playing(userId ?? ''),
       queryFn: load(userId, supabase, loadCurrentlyPlaying),
       staleTime: 30 * 1000,
+    }),
+
+  /** The games picked as favorites (ids, in order), for the Profile page. */
+  favoriteGames: (userId: string | null, supabase?: SupabaseClient) =>
+    queryOptions({
+      queryKey: queryKeys.games.favorites(userId ?? ''),
+      queryFn: load(userId, supabase, loadFavoriteGames),
+      staleTime: 5 * MINUTE,
+      // The page shows the highest rated games without it, so it isn't worth
+      // holding on for.
+      retry: 1,
     }),
 
   /** The games added by hand, for the Add game dialog. */

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     : limit;
   if (!limit.success || !global.success) {
     if (saved) return respond(saved);
-    return jsonError('Try again tomorrow: today’s profiles have all been written.', 429);
+    return jsonError('Try again tomorrow: today’s profiles have all been written', 429);
   }
 
   let apiKey: string;

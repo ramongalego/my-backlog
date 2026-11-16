@@ -22,14 +22,14 @@ export function todayIso(): string {
   return toLocalIsoDate(new Date());
 }
 
-/** "20 Aug" from an ISO date, for the date chip on phones. */
+/** "Aug 20" from an ISO date, for the date chip on phones. */
 export function shortDate(isoDate: string): string {
   const d = new Date(
     Number(isoDate.slice(0, 4)),
     Number(isoDate.slice(5, 7)) - 1,
     Number(isoDate.slice(8, 10)),
   );
-  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short' });
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export function monthName(isoDate: string): string {

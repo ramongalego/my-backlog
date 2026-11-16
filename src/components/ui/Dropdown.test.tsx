@@ -51,7 +51,7 @@ describe('as a toolbar control', () => {
     expect(screen.getByRole('option', { name: 'N64 1 game' })).toBeInTheDocument();
   });
 
-  it('keeps its quiet colours unless given others, and passes classes to its label', () => {
+  it('keeps its quiet colors unless given others, and passes classes to its label', () => {
     const { rerender } = render(
       <Dropdown value="" options={platforms} onChange={jest.fn()} aria-label="Platform" />,
     );

@@ -37,7 +37,7 @@ export interface PlayerFacts {
   ratings: {
     count: number;
     average: number | null;
-    favourites: string[];
+    favorites: string[];
     lowest: { name: string; rating: number }[];
   };
   /** Median time to beat of what they finish, against what waits in the backlog. */
@@ -191,7 +191,7 @@ export function playerFacts(games: GameItem[]): PlayerFacts | null {
     ratings: {
       count: rated.length,
       average: stats.avgRating,
-      favourites: stats.favourites.slice(0, 6).map((g) => g.name),
+      favorites: stats.highestRated.slice(0, 6).map((g) => g.name),
       lowest: [...rated]
         .sort((a, b) => a.rating! - b.rating!)
         .filter((g) => g.rating! <= 6)

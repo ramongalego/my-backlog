@@ -18,7 +18,7 @@ import { Hours } from '@/components/stats/Hours';
 import { BacklogPace } from '@/components/stats/BacklogPace';
 import { TopTags } from '@/components/stats/TopTags';
 import { YearChart } from '@/components/stats/YearChart';
-import { Favourites } from '@/components/stats/Favourites';
+import { HighestRated } from '@/components/stats/HighestRated';
 import { TagCompletion } from '@/components/stats/TagCompletion';
 import { PlayedALot } from '@/components/stats/PlayedALot';
 import { PlayerProfile } from '@/components/stats/PlayerProfile';
@@ -51,7 +51,7 @@ export default function StatsView() {
         <LoadError what="your stats" onRetry={retry} />
       ) : !stats ? (
         <EmptyState icon={Gamepad2} title="No stats yet" action={<StatsStartButtons {...start} />}>
-          Add games to your library, or connect Steam, to see your stats here.
+          Add games to your library, or connect Steam, to see your stats here
         </EmptyState>
       ) : isStarting(stats) ? (
         <StatsStart backlog={stats.backlog} storyHours={stats.estimatedBacklogHours} {...start} />
@@ -64,7 +64,7 @@ export default function StatsView() {
             <Hours stats={stats} />
           </div>
           <BacklogPace stats={stats} />
-          <Favourites stats={stats} />
+          <HighestRated stats={stats} />
           <TagCompletion stats={stats} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TopTags stats={stats} syncs={isSteamConnected} />

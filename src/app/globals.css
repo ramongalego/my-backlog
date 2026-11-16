@@ -314,7 +314,7 @@
   }
 }
 
-/* Toasts (Sonner): the app's dark panels, colour only on the icon, and a
+/* Toasts (Sonner): the app's dark panels, color only on the icon, and a
    quiet button for actions like View and Undo. Selectors are one step more
    specific than Sonner's own, which it injects at runtime. */
 html [data-sonner-toaster][data-sonner-theme] {

@@ -51,7 +51,7 @@ describe('buildInsightMessages', () => {
 
   it('gives the profile their taste, not their failures or what they play now', () => {
     expect(data('profile')).toMatchObject({
-      favourites: ['Loved It'],
+      favorites: ['Loved It'],
       tagsOfGamesTheyLove: [{ tag: 'Metroidvania', games: 1 }],
       ratedAboveCritics: [{ name: 'Loved It', yours: 10, critics: 70 }],
     });

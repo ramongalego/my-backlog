@@ -119,7 +119,7 @@ export interface StatusEdit {
 
 /**
  * Saves a status change from a detail dialog. The change shows at once in the
- * cached games list (any list fetch in flight is cancelled first, so it can't
+ * cached games list (any list fetch in flight is canceled first, so it can't
  * land on top of it) and is undone if the save fails. Callers with another
  * cached view of the game add their own optimistic write with `apply` and
  * undo it in `rollback`.

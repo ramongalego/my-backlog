@@ -214,7 +214,7 @@ it('says when starting it pauses the current game at the top of the queue', asyn
   await search('fire emblem');
   fireEvent.click(screen.getByRole('option', { name: /Fortune's Weave/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
-  expect(screen.getByText('Celeste goes to the top of your queue.')).toBeInTheDocument();
+  expect(screen.getByText('Celeste goes to the top of your queue')).toBeInTheDocument();
 });
 
 it("keeps the form and shows the server's message when the game can't be added", async () => {

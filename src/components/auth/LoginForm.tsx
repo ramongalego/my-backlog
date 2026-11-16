@@ -16,7 +16,7 @@ interface LoginFormProps {
 function mapLoginError(error: AuthError): string {
   // Avoid leaking whether an email is registered — collapse credential errors to one message.
   if (error.code === 'invalid_credentials') {
-    return 'Invalid email or password.';
+    return 'Invalid email or password';
   }
   if (error.code === 'email_not_confirmed') {
     return 'Please confirm your email before signing in. Check your inbox for the confirmation link.';

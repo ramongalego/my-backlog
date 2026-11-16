@@ -21,7 +21,7 @@ export function TagCompletion({ stats }: { stats: Stats }) {
         <p className="-mt-1 mb-6 max-w-2xl text-ink-300">
           You finish <Figure>{finishContrast.high.pct}%</Figure> of the{' '}
           {tagNoun(finishContrast.high.tag)} games you own, but only{' '}
-          <Figure>{finishContrast.low.pct}%</Figure> of the {tagNoun(finishContrast.low.tag)} ones.
+          <Figure>{finishContrast.low.pct}%</Figure> of the {tagNoun(finishContrast.low.tag)} ones
         </p>
       ) : (
         <p className="text-sm text-ink-400 mb-5 -mt-2">Tags with 3+ games in your library</p>

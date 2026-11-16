@@ -112,6 +112,8 @@ Good: "You want somewhere easy to sink into, and this is a little island with no
 Bad: "You build a squad, manage their skills and gear, then take on missions where combat choices and conversations shape the story. It's a long commitment with plenty to learn."
 Bad: "Since you enjoyed the series, this is a perfect pick. It offers a mix of action and exploration, making it a solid fit for your mood and a great choice for tonight."
 
+Use American spelling (favorite, color).
+
 The first bad one only says what you do in it, with no reason it's for them. The second is ad copy: hype words, vague genre labels, and their answers repeated back. Never use these words or phrases: perfect, excellent, ideal, great choice, solid fit, gem, experience, journey, adventure, immersive, cognitive load, itch, lane, vibe,"fits your mood", "for your energy level", "Since you", "look forward", "people remember". No em dashes, no exclamation marks.`;
 
 /**

@@ -64,7 +64,7 @@ export function StatsContentSkeleton() {
         </div>
       </PanelSkeleton>
 
-      {/* Favourites: art beside the ratings. */}
+      {/* Highest rated: art beside the ratings. */}
       <PanelSkeleton className={PANEL}>
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div>

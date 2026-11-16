@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { RefreshCw, LogOut, Bug } from 'lucide-react';
+import { ChevronDown, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/layout/SupportModal';
 import { refreshKeys } from '@/hooks/useLibraryRefresh';
@@ -42,10 +43,10 @@ export function UserMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Enabled items only: a disabled one (refresh on cooldown) can't take focus.
+  // Buttons, and the link to the profile.
   const menuItems = () =>
     Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ??
-        [],
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? [],
     );
 
   const closeMenu = (refocus: boolean) => {
@@ -107,7 +108,7 @@ export function UserMenu({
 
     const items = menuItems();
     if (!items.length) return;
-    const focused = items.indexOf(document.activeElement as HTMLButtonElement);
+    const focused = items.indexOf(document.activeElement as HTMLElement);
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -132,7 +133,11 @@ export function UserMenu({
           if (!open) onOpen?.();
           setOpen(!open);
         }}
-        className="cursor-pointer block rounded overflow-hidden hover:ring-2 hover:ring-ink-600 transition-all"
+        // The chevron says there's a menu here: an avatar alone reads as a
+        // picture. The hover ring stays on the avatar. On the narrowest phones
+        // (320px) the header has no room for it, and a tap on an avatar is
+        // what people try there anyway.
+        className="group flex cursor-pointer items-center gap-1 rounded-lg"
         aria-label="Open user menu"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -143,13 +148,19 @@ export function UserMenu({
             alt={steamUsername ?? 'Profile'}
             width={40}
             height={40}
-            className="rounded"
+            className="rounded transition-shadow group-hover:ring-2 group-hover:ring-ink-600"
           />
         ) : (
-          <div className="w-10 h-10 bg-ink-700 rounded flex items-center justify-center text-ink-300 text-sm font-medium">
+          <div className="w-10 h-10 bg-ink-700 rounded flex items-center justify-center text-ink-300 text-sm font-medium transition-shadow group-hover:ring-2 group-hover:ring-ink-600">
             {(steamUsername ?? user.email)?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
+        <ChevronDown
+          aria-hidden="true"
+          className={`h-4 w-4 text-ink-400 max-[359px]:hidden transition-[color,rotate] duration-200 group-hover:text-ink-100 motion-reduce:transition-none ${
+            open ? 'rotate-180 text-ink-100' : ''
+          }`}
+        />
       </button>
 
       {open && (
@@ -168,6 +179,16 @@ export function UserMenu({
               </p>
             )}
           </div>
+
+          <Link
+            href="/profile"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
+          >
+            <UserRound className="w-4 h-4" aria-hidden="true" />
+            <span>Profile</span>
+          </Link>
 
           {onRefresh && (
             <button

@@ -78,3 +78,44 @@ it('leaves Tab alone in the middle of the dialog', () => {
   expect(notPrevented).toBe(true);
   expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
 });
+
+describe('when it closes', () => {
+  const onOpenerGone = jest.fn();
+  beforeEach(() => onOpenerGone.mockClear());
+
+  function Opened({ open, opener = true }: { open: boolean; opener?: boolean }) {
+    return (
+      <>
+        {opener && <button>Open</button>}
+        <Modal isOpen={open} title="Pick" onClose={() => {}} onOpenerGone={onOpenerGone}>
+          <button>Inside</button>
+        </Modal>
+      </>
+    );
+  }
+
+  /** Opens the dialog from the Open button, as a click on it would. */
+  function open() {
+    const view = render(<Opened open={false} />);
+    screen.getByRole('button', { name: 'Open' }).focus();
+    view.rerender(<Opened open />);
+    return view;
+  }
+
+  it('gives focus back to the control that opened it', () => {
+    const view = open();
+    view.rerender(<Opened open={false} />);
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus();
+    expect(onOpenerGone).not.toHaveBeenCalled();
+  });
+
+  it('asks the parent where focus goes when that control is gone', () => {
+    const view = open();
+    // The dialog replaced what opened it (a place it filled, say).
+    view.rerender(<Opened open opener={false} />);
+    expect(onOpenerGone).not.toHaveBeenCalled();
+
+    view.rerender(<Opened open={false} opener={false} />);
+    expect(onOpenerGone).toHaveBeenCalledTimes(1);
+  });
+});

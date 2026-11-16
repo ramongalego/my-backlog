@@ -19,12 +19,12 @@ const TONES = [
 const COPY: Record<InsightTone, { offer: string; action: string; writing: string }> = {
   profile: {
     offer:
-      'What you finish, what you drop, what you rate highly: what it all says about you as a player.',
+      'What you finish, what you drop, what you rate highly: what it all says about you as a player',
     action: 'Read my profile',
     writing: 'Reading your library…',
   },
   roast: {
-    offer: 'The same library, with none of the kindness.',
+    offer: 'The same library, with none of the kindness',
     action: 'Roast me',
     writing: 'Sharpening the knives…',
   },

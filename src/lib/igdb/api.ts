@@ -122,7 +122,7 @@ function steamIdsOf(listings: ExternalGame[] | undefined): number[] {
 }
 
 /**
- * The game's Steam app ids: to recognise a game you already own on Steam, and
+ * The game's Steam app ids: to recognize a game you already own on Steam, and
  * to use Steam's art and tags. A game released on PC later often has its own
  * IGDB entry, a port, that holds the Steam listing (Persona 4 Golden on Vita,
  * then on PC), so without one of its own, its ports' and the game it's an

@@ -159,7 +159,7 @@ export function ArtPicker({
             ))}
           </ul>
           {choices.length === 0 && (
-            <p className="mt-4 text-sm text-ink-400">SteamGridDB has no other art for this game.</p>
+            <p className="mt-4 text-sm text-ink-400">SteamGridDB has no other art for this game</p>
           )}
         </>
       )}

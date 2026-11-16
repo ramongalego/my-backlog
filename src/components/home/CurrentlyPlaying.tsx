@@ -38,7 +38,7 @@ interface CurrentlyPlayingProps {
   reveal?: boolean;
 }
 
-// The quiet actions under Finish and Drop. The padding, cancelled by the
+// The quiet actions under Finish and Drop. The padding, canceled by the
 // negative margin, makes each a 44px tap target on phones without moving it.
 const TEXT_ACTION =
   'flex items-center gap-1.5 py-3 -my-3 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer';

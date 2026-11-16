@@ -74,7 +74,7 @@ export function QueueList({
     onDragEnd: ({ active, over }) =>
       `${nameOf(active.id)} dropped at ${placeOf(over?.id ?? active.id)}.`,
     onDragCancel: ({ active }) =>
-      `Move cancelled. ${nameOf(active.id)} stays at ${placeOf(active.id)}.`,
+      `Move canceled. ${nameOf(active.id)} stays at ${placeOf(active.id)}.`,
   };
 
   function handleDragStart(event: DragStartEvent) {

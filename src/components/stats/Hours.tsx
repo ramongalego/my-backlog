@@ -18,7 +18,8 @@ export function Hours({ stats }: { stats: Stats }) {
             , about <Figure>{Math.round(days)} days</Figure> of your life
           </>
         )}
-        .{mostPlayed.length > 0 && ' Most of them went here.'}
+        {/* One sentence alone has no period; with the second, both do. */}
+        {mostPlayed.length > 0 && '. Most of them went here.'}
       </Lead>
       {mostPlayed.length > 0 && (
         <ol className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5">

@@ -113,7 +113,7 @@ export function TimeToBeat({
 /**
  * Hours played on Steam, with when you last played in the tooltip. Used
  * wherever a game shows its playtime, so it reads the same everywhere.
- * `compact` is the meta-row form, icon and hours like its neighbours. The
+ * `compact` is the meta-row form, icon and hours like its neighbors. The
  * word "played" still shows when the row is wide enough (`showLabel` forces
  * it), since a bare clock icon next to time-to-beat's clock is ambiguous;
  * elsewhere it reads "5h played".

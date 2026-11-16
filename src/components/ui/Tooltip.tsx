@@ -48,7 +48,7 @@ export function Tooltip({
   };
   const hide = () => setAnchor(null);
 
-  // Centre the bubble over the trigger, then keep it on screen.
+  // Center the bubble over the trigger, then keep it on screen.
   useLayoutEffect(() => {
     const bubble = bubbleRef.current;
     if (!anchor || !bubble) return;

@@ -12,10 +12,10 @@ interface ModalProps {
   ariaLabel?: string;
   /** Id of a heading inside the content that names the dialog, when it renders its own. */
   labelledBy?: string;
-  size?: 'md' | 'lg' | 'xl';
+  size?: 'md' | 'lg' | 'xl' | '2xl';
   /**
    * `top` pins the dialog near the top so it grows downward, for content that
-   * changes height as you use it (search results); centred dialogs re-centre
+   * changes height as you use it (search results); centered dialogs re-center
    * and move under the pointer.
    */
   align?: 'center' | 'top';
@@ -27,6 +27,12 @@ interface ModalProps {
   bare?: boolean;
   /** Plays a bare dialog's exit; the parent unmounts it once that's done. */
   closing?: boolean;
+  /**
+   * Called on close when the control that opened the dialog is no longer on
+   * the page (the dialog replaced it), so the parent can put focus on what
+   * took its place instead of letting it fall back to the page.
+   */
+  onOpenerGone?: () => void;
 }
 
 // xl is a custom 34rem (544px) — a nudge wider than lg (32rem) so a 6-column
@@ -35,6 +41,8 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-[34rem]',
+  // For a grid of game art to pick from (the favorites picker).
+  '2xl': 'max-w-3xl',
 };
 
 // What Tab can land on. Disabled controls and hidden inputs are left out: the
@@ -60,6 +68,7 @@ export function Modal({
   align = 'center',
   bare = false,
   closing = false,
+  onOpenerGone,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -98,6 +107,8 @@ export function Modal({
     }
   });
 
+  const openerGone = useEffectEvent(() => onOpenerGone?.());
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -123,7 +134,11 @@ export function Modal({
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      previousFocus?.focus({ focusVisible: !openedByPointer } as FocusOptions);
+      if (previousFocus?.isConnected) {
+        previousFocus.focus({ focusVisible: !openedByPointer } as FocusOptions);
+      } else {
+        openerGone();
+      }
     };
   }, [isOpen]);
 

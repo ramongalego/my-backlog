@@ -28,13 +28,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { connectSteam } from '@/lib/client/steam-connect';
 
 const EMPTY_COPY: Record<GameFilter, string> = {
-  all: 'Add the games you own, on any console, or connect Steam to bring in your whole library.',
+  all: 'Add the games you own, on any console, or connect Steam to bring in your whole library',
   backlog: "Your backlog is clear. Games you haven't started or decided on show up here.",
   finished:
     'Nothing finished yet. Mark a game as finished from its details to log it in your diary.',
   dropped: 'No dropped games. Games you give up on end up here.',
   wont_play: "Nothing marked Won't Play. Use it for games you never plan to start.",
-  hidden: 'No hidden games.',
+  hidden: 'No hidden games',
 };
 
 export default function GamesView() {
@@ -171,8 +171,10 @@ export default function GamesView() {
               </Button>
             }
           >
-            Try a different name or tag, or switch filters.
-            {isSteamConnected && ' Not on Steam? Add it by hand.'}
+            {/* One sentence alone has no period; with the second, both do. */}
+            {isSteamConnected
+              ? 'Try a different name or tag, or switch filters. Not on Steam? Add it by hand.'
+              : 'Try a different name or tag, or switch filters'}
           </EmptyState>
         ) : platforms?.value ? (
           // The status filter may well have games: just none on this platform.
@@ -185,7 +187,7 @@ export default function GamesView() {
               </Button>
             }
           >
-            Switch filters, or show every platform.
+            Switch filters, or show every platform
           </EmptyState>
         ) : (
           <EmptyState

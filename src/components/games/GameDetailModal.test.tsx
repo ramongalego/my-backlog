@@ -232,7 +232,7 @@ describe('GameDetailModal', () => {
     });
   });
 
-  describe('null/empty initialDate behaviour', () => {
+  describe('null/empty initialDate behavior', () => {
     it('should not render date button when initialDate is null', () => {
       render(<GameDetailModal {...defaultProps} initialStatus="finished" initialDate={null} />);
 
@@ -573,7 +573,7 @@ describe('GameDetailModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Playing' }));
 
-      expect(screen.getByText('Zelda goes to the top of your queue.')).toBeInTheDocument();
+      expect(screen.getByText('Zelda goes to the top of your queue')).toBeInTheDocument();
     });
 
     it('switches on save, instead of saving a status', async () => {
@@ -932,7 +932,7 @@ describe('GameDetailModal as a form', () => {
         expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ art: PICK }));
       });
 
-      it('sends no art when none was picked, or the picker was cancelled', async () => {
+      it('sends no art when none was picked, or the picker was canceled', async () => {
         render(<GameDetailModal {...addingProps} />);
         fireEvent.click(artButton()!);
         await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));
@@ -1016,7 +1016,7 @@ describe('GameDetailModal as a form', () => {
       expect(screen.queryByRole('status', { name: 'Loading the art' })).not.toBeInTheDocument();
     });
 
-    it('goes back to the art it had when the picker is cancelled', async () => {
+    it('goes back to the art it had when the picker is canceled', async () => {
       render(<GameDetailModal {...defaultProps} art={{ gameId: 7 }} />);
       fireEvent.click(artButton()!);
       await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Preview' })));

@@ -61,7 +61,7 @@ describe('getGameDetails', () => {
       description: 'Explore Mira.',
       release_date: 'Mar 21, 2025',
       header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
-      // Its Steam listing, to recognise it in your Steam library.
+      // Its Steam listing, to recognize it in your Steam library.
       steamAppIds: [2369900],
       hasKeyArt: true,
       // Critics' average, rounded, and how many reviews it's from.

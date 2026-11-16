@@ -10,13 +10,13 @@ const MESSAGES: Record<string, string> = {
   invalid_state: 'Your Steam sign-in expired. Please try connecting again.',
   steam_auth_failed: 'Steam sign-in failed. Please try again.',
   invalid_steam_id: 'Steam sign-in failed. Please try again.',
-  server_config: 'Connecting Steam is unavailable right now.',
-  not_authenticated: 'Please sign in before connecting Steam.',
+  server_config: 'Connecting Steam is unavailable right now',
+  not_authenticated: 'Please sign in before connecting Steam',
   steam_link_limited: 'Too many attempts to connect Steam. Please try again in an hour.',
   steam_api_failed: "Couldn't reach Steam. Please try again in a moment.",
   profile_update_failed: "Couldn't import your Steam library. Please try again.",
   games_insert_failed: "Couldn't import your Steam library. Please try again.",
-  invalid_link: 'That link is invalid or has expired.',
+  invalid_link: 'That link is invalid or has expired',
 };
 
 /** Shows `?error=<code>` redirects as a toast, then removes the param from the URL. */

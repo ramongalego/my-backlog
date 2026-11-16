@@ -133,9 +133,7 @@ it('says when SteamGridDB has nothing else, still offering the original', async 
   jest.mocked(fetchArtChoices).mockResolvedValue({ original: STEAM, current: STEAM, choices: [] });
   open();
 
-  expect(
-    await screen.findByText('SteamGridDB has no other art for this game.'),
-  ).toBeInTheDocument();
+  expect(await screen.findByText('SteamGridDB has no other art for this game')).toBeInTheDocument();
   expect(await tile('Original art')).toBeInTheDocument();
   expect(use()).toBeDisabled();
 });

@@ -64,7 +64,7 @@ export function StatsStart({
         {buttons.isSteamConnected
           ? 'Once you’ve finished a few, this page shows'
           : 'Once you’ve finished a few, or brought in your hours from Steam, this page shows'}{' '}
-        where your time went, your favourite games, what you tend to finish and how long your
+        where your time went, your highest rated games, what you tend to finish and how long your
         backlog would take to clear.
       </p>
       <div className="mt-6">

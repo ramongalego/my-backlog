@@ -32,7 +32,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
               tone="error"
               title="This reset link is invalid or expired"
             >
-              Request a new link from the sign in screen and try again.
+              Request a new link from the sign in screen and try again
             </AuthMessage>
             <Link
               href="/"

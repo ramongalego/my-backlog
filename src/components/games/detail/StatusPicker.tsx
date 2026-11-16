@@ -63,9 +63,7 @@ export function StatusPicker({
         })}
       </div>
       {replacesPlaying && (
-        <p className="mt-2 text-xs text-ink-400">
-          {replacesPlaying} goes to the top of your queue.
-        </p>
+        <p className="mt-2 text-xs text-ink-400">{replacesPlaying} goes to the top of your queue</p>
       )}
     </div>
   );

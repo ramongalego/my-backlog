@@ -7,7 +7,7 @@ A full-stack web app that helps players stop scrolling their library and actuall
 - **Pick My Game**: three questions (mood, energy, time), then a pick from your own backlog with a short reason, or leave it to chance.
 - **Playing queue**: drag to reorder (pointer or keyboard), move to top, and switch what you're playing from anywhere in one tap, with Undo.
 - **Library**: Steam games synced with playtime, plus games from any console via IGDB; search, filters, sort, and a detail dialog for every game.
-- **Diary and stats**: finished games with date, rating and notes; hours played, backlog pace, favourites and what you tend to finish. Once the library says enough, Stats can write what it says about you as a player, or roast you with the same facts.
+- **Diary and stats**: finished games with date, rating and notes; hours played, backlog pace, your highest rated games and what you tend to finish. Once the library says enough, Stats can write what it says about you as a player, or roast you with the same facts.
 - **Sharing**: a public page and Open Graph image for each finished game.
 
 ## Tech stack

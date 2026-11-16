@@ -102,7 +102,7 @@ export function SuggestionModal({
             phase: 'error',
             message:
               found.error === 'none'
-                ? "There's no backlog game left to pick: the ones that fit are already queued or started."
+                ? "There's no backlog game left to pick: the ones that fit are already queued or started"
                 : "Couldn't pick a random game. Try again.",
           },
     );

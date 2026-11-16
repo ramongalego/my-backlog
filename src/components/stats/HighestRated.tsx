@@ -9,23 +9,23 @@ import { plural } from '@/components/stats/format';
 import { SectionTitle } from '@/components/stats/SectionTitle';
 
 /** Your best-rated games as art, beside how your ratings spread. */
-export function Favourites({ stats }: { stats: Stats }) {
-  const { favourites, ratedCount, avgRating } = stats;
+export function HighestRated({ stats }: { stats: Stats }) {
+  const { highestRated, ratedCount, avgRating } = stats;
   const showBars = ratedCount >= 3;
-  if (favourites.length === 0 && !showBars) return null;
+  if (highestRated.length === 0 && !showBars) return null;
 
   return (
     <Panel>
       {/* The heading sits in the games' column, so the ratings beside them
-          centre on the whole panel, not just on the art. */}
+          center on the whole panel, not just on the art. */}
       <div
-        className={`grid gap-8 ${favourites.length > 0 && showBars ? 'lg:grid-cols-[minmax(0,1fr)_18rem]' : ''}`}
+        className={`grid gap-8 ${highestRated.length > 0 && showBars ? 'lg:grid-cols-[minmax(0,1fr)_18rem]' : ''}`}
       >
         <div>
-          <SectionTitle>Your favourites</SectionTitle>
-          {favourites.length > 0 && (
+          <SectionTitle>Your highest rated games</SectionTitle>
+          {highestRated.length > 0 && (
             <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4 content-start">
-              {favourites.map((game) => (
+              {highestRated.map((game) => (
                 <li key={game.id} className="min-w-0">
                   <CoverArt
                     src={game.header_image}

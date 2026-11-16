@@ -75,13 +75,13 @@ export interface Stats {
   /** Where the hours went: the most played games, most first. */
   mostPlayed: StatGame[];
   /** Finished games rated 9 or 10 (8 and up when there are few), best and newest first. */
-  favourites: StatGame[];
+  highestRated: StatGame[];
   /** Your highest and lowest finish rates among tags with enough games, when they differ. */
   finishContrast: { high: TagCompletion; low: TagCompletion } | null;
 }
 
 const MOST_PLAYED = 5;
-const FAVOURITES = 8;
+const FAVORITES = 8;
 // A finish rate over fewer games says more about chance than taste.
 const CONTRAST_MIN_GAMES = 8;
 const CONTRAST_MIN_GAP = 20;
@@ -175,7 +175,7 @@ export function computeStats(
     .sort((a, b) => b.pct * Math.log(b.total) - a.pct * Math.log(a.total))
     .slice(0, 12);
 
-  // From the tags the grid shows, so the sentence names ones you'd recognise
+  // From the tags the grid shows, so the sentence names ones you'd recognize
   // rather than a niche tag with a handful of games.
   const contrastTags = tagCompletion
     .filter((t) => t.total >= CONTRAST_MIN_GAMES)
@@ -208,9 +208,9 @@ export function computeStats(
   const byBest = (a: GameItem, b: GameItem) =>
     b.rating! - a.rating! || (b.finished_at ?? '').localeCompare(a.finished_at ?? '');
   const topRated = ratedGames.filter((g) => g.rating! >= 9);
-  const favourites = (topRated.length >= 3 ? topRated : ratedGames.filter((g) => g.rating! >= 8))
+  const highestRated = (topRated.length >= 3 ? topRated : ratedGames.filter((g) => g.rating! >= 8))
     .sort(byBest)
-    .slice(0, FAVOURITES)
+    .slice(0, FAVORITES)
     .map(statGame);
 
   // Finished by year
@@ -292,7 +292,7 @@ export function computeStats(
     ratingDistribution,
     playedALot: playedALotGames,
     mostPlayed,
-    favourites,
+    highestRated,
     finishContrast,
   };
 }

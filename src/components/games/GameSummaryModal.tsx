@@ -102,7 +102,7 @@ export function GameSummaryModal({
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {
-      toast.error("Couldn't copy the link.");
+      toast.error("Couldn't copy the link");
       return;
     }
     setCopied(true);
@@ -198,7 +198,7 @@ export function GameSummaryModal({
                 <span>Share</span>
               </Button>
               <p className="mt-2 text-center text-xs text-ink-500">
-                Makes a public page with this summary.
+                Makes a public page with this summary
               </p>
             </>
           )}

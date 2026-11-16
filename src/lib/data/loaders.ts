@@ -193,6 +193,22 @@ export async function loadQueue(supabase: SupabaseClient, userId: string): Promi
   return (data ?? []) as unknown as QueueItem[];
 }
 
+// ─── Profile ────────────────────────────────────────────────────────────────
+
+/** The ids of the games picked as favorites, in the order they were picked. */
+export async function loadFavoriteGames(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number[]> {
+  const { data, error } = await supabase
+    .from('favorite_games')
+    .select('game_id')
+    .eq('user_id', userId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => row.game_id as number);
+}
+
 // ─── Home ───────────────────────────────────────────────────────────────────
 
 export interface LibraryMeta {

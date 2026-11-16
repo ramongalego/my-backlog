@@ -51,7 +51,7 @@ export function BacklogPace({ stats }: { stats: Stats }) {
         <Lead>
           At {plural(finishedLastYear, 'game')} finished in the last year, your{' '}
           {plural(backlog, 'backlog game')} {backlog === 1 ? 'takes' : 'take'}{' '}
-          <Figure>{formatYears(backlog / finishedLastYear)}</Figure> to clear.
+          <Figure>{formatYears(backlog / finishedLastYear)}</Figure> to clear
         </Lead>
       ) : (
         <p className="text-ink-300 max-w-xl">

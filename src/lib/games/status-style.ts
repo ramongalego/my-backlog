@@ -2,11 +2,11 @@ import { Archive, Ban, Check, EyeOff, Play, X, type LucideIcon } from 'lucide-re
 import type { GameStatus } from './status';
 
 /**
- * The one place a game status gets its label, icon and colours. Playing uses
- * the accent, finished and dropped use their semantic colours, and the
+ * The one place a game status gets its label, icon and colors. Playing uses
+ * the accent, finished and dropped use their semantic colors, and the
  * "parked" statuses (backlog, won't play, hidden) stay neutral.
  *
- * - `text`: status-coloured text, for badges on a dark chip.
+ * - `text`: status-colored text, for badges on a dark chip.
  * - `solid`: the selected state of a status control.
  * - `fill`: bars, legend dots and chart series.
  */

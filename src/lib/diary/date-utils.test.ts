@@ -1,4 +1,4 @@
-import { getMonthKey, formatDay } from '@/lib/diary/date-utils';
+import { getMonthKey, formatDay, shortDate } from '@/lib/diary/date-utils';
 
 describe('getMonthKey', () => {
   it('returns YYYY-MM from a plain date string', () => {
@@ -41,5 +41,12 @@ describe('formatDay', () => {
 
   it('returns first day of month correctly', () => {
     expect(formatDay('2024-06-01')).toBe('01');
+  });
+});
+
+describe('shortDate', () => {
+  it('reads month first, as dates do everywhere else in the app', () => {
+    expect(shortDate('2026-08-20')).toBe('Aug 20');
+    expect(shortDate('2026-01-05T00:00:00+00:00')).toBe('Jan 5');
   });
 });

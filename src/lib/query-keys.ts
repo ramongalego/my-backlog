@@ -8,6 +8,9 @@ export const queryKeys = {
     list: (userId: string) => [...queryKeys.games.all, 'list', userId] as const,
     diary: (userId: string) => [...queryKeys.games.all, 'diary', userId] as const,
     playing: (userId: string) => [...queryKeys.games.all, 'playing', userId] as const,
+    // The games picked as favorites. Under games: removing a game takes it
+    // off them, so a change to the library asks again.
+    favorites: (userId: string) => [...queryKeys.games.all, 'favorites', userId] as const,
     manual: (userId: string) => [...queryKeys.games.all, 'manual', userId] as const,
     openEndedCategories: (userId: string) =>
       [...queryKeys.games.all, 'open-ended-categories', userId] as const,

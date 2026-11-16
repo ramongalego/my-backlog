@@ -77,7 +77,7 @@ export function ResetPasswordForm() {
     return (
       <div className="space-y-4">
         <AuthMessage icon={CheckCircle2} tone="success" title="Password updated">
-          You can now use your new password to sign in.
+          You can now use your new password to sign in
         </AuthMessage>
         <Button className="w-full" onClick={() => router.push('/home')}>
           Continue

@@ -96,7 +96,7 @@ describe('CurrentlyPlaying', () => {
       expect(bar).toHaveStyle({ width: '50%' });
     });
 
-    it('should not show amber colour or past-estimate message', () => {
+    it('should not show amber color or past-estimate message', () => {
       render(<CurrentlyPlaying game={createGame(600, 20)} {...defaultCallbacks} />);
 
       expect(screen.queryByText(/past the/)).not.toBeInTheDocument();

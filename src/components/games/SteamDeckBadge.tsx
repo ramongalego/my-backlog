@@ -2,15 +2,15 @@ import { Ban, CircleAlert, CircleCheck } from 'lucide-react';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 
 // Valve's compatibility ratings. The icon's shape carries the status, so the
-// meta row stays neutral grey like its neighbours; the tooltip has the detail.
+// meta row stays neutral gray like its neighbors; the tooltip has the detail.
 const DECK_COMPAT = {
-  1: { label: 'Unsupported', detail: "Doesn't currently work on Steam Deck.", icon: Ban },
+  1: { label: 'Unsupported', detail: "Doesn't currently work on Steam Deck", icon: Ban },
   2: {
     label: 'Playable',
-    detail: 'Works on Steam Deck, but may need some tweaking to play.',
+    detail: 'Works on Steam Deck, but may need some tweaking to play',
     icon: CircleAlert,
   },
-  3: { label: 'Verified', detail: 'Works great on Steam Deck.', icon: CircleCheck },
+  3: { label: 'Verified', detail: 'Works great on Steam Deck', icon: CircleCheck },
 } as const;
 
 interface SteamDeckBadgeProps {

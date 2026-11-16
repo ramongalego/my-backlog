@@ -115,8 +115,8 @@ export default function PlayingQueueView() {
           }
         >
           {libraryEmpty
-            ? 'Add the games you own, then start one and queue up what’s next.'
-            : 'Pick a game to play on Home, then queue up what’s next from your library.'}
+            ? 'Add the games you own, then start one and queue up what’s next'
+            : 'Pick a game to play on Home, then queue up what’s next from your library'}
         </EmptyState>
       ) : (
         <div>

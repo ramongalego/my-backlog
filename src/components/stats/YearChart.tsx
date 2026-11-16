@@ -22,7 +22,7 @@ export function YearChart({ stats }: { stats: Stats }) {
 
   const empty =
     view === 'finished'
-      ? 'No finished games with dates yet.'
+      ? 'No finished games with dates yet'
       : 'No release year data yet. Sync your library to fill this in.';
 
   return (

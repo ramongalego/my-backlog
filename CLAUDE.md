@@ -19,12 +19,12 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
 - `src/components/<page>/`: the pieces of one page (`stats/`, `queue/`, `diary/`, `home/`, `landing/`, …), one component per file, so a bug in, say, the year chart is in `components/stats/YearChart.tsx`. A page's `View.tsx` only wires them together: data, dialogs, empty and loading states. Components used across pages live in `components/games/` (game art, cards, the game dialog) and `components/ui/` (buttons, panels, menus).
 - `src/app/(marketing)/`: the public landing page (its sections are in `components/landing/`).
 - `src/lib/data/loaders.ts` and `src/lib/data/prefetch.ts`: shared data loaders used both for the server prefetch and the client queries.
-- `src/lib/` is organised by where code runs:
+- `src/lib/` is organized by where code runs:
   - `lib/client/`: browser code that calls the app's API (`game-status`, `queue`, `manual-games`) or reads the database from the browser (`random-pick`).
   - `lib/server/`: the app's server-side logic: applying status changes, rate limits, API responses, syncing Steam data into the database. Every file starts with `import 'server-only'`, so importing one into a component fails the build.
   - `lib/steam`, `lib/igdb`, `lib/hltb`, `lib/steamgriddb`, `lib/supabase`: talking to outside services (their server files are marked `server-only` too).
   - Everything else (`lib/games`, `lib/suggest`, `lib/diary`, …): pure rules and helpers that run anywhere. `npm run lint` enforces these layers (`eslint.config.mjs`): pure folders can't import the database client, `lib/client`, hooks or components; hooks and components can't import `lib/server`; components can't import the database client (sign-in and sign-out excepted).
-- `src/hooks/`: each page's state and actions are in `use<Page>Page` (`useHomePage`, `useGamesPage`, `useQueuePage`, `useDiaryPage`, `useStatsPage`); hooks shared between pages are named for what they do (`useNowPlaying`, `useQueue`, `useSwitchGame`, `useGameMutations`, and `useGameDialog` for the queue and "play this instead" parts of every game dialog). Mutations invalidate React Query caches; pages read everything from React Query.
+- `src/hooks/`: each page's state and actions are in `use<Page>Page` (`useHomePage`, `useGamesPage`, `useQueuePage`, `useDiaryPage`, `useStatsPage`, `useProfilePage`); hooks shared between pages are named for what they do (`useNowPlaying`, `useQueue`, `useSwitchGame`, `useGameMutations`, and `useGameDialog` for the queue and "play this instead" parts of every game dialog). Mutations invalidate React Query caches; pages read everything from React Query.
 - `src/components/layout/` is the app's frame (header, user menu, footer, page container); `src/components/sync/` is the Steam library sync and its progress.
 - A file is named for what it exports (`GameDetailModal.tsx` exports `GameDetailModal`).
 - Tests sit next to the file they test: `YearChart.test.tsx` beside `YearChart.tsx`, `route.test.ts` beside an API `route.ts`. Several tests of one file are named for their topic (`steam-library.clear.test.ts`). Tests call the real code; they never copy it into the test.
@@ -56,7 +56,7 @@ Playing, finishing and the queue go the same way through `hooks/useNowPlaying.ts
 | Something looks wrong on a page | `components/<page>/`, then the page's `View.tsx` |
 | The page shows the wrong data | its page hook in `hooks/`, then `lib/data/loaders.ts` (Games filter, search and counts: `lib/games/library-filter.ts`; Diary grouping: `lib/diary/timeline.ts`) |
 | A button does the wrong thing | the page hook's handler, then `lib/client/` and the matching `app/api/…/route.ts` |
-| A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them) |
+| A rule is wrong (what a status does, picks, stats) | `lib/games/` or `lib/suggest/` (pure, with tests beside them); the Profile page's name, figures and activity: `lib/account/` |
 | Steam, IGDB or HowLongToBeat data is wrong | `lib/steam`, `lib/igdb`, `lib/hltb`, and `lib/server/steam-library.ts` for what's saved |
 
 ## UI and design
@@ -65,7 +65,7 @@ Playing, finishing and the queue go the same way through `hooks/useNowPlaying.ts
 
 The short version:
 - Use the shared components in `src/components/ui/`, `src/components/layout/` and `src/components/games/` (`Button`, `Panel`, `ToggleGroup`, `EmptyState`, `Input`/`fieldClass`, `PageHeader`, `CoverArt`, `StatusBadge`, ...). If you're about to write a pattern for the second time, make it a component instead.
-- Colours are `ink-*` (warm neutrals) and `accent-*` (orange) tokens from `src/app/globals.css`. Status colours come from `STATUS_STYLE` in `src/lib/games/status-style.ts`.
+- Colors are `ink-*` (warm neutrals) and `accent-*` (orange) tokens from `src/app/globals.css`. Status colors come from `STATUS_STYLE` in `src/lib/games/status-style.ts`.
 - Orange is only for the primary action, the current page and the game being played. Text on orange is `ink-950`.
 - No gradient text, glows, kicker labels, uppercase tracked labels, nested cards or icon tiles.
 - Every new page gets a matching skeleton and must work at phone width without horizontal scroll.

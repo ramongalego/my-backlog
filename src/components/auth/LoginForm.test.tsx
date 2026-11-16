@@ -118,7 +118,7 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Invalid email or password.')).toBeInTheDocument();
+      expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
     });
   });
 
@@ -192,7 +192,7 @@ it('signs in once, however many times the form is submitted, and can be tried ag
   expect(signInWithPassword).toHaveBeenCalledTimes(1);
 
   await act(async () => answer({ error: { code: 'invalid_credentials' } }));
-  expect(await screen.findByText('Invalid email or password.')).toBeInTheDocument();
+  expect(await screen.findByText('Invalid email or password')).toBeInTheDocument();
 
   await act(async () => {
     fireEvent.submit(form);
