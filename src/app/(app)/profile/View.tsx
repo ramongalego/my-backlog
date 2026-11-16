@@ -5,6 +5,7 @@ import { Page, PageHeader } from '@/components/layout/Page';
 import { LoadError } from '@/components/ui/LoadError';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { FavoriteGames, type FavoriteGamesHandle } from '@/components/profile/FavoriteGames';
+import { GameDetailModal } from '@/components/games/GameDetailModal';
 import { FavoritesPicker } from '@/components/profile/FavoritesPicker';
 import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
 import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
@@ -45,6 +46,7 @@ export default function ProfileView() {
               onOpenerGone={() => favoritesRow.current?.focus()}
             />
           )}
+          {profile.gameDialog && <GameDetailModal isOpen {...profile.gameDialog} />}
           {changing === 'email' && profile.email && (
             <ChangeEmailDialog
               email={profile.email}
@@ -76,6 +78,7 @@ export default function ProfileView() {
           <FavoriteGames
             ref={favoritesRow}
             games={profile.favorites}
+            onOpen={profile.openGame}
             onChoose={() => {
               profile.favoriteActions.forgetUndo();
               setChoosingFavorites(true);
@@ -83,7 +86,7 @@ export default function ProfileView() {
             onReorder={profile.favoriteActions.reorder}
             onRemove={profile.favoriteActions.remove}
           />
-          <RecentActivity entries={profile.activity} />
+          <RecentActivity entries={profile.activity} onOpen={profile.openGame} />
         </div>
         <aside className="space-y-6" aria-label="Platforms and account">
           <PlaysOn platforms={profile.platforms} />

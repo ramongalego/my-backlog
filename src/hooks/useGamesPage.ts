@@ -21,13 +21,11 @@ import {
   type GameFilter,
   type GameSort,
 } from '@/lib/games/library-filter';
-import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useAuth } from './useAuth';
 import { useQueue } from '@/hooks/useQueue';
 import { useUrlState } from './useUrlState';
-import { useGameDialog } from './useGameDialog';
+import { useLibraryGameDialog } from './useLibraryGameDialog';
 import type { GameDialogProps } from '@/components/games/GameDetailModal';
-import type { GameStatus } from '@/lib/games/status';
 
 interface UseGamesPageReturn {
   games: GameItem[];
@@ -142,13 +140,10 @@ export function useGamesPage(): UseGamesPageReturn {
     setSeenUrlSearch(urlSearch);
     if (urlSearch !== searchQuery.trim()) setSearchQueryState(urlSearch);
   }
-  const [opened, setOpened] = useState<GameItem | null>(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
   // Defer the search value to keep input responsive during filtering
   const deferredSearchQuery = useDeferredValue(searchQuery);
-
-  const statusMutation = useSetGameStatus(userId);
 
   // Select mode: games ticked to move together. The last one ticked is where
   // a shift-click's range starts.
@@ -162,41 +157,8 @@ export function useGamesPage(): UseGamesPageReturn {
     setLastTicked(null);
   };
 
-  // The game as it was when its dialog opened.
-  const handleOpenDetail = (gameId: number) => {
-    const game = games.find((g) => g.id === gameId);
-    if (game) setOpened(game);
-  };
-
-  const dialogFor = useGameDialog(userId);
-  // When it was finished or dropped, for the dialog's date field.
-  const openedDate =
-    (opened?.status === 'finished'
-      ? opened.finished_at?.slice(0, 10)
-      : opened?.status === 'dropped'
-        ? opened.dropped_at?.slice(0, 10)
-        : null) ?? null;
-  const gameDialog: GameDialogProps | null = opened && {
-    game: opened,
-    initialStatus: opened.status,
-    initialDate: openedDate,
-    initialNotes: opened.notes,
-    initialRating: opened.rating,
-    onClose: () => setOpened(null),
-    onConfirm: (status: GameStatus, date: string, notes: string, rating: number | null) =>
-      statusMutation.mutate({ gameId: opened.id, status, date, notes, rating }),
-    // Playing it instead of another game: Undo puts it back as it was
-    // (queued, backlog, finished with its date and review...).
-    ...dialogFor(opened, {
-      status: opened.status,
-      from: {
-        status: opened.status,
-        date: openedDate ?? '',
-        notes: opened.notes,
-        rating: opened.rating,
-      },
-    }),
-  };
+  // A game's dialog, opened from its card or row.
+  const { gameDialog, openGame: handleOpenDetail } = useLibraryGameDialog(userId);
 
   // What the page shows, from the deferred search text so typing stays
   // responsive. Counts follow the search and the platform, so each status

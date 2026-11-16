@@ -18,6 +18,7 @@ import {
   uploadAvatar,
 } from '@/lib/client/profile-identity';
 import { useFavoriteGames } from './useFavoriteGames';
+import { useLibraryGameDialog } from './useLibraryGameDialog';
 
 /**
  * Everything the Profile page shows, from what the app already knows: the
@@ -40,6 +41,8 @@ export function useProfilePage() {
   const favoriteGames = useFavoriteGames(userId);
   const picked = pickedFavorites(games, favoriteGames.pickedIds);
   const perPlatform = countPlatforms(games, 'all');
+  // A game's dialog, opened from a favorite or an activity row.
+  const { gameDialog, openGame } = useLibraryGameDialog(userId);
 
   // A saved change goes into the session the whole app reads, so the
   // header's menu shows the new name or picture at once too.
@@ -127,6 +130,9 @@ export function useProfilePage() {
       sendPasswordReset: () =>
         user?.email ? sendPasswordReset(user.email) : Promise.resolve(false),
     },
+    gameDialog,
+    /** Opens a game's dialog, by its id. */
+    openGame,
     activity: recentActivity(games, playing),
     // Where the library is played, most games first; a platform with only
     // hidden games isn't listed.

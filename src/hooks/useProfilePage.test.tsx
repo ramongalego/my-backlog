@@ -8,6 +8,11 @@ import { queryKeys } from '@/lib/query-keys';
 import { saveFavoriteGames } from '@/lib/client/favorites';
 
 jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+// The game dialog has its own tests (it's the Games page's); here it's only handed on.
+const mockOpenGame = jest.fn();
+jest.mock('@/hooks/useLibraryGameDialog', () => ({
+  useLibraryGameDialog: () => ({ gameDialog: null, openGame: mockOpenGame }),
+}));
 jest.mock('sonner', () => ({ toast: Object.assign(jest.fn(), { error: jest.fn() }) }));
 jest.mock('@/lib/client/favorites', () => ({ saveFavoriteGames: jest.fn(async () => {}) }));
 

@@ -33,8 +33,12 @@ const ART_SIZES = '(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px';
 
 /** A favorite's art, rating and name: the same drawn whether or not it can be moved. */
 function FavoriteArt({ game }: { game: FavoriteGame }) {
-  return <CoverArt src={game.header_image} alt="" sizes={ART_SIZES} />;
+  return <CoverArt src={game.header_image} alt="" sizes={ART_SIZES} interactive />;
 }
+
+/** What a screen reader is told about a favorite, once, for the whole row. */
+const INSTRUCTIONS =
+  'Press Enter to open the game. To move it, press Space to pick it up, the arrow keys to move it, and Space again to drop it. Escape puts it back.';
 
 /** The rating over the art's corner. Not part of what's dragged, so it's not in its name. */
 function RatingChip({ rating }: { rating: number | null }) {
@@ -45,9 +49,10 @@ function RatingChip({ rating }: { rating: number | null }) {
 }
 
 /**
- * A favorite the player picked: drag its art to move it (or pick it up with
- * Space and move it with the arrow keys), and take it off with the X in its
- * corner. The X shows on hover, and while the keyboard is on the favorite; a
+ * A favorite the player picked: a click on its art (or Enter) opens the
+ * game, as game art does everywhere; dragging it moves it (or Space picks it
+ * up and the arrow keys move it), and the X in its corner takes it off.
+ * The X shows on hover, and while the keyboard is on the favorite; a
  * click on the art gives it focus too, but that isn't a reason to keep the X
  * there until the next click elsewhere. A touchscreen has no hover, so there
  * it always shows.
@@ -57,6 +62,8 @@ function PickedFavorite({
   place,
   total,
   onRemove,
+  onOpen,
+  wasDragged,
   handleRef,
 }: {
   game: FavoriteGame;
@@ -64,6 +71,9 @@ function PickedFavorite({
   place: number;
   total: number;
   onRemove: () => void;
+  onOpen: () => void;
+  /** Whether a drag just ended: the click that ends a drag isn't one to open the game. */
+  wasDragged: () => boolean;
   /** The art that moves it, for the row to put focus on. */
   handleRef?: Ref<HTMLDivElement>;
 }) {
@@ -84,8 +94,20 @@ function PickedFavorite({
           {...attributes}
           {...listeners}
           aria-label={`${game.name}, favorite ${place} of ${total}`}
+          onClick={() => {
+            if (!isDragging && !wasDragged()) onOpen();
+          }}
+          // Enter opens the game; every other key is the drag's (Space picks it up).
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !isDragging) {
+              e.preventDefault();
+              onOpen();
+              return;
+            }
+            listeners?.onKeyDown?.(e);
+          }}
           className={`touch-manipulation select-none rounded-lg [-webkit-touch-callout:none] ${
-            isDragging ? 'cursor-grabbing shadow-xl shadow-black/40' : 'cursor-grab'
+            isDragging ? 'cursor-grabbing shadow-xl shadow-black/40' : 'cursor-pointer'
           }`}
         >
           <FavoriteArt game={game} />
@@ -143,7 +165,8 @@ export interface FavoriteGamesHandle {
 /**
  * Four games the player loves, as art, picked by them: the row starts as four
  * empty places and is theirs to fill and arrange where it is. An empty place
- * opens the picker, dragging reorders, and the X takes one off. A row with
+ * opens the picker, a favorite opens its game, dragging reorders, and the X
+ * takes one off. A row with
  * fewer than four keeps its empty places. (With four, one comes off before
  * another goes on: there's no other way into the picker, and none is needed.)
  */
@@ -152,11 +175,14 @@ export function FavoriteGames({
   onChoose,
   onReorder,
   onRemove,
+  onOpen,
   ref,
 }: {
   ref?: Ref<FavoriteGamesHandle>;
   games: FavoriteGame[];
   onChoose: () => void;
+  /** Opens a game's dialog, by its id. */
+  onOpen: (gameId: number) => void;
   /** The picks in their new order, after a drag. */
   onReorder: (gameIds: number[]) => void;
   onRemove: (game: FavoriteGame) => void;
@@ -165,8 +191,24 @@ export function FavoriteGames({
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     // Held for a moment before it lifts: a quick swipe is a scroll.
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    // Space only: Enter opens the game.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] },
+    }),
   );
+
+  // A drag that just ended: the browser sends a click when the button comes
+  // up, and that one mustn't open the game. Cleared once that click has gone.
+  const dragged = useRef(false);
+  const dragStarted = () => {
+    dragged.current = true;
+  };
+  const dragFinished = () => {
+    setTimeout(() => {
+      dragged.current = false;
+    });
+  };
 
   // The order just dropped, shown from the instant of the drop. The page's
   // own copy catches up a moment later, and in that moment the drag library
@@ -199,6 +241,7 @@ export function FavoriteGames({
   };
 
   function handleDragEnd({ active, over }: DragEndEvent) {
+    dragFinished();
     if (!over || active.id === over.id) return;
     const from = ids.indexOf(active.id as number);
     const to = ids.indexOf(over.id as number);
@@ -243,7 +286,9 @@ export function FavoriteGames({
         id="favorites-dnd"
         sensors={sensors}
         collisionDetection={closestCenter}
-        accessibility={{ announcements }}
+        accessibility={{ announcements, screenReaderInstructions: { draggable: INSTRUCTIONS } }}
+        onDragStart={dragStarted}
+        onDragCancel={dragFinished}
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={ids} strategy={rectSortingStrategy}>
@@ -255,6 +300,8 @@ export function FavoriteGames({
                 place={i + 1}
                 total={games.length}
                 onRemove={() => handleRemove(game)}
+                onOpen={() => onOpen(game.id)}
+                wasDragged={() => dragged.current}
                 handleRef={i === games.length - 1 ? lastFavorite : undefined}
               />
             ))}

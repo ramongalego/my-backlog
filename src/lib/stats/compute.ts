@@ -28,7 +28,7 @@ interface RatingBar {
   count: number;
 }
 
-export interface PlayedALotGame {
+interface PlayedALotGame {
   id: number;
   app_id: number | null;
   source: string;

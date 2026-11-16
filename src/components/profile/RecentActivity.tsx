@@ -13,31 +13,41 @@ import { TruncatedText } from '@/components/ui/TruncatedText';
 /** What happened, in the past tense, or now. */
 const WHAT = { playing: 'Playing', finished: 'Finished', dropped: 'Dropped' } as const;
 
-function Row({ entry }: { entry: ActivityEntry }) {
+/**
+ * One thing that happened, as a button that opens the game: to fix a date or
+ * a rating where it's seen. Its name is what it shows, read in order.
+ */
+function Row({ entry, onOpen }: { entry: ActivityEntry; onOpen: (gameId: number) => void }) {
   const { icon: Icon, text } = STATUS_STYLE[entry.kind];
   const platform = consoleOf(entry);
   return (
-    <li className={ACTIVITY_ROW}>
-      <CoverThumb src={entry.header_image} alt="" />
-      <div className="min-w-0 flex-1">
-        <TruncatedText as="p" className="font-medium text-ink-100 lg:truncate">
-          {entry.name}
-        </TruncatedText>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
-          <span className={`inline-flex items-center gap-1 ${text}`}>
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            {WHAT[entry.kind]}
-          </span>{' '}
-          {entry.day && (
-            <span>
-              {entry.kind === 'playing' && 'since '}
-              {activityDay(entry.day)}
-            </span>
-          )}{' '}
-          {platform && <span>on {platform}</span>}
-        </p>
-      </div>
-      {entry.rating != null && <Rating rating={entry.rating} className="shrink-0" />}
+    <li>
+      <button
+        type="button"
+        onClick={() => onOpen(entry.id)}
+        className={`${ACTIVITY_ROW} group -mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 text-left transition-colors hover:bg-ink-800/50`}
+      >
+        <CoverThumb src={entry.header_image} alt="" />
+        <span className="block min-w-0 flex-1">
+          <TruncatedText className="block font-medium text-ink-100 transition-colors group-hover:text-ink-50 lg:truncate">
+            {entry.name}
+          </TruncatedText>{' '}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
+            <span className={`inline-flex items-center gap-1 ${text}`}>
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {WHAT[entry.kind]}
+            </span>{' '}
+            {entry.day && (
+              <span>
+                {entry.kind === 'playing' && 'since '}
+                {activityDay(entry.day)}
+              </span>
+            )}{' '}
+            {platform && <span>on {platform}</span>}
+          </span>
+        </span>{' '}
+        {entry.rating != null && <Rating rating={entry.rating} className="shrink-0" />}
+      </button>
     </li>
   );
 }
@@ -47,7 +57,14 @@ function Row({ entry }: { entry: ActivityEntry }) {
  * finished or dropped, newest first. A list, where the favorites above are
  * art, so the two don't read as the same row twice.
  */
-export function RecentActivity({ entries }: { entries: ActivityEntry[] }) {
+export function RecentActivity({
+  entries,
+  onOpen,
+}: {
+  entries: ActivityEntry[];
+  /** Opens a game's dialog, by its id. */
+  onOpen: (gameId: number) => void;
+}) {
   return (
     <ProfileSection
       id="profile-activity"
@@ -66,7 +83,7 @@ export function RecentActivity({ entries }: { entries: ActivityEntry[] }) {
       {entries.length > 0 ? (
         <ul className={ACTIVITY_LIST}>
           {entries.map((entry) => (
-            <Row key={`${entry.kind}-${entry.id}`} entry={entry} />
+            <Row key={`${entry.kind}-${entry.id}`} entry={entry} onOpen={onOpen} />
           ))}
         </ul>
       ) : (

@@ -2,7 +2,7 @@
 
 import { CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
-import type { PlayedALotGame, Stats } from '@/lib/stats/compute';
+import type { Stats } from '@/lib/stats/compute';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { steamLastPlayed } from '@/lib/games/consoles';
@@ -18,7 +18,8 @@ export function PlayedALot({
   onEdit,
 }: {
   stats: Stats;
-  onEdit: (game: PlayedALotGame) => void;
+  /** Opens the game's dialog, by its id. */
+  onEdit: (gameId: number) => void;
 }) {
   return (
     <Panel>
@@ -30,7 +31,7 @@ export function PlayedALot({
       <ul className="space-y-3">
         {stats.playedALot.map((game) => {
           const { id, name, playtime_forever, main_story_hours, header_image } = game;
-          const edit = () => onEdit(game);
+          const edit = () => onEdit(id);
           return (
             <li key={id} className="flex items-center gap-3">
               <button

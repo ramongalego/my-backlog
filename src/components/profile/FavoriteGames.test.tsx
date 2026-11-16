@@ -12,6 +12,8 @@ jest.mock('next/image', () => ({
 // is stood in for: the test ends a drag by hand and checks what the row makes
 // of it. Everything else is dnd-kit's own.
 let endDrag: (event: { active: { id: number }; over: { id: number } | null }) => void;
+let startDrag: () => void;
+let instructions: string;
 let announce: {
   onDragStart: (e: { active: { id: number } }) => string;
   onDragEnd: (e: { active: { id: number }; over: { id: number } | null }) => string;
@@ -22,14 +24,21 @@ jest.mock('@dnd-kit/core', () => ({
   DndContext: ({
     children,
     onDragEnd,
+    onDragStart,
     accessibility,
   }: {
     children: ReactNode;
     onDragEnd: typeof endDrag;
-    accessibility: { announcements: typeof announce };
+    onDragStart: typeof startDrag;
+    accessibility: {
+      announcements: typeof announce;
+      screenReaderInstructions: { draggable: string };
+    };
   }) => {
     endDrag = onDragEnd;
+    startDrag = onDragStart;
     announce = accessibility.announcements;
+    instructions = accessibility.screenReaderInstructions.draggable;
     return <>{children}</>;
   },
 }));
@@ -62,7 +71,8 @@ const four = [
 const onChoose = jest.fn();
 const onReorder = jest.fn();
 const onRemove = jest.fn();
-const actions = { onChoose, onReorder, onRemove };
+const onOpen = jest.fn();
+const actions = { onChoose, onReorder, onRemove, onOpen };
 beforeEach(() => jest.clearAllMocks());
 
 const section = () => screen.getByRole('region', { name: 'Favorite games' });
@@ -189,6 +199,46 @@ describe('with favorites picked', () => {
     const name = screen.getByText('Castlevania: Aria of Sorrow');
     expect(name).toHaveClass('lg:truncate');
     expect(name).not.toHaveClass('truncate');
+  });
+
+  describe('opening the game', () => {
+    const art = (name: string) =>
+      section().querySelector(`[aria-label^="${name}, favorite"]`) as HTMLElement;
+
+    it('opens it with a click on its art, as game art does everywhere', () => {
+      render(<FavoriteGames {...actions} games={four} />);
+      fireEvent.click(art('Persona 5 Royal'));
+      expect(onOpen).toHaveBeenCalledWith(2);
+    });
+
+    it('opens it with Enter; Space is left to pick it up', () => {
+      render(<FavoriteGames {...actions} games={four} />);
+      fireEvent.keyDown(art('Hades'), { key: 'Enter' });
+      expect(onOpen).toHaveBeenCalledWith(4);
+      fireEvent.keyDown(art('Hades'), { key: ' ' });
+      expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it("doesn't open it from the click that ends a drag", async () => {
+      jest.useFakeTimers();
+      render(<FavoriteGames {...actions} games={four} />);
+      act(() => startDrag());
+      act(() => endDrag({ active: { id: 1 }, over: { id: 3 } }));
+      // The browser's click as the button comes up, on the art it was dropped by.
+      fireEvent.click(art('Castlevania: Aria of Sorrow'));
+      expect(onOpen).not.toHaveBeenCalled();
+
+      // Once that's gone by, a click opens it again.
+      act(() => jest.runAllTimers());
+      fireEvent.click(art('Castlevania: Aria of Sorrow'));
+      expect(onOpen).toHaveBeenCalledWith(1);
+      jest.useRealTimers();
+    });
+
+    it('tells a screen reader both: Enter opens it, Space moves it', () => {
+      render(<FavoriteGames {...actions} games={four} />);
+      expect(instructions).toMatch(/^Press Enter to open the game\. To move it, press Space/);
+    });
   });
 
   it('takes a favorite off with the X on its art', () => {

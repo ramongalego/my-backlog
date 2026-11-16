@@ -1,6 +1,7 @@
 'use client';
 
 import { CoverArt } from '@/components/games/CoverArt';
+import { openGameLabel } from '@/lib/games/game-label';
 import { Rating } from '@/components/games/Rating';
 import { growBar, useInView } from '@/hooks/useInView';
 import type { Stats } from '@/lib/stats/compute';
@@ -9,8 +10,18 @@ import { plural } from '@/components/stats/format';
 import { SectionTitle } from '@/components/stats/SectionTitle';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
-/** Your best-rated games as art, beside how your ratings spread. */
-export function HighestRated({ stats }: { stats: Stats }) {
+/**
+ * Your best-rated games as art, beside how your ratings spread. Each opens
+ * its game's dialog, as game art does everywhere.
+ */
+export function HighestRated({
+  stats,
+  onOpen,
+}: {
+  stats: Stats;
+  /** Opens a game's dialog, by its id. */
+  onOpen: (gameId: number) => void;
+}) {
   const { highestRated, ratedCount, avgRating } = stats;
   const showBars = ratedCount >= 3;
   if (highestRated.length === 0 && !showBars) return null;
@@ -28,23 +39,37 @@ export function HighestRated({ stats }: { stats: Stats }) {
             <ul className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-4 content-start">
               {highestRated.map((game) => (
                 <li key={game.id} className="min-w-0">
-                  <CoverArt
-                    src={game.header_image}
-                    alt=""
-                    sizes="(max-width: 640px) 50vw, 220px"
-                    className="w-full"
-                  >
-                    {game.rating != null && (
-                      <Rating
-                        rating={game.rating}
-                        onArt
-                        className="absolute bottom-1.5 right-1.5"
-                      />
+                  <button
+                    type="button"
+                    onClick={() => onOpen(game.id)}
+                    aria-label={openGameLabel(
+                      { ...game, status: 'finished' },
+                      { showStatus: false },
                     )}
-                  </CoverArt>
-                  <TruncatedText as="p" className="mt-1.5 text-sm text-ink-200 truncate">
-                    {game.name}
-                  </TruncatedText>
+                    className="group block w-full cursor-pointer rounded-lg text-left"
+                  >
+                    <CoverArt
+                      src={game.header_image}
+                      alt=""
+                      sizes="(max-width: 640px) 50vw, 220px"
+                      interactive
+                      className="w-full"
+                    >
+                      {game.rating != null && (
+                        <Rating
+                          rating={game.rating}
+                          onArt
+                          className="absolute bottom-1.5 right-1.5"
+                        />
+                      )}
+                    </CoverArt>
+                    <TruncatedText
+                      as="span"
+                      className="mt-1.5 block text-sm text-ink-200 truncate transition-colors group-hover:text-ink-50"
+                    >
+                      {game.name}
+                    </TruncatedText>
+                  </button>
                 </li>
               ))}
             </ul>

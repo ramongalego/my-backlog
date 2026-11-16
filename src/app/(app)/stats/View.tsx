@@ -64,7 +64,7 @@ export default function StatsView() {
             <Hours stats={stats} />
           </div>
           <BacklogPace stats={stats} />
-          <HighestRated stats={stats} />
+          <HighestRated stats={stats} onOpen={openGame} />
           <TagCompletion stats={stats} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TopTags stats={stats} syncs={isSteamConnected} />
