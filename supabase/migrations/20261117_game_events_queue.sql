@@ -1,3 +1,8 @@
+-- ALREADY APPLIED, AND SUPERSEDED: 20261117_history_fixes.sql defines the
+-- whole history again. Don't run this file again by itself: it puts back an
+-- older version of some functions, and the history then records less until
+-- 20261117_history_fixes.sql is run after it.
+--
 -- The history records a game going on the queue and coming off it. Applied
 -- after 20261117_game_events_merged.sql.
 --

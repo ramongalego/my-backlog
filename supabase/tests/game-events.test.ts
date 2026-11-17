@@ -18,6 +18,7 @@ const MIGRATIONS = [
   '20261117_game_events_added.sql',
   '20261117_game_events_merged.sql',
   '20261117_game_events_queue.sql',
+  '20261117_history_fixes.sql',
 ].map((file) => sqlFile('migrations', file));
 
 /** Takes the history out of a database, as it was before the first migration. */
@@ -26,6 +27,13 @@ const UNINSTALL = `
   drop trigger if exists games_record_changed on games;
   drop trigger if exists playing_queue_record_added on playing_queue;
   drop trigger if exists playing_queue_record_removed on playing_queue;
+  drop trigger if exists favorite_games_record_added on favorite_games;
+  drop trigger if exists favorite_games_record_removed on favorite_games;
+  drop function if exists public.record_favorite_event();
+  drop function if exists public.game_event_failed(text, uuid, bigint, text);
+  drop function if exists public.add_to_queue(bigint, numeric);
+  drop table if exists game_event_failures;
+  grant update on playing_queue to authenticated;
   drop function if exists public.record_queue_event();
   drop function if exists public.game_event_record(uuid, bigint, jsonb);
   drop function if exists public.record_games_added();
@@ -103,12 +111,13 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
 
   /**
    * Changes games as the app does: signed in as the player, through
-   * apply_status_change, in one transaction. `undo` sends them as an Undo.
+   * apply_status_change, in one transaction. `undo` sends them as an Undo of
+   * a change made that many seconds ago (`true`: up to fifteen minutes ago).
    */
   const changeAll = (
     items: { id: number; update: Record<string, unknown> }[],
     {
-      undo = false,
+      undo = false as boolean | number,
       userId = player,
       timeZone = undefined as string | undefined,
       /** Games put at the top of the queue in the same save: one paused for another. */
@@ -118,13 +127,25 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
     db.asUser(
       userId,
       'select apply_status_change($1::jsonb, $2::bigint[])',
-      [JSON.stringify(items.map((item) => (undo ? { ...item, undo: true } : item))), toQueue],
+      [
+        JSON.stringify(
+          items.map((item) =>
+            undo === false ? item : { ...item, undo: true, ago: undo === true ? 900 : undo },
+          ),
+        ),
+        toQueue,
+      ],
       timeZone,
     );
   const change = (
     id: number,
     update: Record<string, unknown>,
-    options: { undo?: boolean; userId?: string; timeZone?: string; toQueue?: number[] } = {},
+    options: {
+      undo?: boolean | number;
+      userId?: string;
+      timeZone?: string;
+      toQueue?: number[];
+    } = {},
   ) => changeAll([{ id, update }], options);
 
   /** Puts a game on the player's queue, or takes it off, as the queue's route does. */
@@ -314,15 +335,36 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
         ]);
       });
 
-      it('records up to twenty arriving at once, and takes more than that for an import', async () => {
+      it('records up to fifty arriving, and takes more than that for an import', async () => {
         await arrive(steamGames(5));
         await libraryIsOlder(30);
 
-        await arrive(steamGames(20, 100));
-        expect(await countEvents()).toBe(20);
+        await arrive(steamGames(50, 100));
+        expect(await countEvents()).toBe(50);
 
-        await arrive(steamGames(21, 200));
-        expect(await countEvents()).toBe(20);
+        await libraryIsOlder(30);
+        await arrive(steamGames(51, 200));
+        expect(await countEvents()).toBe(50);
+      });
+
+      it('counts a sync as a whole: the last statement of a big one is not taken for purchases', async () => {
+        await arrive(steamGames(5));
+        await libraryIsOlder(30);
+
+        // 510 new games come in two statements, as the sync sends them.
+        await arrive(steamGames(500, 1000));
+        await arrive(steamGames(10, 2000));
+        expect(await countEvents()).toBe(0);
+      });
+
+      it('takes two small syncs minutes apart for purchases, both of them', async () => {
+        await arrive(steamGames(5));
+        await libraryIsOlder(30);
+
+        await arrive(steamGames(3, 100));
+        await libraryIsOlder(4);
+        await arrive(steamGames(4, 200));
+        expect(await countEvents()).toBe(7);
       });
 
       it("doesn't take a game added minutes into an import for one bought since", async () => {
@@ -494,7 +536,7 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
 
       await write(
         game,
-        `name = 'Hades II', notes = 'Great', main_story_hours = 22, reroll_count = 3,
+        `name = 'Hades II', main_story_hours = 22, reroll_count = 3,
          header_image = 'https://example.com/a.jpg', tags = '{roguelike}', source = 'manual'`,
       );
       // And saving the same values again, as a sync does.
@@ -818,6 +860,557 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
     });
   });
 
+  describe('an Undo whose change left no event', () => {
+    const started = {
+      kind: 'status',
+      changes: { status: ['backlog', 'playing'], started_at: [null, '2026-11-17T20:00:00+00:00'] },
+    };
+    /** Started, moved back by hand within the sitting (which leaves nothing), then put back by Undo. */
+    const startBackUndo = async (game: number) => {
+      await change(game, { status: 'playing', started_at: '2026-11-17T20:00:00Z' });
+      await later(10);
+      await change(game, { status: 'backlog', started_at: null });
+      await later(3);
+      await change(game, { status: 'playing', started_at: '2026-11-17T20:00:00Z' }, { undo: 3 });
+    };
+
+    it("is a change of its own: it doesn't reach into the game's arrival", async () => {
+      const [game] = await arrive([{ platform: 'Switch 2' }]);
+      await later(90 * 24 * 3600);
+      const arrival = await eventsOf(game);
+
+      await startBackUndo(game);
+
+      expect(await eventsOf(game)).toEqual([...arrival, started]);
+    });
+
+    it("doesn't turn hours played long ago into a start", async () => {
+      const game = await addGame({ platform: 'PC', playtime_forever: 100 });
+      await write(game, 'playtime_forever = 160');
+      await later(200 * 24 * 3600);
+
+      await startBackUndo(game);
+
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'playtime', changes: { playtime_forever: [100, 160] } },
+        started,
+      ]);
+    });
+
+    it("doesn't take a week-old queue entry for the one it puts back", async () => {
+      const game = await addGame();
+      await queue(game);
+      await later(7 * 24 * 3600);
+
+      // Play, then "move to queue" within the sitting, then that move's Undo.
+      await change(game, { status: 'playing', started_at: '2026-11-17T20:00:00Z' });
+      await later(10);
+      await change(game, { status: 'backlog' }, { toQueue: [game] });
+      await later(3);
+      await change(game, { status: 'playing' }, { undo: 3 });
+
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'queue', changes: { queued: [false, true] } },
+        {
+          kind: 'status',
+          changes: {
+            status: ['backlog', 'playing'],
+            started_at: [null, '2026-11-17T20:00:00+00:00'],
+            queued: [true, false],
+          },
+        },
+      ]);
+    });
+
+    it("doesn't take back a finish from months ago", async () => {
+      const game = await addGame({ status: 'playing', started_at: '2026-03-01T00:00:00Z' });
+      const finished = { status: 'finished', finished_at: '2026-03-20T00:00:00Z', rating: 9 };
+      await change(game, finished);
+      await later(240 * 24 * 3600);
+      const finish = await eventsOf(game);
+
+      // Hidden and back within the sitting, then the Undo of the move back.
+      const hidden = { status: 'hidden', finished_at: null, rating: null };
+      await change(game, hidden);
+      await later(10);
+      await change(game, finished);
+      await later(3);
+      await change(game, hidden, { undo: 3 });
+
+      expect(await eventsOf(game)).toEqual([
+        ...finish,
+        {
+          kind: 'status',
+          changes: {
+            status: ['finished', 'hidden'],
+            finished_at: ['2026-03-20T00:00:00+00:00', null],
+            rating: [9, null],
+          },
+        },
+      ]);
+    });
+
+    it("leaves another game's start alone when the Undo sends it back to the backlog", async () => {
+      const other = await addGame({ name: 'Celeste', igdb_id: 2 });
+      const game = await addGame({ name: 'Hades', igdb_id: 3 });
+      // Started on another device an hour ago.
+      await change(other, { status: 'playing', started_at: '2026-11-17T19:00:00Z' });
+      await later(3600);
+
+      // An Undo that starts a game again sends back whatever is playing.
+      await changeAll(
+        [
+          { id: other, update: { status: 'backlog', started_at: null } },
+          { id: game, update: { status: 'playing', started_at: '2026-11-17T20:00:00Z' } },
+        ],
+        { undo: 5 },
+      );
+
+      expect((await eventsOf(other)).map((event) => event.changes.status)).toEqual([
+        ['backlog', 'playing'],
+        ['playing', 'backlog'],
+      ]);
+    });
+
+    it('only reaches the sitting when the app does not say how long ago the change was', async () => {
+      const game = await addGame({ status: 'finished', finished_at: '2026-10-19T00:00:00Z' });
+      await change(game, { status: 'hidden', finished_at: null });
+      await later(600);
+      await db.asUser(player, 'select apply_status_change($1::jsonb)', [
+        JSON.stringify([
+          {
+            id: game,
+            update: { status: 'finished', finished_at: '2026-10-19T00:00:00Z' },
+            undo: true,
+          },
+        ]),
+      ]);
+      expect(await eventsOf(game)).toHaveLength(2);
+    });
+
+    it.each(['-5', 'soon', '1e9', '', '99999999999'])(
+      'saves the change, and folds no further than it should, when how long ago is "%s"',
+      async (ago) => {
+        const game = await addGame();
+        await change(game, { status: 'hidden' });
+        await later(2 * 24 * 3600);
+        await db.asUser(player, 'select apply_status_change($1::jsonb)', [
+          JSON.stringify([{ id: game, update: { status: 'backlog' }, undo: true, ago }]),
+        ]);
+        expect(await statusOf(game)).toBe('backlog');
+        // Two days is past the day an Undo can reach back.
+        expect(await eventsOf(game)).toHaveLength(2);
+      },
+    );
+  });
+
+  describe('an Undo after something else happened to the game', () => {
+    it('is taken out of the change it undoes, leaving what came in between', async () => {
+      const game = await addGame({
+        platform: 'PC',
+        playtime_forever: 100,
+        status: 'playing',
+        started_at: '2026-11-01T00:00:00Z',
+      });
+      await change(game, { status: 'finished', finished_at: '2026-11-17T00:00:00Z', rating: 9 });
+      await later(60);
+      // The tab comes back: a refresh brings new hours before Undo is pressed.
+      await write(game, 'playtime_forever = 130');
+      await later(60);
+      await change(game, { status: 'playing', finished_at: null, rating: null }, { undo: 120 });
+
+      // Not a finish and then an un-finish: only the hours.
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'playtime', changes: { playtime_forever: [100, 130] } },
+      ]);
+    });
+
+    it('goes into the last event when a later change stands on what it takes back', async () => {
+      const game = await addGame({ status: 'playing', started_at: '2026-11-01T00:00:00Z' });
+      await change(game, { status: 'finished', finished_at: '2026-11-17T00:00:00Z', rating: 9 });
+      await later(60);
+      await write(game, 'rating = 8');
+      await later(60);
+      await change(game, { status: 'playing', finished_at: null, rating: null }, { undo: 120 });
+
+      expect(await eventsOf(game)).toEqual([
+        {
+          kind: 'status',
+          changes: {
+            status: ['playing', 'finished'],
+            finished_at: [null, '2026-11-17T00:00:00+00:00'],
+            rating: [null, 9],
+          },
+        },
+        {
+          kind: 'status',
+          changes: {
+            status: ['finished', 'playing'],
+            finished_at: ['2026-11-17T00:00:00+00:00', null],
+            rating: [9, null],
+          },
+        },
+      ]);
+    });
+
+    it('leaves only the hours when a switch to a queued game is undone after it was played', async () => {
+      const a = await addGame({ status: 'playing', started_at: '2026-11-13T13:57:00Z' });
+      const b = await addGame({ name: 'Celeste', igdb_id: 2, platform: 'PC' });
+      await queue(b);
+      await later(3600);
+      const before = { a: await eventsOf(a), b: await eventsOf(b) };
+
+      await changeAll(
+        [
+          { id: a, update: { status: 'backlog' } },
+          { id: b, update: { status: 'playing', started_at: '2026-11-17T20:00:00Z' } },
+        ],
+        { toQueue: [a] },
+      );
+      await later(60);
+      await write(b, 'playtime_forever = 90');
+      await later(60);
+
+      // Undo, as the app sends it: A is switched back to, pausing B at the top
+      // of the queue, then B's start is cleared.
+      await changeAll(
+        [
+          { id: b, update: { status: 'backlog' } },
+          { id: a, update: { status: 'playing' } },
+        ],
+        { undo: 120, toQueue: [b] },
+      );
+      await change(b, { status: 'backlog', started_at: null }, { undo: 120 });
+
+      expect(await queued()).toEqual([b]);
+      expect(await eventsOf(a)).toEqual(before.a);
+      expect(await eventsOf(b)).toEqual([
+        ...before.b,
+        { kind: 'playtime', changes: { playtime_forever: [0, 90] } },
+      ]);
+    });
+
+    it('takes a game off the queue and puts it back by Undo, however late, leaving nothing', async () => {
+      const game = await addGame();
+      await queue(game);
+      await later(3600);
+      const before = await eventsOf(game);
+
+      await unqueue(game);
+      await later(600);
+      await db.asUser(player, 'select add_to_queue($1, $2)', [game, 600]);
+
+      expect(await queued()).toEqual([game]);
+      expect(await eventsOf(game)).toEqual(before);
+    });
+
+    it("puts a game on the queue by Undo only if it is the player's, and once", async () => {
+      const other = await createUser(db);
+      const theirs = await addGame({}, other);
+      await expect(db.asUser(player, 'select add_to_queue($1, $2)', [theirs, 5])).rejects.toThrow(
+        /foreign key|violates/,
+      );
+
+      const game = await addGame();
+      await db.asUser(player, 'select add_to_queue($1, $2)', [game, 5]);
+      await db.asUser(player, 'select add_to_queue($1, $2)', [game, 5]);
+      expect(await queued()).toEqual([game]);
+      await expect(db.asVisitor('select add_to_queue($1, $2)', [game, 5])).rejects.toThrow(
+        /permission denied/,
+      );
+    });
+  });
+
+  describe('hours across a platform move', () => {
+    const steamGame = () =>
+      addGame({ source: 'steam', app_id: 620, platform: 'PC', playtime_forever: 3000 });
+
+    it("doesn't fold a move into hours just played, which would lose them", async () => {
+      const game = await steamGame();
+      // A sync brings an hour played; seconds later the game is moved to a console.
+      await write(game, 'playtime_forever = 3060');
+      await write(game, `platform = 'Xbox', playtime_forever = 300`);
+
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'playtime', changes: { playtime_forever: [3000, 3060] } },
+        { kind: 'edit', changes: { platform: ['PC', 'Xbox'], playtime_forever: [3060, 300] } },
+      ]);
+    });
+
+    it('still folds what is saved with the move into it', async () => {
+      const game = await steamGame();
+      await write(game, `platform = 'Xbox', playtime_forever = 300`);
+      await change(game, { status: 'finished', finished_at: '2026-11-17T00:00:00Z' });
+      await write(game, 'playtime_forever = 320');
+
+      expect(await eventsOf(game)).toEqual([
+        {
+          kind: 'status',
+          changes: {
+            platform: ['PC', 'Xbox'],
+            playtime_forever: [3000, 320],
+            status: ['backlog', 'finished'],
+            finished_at: [null, '2026-11-17T00:00:00+00:00'],
+          },
+        },
+      ]);
+    });
+
+    it('is the hours as they end when a game is moved and moved back in one sitting', async () => {
+      const game = await steamGame();
+      await write(game, `platform = 'Xbox', playtime_forever = 300`);
+      // Back to Steam, with the total Steam reports now.
+      await write(game, `platform = 'PC', playtime_forever = 3050`);
+
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'playtime', changes: { playtime_forever: [3000, 3050] } },
+      ]);
+    });
+
+    it('folds a move into the arrival of a game that has only just arrived', async () => {
+      const [game] = await arrive([{ platform: 'Switch', playtime_forever: 120 }]);
+      await write(game, `platform = 'Switch 2'`);
+      expect(await eventsOf(game)).toEqual([
+        {
+          kind: 'added',
+          changes: {
+            status: [null, 'backlog'],
+            platform: [null, 'Switch 2'],
+            playtime_forever: [null, 120],
+          },
+        },
+      ]);
+    });
+  });
+
+  describe('favorites and notes', () => {
+    const favorites = (ids: number[]) =>
+      db.asUser(player, 'select set_favorite_games($1::bigint[])', [ids]);
+    const favorite = { kind: 'favorite', changes: { favorite: [false, true] } };
+
+    it('records a game becoming a favorite, and later no longer one', async () => {
+      const game = await addGame();
+      await favorites([game]);
+      expect(await eventsOf(game)).toEqual([favorite]);
+
+      await later();
+      await favorites([]);
+      expect(await eventsOf(game)).toEqual([
+        favorite,
+        { kind: 'favorite', changes: { favorite: [true, false] } },
+      ]);
+    });
+
+    it('records nothing for the favorites that stay when they are saved again or reordered', async () => {
+      const games = [await addGame({ igdb_id: 1 }), await addGame({ igdb_id: 2 })];
+      await favorites(games);
+      await later(3600);
+
+      await favorites([games[1], games[0]]);
+      const added = await addGame({ igdb_id: 3 });
+      await later(3600);
+      await favorites([games[1], games[0], added]);
+
+      expect(await eventsOf(games[0])).toEqual([favorite]);
+      expect(await eventsOf(games[1])).toEqual([favorite]);
+      expect(await eventsOf(added)).toEqual([favorite]);
+    });
+
+    it("doesn't record a favorite being removed from the library as no longer a favorite", async () => {
+      const kept = await addGame({ igdb_id: 1 });
+      const removed = await addGame({ igdb_id: 2 });
+      await favorites([kept, removed]);
+      await later();
+
+      await db.asUser(player, 'delete from games where id = $1', [removed]);
+
+      expect(await eventsOf(removed)).toEqual([]);
+      expect(await eventsOf(kept)).toEqual([favorite]);
+    });
+
+    it('records a note being written and cleared, never its words', async () => {
+      const game = await addGame();
+      await write(game, `notes = 'The ending got me'`);
+      const written = { kind: 'note', changes: { noted: [false, true] } };
+      expect(await eventsOf(game)).toEqual([written]);
+
+      await later();
+      await write(game, `notes = 'The ending really got me'`);
+      expect(await eventsOf(game)).toEqual([written]);
+
+      await later();
+      await write(game, `notes = ''`);
+      expect(await eventsOf(game)).toEqual([
+        written,
+        { kind: 'note', changes: { noted: [true, false] } },
+      ]);
+      expect(JSON.stringify(await db.query('select changes from game_events'))).not.toContain(
+        'ending',
+      );
+    });
+
+    it('carries the note with the finish it was written with', async () => {
+      const game = await addGame({ status: 'playing', started_at: '2026-11-01T00:00:00Z' });
+      await change(game, {
+        status: 'finished',
+        finished_at: '2026-11-17T00:00:00Z',
+        rating: 9,
+        notes: 'Loved it',
+      });
+      expect(await eventsOf(game)).toEqual([
+        {
+          kind: 'status',
+          changes: {
+            status: ['playing', 'finished'],
+            finished_at: [null, '2026-11-17T00:00:00+00:00'],
+            rating: [null, 9],
+            noted: [false, true],
+          },
+        },
+      ]);
+    });
+
+    it('is part of the arrival of a game added with a note and made a favorite', async () => {
+      const [game] = await arrive([{ platform: 'Switch', notes: 'From the eShop sale' }]);
+      await favorites([game]);
+      expect(await eventsOf(game)).toEqual([
+        {
+          kind: 'added',
+          changes: {
+            status: [null, 'backlog'],
+            platform: [null, 'Switch'],
+            noted: [null, true],
+            favorite: [null, true],
+          },
+        },
+      ]);
+    });
+  });
+
+  describe('what could not be recorded', () => {
+    const failures = () =>
+      db.query<{ source: string; game_id: number | null; message: string }>(
+        'select source, game_id, message from game_event_failures order by id',
+      );
+
+    it('is noted, with the game and what went wrong, while the change is still saved', async () => {
+      const game = await addGame();
+      await db.exec(
+        'alter function public.game_event_record(uuid, bigint, jsonb) rename to game_event_record_gone',
+      );
+      try {
+        await change(game, { status: 'hidden' });
+        await queue(await addGame({ igdb_id: 2 }));
+      } finally {
+        await db.exec(
+          'alter function public.game_event_record_gone(uuid, bigint, jsonb) rename to game_event_record',
+        );
+      }
+
+      expect(await statusOf(game)).toBe('hidden');
+      expect(await countEvents()).toBe(0);
+      const noted = await failures();
+      expect(noted.map((failure) => failure.source)).toEqual([
+        'record_game_event',
+        'record_queue_event',
+      ]);
+      expect(noted[0].game_id).toBe(game);
+      expect(noted[0].message).toMatch(/game_event_record/);
+    });
+
+    it('is empty while everything is recorded', async () => {
+      const game = await addGame();
+      await change(game, { status: 'playing', started_at: '2026-11-17T20:00:00Z' });
+      await queue(await addGame({ igdb_id: 2 }));
+      expect(await failures()).toEqual([]);
+    });
+
+    it("can't be read or written by a player, and goes with a deleted account", async () => {
+      await db.query(
+        `insert into game_event_failures (source, user_id, message) values ('test', $1, 'x')`,
+        [player],
+      );
+      await expect(db.asUser(player, 'select * from game_event_failures')).rejects.toThrow(
+        /permission denied/,
+      );
+      await expect(
+        db.asUser(player, `insert into game_event_failures (source, message) values ('x', 'x')`),
+      ).rejects.toThrow(/permission denied/);
+      expect(await db.asServer('select source from game_event_failures')).toEqual([
+        { source: 'test' },
+      ]);
+
+      await db.query('delete from auth.users where id = $1', [player]);
+      expect(await failures()).toEqual([]);
+    });
+
+    it('still saves the change when even the note of the failure cannot be written', async () => {
+      const game = await addGame();
+      await db.exec(
+        `alter function public.game_event_record(uuid, bigint, jsonb) rename to game_event_record_gone;
+         alter function public.game_event_failed(text, uuid, bigint, text) rename to game_event_failed_gone`,
+      );
+      try {
+        await change(game, { status: 'hidden' });
+      } finally {
+        await db.exec(
+          `alter function public.game_event_record_gone(uuid, bigint, jsonb) rename to game_event_record;
+           alter function public.game_event_failed_gone(text, uuid, bigint, text) rename to game_event_failed`,
+        );
+      }
+      expect(await statusOf(game)).toBe('hidden');
+    });
+  });
+
+  describe('what a player can do to the queue and the history directly', () => {
+    it('moves a queue entry up and down, but cannot point it at another game', async () => {
+      const a = await addGame({ igdb_id: 1 });
+      const b = await addGame({ igdb_id: 2 });
+      await queue(a);
+
+      await db.asUser(player, 'update playing_queue set position = 5 where game_id = $1', [a]);
+      await expect(
+        db.asUser(player, 'update playing_queue set game_id = $1 where game_id = $2', [b, a]),
+      ).rejects.toThrow(/permission denied/);
+      expect(await queued()).toEqual([a]);
+    });
+
+    it('has the grants the history needs from its own migration, whatever a project gives new tables', async () => {
+      const game = await addGame();
+      await change(game, { status: 'hidden' });
+      await db.exec('revoke all on game_events from anon, authenticated, service_role');
+      await expect(db.asUser(player, 'select kind from game_events')).rejects.toThrow(
+        /permission denied/,
+      );
+
+      await db.exec(MIGRATIONS[MIGRATIONS.length - 1]);
+
+      expect(await db.asUser(player, 'select kind from game_events')).toEqual([{ kind: 'status' }]);
+      expect(await db.asServer('select kind from game_events')).toEqual([{ kind: 'status' }]);
+      await expect(db.asUser(player, 'delete from game_events')).rejects.toThrow(
+        /permission denied/,
+      );
+      await expect(db.asVisitor('select kind from game_events')).rejects.toThrow(
+        /permission denied/,
+      );
+    });
+
+    it('is whole again after the last migration alone, whatever an older one put back', async () => {
+      // An older migration run again by itself narrows what the history takes.
+      await db.exec(MIGRATIONS[1]);
+      await db.exec(MIGRATIONS[MIGRATIONS.length - 1]);
+
+      const game = await addGame();
+      await queue(game);
+      await db.asUser(player, 'select set_favorite_games($1::bigint[])', [[game]]);
+      await later();
+      await change(game, { status: 'playing', started_at: '2026-11-17T20:00:00Z' });
+
+      expect((await eventsOf(game)).map((event) => event.kind)).toEqual(['queue', 'status']);
+      expect(await db.query('select * from game_event_failures')).toEqual([]);
+    });
+  });
+
   describe('an Undo the app sends as one', () => {
     it('is folded into the change it undoes however late it comes', async () => {
       const games = await Promise.all(
@@ -916,7 +1509,7 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       // One save with an Undo for one game and an ordinary change for the other.
       await db.asUser(player, 'select apply_status_change($1::jsonb)', [
         JSON.stringify([
-          { id: undone, update: { status: 'backlog' }, undo: true },
+          { id: undone, update: { status: 'backlog' }, undo: true, ago: 600 },
           { id: other, update: { status: 'backlog' } },
         ]),
       ]);
@@ -968,7 +1561,8 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
         (
           await db.query<{ row: Record<string, unknown> }>(
             `select public.game_event_snapshot(g) || jsonb_build_object(
-               'queued', exists (select 1 from playing_queue q where q.game_id = g.id)
+               'queued', exists (select 1 from playing_queue q where q.game_id = g.id),
+               'favorite', exists (select 1 from favorite_games f where f.game_id = g.id)
              ) as row
              from games g where g.id = $1`,
             [game],
@@ -976,29 +1570,41 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
         )[0].row;
       const before = await snapshot();
 
-      // The same sequence every run.
+      // The same sequence every run (mulberry32: every bit of it varies, where
+      // a generator that overflowed a double drew the same answer to every
+      // yes-or-no question).
       let seed = 20261117;
       const random = (below: number) => {
-        seed = (seed * 1103515245 + 12345) % 2147483648;
-        return seed % below;
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * below);
       };
+      const drawn = { undone: 0, plain: 0, dated: 0 };
+      let isFavorite = false;
       const day = () => `2026-${String(1 + random(11)).padStart(2, '0')}-1${random(9)}T00:00:00Z`;
       const statuses = ['backlog', 'playing', 'finished', 'dropped', 'wont_play', 'hidden'];
 
-      for (let step = 0; step < 120; step++) {
-        const what = random(7);
-        if (what === 0) {
+      const STEPS = 400;
+      for (let step = 0; step < STEPS; step++) {
+        const what = random(9);
+        if (what === 0 || what === 7) {
+          // An Undo of a change made a moment ago, a minute ago or an hour ago.
+          const undo = random(3) === 0 ? [3, 70, 3600][random(3)] : false;
+          if (undo === false) drawn.plain++;
+          else drawn.undone++;
           await change(
             game,
             {
               status: statuses[random(statuses.length)],
-              ...(random(2) ? { started_at: random(3) ? day() : null } : {}),
+              ...(random(2) ? { started_at: random(3) ? (drawn.dated++, day()) : null } : {}),
               ...(random(2) ? { finished_at: random(3) ? day() : null } : {}),
               ...(random(2) ? { dropped_at: random(3) ? day() : null } : {}),
               ...(random(2) ? { rating: random(4) ? random(11) : null } : {}),
+              ...(random(3) === 0 ? { notes: random(2) ? 'A note' : null } : {}),
             },
             {
-              undo: random(4) === 0,
+              undo,
               timeZone: ['UTC', 'Asia/Tokyo', 'America/New_York'][random(3)],
             },
           );
@@ -1014,18 +1620,35 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
           // On the queue, or off it. (A status change away from the backlog
           // takes a game off by itself.)
           if ((await queued()).includes(game)) await unqueue(game);
-          else await queue(game);
+          else if (random(3) === 0) {
+            await db.asUser(player, 'select add_to_queue($1, $2)', [
+              game,
+              [3, 70, 3600][random(3)],
+            ]);
+          } else await queue(game);
+        } else if (what === 8) {
+          isFavorite = !isFavorite;
+          await db.asUser(player, 'select set_favorite_games($1::bigint[])', [
+            isFavorite ? [game] : [],
+          ]);
         } else {
           await write(game, `last_played_at = '${day()}', name = 'Hades ${step}'`);
         }
-        // Sometimes the next change is part of the same sitting, sometimes not.
-        if (random(3) === 0) await later(31);
+        // Sometimes the next change is part of the same sitting, sometimes a
+        // minute later, sometimes hours.
+        const gap = random(4);
+        if (gap === 1) await later(31);
+        else if (gap === 2) await later(5000);
       }
+      // The draws really varied: plain changes and Undos, with and without dates.
+      expect(drawn.undone).toBeGreaterThan(15);
+      expect(drawn.plain).toBeGreaterThan(30);
+      expect(drawn.dated).toBeGreaterThan(15);
 
       const state: Record<string, unknown> = { ...before };
       const events = await eventsOf(game);
       for (const event of events) {
-        expect(['status', 'edit', 'queue', 'playtime']).toContain(event.kind);
+        expect(['status', 'edit', 'queue', 'favorite', 'note', 'playtime']).toContain(event.kind);
         expect(Object.keys(event.changes).length).toBeGreaterThan(0);
         for (const [column, [was, isNow]] of Object.entries(event.changes)) {
           // When it was last played also changes by itself, unrecorded.
@@ -1038,8 +1661,9 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       delete now.last_played_at;
       expect(state).toEqual(now);
       // Folded, not one event per write.
-      expect(events.length).toBeLessThan(120);
-    }, 60_000);
+      expect(events.length).toBeLessThan(STEPS);
+      expect(await db.query('select * from game_event_failures')).toEqual([]);
+    }, 120_000);
   });
 
   describe('whose it is', () => {
@@ -1088,10 +1712,12 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
                 'public.game_event_kind(jsonb)',
                 'public.game_event_arrival(jsonb)',
                 'public.game_event_record(uuid, bigint, jsonb)',
-                'public.record_queue_event()'
+                'public.record_queue_event()',
+                'public.record_favorite_event()',
+                'public.game_event_failed(text, uuid, bigint, text)'
               ]) as fn`,
       );
-      expect(rows).toHaveLength(18);
+      expect(rows).toHaveLength(22);
       expect(rows.filter((row) => row.allowed)).toEqual([]);
     });
   });

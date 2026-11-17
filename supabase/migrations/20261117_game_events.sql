@@ -1,3 +1,8 @@
+-- ALREADY APPLIED, AND SUPERSEDED: 20261117_history_fixes.sql defines the
+-- whole history again. Don't run this file again by itself: it puts back an
+-- older version of some functions, and the history then records less until
+-- 20261117_history_fixes.sql is run after it.
+--
 -- A history of what a player does with their games. A game's row only holds
 -- how things stand now (one status, one start date, one finish date), so what
 -- came before is lost each time it changes. From here on every such change is

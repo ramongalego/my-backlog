@@ -1,3 +1,8 @@
+-- ALREADY APPLIED, AND SUPERSEDED: 20261117_history_fixes.sql defines the
+-- whole history again. Don't run this file again by itself: it puts back an
+-- older version of some functions, and the history then records less until
+-- 20261117_history_fixes.sql is run after it.
+--
 -- Corrections to the history, found by running every way the app changes a
 -- game against it and by an independent review. Applied after
 -- 20261117_game_events_added.sql.
