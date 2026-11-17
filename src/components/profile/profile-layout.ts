@@ -26,6 +26,24 @@ export const FAVORITE_GRID = 'grid grid-cols-2 sm:grid-cols-4 gap-x-3 sm:gap-x-4
 /** A section's heading row: its title, with room for an action beside it. */
 export const SECTION_HEADING = 'mb-4 flex min-h-8 items-center justify-between gap-4';
 
-/** The activity list and one row of it. */
+/** How many activity rows show at first, and how many more Show more adds each time. */
+export const ACTIVITY_PAGE = 6;
+
+/**
+ * The activity list: its days, each with its date beside its rows (above
+ * them on phones), and one row.
+ */
 export const ACTIVITY_LIST = 'divide-y divide-ink-800/70 border-y border-ink-800/70';
+export const ACTIVITY_DAY = 'sm:flex sm:gap-4';
+// Level with the first row's text: the row's padding, and its text centered on its art.
+// Wide enough for a month with its year ("Aug 2025") on one line.
+export const ACTIVITY_DATE = 'pt-3 tabular-nums sm:w-16 sm:shrink-0 sm:pt-[13px]';
+/**
+ * The date as a stamp: the day over its month from `sm`, side by side on
+ * phones. From `sm` it stays in view under the header while its day's rows
+ * scroll past, so a long day never leaves the column beside it empty.
+ */
+export const ACTIVITY_STAMP =
+  'flex items-baseline gap-1.5 whitespace-nowrap sm:sticky sm:top-20 sm:flex-col sm:items-center sm:gap-0.5';
+export const ACTIVITY_ROWS = 'min-w-0 flex-1 divide-y divide-ink-800/40';
 export const ACTIVITY_ROW = 'flex items-center gap-3 sm:gap-4 py-2.5';

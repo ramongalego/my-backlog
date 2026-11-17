@@ -13,6 +13,9 @@ export const queryKeys = {
     // off them, so a change to the library asks again.
     favorites: (userId: string) => [...queryKeys.games.all, 'favorites', userId] as const,
     manual: (userId: string) => [...queryKeys.games.all, 'manual', userId] as const,
+    // The latest of the history (game_events), for the Profile page's
+    // activity. Under games: a change to a game is a new event.
+    history: (userId: string) => [...queryKeys.games.all, 'history', userId] as const,
     openEndedCategories: (userId: string) =>
       [...queryKeys.games.all, 'open-ended-categories', userId] as const,
     // Under games, so any change to the library asks the server again (which

@@ -19,6 +19,7 @@ import {
   loadManualGames,
   loadOpenEndedCategories,
   loadQueue,
+  loadRecentHistory,
   type CarouselPools,
 } from './loaders';
 
@@ -69,6 +70,17 @@ export const queries = {
       queryKey: queryKeys.games.favorites(userId ?? ''),
       queryFn: load(userId, supabase, loadFavoriteGames),
       staleTime: 5 * MINUTE,
+    }),
+
+  /**
+   * The latest of the history, for the Profile page's Recent activity.
+   * Short-lived: anything done to a game anywhere adds to it.
+   */
+  history: (userId: string | null, supabase?: SupabaseClient) =>
+    queryOptions({
+      queryKey: queryKeys.games.history(userId ?? ''),
+      queryFn: load(userId, supabase, loadRecentHistory),
+      staleTime: 30 * 1000,
     }),
 
   /**

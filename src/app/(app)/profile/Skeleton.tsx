@@ -2,8 +2,13 @@ import { COVER_ASPECT } from '@/components/games/CoverArt';
 import { PageSkeleton, PanelSkeleton, Skeleton } from '@/components/layout/Skeleton';
 import { panelPadding } from '@/components/ui/Panel';
 import {
+  ACTIVITY_DATE,
+  ACTIVITY_DAY,
   ACTIVITY_LIST,
+  ACTIVITY_PAGE,
   ACTIVITY_ROW,
+  ACTIVITY_ROWS,
+  ACTIVITY_STAMP,
   AVATAR_SIZE,
   FAVORITE_GRID,
   FAVORITE_SLOTS,
@@ -67,20 +72,36 @@ export function ProfilePageSkeleton() {
           <div>
             <SectionHeading width="w-36" />
             <div className={ACTIVITY_LIST}>
-              {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className={ACTIVITY_ROW}>
-                  <Skeleton className={`w-16 sm:w-28 ${COVER_ASPECT} shrink-0 rounded-md`} />
-                  {/* A 24px name line over a 20px line, as the row's text is. */}
-                  <div className="min-w-0 flex-1">
+              {/* One day, its date beside its rows, as the list has them. */}
+              <div className={ACTIVITY_DAY}>
+                <div className={ACTIVITY_DATE}>
+                  {/* The stamp: a day over its month. */}
+                  <div className={ACTIVITY_STAMP}>
                     <div className="flex h-6 items-center">
-                      <Skeleton className="h-5 w-2/5" />
+                      <Skeleton className="h-5 w-6" />
                     </div>
-                    <div className="mt-0.5 flex h-5 items-center">
-                      <Skeleton className="h-4 w-1/3" />
+                    <div className="flex h-5 items-center">
+                      <Skeleton className="h-3 w-7" />
                     </div>
                   </div>
                 </div>
-              ))}
+                <div className={ACTIVITY_ROWS}>
+                  {Array.from({ length: ACTIVITY_PAGE }, (_, i) => (
+                    <div key={i} className={ACTIVITY_ROW}>
+                      <Skeleton className={`w-16 sm:w-28 ${COVER_ASPECT} shrink-0 rounded-md`} />
+                      {/* A 24px name line over a 20px line, as the row's text is. */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex h-6 items-center">
+                          <Skeleton className="h-5 w-2/5" />
+                        </div>
+                        <div className="mt-0.5 flex h-5 items-center">
+                          <Skeleton className="h-4 w-1/3" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

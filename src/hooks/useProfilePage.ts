@@ -47,6 +47,9 @@ export function useProfilePage() {
     refetch,
   } = useQuery(queries.gamesList(userId));
   const { data: playing = null } = useQuery(queries.playing(userId));
+  // The history, for Recent activity. If it can't be read, the activity is
+  // what the games themselves say, as it was before there was a history.
+  const { data: history = [] } = useQuery(queries.history(userId));
   // Until the database has said (or if it can't), how the account was made.
   const { data: hasPassword } = useQuery(queries.hasPassword(userId));
 
@@ -190,7 +193,7 @@ export function useProfilePage() {
     gameDialog,
     /** Opens a game's dialog, by its id. */
     openGame,
-    activity: recentActivity(games, playing),
+    activity: recentActivity(games, playing, history),
     // Where the library is played, most games first (then by name), counting
     // what the Games page would list: hidden games aren't counted, and a
     // platform with only hidden games isn't listed.

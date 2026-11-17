@@ -1,6 +1,7 @@
 // Data loaders shared by server-side prefetching (server Supabase client) and
 // client-side React Query hooks (browser Supabase client). Keeping one copy
 // guarantees the prefetched data has exactly the shape the hooks expect.
+import type { ActivityEvent } from '@/lib/account/activity';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import { OPEN_ENDED_MIN_MINUTES } from '@/lib/games/played-a-lot';
@@ -207,6 +208,27 @@ export async function loadFavoriteGames(
     .order('position', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((row) => row.game_id as number);
+}
+
+/** How many of the latest events the Profile page's activity is drawn from. */
+const RECENT_HISTORY = 50;
+
+/**
+ * The latest of the player's history (game_events), newest first: what the
+ * Profile page's Recent activity reads (lib/account/activity.ts).
+ */
+export async function loadRecentHistory(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ActivityEvent[]> {
+  const { data, error } = await supabase
+    .from('game_events')
+    .select('id, game_id, kind, changes, created_at')
+    .eq('user_id', userId)
+    .order('id', { ascending: false })
+    .limit(RECENT_HISTORY);
+  if (error) throw error;
+  return (data ?? []) as ActivityEvent[];
 }
 
 /**

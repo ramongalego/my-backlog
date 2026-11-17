@@ -62,6 +62,10 @@ export function useFavoriteGames(userId: string | null) {
         latest.current = null;
         queryClient.setQueryData(key, saved.current);
         void queryClient.invalidateQueries({ queryKey: key });
+        // Recent activity says a game became a favorite or stopped being one.
+        if (userId) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.games.history(userId) });
+        }
       }
     }
   };
