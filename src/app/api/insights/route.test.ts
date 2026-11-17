@@ -147,6 +147,35 @@ it('tries again once when the answer is unusable, then gives up with a 503', asy
   expect(saveInsight).not.toHaveBeenCalled();
 });
 
+describe("when OpenAI's spending limit has been reached", () => {
+  beforeEach(() => {
+    create.mockRejectedValue(
+      Object.assign(new Error('limit reached'), {
+        status: 429,
+        code: 'project_spend_limit_exceeded',
+      }),
+    );
+  });
+
+  it('returns the last one written, without asking again', async () => {
+    saved = { headline: 'Old', paragraphs: ['Old.'], signature: 'stale', generatedAt: 'x' };
+    const res = await ask({ tone: 'profile' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).headline).toBe('Old');
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('says so when there is none, and saves nothing', async () => {
+    const res = await ask({ tone: 'roast' });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'Player profiles have run out of budget for now. Try again later.',
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(saveInsight).not.toHaveBeenCalled();
+  });
+});
+
 it('uses a second attempt when the first fails', async () => {
   create.mockRejectedValueOnce(new Error('timeout'));
   const res = await ask({ tone: 'profile' });

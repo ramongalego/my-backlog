@@ -11,7 +11,7 @@ import {
   type Insight,
 } from '@/lib/profile/prompt';
 import { insightRequestSchema } from '@/lib/validations/insights';
-import { AI_MODEL, OPENAI_OPTIONS } from '@/lib/server/ai-model';
+import { AI_MODEL, OPENAI_OPTIONS, isOutOfBudget } from '@/lib/server/ai-model';
 import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
 import { jsonError } from '@/lib/server/api-response';
 import { getOpenAIApiKey } from '@/lib/server/env';
@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
   }
 
   let insight: Insight | null = null;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !insight; attempt++) {
+  let outOfBudget = false;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !insight && !outOfBudget; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
         model: AI_MODEL,
@@ -110,11 +111,20 @@ export async function POST(request: NextRequest) {
       insight = parseInsight(completion.choices[0]?.message?.content ?? '');
       if (!insight) console.error(`Unusable player profile (attempt ${attempt})`);
     } catch (err) {
-      console.error(`OpenAI error writing a player profile (attempt ${attempt}):`, err);
+      // The spending cap was reached (see ai-model.ts): asking again can't help.
+      if (isOutOfBudget(err)) {
+        console.error('OpenAI refused a player profile: the spending limit has been reached');
+        outOfBudget = true;
+      } else {
+        console.error(`OpenAI error writing a player profile (attempt ${attempt}):`, err);
+      }
     }
   }
   if (!insight) {
     if (saved) return respond(saved);
+    if (outOfBudget) {
+      return jsonError('Player profiles have run out of budget for now. Try again later.', 503);
+    }
     return jsonError('Couldn’t write it right now. Try again in a moment.', 503);
   }
 

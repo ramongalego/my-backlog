@@ -11,7 +11,7 @@ import { withoutLaterEntries } from '@/lib/games/series-order';
 import { isReleased } from '@/lib/games/release-date';
 import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
-import { AI_MODEL, OPENAI_OPTIONS } from '@/lib/server/ai-model';
+import { AI_MODEL, OPENAI_OPTIONS, isOutOfBudget } from '@/lib/server/ai-model';
 import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
 
 // Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
@@ -230,7 +230,8 @@ export async function POST(request: NextRequest) {
   let suggestedGame: BacklogGame | undefined;
   let reasoning = '';
   let serviceDown = false;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !suggestedGame; attempt++) {
+  let outOfBudget = false;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !suggestedGame && !outOfBudget; attempt++) {
     let aiResponse: string;
     try {
       const completion = await openai.chat.completions.create({
@@ -243,6 +244,12 @@ export async function POST(request: NextRequest) {
       aiResponse = completion.choices[0]?.message?.content ?? '';
       serviceDown = false;
     } catch (err) {
+      // The spending cap was reached (see ai-model.ts): asking again can't help.
+      if (isOutOfBudget(err)) {
+        console.error('OpenAI refused a pick: the spending limit has been reached');
+        outOfBudget = true;
+        continue;
+      }
       console.error(`OpenAI API error (attempt ${attempt}):`, err);
       serviceDown = true;
       continue;
@@ -259,6 +266,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (outOfBudget) {
+    return jsonError(
+      'Pick My Game has run out of budget for now. Use Random in the meantime.',
+      503,
+    );
+  }
   if (!suggestedGame) {
     return serviceDown
       ? jsonError('AI service temporarily unavailable', 503)

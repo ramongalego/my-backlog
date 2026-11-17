@@ -266,4 +266,46 @@ describe('when the model lets it down', () => {
     expect((await suggest()).status).toBe(503);
     expect(create).toHaveBeenCalledTimes(2);
   });
+
+  it('asks again after a rate limit, which passes', async () => {
+    create
+      .mockRejectedValueOnce(
+        Object.assign(new Error('slow down'), { status: 429, code: 'rate_limit_exceeded' }),
+      )
+      .mockImplementationOnce(answerWithFirstOffered());
+    expect((await suggest()).status).toBe(200);
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("when OpenAI's spending limit has been reached", () => {
+  it.each([
+    'project_spend_limit_exceeded',
+    'organization_spend_limit_exceeded',
+    'credit_balance_exhausted',
+    'insufficient_quota',
+  ])('says so and points to Random, without asking again (%s)', async (code) => {
+    create.mockRejectedValue(Object.assign(new Error('limit reached'), { status: 429, code }));
+    const res = await suggest();
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'Pick My Game has run out of budget for now. Use Random in the meantime.',
+    });
+    // Asking a second time couldn't help, and nothing was spent.
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops at once when the limit is hit on the second ask', async () => {
+    create
+      .mockResolvedValueOnce({ choices: [{ message: { content: 'not json' } }] })
+      .mockRejectedValueOnce(
+        Object.assign(new Error('limit reached'), {
+          status: 429,
+          code: 'project_spend_limit_exceeded',
+        }),
+      );
+    const res = await suggest();
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toMatch(/run out of budget/);
+  });
 });
