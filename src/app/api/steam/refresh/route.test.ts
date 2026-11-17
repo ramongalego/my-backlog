@@ -13,6 +13,9 @@ let user: { id: string } | null = { id: 'user-1' };
 let steamId: string | null = '76561198000000000';
 let limited = false;
 let steamKey: string | null = 'steam-key';
+// How many of the coming profile reads fail, as a timeout or a 5xx does: the
+// client answers with an error, it doesn't throw.
+let failingReads = 0;
 const limitKeys: string[] = [];
 
 jest.mock('@/lib/supabase/server', () => ({
@@ -22,14 +25,20 @@ jest.mock('@/lib/supabase/server', () => ({
       const builder = {
         select: () => builder,
         eq: () => builder,
-        single: async () => ({
-          data: {
-            steam_id: steamId,
-            steam_username: 'Ankrath',
-            steam_avatar: 'https://avatars.steamstatic.com/old.jpg',
-          },
-          error: null,
-        }),
+        single: async () => {
+          if (failingReads > 0) {
+            failingReads--;
+            return { data: null, error: { message: 'upstream request timeout' } };
+          }
+          return {
+            data: {
+              steam_id: steamId,
+              steam_username: 'Ankrath',
+              steam_avatar: 'https://avatars.steamstatic.com/old.jpg',
+            },
+            error: null,
+          };
+        },
       };
       return builder;
     },
@@ -97,6 +106,7 @@ beforeEach(() => {
   steamId = '76561198000000000';
   limited = false;
   steamKey = 'steam-key';
+  failingReads = 0;
   limitKeys.length = 0;
   profileUpdates.length = 0;
   // Steam has the same name and picture as saved, unless a test says otherwise.
@@ -237,6 +247,88 @@ describe('when Steam is disconnected while a refresh is running', () => {
     await refresh();
     expect(syncOwnedGames).not.toHaveBeenCalled();
     expect(clearLibrary).not.toHaveBeenCalled();
+  });
+});
+
+// A read that fails says nothing about the link: it must never be taken for a
+// disconnect, which deletes every Steam game with its status, rating and notes.
+describe("when it can't be read whether Steam is still linked", () => {
+  const AS_USUAL = {
+    success: true,
+    newGames: 1,
+    updatedPlaytime: 2,
+    updatedGames: 3,
+    updatedStoreData: 4,
+    updatedCriticScores: 5,
+    updatedHours: 6,
+  };
+  /** The reads fail from the moment Steam has answered, before any game is written. */
+  const failReadsBeforeTheSync = (reads: number) =>
+    jest.mocked(getOwnedGames).mockImplementation(async () => {
+      failingReads = reads;
+      return { games: OWNED, isPrivate: false } as never;
+    });
+  /** The reads fail from the moment the games have been written. */
+  const failReadsAfterTheSync = (reads: number) =>
+    jest.mocked(syncOwnedGames).mockImplementation(async () => {
+      failingReads = reads;
+      return { newGames: 1, updatedPlaytime: 2, updatedGames: 3 };
+    });
+
+  it('writes nothing, and says the refresh failed, if that is before the games are written', async () => {
+    failReadsBeforeTheSync(2);
+
+    const res = await refresh();
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Failed to update library' });
+    expect(syncOwnedGames).not.toHaveBeenCalled();
+    expect(clearLibrary).not.toHaveBeenCalled();
+    expect(profileUpdates).toEqual([]);
+    for (const fn of scoreRefreshes()) expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('keeps the library if that is after the games are written, and carries on', async () => {
+    failReadsAfterTheSync(2);
+
+    const res = await refresh();
+
+    expect(clearLibrary).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(AS_USUAL);
+  });
+
+  it('reads it a second time before the sync, and syncs as usual when that works', async () => {
+    failReadsBeforeTheSync(1);
+
+    const res = await refresh();
+
+    expect(syncOwnedGames).toHaveBeenCalledWith(expect.anything(), 'user-1', OWNED);
+    expect(clearLibrary).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(AS_USUAL);
+  });
+
+  it('reads it a second time after the sync, and keeps the games when Steam is still linked', async () => {
+    failReadsAfterTheSync(1);
+
+    const res = await refresh();
+
+    expect(clearLibrary).not.toHaveBeenCalled();
+    expect(res.body).toEqual(AS_USUAL);
+  });
+
+  it('still takes the games out when the second read shows Steam was disconnected', async () => {
+    jest.mocked(syncOwnedGames).mockImplementation(async () => {
+      steamId = null;
+      failingReads = 1;
+      return { newGames: 210, updatedPlaytime: 0, updatedGames: 0 };
+    });
+
+    const res = await refresh();
+
+    expect(clearLibrary).toHaveBeenCalledWith(expect.anything(), 'user-1');
+    expect(res.body).toMatchObject({ newGames: 0 });
   });
 });
 

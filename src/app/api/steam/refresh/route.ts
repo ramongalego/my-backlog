@@ -79,15 +79,26 @@ export async function POST(request: NextRequest) {
     // Steam took seconds to answer, and the account may have been disconnected
     // (or switched to another Steam account) meanwhile: then this library is no
     // longer the player's, and importing it would put it back.
-    const stillLinked = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('steam_id')
-        .eq('id', user.id)
-        .single();
-      return data?.steam_id === profile.steam_id;
+    // A read that fails says nothing either way: the client answers with an
+    // error rather than throwing, and taking that for a disconnect would delete
+    // the whole library over a timeout. So it's read a second time, and a link
+    // that still can't be read is 'unknown', never 'unlinked'.
+    const steamLink = async (): Promise<'linked' | 'unlinked' | 'unknown'> => {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('steam_id')
+          .eq('id', user.id)
+          .single();
+        if (data && !error) return data.steam_id === profile.steam_id ? 'linked' : 'unlinked';
+        console.error('Reading the Steam link failed:', error);
+      }
+      return 'unknown';
     };
-    if (!(await stillLinked())) return NextResponse.json({ success: true, ...result });
+    const linkBefore = await steamLink();
+    // Without knowing whose library this is now, none of it is written.
+    if (linkBefore === 'unknown') return jsonError('Failed to update library', 500);
+    if (linkBefore === 'unlinked') return NextResponse.json({ success: true, ...result });
 
     try {
       result = await syncOwnedGames(supabase, user.id, steamGames);
@@ -97,8 +108,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Disconnected while the games were being written: take them out again, as
-    // the disconnect meant to.
-    if (!(await stillLinked())) {
+    // the disconnect meant to. Only when a read showed it: if the link can't be
+    // read, the games stay and the refresh carries on as for a linked account.
+    if ((await steamLink()) === 'unlinked') {
       await clearLibrary(supabase, user.id).catch((error) =>
         console.error('Clearing a library imported after disconnecting failed:', error),
       );
