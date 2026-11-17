@@ -40,7 +40,7 @@ const sections: LegalSection[] = [
             ],
             [
               'Library',
-              'The games you add, with the status, hours played, dates, rating and notes you record for each, plus your queue and your favorite games.',
+              'The games you add, with the status, hours played, dates, rating and notes you record for each, plus your queue and your favorite games. We also keep a history of the changes to each game, which records when its status, dates, rating or hours changed and what they were before.',
             ],
             [
               'Steam',
@@ -208,9 +208,9 @@ const sections: LegalSection[] = [
       <>
         <p>
           We keep your data for as long as your account exists. Deleting your account immediately
-          deletes your account record, library, diary, queue, favorites, profile picture, share
-          pages and the messages you sent through Report an issue. Copies may persist in our
-          database provider&apos;s backups until those backups expire.
+          deletes your account record, library and its history, diary, queue, favorites, profile
+          picture, share pages and the messages you sent through Report an issue. Copies may persist
+          in our database provider&apos;s backups until those backups expire.
         </p>
         <p>
           If you disconnect Steam, your Steam games and everything recorded on them are removed. Our
@@ -288,7 +288,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      effective="November 16, 2026"
+      effective="November 17, 2026"
       intro={
         <>
           <p>

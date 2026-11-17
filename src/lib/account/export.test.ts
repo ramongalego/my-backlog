@@ -39,6 +39,7 @@ const rows = (over: Partial<ExportRows> = {}): ExportRows => ({
   insights: [],
   sharePages: [],
   supportMessages: [],
+  history: [],
   ...over,
 });
 
@@ -203,6 +204,45 @@ describe('buildExport', () => {
     expect(data.supportMessages).toEqual([
       { type: 'bug', message: 'The queue jumped', sentAt: '2026-04-01T08:00:00Z' },
     ]);
+  });
+
+  it('includes the history of changes to the games in the file, as it was recorded', () => {
+    const finished = { status: ['playing', 'finished'], rating: [null, 9] };
+    const data = buildExport(
+      rows({
+        games: [game({ id: 7, name: 'Hades' })],
+        history: [
+          { game_id: 7, kind: 'status', changes: finished, created_at: '2026-11-17T21:00:00Z' },
+          {
+            game_id: 7,
+            kind: 'playtime',
+            changes: { playtime_forever: [600, 660] },
+            created_at: '2026-11-18T09:00:00Z',
+          },
+          // A tool Steam counts as owned: its hours change too, but it isn't in the file.
+          {
+            game_id: 99,
+            kind: 'playtime',
+            changes: { playtime_forever: [0, 30] },
+            created_at: '2026-11-18T10:00:00Z',
+          },
+        ],
+      }),
+      NOW,
+    );
+    expect(data.history).toEqual([
+      { gameId: 7, kind: 'status', changes: finished, at: '2026-11-17T21:00:00Z' },
+      {
+        gameId: 7,
+        kind: 'playtime',
+        changes: { playtime_forever: [600, 660] },
+        at: '2026-11-18T09:00:00Z',
+      },
+    ]);
+  });
+
+  it('has an empty history for a library nothing has happened in yet', () => {
+    expect(buildExport(rows({ games: [game({ id: 7, name: 'Hades' })] }), NOW).history).toEqual([]);
   });
 });
 

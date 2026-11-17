@@ -58,6 +58,8 @@ export interface ExportRows {
     created_at: string;
   }[];
   supportMessages: { type: string; message: string; created_at: string }[];
+  /** The history of changes to the games (game_events), oldest first. */
+  history: { game_id: number; kind: string; changes: unknown; created_at: string }[];
 }
 
 export interface ExportedGame {
@@ -118,6 +120,13 @@ export interface AccountExport {
   }[];
   /** What the player sent through Report a problem. */
   supportMessages: { type: string; message: string; sentAt: string }[];
+  /**
+   * What changed about the games above, and when, oldest first: a status
+   * (with the dates and rating saved with it), a date or rating edited by
+   * itself, or the hours. `changes` names each value that changed, as
+   * [before, after]; hours are in minutes. Kept from November 2026 on.
+   */
+  history: { gameId: number; kind: string; changes: unknown; at: string }[];
 }
 
 /** A finish or drop date is saved as a day (midnight UTC): the day is read straight off it. */
@@ -131,6 +140,9 @@ export function buildExport(rows: ExportRows, now = new Date()): AccountExport {
     );
   const queue = place(rows.queue);
   const favorites = place(rows.favorites);
+  // Only of the games in the file: Steam also counts tools and soundtracks
+  // as owned, and their hours change too.
+  const listed = new Set(rows.games.map((game) => game.id));
 
   return {
     app: 'MyBacklog',
@@ -182,6 +194,14 @@ export function buildExport(rows: ExportRows, now = new Date()): AccountExport {
       message: message.message,
       sentAt: message.created_at,
     })),
+    history: rows.history
+      .filter((event) => listed.has(event.game_id))
+      .map((event) => ({
+        gameId: event.game_id,
+        kind: event.kind,
+        changes: event.changes,
+        at: event.created_at,
+      })),
   };
 }
 

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
       return data as T | null;
     };
-    const [profile, games, queue, favorites, insights, sharePages, supportMessages] =
+    const [profile, games, queue, favorites, insights, sharePages, supportMessages, history] =
       await Promise.all([
         read<{
           steam_id: string | null;
@@ -102,6 +102,15 @@ export async function GET(request: NextRequest) {
             .eq('user_id', user.id)
             .order('created_at'),
         ),
+        // It grows with every change to a game, so it's read in pages too.
+        fetchAllRows<ExportRows['history'][number]>((from, to) =>
+          supabase
+            .from('game_events')
+            .select('game_id, kind, changes, created_at')
+            .eq('user_id', user.id)
+            .order('id')
+            .range(from, to),
+        ),
       ]);
     rows = {
       account: {
@@ -117,6 +126,7 @@ export async function GET(request: NextRequest) {
       insights: insights ?? [],
       sharePages: sharePages ?? [],
       supportMessages: supportMessages ?? [],
+      history,
     };
   } catch (error) {
     // All of it or none: a file missing a part would pass for a full copy.

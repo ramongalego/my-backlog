@@ -86,6 +86,14 @@ beforeEach(() => {
     player_insights: [],
     shared_completions: [],
     support_tickets: [{ type: 'bug', message: 'Hello', created_at: '2026-04-01T08:00:00Z' }],
+    game_events: [
+      {
+        game_id: 1,
+        kind: 'status',
+        changes: { status: ['playing', 'finished'], rating: [null, 9] },
+        created_at: '2026-03-20T21:00:00Z',
+      },
+    ],
   };
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -118,6 +126,14 @@ it('sends everything as a JSON file to download, never cached', async () => {
   expect(data.supportMessages).toEqual([
     { type: 'bug', message: 'Hello', sentAt: '2026-04-01T08:00:00Z' },
   ]);
+  expect(data.history).toEqual([
+    {
+      gameId: 1,
+      kind: 'status',
+      changes: { status: ['playing', 'finished'], rating: [null, 9] },
+      at: '2026-03-20T21:00:00Z',
+    },
+  ]);
 });
 
 it('sends the games as a CSV file when asked for one', async () => {
@@ -137,6 +153,7 @@ it("reads only the player's own rows, in every table", async () => {
     'service:shared_completions',
     'service:support_tickets',
     'user:favorite_games',
+    'user:game_events',
     'user:games',
     'user:player_insights',
     'user:playing_queue',
@@ -162,7 +179,7 @@ it('refuses a signed-out request, an unknown format, and one past the limit', as
 });
 
 it('sends nothing rather than a file with a part missing', async () => {
-  for (const table of ['games', 'playing_queue', 'support_tickets', 'profiles']) {
+  for (const table of ['games', 'playing_queue', 'support_tickets', 'profiles', 'game_events']) {
     failing = table;
     const res = await get();
     expect(res.status).toBe(500);

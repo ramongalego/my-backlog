@@ -132,6 +132,27 @@ create table favorite_games (
   foreign key (user_id, game_id) references games (user_id, id) on delete cascade
 );
 
+-- A history of what a player does with their games: a game's row only holds
+-- how things stand now, so each change to its status, dates, rating or hours
+-- is kept here as it happens (the triggers below write it; nothing reads it
+-- yet). See migrations/20261117_game_events.sql.
+create table game_events (
+  id bigint generated always as identity primary key,
+  user_id uuid not null,
+  game_id bigint not null,
+  -- What kind of change: the status moved (which carries any dates and rating
+  -- saved with it), a date or rating was edited by itself, or only the hours.
+  kind text not null check (kind in ('status', 'edit', 'playtime')),
+  -- Each column that changed, as [before, after]: status, started_at,
+  -- finished_at, dropped_at, rating, playtime_forever (minutes). "before" is
+  -- null for a game that was added already started, finished or dropped.
+  changes jsonb not null,
+  created_at timestamptz not null default now(),
+  -- Removing a game (or disconnecting Steam, or deleting the account) takes
+  -- its history with it, as the privacy policy says.
+  foreign key (user_id, game_id) references games (user_id, id) on delete cascade
+);
+
 create table shared_completions (
   id text primary key,
   game_name text not null,
@@ -183,6 +204,9 @@ create unique index games_one_playing_per_user on games (user_id) where status =
 -- One manual entry per game and platform.
 create unique index games_manual_unique on games (user_id, igdb_id, platform) where source = 'manual';
 create index playing_queue_user_position on playing_queue (user_id, position);
+-- A player's history, newest first; and one game's, for the trigger's lookup.
+create index game_events_user_time on game_events (user_id, id desc);
+create index game_events_game on game_events (user_id, game_id, id desc);
 
 -- ─── Row-level security ─────────────────────────────────────────────────────
 
@@ -191,6 +215,7 @@ alter table games enable row level security;
 alter table game_metadata enable row level security;
 alter table playing_queue enable row level security;
 alter table favorite_games enable row level security;
+alter table game_events enable row level security;
 alter table shared_completions enable row level security;
 alter table support_tickets enable row level security;
 alter table rate_limits enable row level security;
@@ -226,6 +251,12 @@ create policy "Users manage own favorites" on favorite_games
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+-- A player can read their own history. Nobody writes it but the trigger.
+create policy "Users can view own game events" on game_events
+  for select to authenticated using ((select auth.uid()) = user_id);
+revoke all on game_events from anon;
+revoke insert, update, delete, truncate on game_events from authenticated;
+
 -- Share pages: no policies and no privileges, so the public API can't read,
 -- list or write them. /api/share/completion creates one with the server's key
 -- after its checks, and the share page and its preview image read one row by
@@ -259,6 +290,102 @@ revoke execute on function public.handle_new_user() from public, anon, authentic
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Writes one row for a change to a game's status, dates, rating or hours. It
+-- runs with the table owner's rights, since players can't write the history
+-- themselves, and reads nothing but the row being changed.
+--
+-- A status put straight back within half a minute (Undo, which every status
+-- change offers) takes the first change out again instead of adding a second:
+-- a change that was undone leaves no trace.
+--
+-- The history is a record on the side. Whatever goes wrong in here is logged
+-- and swallowed: it must never stop the change it is recording.
+create or replace function public.record_game_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_old jsonb := case when tg_op = 'UPDATE' then to_jsonb(old) else '{}'::jsonb end;
+  v_new jsonb := to_jsonb(new);
+  v_column text;
+  v_before jsonb;
+  v_after jsonb;
+  v_changes jsonb := '{}'::jsonb;
+  v_kind text;
+  v_last public.game_events%rowtype;
+begin
+  foreach v_column in array
+    array['status', 'started_at', 'finished_at', 'dropped_at', 'rating', 'playtime_forever']
+  loop
+    v_before := coalesce(v_old -> v_column, 'null'::jsonb);
+    v_after := coalesce(v_new -> v_column, 'null'::jsonb);
+    if v_before <> v_after then
+      v_changes := v_changes || jsonb_build_object(v_column, jsonb_build_array(v_before, v_after));
+    end if;
+  end loop;
+
+  if v_changes = '{}'::jsonb then
+    return null;
+  end if;
+
+  v_kind := case
+    when v_changes ? 'status' then 'status'
+    when v_changes ?| array['started_at', 'finished_at', 'dropped_at', 'rating'] then 'edit'
+    else 'playtime'
+  end;
+
+  if tg_op = 'UPDATE' and v_kind = 'status' then
+    select e.* into v_last
+    from public.game_events e
+    where e.user_id = new.user_id and e.game_id = new.id and e.kind = 'status'
+    order by e.id desc
+    limit 1;
+
+    if found
+      and v_last.created_at > now() - interval '30 seconds'
+      and v_last.changes -> 'status' = jsonb_build_array(v_new -> 'status', v_old -> 'status')
+    then
+      delete from public.game_events where id = v_last.id;
+      return null;
+    end if;
+  end if;
+
+  insert into public.game_events (user_id, game_id, kind, changes)
+  values (new.user_id, new.id, v_kind, v_changes);
+  return null;
+exception when others then
+  raise warning 'record_game_event: % (%)', sqlerrm, sqlstate;
+  return null;
+end;
+$$;
+
+-- Only ever run as the triggers below; never callable through the API.
+revoke execute on function public.record_game_event() from public, anon, authenticated;
+
+-- The conditions are on the triggers, so the function isn't even called for
+-- the changes it has nothing to say about: a Steam import adds thousands of
+-- backlog games, and a sync rewrites details on every one of them.
+create trigger games_record_added
+  after insert on games
+  for each row
+  when (new.status <> 'backlog')
+  execute function public.record_game_event();
+
+create trigger games_record_changed
+  after update on games
+  for each row
+  when (
+    old.status is distinct from new.status
+    or old.started_at is distinct from new.started_at
+    or old.finished_at is distinct from new.finished_at
+    or old.dropped_at is distinct from new.dropped_at
+    or old.rating is distinct from new.rating
+    or old.playtime_forever is distinct from new.playtime_forever
+  )
+  execute function public.record_game_event();
 
 -- Atomically reorders the caller's queue (validated, RLS still applies).
 create or replace function public.reorder_queue(p_game_ids bigint[])

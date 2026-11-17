@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/live-checks/*.live.ts"],
+  "entry": ["src/live-checks/*.live.ts", "supabase/tests/database-worker.mjs"],
   "ignore": [".claude/**"],
   "ignoreDependencies": ["ts-node"]
 }
