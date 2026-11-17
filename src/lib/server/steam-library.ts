@@ -76,8 +76,18 @@ export async function syncOwnedGames(
   const stored = new Map(existing.map((g) => [g.app_id, g]));
 
   const newGames = steamGames.filter((game) => !stored.has(game.appid));
+  // With "Always keep my total playtime private" on, Steam still lists every
+  // game but reports 0 minutes for each. Written as given, that would replace
+  // the whole library's hours with 0, and write every total again once the
+  // option is turned off, which the history reads as hours played that day.
+  // So when Steam reports no time on any game while a game still played on
+  // Steam has hours here, playtime isn't being shared, and this sync writes
+  // none. (A game moved to a console doesn't count: its hours were entered.)
+  const playtimeHidden =
+    steamGames.every((game) => game.playtime_forever === 0) &&
+    existing.some((game) => !playsOnConsole(game.platform) && (game.playtime_forever ?? 0) > 0);
   const playtimeChanged = (game: SteamGame) =>
-    stored.get(game.appid)?.playtime_forever !== game.playtime_forever;
+    !playtimeHidden && stored.get(game.appid)?.playtime_forever !== game.playtime_forever;
   // Only when Steam shares a date: a private profile shouldn't wipe a known one.
   const lastPlayedChanged = (game: SteamGame) => {
     const steam = lastPlayedAt(game);
@@ -124,7 +134,7 @@ export async function syncOwnedGames(
           supabase
             .from('games')
             .update({
-              playtime_forever: game.playtime_forever,
+              ...(playtimeHidden ? {} : { playtime_forever: game.playtime_forever }),
               ...(lastPlayed ? { last_played_at: lastPlayed } : {}),
             })
             .eq('user_id', userId)
