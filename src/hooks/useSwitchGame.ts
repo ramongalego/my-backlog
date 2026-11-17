@@ -48,6 +48,12 @@ interface SwitchInput {
     order: number[] | null;
     /** Its start date before the switch (set only if it was paused itself). */
     startedAt: string | null;
+    /**
+     * When the paused game had last been played before the switch (pausing it
+     * stamped that), so it goes back to playing as it was. Left out when the
+     * page doesn't know it.
+     */
+    lastPlayedAt?: string | null;
   };
 }
 
@@ -77,7 +83,13 @@ export function useSwitchGame(userId: string | null) {
         game.id,
         'playing',
         // Each write of an Undo says it is one, for the history.
-        undo ? { pausePlaying: true, undo: true } : { pausePlaying: true },
+        undo
+          ? {
+              pausePlaying: true,
+              undo: true,
+              ...(undo.lastPlayedAt !== undefined ? { lastPlayedAt: undo.lastPlayedAt } : {}),
+            }
+          : { pausePlaying: true },
       );
       if (!undo) return paused;
       // `playing` (switched to a moment ago) is paused at the top of the
@@ -145,7 +157,7 @@ export function useSwitchGame(userId: string | null) {
       }
       toast.error("Couldn't switch games. Please try again.");
     },
-    onSuccess: (paused, { game, from, undo }, context) => {
+    onSuccess: (paused, { game, playing, from, undo }, context) => {
       if (undo) return;
       // Nothing was playing after all (stopped elsewhere): nothing to undo to.
       const stopped = paused[0];
@@ -198,7 +210,13 @@ export function useSwitchGame(userId: string | null) {
               game: pausedGame,
               playing: now,
               from,
-              undo: { order, startedAt: queuedBefore?.game.started_at ?? null },
+              undo: {
+                order,
+                startedAt: queuedBefore?.game.started_at ?? null,
+                // Only of the game the page had as playing: its row from
+                // before the switch is the one that knows.
+                lastPlayedAt: playing.id === stopped.id ? playing.last_played_at : undefined,
+              },
             });
           },
         },

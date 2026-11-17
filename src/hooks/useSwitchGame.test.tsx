@@ -128,6 +128,43 @@ it('undo puts a finished game back as finished, with its date, notes and rating'
   expect(ids(queryClient)).toEqual([3]);
 });
 
+it.each([
+  ['the date it had', '2026-11-16T12:11:47.090Z'],
+  ['none, when it had none', null],
+])('undo puts the paused game back as last played when it was: %s', async (_, lastPlayedAt) => {
+  const { result, queryClient } = setup([queued(metroid, 0)]);
+  // Pausing a console game stamps it as last played now.
+  queryClient.setQueryData(queryKeys.games.playing('u'), {
+    ...zelda,
+    last_played_at: lastPlayedAt,
+  });
+  await act(() => result.current.switchTo(momodora));
+  await undo();
+
+  await waitFor(() => expect(removeFromQueue).toHaveBeenCalledWith(2));
+  expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', {
+    pausePlaying: true,
+    undo: true,
+    lastPlayedAt,
+  });
+});
+
+it("undo leaves the paused game's last-played date alone when it wasn't the game the page had", async () => {
+  // Switched to Castlevania on another device: the page still shows Zelda.
+  jest.mocked(updateGameStatus).mockResolvedValueOnce({ paused: [{ id: 7, name: 'Castlevania' }] });
+  const { result, queryClient } = setup([]);
+  queryClient.setQueryData(queryKeys.games.playing('u'), {
+    ...zelda,
+    last_played_at: '2026-11-16T12:11:47.090Z',
+  });
+  await act(() => result.current.switchTo(momodora));
+  await undo();
+
+  await waitFor(() =>
+    expect(updateGameStatus).toHaveBeenCalledWith(7, 'playing', { pausePlaying: true, undo: true }),
+  );
+});
+
 it('undo puts a queued game back in its place', async () => {
   const { result, queryClient } = setup([queued(metroid, 0), queued(momodora, 1)]);
   await act(() => result.current.switchTo(momodora));
