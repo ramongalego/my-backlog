@@ -40,7 +40,7 @@ const sections: LegalSection[] = [
             ],
             [
               'Library',
-              'The games you add, with the status, hours played, dates, rating and notes you record for each, plus your queue and your favorite games. We also keep a history of the changes to each game, which records when its status, dates, rating or hours changed and what they were before.',
+              'The games you add, with the status, hours played, dates, rating and notes you record for each, plus your queue and your favorite games. We also keep a history of each game, which records when it was added and when its status, dates, rating or hours changed, with what they were before.',
             ],
             [
               'Steam',

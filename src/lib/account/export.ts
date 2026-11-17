@@ -121,10 +121,13 @@ export interface AccountExport {
   /** What the player sent through Report a problem. */
   supportMessages: { type: string; message: string; sentAt: string }[];
   /**
-   * What changed about the games above, and when, oldest first: a status
-   * (with the dates and rating saved with it), a date or rating edited by
-   * itself, or the hours. `changes` names each value that changed, as
-   * [before, after]; hours are in minutes. Kept from November 2026 on.
+   * What happened to the games above, and when, oldest first. `kind` is
+   * "added" (a game added by hand, or bought on Steam after the library was
+   * imported), "status" (with the dates and rating saved with it), "edit" (a
+   * date or rating changed by itself) or "playtime" (the hours). `changes`
+   * names each value that changed, as [before, after], with every "before"
+   * null for a game being added; hours are in minutes. Kept from November
+   * 2026 on.
    */
   history: { gameId: number; kind: string; changes: unknown; at: string }[];
 }

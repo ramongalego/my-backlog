@@ -133,19 +133,22 @@ create table favorite_games (
 );
 
 -- A history of what a player does with their games: a game's row only holds
--- how things stand now, so each change to its status, dates, rating or hours
--- is kept here as it happens (the triggers below write it; nothing reads it
--- yet). See migrations/20261117_game_events.sql.
+-- how things stand now, so a game arriving and each change to its status,
+-- dates, rating or hours is kept here as it happens (the triggers below write
+-- it; nothing reads it yet). See migrations/20261117_game_events.sql and
+-- 20261117_game_events_added.sql.
 create table game_events (
   id bigint generated always as identity primary key,
   user_id uuid not null,
   game_id bigint not null,
-  -- What kind of change: the status moved (which carries any dates and rating
-  -- saved with it), a date or rating was edited by itself, or only the hours.
-  kind text not null check (kind in ('status', 'edit', 'playtime')),
+  -- What happened: the game arrived (added by hand, or bought on Steam since
+  -- the library was imported), its status moved (which carries any dates and
+  -- rating saved with it), a date or rating was edited by itself, or only the
+  -- hours changed.
+  kind text not null check (kind in ('added', 'status', 'edit', 'playtime')),
   -- Each column that changed, as [before, after]: status, started_at,
-  -- finished_at, dropped_at, rating, playtime_forever (minutes). "before" is
-  -- null for a game that was added already started, finished or dropped.
+  -- finished_at, dropped_at, rating, playtime_forever (minutes). For a game
+  -- arriving, it is what the game started with, every "before" null.
   changes jsonb not null,
   created_at timestamptz not null default now(),
   -- Removing a game (or disconnecting Steam, or deleting the account) takes
@@ -291,16 +294,44 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Writes one row for a change to a game's status, dates, rating or hours. It
--- runs with the table owner's rights, since players can't write the history
--- themselves, and reads nothing but the row being changed.
+-- The history (game_events) is written by the triggers below and by nothing
+-- else, with the table owner's rights, since players can't write it
+-- themselves. It is a record on the side: whatever goes wrong in a trigger is
+-- logged and swallowed, so it never stops the change it is recording.
 --
--- A status put straight back within half a minute (Undo, which every status
--- change offers) takes the first change out again instead of adding a second:
--- a change that was undone leaves no trace.
---
--- The history is a record on the side. Whatever goes wrong in here is logged
--- and swallowed: it must never stop the change it is recording.
+-- A game arriving is recorded when a player added it by hand (in any state)
+-- or bought it on Steam since their library was imported, and not for an
+-- import: Steam games count as bought when the library already held Steam
+-- games from ten minutes or more before and no more than twenty arrive at
+-- once. A status put straight back within half a minute (Undo, which every
+-- status change offers) takes the first change out again instead of adding a
+-- second: a change that was undone leaves no trace.
+
+-- Each of a game's tracked columns that differs between two versions of its
+-- row, as [before, after]. A column missing from "before" counts as null, so
+-- an empty "before" gives every value the game starts with.
+create or replace function public.game_event_changes(p_before jsonb, p_after jsonb)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(tracked.name, jsonb_build_array(tracked.was, tracked.is_now)), '{}'::jsonb)
+  from (
+    select
+      name,
+      coalesce(p_before -> name, 'null'::jsonb) as was,
+      coalesce(p_after -> name, 'null'::jsonb) as is_now
+    from unnest(
+      array['status', 'started_at', 'finished_at', 'dropped_at', 'rating', 'playtime_forever']
+    ) as name
+  ) as tracked
+  where tracked.was <> tracked.is_now;
+$$;
+
+revoke execute on function public.game_event_changes(jsonb, jsonb) from public, anon, authenticated;
+
+-- A change to a game already in the library (as before, now for updates only).
 create or replace function public.record_game_event()
 returns trigger
 language plpgsql
@@ -308,25 +339,10 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_old jsonb := case when tg_op = 'UPDATE' then to_jsonb(old) else '{}'::jsonb end;
-  v_new jsonb := to_jsonb(new);
-  v_column text;
-  v_before jsonb;
-  v_after jsonb;
-  v_changes jsonb := '{}'::jsonb;
+  v_changes jsonb := public.game_event_changes(to_jsonb(old), to_jsonb(new));
   v_kind text;
   v_last public.game_events%rowtype;
 begin
-  foreach v_column in array
-    array['status', 'started_at', 'finished_at', 'dropped_at', 'rating', 'playtime_forever']
-  loop
-    v_before := coalesce(v_old -> v_column, 'null'::jsonb);
-    v_after := coalesce(v_new -> v_column, 'null'::jsonb);
-    if v_before <> v_after then
-      v_changes := v_changes || jsonb_build_object(v_column, jsonb_build_array(v_before, v_after));
-    end if;
-  end loop;
-
   if v_changes = '{}'::jsonb then
     return null;
   end if;
@@ -337,7 +353,7 @@ begin
     else 'playtime'
   end;
 
-  if tg_op = 'UPDATE' and v_kind = 'status' then
+  if v_kind = 'status' then
     select e.* into v_last
     from public.game_events e
     where e.user_id = new.user_id and e.game_id = new.id and e.kind = 'status'
@@ -346,7 +362,7 @@ begin
 
     if found
       and v_last.created_at > now() - interval '30 seconds'
-      and v_last.changes -> 'status' = jsonb_build_array(v_new -> 'status', v_old -> 'status')
+      and v_last.changes -> 'status' = jsonb_build_array(to_jsonb(new.status), to_jsonb(old.status))
     then
       delete from public.game_events where id = v_last.id;
       return null;
@@ -362,18 +378,71 @@ exception when others then
 end;
 $$;
 
--- Only ever run as the triggers below; never callable through the API.
 revoke execute on function public.record_game_event() from public, anon, authenticated;
 
--- The conditions are on the triggers, so the function isn't even called for
--- the changes it has nothing to say about: a Steam import adds thousands of
--- backlog games, and a sync rewrites details on every one of them.
+-- Games arriving, once for each statement that adds any (see the top of this
+-- file for which are recorded). "changes" holds what each game started with,
+-- every "before" null; hours are left out when there are none yet.
+create or replace function public.record_games_added()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.game_events (user_id, game_id, kind, changes)
+  select
+    a.user_id,
+    a.id,
+    'added',
+    case
+      when coalesce(a.playtime_forever, 0) > 0
+        then public.game_event_changes('{}'::jsonb, to_jsonb(a))
+      else public.game_event_changes('{}'::jsonb, to_jsonb(a)) - 'playtime_forever'
+    end
+  from added a
+  where
+    -- By hand, or already in a state: something the player did.
+    a.source <> 'steam'
+    or a.status <> 'backlog'
+    -- From Steam into the backlog: only when it reads as bought, not imported.
+    or a.user_id in (
+      select arriving.user_id
+      from (
+        select n.user_id, count(*) as games
+        from added n
+        where n.source = 'steam' and n.status = 'backlog'
+        group by n.user_id
+      ) as arriving
+      where arriving.games <= 20
+        and exists (
+          select 1
+          from public.games g
+          where g.user_id = arriving.user_id
+            and g.source = 'steam'
+            and g.created_at < now() - interval '10 minutes'
+        )
+    )
+  order by a.id;
+  return null;
+exception when others then
+  raise warning 'record_games_added: % (%)', sqlerrm, sqlstate;
+  return null;
+end;
+$$;
+
+revoke execute on function public.record_games_added() from public, anon, authenticated;
+
+-- One call for a whole statement, with every row it added: an import adds
+-- hundreds at a time, and whether a game counts depends on the rest.
 create trigger games_record_added
   after insert on games
-  for each row
-  when (new.status <> 'backlog')
-  execute function public.record_game_event();
+  referencing new table as added
+  for each statement
+  execute function public.record_games_added();
 
+-- The condition is on the trigger, so the function isn't even called for the
+-- changes it has nothing to say about: a sync rewrites details on every game.
 create trigger games_record_changed
   after update on games
   for each row
