@@ -238,6 +238,32 @@ describe('applyStatusChange', () => {
     });
   });
 
+  it('marks every game an Undo writes, and none of an ordinary change', async () => {
+    const { client } = fakeSupabase({
+      games: [game(1, 'playing'), game(2, 'backlog')],
+      playing_queue: [],
+    });
+    const rpc = jest.spyOn(client, 'rpc');
+
+    await applyStatusChange(client, 'u', {
+      gameId: 2,
+      status: 'playing',
+      pausePlaying: true,
+      undo: true,
+    });
+    expect(rpc).toHaveBeenLastCalledWith('apply_status_change', {
+      p_updates: [
+        { id: 1, update: { status: 'backlog' }, undo: true },
+        { id: 2, update: { status: 'playing', started_at: expect.any(String) }, undo: true },
+      ],
+      p_pause_ids: [1],
+    });
+
+    await applyStatusChange(client, 'u', { gameId: 2, status: 'backlog' });
+    const [, sent] = rpc.mock.calls.at(-1) as unknown as [string, { p_updates: object[] }];
+    expect(sent.p_updates.every((item) => !('undo' in item))).toBe(true);
+  });
+
   it('says the game is gone if it was removed while the change was being saved', async () => {
     const { client, tables } = fakeSupabase({ games: [game(1, 'backlog')], playing_queue: [] });
     const rpc = client.rpc.bind(client);
@@ -479,6 +505,7 @@ describe('applyStatusChanges (several games at once)', () => {
       games: [{ ...game(1, 'hidden'), source: 'manual', platform: 'Switch', last_played_at: null }],
       playing_queue: [],
     });
+    const rpc = jest.spyOn(client, 'rpc');
 
     await restoreGames(client, 'u', [
       {
@@ -500,6 +527,10 @@ describe('applyStatusChanges (several games at once)', () => {
       last_played_at: null,
     });
     expect(log).toEqual(['rpc apply_status_change']);
+    // Sent as an Undo: the history takes the move back out, where it would
+    // otherwise read as the game being finished a second time.
+    const [, sent] = rpc.mock.calls[0] as unknown as [string, { p_updates: { undo?: true }[] }];
+    expect(sent.p_updates.map((item) => item.undo)).toEqual([true]);
   });
 
   it("refuses an Undo for a game that isn't the user's, or that is being played now", async () => {

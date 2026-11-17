@@ -173,6 +173,24 @@ describe('clicks that land before the page has redrawn', () => {
     expect(completeGame).toHaveBeenCalledTimes(1);
   });
 
+  it('starts the game again as an Undo when the toast for moving it away is pressed', async () => {
+    const { result } = setup();
+    act(() => result.current.moveToBacklog());
+    await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+    expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'backlog');
+
+    const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
+      string,
+      { action: { onClick: () => void } },
+    ];
+    act(() => options.action.onClick());
+
+    // Said to be an Undo, for the history; a game started from the queue isn't.
+    await waitFor(() =>
+      expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', { undo: true }),
+    );
+  });
+
   it('takes the same action again once the first has been saved', async () => {
     const { result, queryClient } = setup();
 
@@ -295,9 +313,12 @@ describe('switching games from the queue', () => {
     await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
     expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([2, 3]);
     await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([2, 3]));
-    expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', { pausePlaying: true });
+    expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', {
+      pausePlaying: true,
+      undo: true,
+    });
     // Metroid Dread was only playing for a moment: its start date is cleared.
-    expect(updateGameStatus).toHaveBeenCalledWith(3, 'backlog');
+    expect(updateGameStatus).toHaveBeenCalledWith(3, 'backlog', { undo: true });
     // No second Undo for the undo.
     expect(toast).toHaveBeenCalledTimes(1);
   });

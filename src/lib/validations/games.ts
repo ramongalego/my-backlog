@@ -25,6 +25,10 @@ export const gameStatusSchema = z.object({
   // Moving the game being played to the queue: with status backlog, it also
   // goes to the top of the queue, in the same save.
   queueAtTop: z.boolean().optional(),
+  // This change is an Undo of the last one (a toast's button). It is saved
+  // like any other; the history folds it into the change it undoes, however
+  // long the toast waited, instead of recording a second one (game_events).
+  undo: z.boolean().optional(),
 });
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;

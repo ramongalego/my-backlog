@@ -95,3 +95,18 @@ it('stops a player past the limit, without touching the game', async () => {
   expect(res.headers.get('Retry-After')).toBeTruthy();
   expect(applyStatusChange).not.toHaveBeenCalled();
 });
+
+it('passes an Undo on as one, and an ordinary change as not', async () => {
+  await change({ gameId: 7, status: 'playing', undo: true });
+  expect(applyStatusChange).toHaveBeenLastCalledWith(
+    expect.anything(),
+    user!.id,
+    expect.objectContaining({ gameId: 7, status: 'playing', undo: true }),
+  );
+
+  await change({ gameId: 7, status: 'backlog' });
+  const [, , sent] = jest.mocked(applyStatusChange).mock.calls.at(-1)!;
+  expect(sent.undo).toBeUndefined();
+
+  expect((await change({ gameId: 7, status: 'backlog', undo: 'yes' })).status).toBe(400);
+});

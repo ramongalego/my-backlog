@@ -124,10 +124,13 @@ export interface AccountExport {
    * What happened to the games above, and when, oldest first. `kind` is
    * "added" (a game added by hand, or bought on Steam after the library was
    * imported), "status" (with the dates and rating saved with it), "edit" (a
-   * date or rating changed by itself) or "playtime" (the hours). `changes`
-   * names each value that changed, as [before, after], with every "before"
-   * null for a game being added; hours are in minutes. Kept from November
-   * 2026 on.
+   * date, the rating or the platform changed by itself) or "playtime" (the
+   * hours). `changes` names each value that changed, as [before, after],
+   * with every "before" null for a game being added; hours are in minutes,
+   * and dates are in UTC. Changes made within 30 seconds of each other are
+   * one entry, holding what they came to; a change that was undone leaves
+   * none. `at` is when it was logged. Kept from November 2026 on.
+   * (lib/account/history.ts reads time played from it.)
    */
   history: { gameId: number; kind: string; changes: unknown; at: string }[];
 }

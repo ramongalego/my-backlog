@@ -39,7 +39,7 @@ export async function applyStatusChange(
   userId: string,
   change: StatusChange,
 ): Promise<StatusChangeResult> {
-  const { gameId, status, pausePlaying = false, queueAtTop = false } = change;
+  const { gameId, status, pausePlaying = false, queueAtTop = false, undo = false } = change;
   const failed = (err: unknown): StatusChangeResult => {
     console.error(err);
     return { ok: false, status: 500, error: 'Failed to update game status' };
@@ -78,7 +78,10 @@ export async function applyStatusChange(
   // Only one game can be playing: any other one goes back to the backlog, or
   // is paused at the top of the queue. Those come first in the list, since the
   // database allows one playing game at any moment.
-  const updates: { id: number; update: ReturnType<typeof statusUpdate> }[] = [];
+  // An Undo marks every game it writes, for the history (apply_status_change).
+  const updates: { id: number; update: ReturnType<typeof statusUpdate>; undo?: true }[] = [];
+  const item = (id: number, update: ReturnType<typeof statusUpdate>) =>
+    undo ? { id, update, undo: true as const } : { id, update };
   const paused: PausedGame[] = [];
   if (status === 'playing') {
     const { data: others, error: playingError } = await supabase
@@ -89,17 +92,14 @@ export async function applyStatusChange(
       .neq('id', gameId);
     if (playingError) return failed(playingError);
     for (const other of others ?? []) {
-      updates.push({
-        id: other.id,
-        update: withLastPlayed(other, pausePlaying ? PAUSED : DEMOTED),
-      });
+      updates.push(item(other.id, withLastPlayed(other, pausePlaying ? PAUSED : DEMOTED)));
       if (pausePlaying) paused.push({ id: other.id, name: other.name });
     }
   }
 
   const update = statusUpdate(change);
   if (resuming) delete update.started_at;
-  updates.push({ id: gameId, update: withLastPlayed(target, update) });
+  updates.push(item(gameId, withLastPlayed(target, update)));
 
   // The games that go to the top of the queue: one paused for another, or
   // this one, moved there from playing.
@@ -175,7 +175,7 @@ async function readBulkTargets(
 
 async function saveBulk(
   supabase: SupabaseClient,
-  updates: { id: number; update: object }[],
+  updates: { id: number; update: object; undo?: true }[],
 ): Promise<{ ok: true } | BulkFailure> {
   const { error } = await supabase.rpc('apply_status_change', {
     p_updates: updates,
@@ -238,6 +238,9 @@ export async function applyStatusChanges(
  * Puts several games back exactly as they were (a bulk change's Undo): the
  * status and everything a status change can touch, as given, in one
  * transaction. Not through the rules, which would clear or stamp things.
+ * Each is sent as an Undo, so the history takes the move back out instead of
+ * recording a second one (a game moved from Finished and back isn't finished
+ * twice), however long the toast waited.
  */
 export async function restoreGames(
   supabase: SupabaseClient,
@@ -265,6 +268,7 @@ export async function restoreGames(
           rating: game.rating,
           last_played_at: game.last_played_at,
         },
+        undo: true as const,
       };
     }),
   );

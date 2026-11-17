@@ -21,6 +21,8 @@ async function run({ op, sql, params, as }) {
     return db.transaction(async (tx) => {
       await tx.query(`select set_config('request.jwt.claim.sub', $1, true)`, [as.userId ?? '']);
       await tx.exec(`set local role ${as.role === 'anon' ? 'anon' : 'authenticated'}`);
+      // A direct caller of the API can ask for any time zone.
+      if (as.timeZone) await tx.query(`select set_config('TimeZone', $1, true)`, [as.timeZone]);
       return (await tx.query(sql, params ?? [])).rows;
     });
   }

@@ -73,20 +73,25 @@ export function useSwitchGame(userId: string | null) {
     mutationFn: async ({ game, playing, from, undo }: SwitchInput) => {
       // The server says which game it paused: the page's idea of what's
       // playing can be out of date (switched on another device meanwhile).
-      const { paused } = await updateGameStatus(game.id, 'playing', { pausePlaying: true });
+      const { paused } = await updateGameStatus(
+        game.id,
+        'playing',
+        // Each write of an Undo says it is one, for the history.
+        undo ? { pausePlaying: true, undo: true } : { pausePlaying: true },
+      );
       if (!undo) return paused;
       // `playing` (switched to a moment ago) is paused at the top of the
       // queue now: put it back where it was.
       if (undo.order) {
         // It wasn't really started, unless it was paused itself.
-        if (!undo.startedAt) await updateGameStatus(playing.id, 'backlog');
+        if (!undo.startedAt) await updateGameStatus(playing.id, 'backlog', { undo: true });
         await reorderQueue(undo.order);
       } else if (from.status === 'backlog') {
         await removeFromQueue(playing.id);
-        await updateGameStatus(playing.id, 'backlog');
+        await updateGameStatus(playing.id, 'backlog', { undo: true });
       } else {
         // Any status but backlog takes it off the queue too.
-        await updateGameStatus(playing.id, from.status, restoreOptions(from));
+        await updateGameStatus(playing.id, from.status, { ...restoreOptions(from), undo: true });
       }
       return paused;
     },

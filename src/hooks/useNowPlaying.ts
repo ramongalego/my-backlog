@@ -109,8 +109,13 @@ export function useNowPlaying(userId: string | null) {
   const pickMutation = useMutation({
     scope: QUEUE_SCOPE,
     // The status route also takes the game off the queue if it was queued.
-    mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'playing'),
-    onMutate: async (game) => {
+    // Started by an Undo (the game was moved away a moment ago), it says so,
+    // for the history.
+    mutationFn: ({ game, undo }: { game: GameWithImage; undo?: boolean }) =>
+      undo
+        ? updateGameStatus(game.id, 'playing', { undo: true })
+        : updateGameStatus(game.id, 'playing'),
+    onMutate: async ({ game }) => {
       // An Undo still on screen (the last game, moved to the backlog) would
       // now start that game over this one: starting a game settles it.
       toast.dismiss(QUEUE_UNDO_TOAST);
@@ -124,7 +129,7 @@ export function useNowPlaying(userId: string | null) {
       );
       return context;
     },
-    onError: (err, _game, context) => {
+    onError: (err, _started, context) => {
       console.error('Failed to pick game:', err);
       rollback(context);
       toast.error('Failed to start playing');
@@ -133,8 +138,8 @@ export function useNowPlaying(userId: string | null) {
   });
 
   /** Starts a game, once: the server takes it off the queue if it was queued. */
-  const start = (game: GameWithImage) =>
-    once(`play:${game.id}`, () => pickMutation.mutateAsync(game));
+  const start = (game: GameWithImage, undo = false) =>
+    once(`play:${game.id}`, () => pickMutation.mutateAsync({ game, undo }));
   /** The playing game leaving (finished, dropped, queued or to the backlog), once. */
   const stop = (game: GameWithImage, send: () => Promise<unknown>) => once(`stop:${game.id}`, send);
 
@@ -182,7 +187,7 @@ export function useNowPlaying(userId: string | null) {
     toast(`Moved ${game.name} to your ${where}`, {
       id: QUEUE_UNDO_TOAST,
       duration: UNDO_MS,
-      action: { label: 'Undo', onClick: () => void start(game) },
+      action: { label: 'Undo', onClick: () => void start(game, true) },
     });
 
   const moveToQueueMutation = useMutation({

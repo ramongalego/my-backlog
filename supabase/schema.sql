@@ -1,8 +1,9 @@
 -- Snapshot of the full public schema, for reference and for recreating the
 -- database. The base tables were created in the Supabase dashboard before
 -- migrations were tracked, so migrations/ only holds later changes. This file
--- reflects the state after every migration up to 20261112 has been applied.
--- Keep it in sync when adding migrations.
+-- reflects the state after every migration in migrations/ has been applied.
+-- Keep it in sync when adding migrations: supabase/tests checks the history
+-- behaves the same built from this file and brought up by its migrations.
 
 -- ─── Tables ─────────────────────────────────────────────────────────────────
 
@@ -134,23 +135,27 @@ create table favorite_games (
 
 -- A history of what a player does with their games: a game's row only holds
 -- how things stand now, so a game arriving and each change to its status,
--- dates, rating or hours is kept here as it happens (the triggers below write
--- it; nothing reads it yet). See migrations/20261117_game_events.sql and
--- 20261117_game_events_added.sql.
+-- dates, rating, hours or platform is kept here as it happens (the triggers
+-- below write it, and say how; nothing reads it yet). See the three
+-- migrations/20261117_game_events*.sql.
 create table game_events (
   id bigint generated always as identity primary key,
   user_id uuid not null,
   game_id bigint not null,
   -- What happened: the game arrived (added by hand, or bought on Steam since
   -- the library was imported), its status moved (which carries any dates and
-  -- rating saved with it), a date or rating was edited by itself, or only the
-  -- hours changed.
+  -- rating saved with it), a date, rating or platform was changed by itself,
+  -- or only the hours changed.
   kind text not null check (kind in ('added', 'status', 'edit', 'playtime')),
   -- Each column that changed, as [before, after]: status, started_at,
-  -- finished_at, dropped_at, rating, playtime_forever (minutes). For a game
+  -- finished_at, dropped_at, rating, playtime_forever (minutes), platform,
+  -- and last_played_at when it changed along with one of those. For a game
   -- arriving, it is what the game started with, every "before" null.
   changes jsonb not null,
+  -- When the first change of the event was made, and the last one folded
+  -- into it (changes within 30 seconds of each other are one event).
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   -- Removing a game (or disconnecting Steam, or deleting the account) takes
   -- its history with it, as the privacy policy says.
   foreign key (user_id, game_id) references games (user_id, id) on delete cascade
@@ -299,78 +304,185 @@ create trigger on_auth_user_created
 -- themselves. It is a record on the side: whatever goes wrong in a trigger is
 -- logged and swallowed, so it never stops the change it is recording.
 --
--- A game arriving is recorded when a player added it by hand (in any state)
--- or bought it on Steam since their library was imported, and not for an
--- import: Steam games count as bought when the library already held Steam
--- games from ten minutes or more before and no more than twenty arrive at
--- once. A status put straight back within half a minute (Undo, which every
--- status change offers) takes the first change out again instead of adding a
--- second: a change that was undone leaves no trace.
+-- Arrivals. A game arriving is recorded when a player added it by hand (in
+-- any state) or bought it on Steam since their library was imported, and not
+-- for an import: Steam games count as bought when the library already held
+-- Steam games from ten minutes or more before and no more than twenty arrive
+-- at once.
+--
+-- One sitting is one event. An action in the app is often several writes to
+-- a game (adding one as finished is an insert, then a status change), and an
+-- Undo is a second change that cancels the first. So a change to a game
+-- within 30 seconds of its last one is folded into that event, which holds
+-- the net change: what each value was before the first write and what it is
+-- after the last. If that comes to nothing the event goes; if an Undo didn't
+-- put everything back, what is left stays. An arrival stays an arrival, with
+-- what the game ended up starting with. A change the app sends as an Undo
+-- (apply_status_change, "undo": true) is folded in however late it comes:
+-- its toast waits while the tab is in the background.
+--
+-- Reading hours. playtime_forever is a running total for one platform, and
+-- moving a game to another platform replaces it. The time played is the sum
+-- of its increases, leaving out any change recorded in the same event as a
+-- platform change, the first change after one, the starting value of an
+-- arrival, and decreases (corrections).
+--
+-- Reading dates. A finish or a drop happened on the finished_at or
+-- dropped_at it carries, which the player chose; one without a date is
+-- undated. An event's created_at is when it was logged, and last_played_at,
+-- where an event carries it, is the day the game was played. Dates are
+-- written in UTC whatever the session's time zone.
 
--- Each of a game's tracked columns that differs between two versions of its
--- row, as [before, after]. A column missing from "before" counts as null, so
--- an empty "before" gives every value the game starts with.
+-- The columns of a game that the history records, as they are in one version
+-- of its row. Dates are written in UTC.
+create or replace function public.game_event_snapshot(g public.games)
+returns jsonb
+language sql
+stable
+set search_path = ''
+set timezone = 'UTC'
+as $$
+  select jsonb_build_object(
+    'status', g.status,
+    'started_at', g.started_at,
+    'finished_at', g.finished_at,
+    'dropped_at', g.dropped_at,
+    'rating', g.rating,
+    'playtime_forever', g.playtime_forever,
+    'platform', g.platform,
+    'last_played_at', g.last_played_at
+  );
+$$;
+
+-- Each recorded column that differs between two versions of a game's row, as
+-- [before, after]. A column missing from "before" counts as null.
 create or replace function public.game_event_changes(p_before jsonb, p_after jsonb)
 returns jsonb
 language sql
 immutable
 set search_path = ''
 as $$
-  select coalesce(jsonb_object_agg(tracked.name, jsonb_build_array(tracked.was, tracked.is_now)), '{}'::jsonb)
+  select coalesce(
+    jsonb_object_agg(
+      now_is.key,
+      jsonb_build_array(coalesce(p_before -> now_is.key, 'null'::jsonb), now_is.value)
+    ),
+    '{}'::jsonb
+  )
+  from jsonb_each(p_after) as now_is
+  where coalesce(p_before -> now_is.key, 'null'::jsonb) <> now_is.value;
+$$;
+
+-- Two sets of changes to one game, one after the other, as a single set:
+-- each value as it was before the first and as it is after the second. A
+-- value that ends where it began drops out.
+create or replace function public.game_event_net(p_earlier jsonb, p_later jsonb)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(net.name, jsonb_build_array(net.was, net.is_now)), '{}'::jsonb)
   from (
     select
       name,
-      coalesce(p_before -> name, 'null'::jsonb) as was,
-      coalesce(p_after -> name, 'null'::jsonb) as is_now
-    from unnest(
-      array['status', 'started_at', 'finished_at', 'dropped_at', 'rating', 'playtime_forever']
-    ) as name
-  ) as tracked
-  where tracked.was <> tracked.is_now;
+      case when p_earlier ? name then p_earlier -> name -> 0 else p_later -> name -> 0 end as was,
+      case when p_later ? name then p_later -> name -> 1 else p_earlier -> name -> 1 end as is_now
+    from (
+      select jsonb_object_keys(p_earlier) as name
+      union
+      select jsonb_object_keys(p_later)
+    ) as names
+  ) as net
+  where net.was <> net.is_now;
 $$;
 
-revoke execute on function public.game_event_changes(jsonb, jsonb) from public, anon, authenticated;
+-- What kind of event a set of changes is, or null when it is none: when a
+-- game was last played is only ever recorded alongside something else.
+create or replace function public.game_event_kind(p_changes jsonb)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_changes ? 'status' then 'status'
+    when p_changes ?| array['started_at', 'finished_at', 'dropped_at', 'rating', 'platform'] then 'edit'
+    when p_changes ? 'playtime_forever' then 'playtime'
+  end;
+$$;
 
--- A change to a game already in the library (as before, now for updates only).
+-- What a game arrived with: every value it has, each "before" null, leaving
+-- out what it doesn't have (and hours when there are none yet).
+create or replace function public.game_event_arrival(p_changes jsonb)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(key, jsonb_build_array('null'::jsonb, value -> 1)), '{}'::jsonb)
+  from jsonb_each(p_changes)
+  where value -> 1 <> 'null'::jsonb
+    and not (key = 'playtime_forever' and value -> 1 = '0'::jsonb);
+$$;
+
+revoke execute on function public.game_event_snapshot(public.games) from public, anon, authenticated;
+revoke execute on function public.game_event_changes(jsonb, jsonb) from public, anon, authenticated;
+revoke execute on function public.game_event_net(jsonb, jsonb) from public, anon, authenticated;
+revoke execute on function public.game_event_kind(jsonb) from public, anon, authenticated;
+revoke execute on function public.game_event_arrival(jsonb) from public, anon, authenticated;
+
+-- A change to a game already in the library.
 create or replace function public.record_game_event()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
+set timezone = 'UTC'
 as $$
 declare
-  v_changes jsonb := public.game_event_changes(to_jsonb(old), to_jsonb(new));
+  v_changes jsonb;
+  v_net jsonb;
   v_kind text;
+  v_undoing boolean;
   v_last public.game_events%rowtype;
 begin
-  if v_changes = '{}'::jsonb then
+  v_changes := public.game_event_changes(
+    public.game_event_snapshot(old),
+    public.game_event_snapshot(new)
+  );
+  -- Set by apply_status_change for a change the app sends as an Undo.
+  v_undoing := coalesce(current_setting('mybacklog.undoing', true), '') = 'true';
+
+  select e.* into v_last
+  from public.game_events e
+  where e.user_id = new.user_id and e.game_id = new.id
+  order by e.id desc
+  limit 1;
+
+  -- Part of the same sitting, or the Undo of it: the event becomes the net
+  -- change.
+  if found and (v_undoing or v_last.updated_at > now() - interval '30 seconds') then
+    v_net := public.game_event_net(v_last.changes, v_changes);
+    if v_last.kind = 'added' then
+      update public.game_events
+      set changes = public.game_event_arrival(v_net), updated_at = now()
+      where id = v_last.id;
+    elsif public.game_event_kind(v_net) is null then
+      delete from public.game_events where id = v_last.id;
+    else
+      update public.game_events
+      set kind = public.game_event_kind(v_net), changes = v_net, updated_at = now()
+      where id = v_last.id;
+    end if;
     return null;
   end if;
 
-  v_kind := case
-    when v_changes ? 'status' then 'status'
-    when v_changes ?| array['started_at', 'finished_at', 'dropped_at', 'rating'] then 'edit'
-    else 'playtime'
-  end;
-
-  if v_kind = 'status' then
-    select e.* into v_last
-    from public.game_events e
-    where e.user_id = new.user_id and e.game_id = new.id and e.kind = 'status'
-    order by e.id desc
-    limit 1;
-
-    if found
-      and v_last.created_at > now() - interval '30 seconds'
-      and v_last.changes -> 'status' = jsonb_build_array(to_jsonb(new.status), to_jsonb(old.status))
-    then
-      delete from public.game_events where id = v_last.id;
-      return null;
-    end if;
+  v_kind := public.game_event_kind(v_changes);
+  if v_kind is not null then
+    insert into public.game_events (user_id, game_id, kind, changes)
+    values (new.user_id, new.id, v_kind, v_changes);
   end if;
-
-  insert into public.game_events (user_id, game_id, kind, changes)
-  values (new.user_id, new.id, v_kind, v_changes);
   return null;
 exception when others then
   raise warning 'record_game_event: % (%)', sqlerrm, sqlstate;
@@ -380,27 +492,27 @@ $$;
 
 revoke execute on function public.record_game_event() from public, anon, authenticated;
 
--- Games arriving, once for each statement that adds any (see the top of this
--- file for which are recorded). "changes" holds what each game started with,
--- every "before" null; hours are left out when there are none yet.
+-- Games arriving, once for each statement that adds any: a game added by
+-- hand always, a Steam game when it reads as bought and not imported (see
+-- 20261117_game_events_added.sql).
 create or replace function public.record_games_added()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
+set timezone = 'UTC'
 as $$
 begin
   insert into public.game_events (user_id, game_id, kind, changes)
   select
-    a.user_id,
-    a.id,
+    g.user_id,
+    g.id,
     'added',
-    case
-      when coalesce(a.playtime_forever, 0) > 0
-        then public.game_event_changes('{}'::jsonb, to_jsonb(a))
-      else public.game_event_changes('{}'::jsonb, to_jsonb(a)) - 'playtime_forever'
-    end
+    public.game_event_arrival(
+      public.game_event_changes('{}'::jsonb, public.game_event_snapshot(g))
+    )
   from added a
+  join public.games g on g.id = a.id
   where
     -- By hand, or already in a state: something the player did.
     a.source <> 'steam'
@@ -417,13 +529,13 @@ begin
       where arriving.games <= 20
         and exists (
           select 1
-          from public.games g
-          where g.user_id = arriving.user_id
-            and g.source = 'steam'
-            and g.created_at < now() - interval '10 minutes'
+          from public.games older
+          where older.user_id = arriving.user_id
+            and older.source = 'steam'
+            and older.created_at < now() - interval '10 minutes'
         )
     )
-  order by a.id;
+  order by g.id;
   return null;
 exception when others then
   raise warning 'record_games_added: % (%)', sqlerrm, sqlstate;
@@ -453,6 +565,7 @@ create trigger games_record_changed
     or old.dropped_at is distinct from new.dropped_at
     or old.rating is distinct from new.rating
     or old.playtime_forever is distinct from new.playtime_forever
+    or old.platform is distinct from new.platform
   )
   execute function public.record_game_event();
 
@@ -580,6 +693,8 @@ grant execute on function public.account_has_password() to authenticated;
 -- works them out, lib/games/status-rules.ts), in order, taking any game that
 -- leaves the backlog off the queue, then putting paused games at the top of
 -- it. A column not named in "update" keeps its value. RLS still applies.
+-- An item with "undo": true is an Undo, which the history folds into the
+-- change it undoes (record_game_event).
 create or replace function public.apply_status_change(
   p_updates jsonb,
   p_pause_ids bigint[] default '{}'
@@ -609,6 +724,10 @@ begin
   for v_item in select value from jsonb_array_elements(p_updates) loop
     v_game_id := (v_item ->> 'id')::bigint;
     v_update := v_item -> 'update';
+    -- An item sent as an Undo ("undo": true) says so to the history, which
+    -- folds it into the change it undoes however long ago that was
+    -- (record_game_event). For this transaction only.
+    perform set_config('mybacklog.undoing', coalesce(v_item ->> 'undo', 'false'), true);
 
     update games
     set
@@ -635,6 +754,7 @@ begin
       delete from playing_queue where user_id = v_user_id and game_id = v_game_id;
     end if;
   end loop;
+  perform set_config('mybacklog.undoing', 'false', true);
 
   -- Paused games go first in the queue, ahead of what's there now.
   if coalesce(array_length(p_pause_ids, 1), 0) > 0 then

@@ -16,6 +16,12 @@ export async function updateGameStatus(
     pausePlaying?: boolean;
     /** With status backlog: put the game at the top of the queue in the same save. */
     queueAtTop?: boolean;
+    /**
+     * This change is an Undo of the last one. Every Undo that changes a game
+     * says so: the history then takes the change back out instead of
+     * recording a second one, however long the toast waited to be pressed.
+     */
+    undo?: boolean;
   },
 ): Promise<{ paused: { id: number; name: string }[] }> {
   const res = await fetch('/api/games/status', {
@@ -30,6 +36,7 @@ export async function updateGameStatus(
       rating: opts?.rating,
       ...(opts?.pausePlaying ? { pausePlaying: true } : {}),
       ...(opts?.queueAtTop ? { queueAtTop: true } : {}),
+      ...(opts?.undo ? { undo: true } : {}),
     }),
   });
 

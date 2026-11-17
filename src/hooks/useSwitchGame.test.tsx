@@ -91,8 +91,12 @@ it('undo puts a backlog game back in the backlog, off the queue', async () => {
   await undo();
 
   await waitFor(() => expect(removeFromQueue).toHaveBeenCalledWith(2));
-  expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', { pausePlaying: true });
-  expect(updateGameStatus).toHaveBeenLastCalledWith(2, 'backlog');
+  // Each write of the Undo says it is one, so the history takes the switch
+  // back out instead of recording a second one.
+  expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', { pausePlaying: true, undo: true });
+  expect(updateGameStatus).toHaveBeenLastCalledWith(2, 'backlog', { undo: true });
+  // The switch itself was an ordinary change.
+  expect(updateGameStatus).toHaveBeenNthCalledWith(1, 2, 'playing', { pausePlaying: true });
   expect(reorderQueue).not.toHaveBeenCalled();
   expect(result.current.playing?.id).toBe(1);
   expect(ids(queryClient)).toEqual([3]);
@@ -116,6 +120,7 @@ it('undo puts a finished game back as finished, with its date, notes and rating'
       droppedAt: undefined,
       notes: 'Loved it',
       rating: 9,
+      undo: true,
     }),
   );
   expect(removeFromQueue).not.toHaveBeenCalled();
@@ -130,7 +135,7 @@ it('undo puts a queued game back in its place', async () => {
   await undo();
 
   await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([3, 2]));
-  expect(updateGameStatus).toHaveBeenLastCalledWith(2, 'backlog');
+  expect(updateGameStatus).toHaveBeenLastCalledWith(2, 'backlog', { undo: true });
   expect(ids(queryClient)).toEqual([3, 2]);
 });
 

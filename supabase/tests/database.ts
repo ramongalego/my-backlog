@@ -58,7 +58,7 @@ interface Request {
   op: 'exec' | 'query' | 'close';
   sql?: string;
   params?: unknown[];
-  as?: { role: 'authenticated' | 'anon'; userId?: string };
+  as?: { role: 'authenticated' | 'anon'; userId?: string; timeZone?: string };
 }
 
 export interface TestDatabase {
@@ -71,7 +71,13 @@ export interface TestDatabase {
    * reaches the database: the `authenticated` role, with row-level security
    * on and `auth.uid()` answering with their id.
    */
-  asUser<T = Row>(userId: string, sql: string, params?: unknown[]): Promise<T[]>;
+  asUser<T = Row>(
+    userId: string,
+    sql: string,
+    params?: unknown[],
+    /** The session's time zone, which a direct caller of the API can choose. */
+    timeZone?: string,
+  ): Promise<T[]>;
   /** Runs one statement as a signed-out visitor. */
   asVisitor<T = Row>(sql: string, params?: unknown[]): Promise<T[]>;
   close(): Promise<void>;
@@ -115,8 +121,13 @@ export async function createDatabase(): Promise<TestDatabase> {
     exec: async (sql) => void (await send({ op: 'exec', sql })),
     query: <T>(sql: string, params?: unknown[]) =>
       send({ op: 'query', sql, params }) as Promise<T[]>,
-    asUser: <T>(userId: string, sql: string, params?: unknown[]) =>
-      send({ op: 'query', sql, params, as: { role: 'authenticated', userId } }) as Promise<T[]>,
+    asUser: <T>(userId: string, sql: string, params?: unknown[], timeZone?: string) =>
+      send({
+        op: 'query',
+        sql,
+        params,
+        as: { role: 'authenticated', userId, timeZone },
+      }) as Promise<T[]>,
     asVisitor: <T>(sql: string, params?: unknown[]) =>
       send({ op: 'query', sql, params, as: { role: 'anon' } }) as Promise<T[]>,
     close: async () => {
