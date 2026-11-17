@@ -34,6 +34,9 @@ export const syncHltbRequestSchema = z.object({
 
 export const queueAddRequestSchema = z.object({
   gameId: gameIdSchema,
+  // An Undo of taking the game off the queue: how long ago that was, in
+  // milliseconds, as the browser timed it (see undoAgoMs in games.ts).
+  undoAgoMs: z.number().min(0).optional(),
 });
 
 export const rerollRequestSchema = z.object({

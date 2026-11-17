@@ -7,7 +7,7 @@ import { queries } from '@/lib/data/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { useInvalidateQueries } from '@/hooks/useGameMutations';
 import { useInFlight } from '@/hooks/useInFlight';
-import { UNDO_MS } from '@/lib/undo';
+import { sinceNow, UNDO_MS } from '@/lib/undo';
 import type { QueueItem } from '@/types/games';
 import {
   QUEUE_SCOPE,
@@ -108,6 +108,7 @@ export function useRemoveFromQueue(userId: string | null) {
       const item = context!.previousQueue![index];
       // One Undo per removal, however many times it's clicked.
       let undone = false;
+      const since = sinceNow();
       toast(`Moved ${item.game.name} to your backlog`, {
         id: QUEUE_UNDO_TOAST,
         duration: UNDO_MS,
@@ -116,7 +117,7 @@ export function useRemoveFromQueue(userId: string | null) {
           onClick: () => {
             if (undone) return;
             undone = true;
-            restoreMutation.mutate({ item, index });
+            restoreMutation.mutate({ item, index, agoMs: since() });
           },
         },
       });
@@ -128,9 +129,18 @@ export function useRemoveFromQueue(userId: string | null) {
   // shrunk since). Only that game: anything else that changed meanwhile stays.
   const restoreMutation = useMutation({
     scope: QUEUE_SCOPE,
-    mutationFn: async ({ item, index }: { item: QueueItem; index: number }) => {
+    mutationFn: async ({
+      item,
+      index,
+      agoMs,
+    }: {
+      item: QueueItem;
+      index: number;
+      /** How long ago it was taken off, for the history. */
+      agoMs: number;
+    }) => {
       // The server adds it last; move it up unless last is where it was.
-      await addToQueue(item.game_id);
+      await addToQueue(item.game_id, agoMs);
       const rest = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? [])
         .map((q) => q.game_id)
         .filter((id) => id !== item.game_id);

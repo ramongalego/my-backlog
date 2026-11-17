@@ -76,11 +76,27 @@ function setup() {
 const undoFromToast = () =>
   (jest.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } }).action;
 
+/**
+ * Stops the clock (the timers stay real), so a test can let an exact time
+ * pass between a move and its Undo.
+ */
+let clock: jest.SpyInstance | undefined;
+function stopClock() {
+  let now = Date.parse('2026-11-17T12:00:00Z');
+  clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+  return { pass: (ms: number) => void (now += ms) };
+}
+
 beforeEach(() => {
   jest.mocked(updateGameStatuses).mockReset().mockResolvedValue(previous);
   jest.mocked(restoreGameStatuses).mockReset().mockResolvedValue(undefined);
   jest.mocked(toast).mockClear();
   jest.mocked(toast.error).mockClear();
+});
+
+afterEach(() => {
+  clock?.mockRestore();
+  clock = undefined;
 });
 
 it('moves the games on the page at once and saves them in one request', async () => {
@@ -114,7 +130,10 @@ it('undoes a move by sending back exactly what the server said the games had', a
 
   act(() => undoFromToast().onClick());
 
-  await waitFor(() => expect(restoreGameStatuses).toHaveBeenCalledWith(previous));
+  // With how long ago the move was, for the history.
+  await waitFor(() =>
+    expect(restoreGameStatuses).toHaveBeenCalledWith(previous, expect.any(Number)),
+  );
   // The page has them back too, leftovers included, and nothing else is sent.
   expect(list()[0]).toMatchObject({
     status: 'backlog',
@@ -126,6 +145,39 @@ it('undoes a move by sending back exactly what the server said the games had', a
   expect(updateGameStatuses).toHaveBeenCalledTimes(1);
   // The undo itself isn't offered an undo.
   expect(toast).toHaveBeenCalledTimes(1);
+});
+
+it('tells the server how long the Undo waited: the time since the move was saved', async () => {
+  const time = stopClock();
+  const { result } = setup();
+  act(() => result.current.move([hades, celeste] as never, 'hidden'));
+  await waitFor(() => expect(toast).toHaveBeenCalled());
+
+  // The toast waits while its tab is in the background: a minute and a half.
+  time.pass(90_000);
+  act(() => undoFromToast().onClick());
+
+  await waitFor(() => expect(restoreGameStatuses).toHaveBeenCalledWith(previous, 90_000));
+  expect(restoreGameStatuses).toHaveBeenCalledTimes(1);
+});
+
+it('times each Undo from its own move, not from the one before', async () => {
+  const time = stopClock();
+  const { result } = setup();
+  act(() => result.current.move([hades] as never, 'hidden'));
+  await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+
+  time.pass(60_000);
+  act(() => result.current.move([celeste] as never, 'hidden'));
+  await waitFor(() => expect(toast).toHaveBeenCalledTimes(2));
+
+  time.pass(5_000);
+  const latest = jest.mocked(toast).mock.calls[1][1] as unknown as {
+    action: { onClick: () => void };
+  };
+  act(() => latest.action.onClick());
+
+  await waitFor(() => expect(restoreGameStatuses).toHaveBeenCalledWith(previous, 5_000));
 });
 
 describe('telling the page when a move is done', () => {
@@ -205,6 +257,7 @@ describe('clicks that come too fast', () => {
 
     await waitFor(() => expect(restoreGameStatuses).toHaveBeenCalled());
     expect(restoreGameStatuses).toHaveBeenCalledTimes(1);
+    expect(restoreGameStatuses).toHaveBeenCalledWith(previous, expect.any(Number));
   });
 });
 

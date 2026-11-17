@@ -28,8 +28,17 @@ export async function updateGameStatus(
      */
     startedAt?: string | null;
     lastPlayedAt?: string | null;
+    /**
+     * With an Undo: how long ago the change it undoes was made (`sinceNow`,
+     * lib/undo.ts), so the history takes it out of that change and no other.
+     */
+    undoAgoMs?: number;
   },
-): Promise<{ paused: { id: number; name: string }[] }> {
+): Promise<{
+  paused: { id: number; name: string }[];
+  /** When the game had been started, before this change. */
+  startedAt?: string | null;
+}> {
   const res = await fetch('/api/games/status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -43,7 +52,8 @@ export async function updateGameStatus(
       ...(opts?.pausePlaying ? { pausePlaying: true } : {}),
       ...(opts?.queueAtTop ? { queueAtTop: true } : {}),
       ...(opts?.undo ? { undo: true } : {}),
-      ...(opts?.undo && opts.startedAt ? { startedAt: opts.startedAt } : {}),
+      ...(opts?.undo && opts.undoAgoMs !== undefined ? { undoAgoMs: opts.undoAgoMs } : {}),
+      ...(opts?.undo && opts.startedAt !== undefined ? { startedAt: opts.startedAt } : {}),
       ...(opts?.undo && opts.lastPlayedAt !== undefined ? { lastPlayedAt: opts.lastPlayedAt } : {}),
     }),
   });
@@ -59,7 +69,7 @@ export async function updateGameStatus(
     throw new Error(`updateGameStatus failed (${res.status})${detail}`);
   }
   const body = await res.json().catch(() => null);
-  return { paused: body?.paused ?? [] };
+  return { paused: body?.paused ?? [], startedAt: body?.startedAt ?? null };
 }
 
 /** A bulk move the server didn't make, with its status so the page can say why. */
@@ -96,9 +106,12 @@ export async function updateGameStatuses(changes: StatusChange[]): Promise<GameR
   return (await postBulk({ changes })).previous ?? [];
 }
 
-/** Puts several games back exactly as they were: a bulk change's Undo. */
-export async function restoreGameStatuses(games: GameRestore[]): Promise<void> {
-  await postBulk({ restore: games });
+/**
+ * Puts several games back exactly as they were: a bulk change's Undo.
+ * `agoMs` is how long ago the change was made (`sinceNow`, lib/undo.ts).
+ */
+export async function restoreGameStatuses(games: GameRestore[], agoMs?: number): Promise<void> {
+  await postBulk({ restore: games, ...(agoMs !== undefined ? { agoMs } : {}) });
 }
 
 interface CompleteGameResult {

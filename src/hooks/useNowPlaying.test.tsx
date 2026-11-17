@@ -74,6 +74,26 @@ function setup({ queue = [queued] as unknown[], nowPlaying = playing as unknown 
   return { ...renderHook(() => useNowPlaying('u'), { wrapper }), queryClient };
 }
 
+/**
+ * Stops the clock (the timers stay real), so a test can let an exact time
+ * pass between a change and its Undo.
+ */
+let clock: jest.SpyInstance | undefined;
+function stopClock() {
+  let now = Date.parse('2026-11-17T12:00:00Z');
+  clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+  return { pass: (ms: number) => void (now += ms) };
+}
+
+/** The Undo of the toast said `nth` (the first, unless told). */
+const undoOf = (nth = 0) =>
+  (jest.mocked(toast).mock.calls[nth][1] as unknown as { action: { onClick: () => void } }).action;
+
+afterEach(() => {
+  clock?.mockRestore();
+  clock = undefined;
+});
+
 beforeEach(() => {
   jest.mocked(completeGame).mockReset();
   // The server reports the game it paused: whichever game was playing.
@@ -185,22 +205,63 @@ describe('clicks that land before the page has redrawn', () => {
     await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
     expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'backlog');
 
-    const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
-      string,
-      { action: { onClick: () => void } },
-    ];
-    act(() => options.action.onClick());
+    act(() => undoOf().onClick());
 
-    // Said to be an Undo, for the history, and with when it had been started
-    // and last played: it comes back "playing since Nov 13", not since today.
+    // Said to be an Undo, with how long ago the move was, for the history,
+    // and with when it had been started and last played: it comes back
+    // "playing since Nov 13", not since today.
     await waitFor(() =>
       expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', {
         undo: true,
+        undoAgoMs: expect.any(Number),
         startedAt: '2026-11-13T13:57:00+00:00',
         lastPlayedAt: '2026-11-16T12:11:00+00:00',
       }),
     );
   });
+
+  it.each([
+    ['backlog', 'moveToBacklog'],
+    ['queue', 'moveToQueue'],
+  ] as const)(
+    'undoes a move to the %s once, however many times Undo is pressed, saying how long it waited',
+    async (where, move) => {
+      const time = stopClock();
+      const { result } = setup({
+        nowPlaying: {
+          ...playing,
+          started_at: '2026-11-13T13:57:00+00:00',
+          last_played_at: '2026-11-16T12:11:00+00:00',
+        },
+      });
+      act(() => result.current[move]());
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith(
+          `Moved SteamWorld Dig to your ${where}`,
+          expect.anything(),
+        ),
+      );
+
+      // The toast waits while its tab is in the background: a minute and a half.
+      time.pass(90_000);
+      act(() => {
+        undoOf().onClick();
+        undoOf().onClick();
+        undoOf().onClick();
+      });
+
+      await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
+      await waitFor(() => expect(result.current.isStatusLoading).toBe(false));
+      // The move, and one Undo.
+      expect(updateGameStatus).toHaveBeenCalledTimes(2);
+      expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', {
+        undo: true,
+        undoAgoMs: 90_000,
+        startedAt: '2026-11-13T13:57:00+00:00',
+        lastPlayedAt: '2026-11-16T12:11:00+00:00',
+      });
+    },
+  );
 
   it('starts a game from the queue the usual way: from now, and not as an Undo', async () => {
     const { result } = setup({ queue: [queued], nowPlaying: null });
@@ -322,21 +383,24 @@ describe('switching games from the queue', () => {
     act(() => result.current.pickFromQueue(3));
     await waitFor(() => expect(toast).toHaveBeenCalled());
 
-    const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
-      string,
-      { action: { onClick: () => void } },
-    ];
-    act(() => options.action.onClick());
+    act(() => undoOf().onClick());
 
     await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
     expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([2, 3]);
     await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([2, 3]));
-    expect(updateGameStatus).toHaveBeenCalledWith(1, 'playing', {
+    // Each write says it is an Undo, and how long ago the switch was. Metroid
+    // Dread goes back to its place in the queue, so it is paused there first.
+    expect(updateGameStatus).toHaveBeenNthCalledWith(2, 1, 'playing', {
       pausePlaying: true,
       undo: true,
+      undoAgoMs: expect.any(Number),
     });
-    // Metroid Dread was only playing for a moment: its start date is cleared.
-    expect(updateGameStatus).toHaveBeenCalledWith(3, 'backlog', { undo: true });
+    // It was only playing for a moment: its start date is cleared.
+    expect(updateGameStatus).toHaveBeenNthCalledWith(3, 3, 'backlog', {
+      undo: true,
+      undoAgoMs: expect.any(Number),
+    });
+    expect(updateGameStatus).toHaveBeenCalledTimes(3);
     // No second Undo for the undo.
     expect(toast).toHaveBeenCalledTimes(1);
   });

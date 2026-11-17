@@ -1,4 +1,4 @@
-import { safeText, syncSingleRequestSchema } from '@/lib/validations/common';
+import { queueAddRequestSchema, safeText, syncSingleRequestSchema } from '@/lib/validations/common';
 import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
 
 // The sync route validates its input with `syncSingleRequestSchema` (zod) and
@@ -52,6 +52,40 @@ describe('syncSingleRequestSchema (sync route input validation)', () => {
     it('should reject an empty name', () => {
       expect(syncSingleRequestSchema.safeParse({ appId: 730, name: '' }).success).toBe(false);
     });
+  });
+});
+
+describe('queueAddRequestSchema (adding a game to the queue)', () => {
+  it('takes the game alone: an ordinary add says no time', () => {
+    const result = queueAddRequestSchema.safeParse({ gameId: 7 });
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ gameId: 7 });
+    expect(result.data).not.toHaveProperty('undoAgoMs');
+  });
+
+  it.each([0, 1, 90_000, 7 * 24 * 60 * 60 * 1000])(
+    'accepts %d for how long ago an Undo took the game off',
+    (undoAgoMs) => {
+      const result = queueAddRequestSchema.safeParse({ gameId: 7, undoAgoMs });
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ gameId: 7, undoAgoMs });
+    },
+  );
+
+  it.each([
+    ['a negative time', -1],
+    ['a number sent as text', '90000'],
+    ['text', 'a while ago'],
+    ['null', null],
+  ])('rejects %s for how long ago that was', (_, undoAgoMs) => {
+    expect(queueAddRequestSchema.safeParse({ gameId: 7, undoAgoMs }).success).toBe(false);
+  });
+
+  it.each([
+    ['no game', { undoAgoMs: 90_000 }],
+    ['a game id that is not one', { gameId: 0, undoAgoMs: 90_000 }],
+  ])('still rejects %s', (_, body) => {
+    expect(queueAddRequestSchema.safeParse(body).success).toBe(false);
   });
 });
 

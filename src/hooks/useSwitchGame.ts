@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { queries } from '@/lib/data/queries';
-import { removeFromQueue, reorderQueue } from '@/lib/client/queue';
+import { reorderQueue } from '@/lib/client/queue';
 import {
   QUEUE_SCOPE,
   QUEUE_UNDO_TOAST,
@@ -18,7 +18,7 @@ import type { GameStatus } from '@/lib/games/status';
 import { useInvalidateQueries, usePatchGamesList } from '@/hooks/useGameMutations';
 import { useInFlight } from '@/hooks/useInFlight';
 import { queryKeys } from '@/lib/query-keys';
-import { UNDO_MS } from '@/lib/undo';
+import { sinceNow, UNDO_MS } from '@/lib/undo';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 
@@ -54,6 +54,14 @@ interface SwitchInput {
      * page doesn't know it.
      */
     lastPlayedAt?: string | null;
+    /**
+     * When the switched-to game had been started before the switch, which
+     * stamped it with now: put back with a game that goes back to finished
+     * or dropped.
+     */
+    wasStartedAt: string | null;
+    /** How long ago the switch was made, for the history (`sinceNow`). */
+    agoMs: number;
   };
 }
 
@@ -79,33 +87,40 @@ export function useSwitchGame(userId: string | null) {
     mutationFn: async ({ game, playing, from, undo }: SwitchInput) => {
       // The server says which game it paused: the page's idea of what's
       // playing can be out of date (switched on another device meanwhile).
-      const { paused } = await updateGameStatus(
+      const switched = await updateGameStatus(
         game.id,
         'playing',
-        // Each write of an Undo says it is one, for the history.
+        // Each write of an Undo says it is one, and how long ago the switch
+        // was, for the history. The game switched to goes back to the top of
+        // the queue only if the queue is where it was; otherwise it goes
+        // straight back to the backlog, in the same save.
         undo
           ? {
-              pausePlaying: true,
+              pausePlaying: !!undo.order,
               undo: true,
+              undoAgoMs: undo.agoMs,
               ...(undo.lastPlayedAt !== undefined ? { lastPlayedAt: undo.lastPlayedAt } : {}),
             }
           : { pausePlaying: true },
       );
-      if (!undo) return paused;
-      // `playing` (switched to a moment ago) is paused at the top of the
-      // queue now: put it back where it was.
+      if (!undo) return switched;
+      const undoing = { undo: true, undoAgoMs: undo.agoMs };
       if (undo.order) {
-        // It wasn't really started, unless it was paused itself.
-        if (!undo.startedAt) await updateGameStatus(playing.id, 'backlog', { undo: true });
+        // `playing` (switched to a moment ago) is paused at the top of the
+        // queue now: put it back where it was. It wasn't really started,
+        // unless it was paused itself.
+        if (!undo.startedAt) await updateGameStatus(playing.id, 'backlog', undoing);
         await reorderQueue(undo.order);
-      } else if (from.status === 'backlog') {
-        await removeFromQueue(playing.id);
-        await updateGameStatus(playing.id, 'backlog', { undo: true });
-      } else {
-        // Any status but backlog takes it off the queue too.
-        await updateGameStatus(playing.id, from.status, { ...restoreOptions(from), undo: true });
+      } else if (from.status !== 'backlog') {
+        // Back as it was: finished or dropped again with its date, notes and
+        // rating, and started when it had been.
+        await updateGameStatus(playing.id, from.status, {
+          ...restoreOptions(from),
+          ...undoing,
+          startedAt: undo.wasStartedAt,
+        });
       }
-      return paused;
+      return switched;
     },
     onMutate: async ({ game, playing, from, undo }) => {
       await Promise.all([
@@ -157,10 +172,10 @@ export function useSwitchGame(userId: string | null) {
       }
       toast.error("Couldn't switch games. Please try again.");
     },
-    onSuccess: (paused, { game, playing, from, undo }, context) => {
+    onSuccess: (switched, { game, playing, from, undo }, context) => {
       if (undo) return;
       // Nothing was playing after all (stopped elsewhere): nothing to undo to.
-      const stopped = paused[0];
+      const stopped = switched.paused[0];
       if (!stopped) {
         toast(`Now playing ${game.name}`);
         return;
@@ -169,6 +184,7 @@ export function useSwitchGame(userId: string | null) {
       const queuedBefore = before.find((q) => q.game_id === game.id);
       // One Undo per switch, however many times it's clicked.
       let undone = false;
+      const since = sinceNow();
       toast(`Now playing ${game.name}. ${stopped.name} is first in your queue.`, {
         id: QUEUE_UNDO_TOAST,
         duration: UNDO_MS,
@@ -216,6 +232,8 @@ export function useSwitchGame(userId: string | null) {
                 // Only of the game the page had as playing: its row from
                 // before the switch is the one that knows.
                 lastPlayedAt: playing.id === stopped.id ? playing.last_played_at : undefined,
+                wasStartedAt: switched.startedAt ?? null,
+                agoMs: since(),
               },
             });
           },

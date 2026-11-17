@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
   const undo = bulkRestoreSchema.safeParse(body);
   if (undo.success) {
-    const result = await restoreGames(supabase, user.id, undo.data.restore);
+    const result = await restoreGames(supabase, user.id, undo.data.restore, undo.data.agoMs);
     if (!result.ok) return jsonError(result.error, result.status);
     return NextResponse.json({ success: true, count: result.count });
   }

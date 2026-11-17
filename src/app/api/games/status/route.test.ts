@@ -60,7 +60,12 @@ it('applies a valid change for the signed-in player and reports what it paused',
   });
 
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ success: true, paused: [{ id: 9, name: 'Zelda' }] });
+  expect(await res.json()).toEqual({
+    success: true,
+    paused: [{ id: 9, name: 'Zelda' }],
+    // The rules didn't say when the game had been started.
+    startedAt: null,
+  });
   expect(applyStatusChange).toHaveBeenCalledWith(
     expect.anything(),
     user!.id,
@@ -72,6 +77,25 @@ it('applies a valid change for the signed-in player and reports what it paused',
       notes: 'Loved the ending',
     }),
   );
+});
+
+it('answers with when the game had been started before the change, for its Undo to put back', async () => {
+  jest.mocked(applyStatusChange).mockResolvedValue({
+    ok: true,
+    paused: [],
+    startedAt: '2026-11-13T13:57:21.123+00:00',
+  });
+  const started = await change({ gameId: 7, status: 'playing', pausePlaying: true });
+  expect(await started.json()).toEqual({
+    success: true,
+    paused: [],
+    startedAt: '2026-11-13T13:57:21.123+00:00',
+  });
+
+  // It had never been started.
+  jest.mocked(applyStatusChange).mockResolvedValue({ ok: true, paused: [], startedAt: null });
+  const neverStarted = await change({ gameId: 7, status: 'playing', pausePlaying: true });
+  expect(await neverStarted.json()).toEqual({ success: true, paused: [], startedAt: null });
 });
 
 it("passes on the rule's own refusal, with its status code", async () => {
@@ -111,6 +135,38 @@ it('passes an Undo on as one, and an ordinary change as not', async () => {
   expect((await change({ gameId: 7, status: 'backlog', undo: 'yes' })).status).toBe(400);
 });
 
+it("passes on how long ago an Undo's change was made", async () => {
+  await change({ gameId: 7, status: 'playing', undo: true, undoAgoMs: 90_000 });
+  expect(applyStatusChange).toHaveBeenLastCalledWith(
+    expect.anything(),
+    user!.id,
+    expect.objectContaining({ gameId: 7, status: 'playing', undo: true, undoAgoMs: 90_000 }),
+  );
+
+  // Pressed the moment the toast appeared.
+  await change({ gameId: 7, status: 'playing', undo: true, undoAgoMs: 0 });
+  expect(applyStatusChange).toHaveBeenLastCalledWith(
+    expect.anything(),
+    user!.id,
+    expect.objectContaining({ undoAgoMs: 0 }),
+  );
+
+  // An Undo from a page loaded before this: no time with it.
+  await change({ gameId: 7, status: 'playing', undo: true });
+  const [, , sent] = jest.mocked(applyStatusChange).mock.calls.at(-1)!;
+  expect(sent.undoAgoMs).toBeUndefined();
+});
+
+it.each([
+  ['a time before the change', -1],
+  ['a time that is not a number', '90000'],
+  ['no time, said as null', null],
+])("refuses %s for how long ago an Undo's change was", async (_, undoAgoMs) => {
+  const res = await change({ gameId: 7, status: 'playing', undo: true, undoAgoMs });
+  expect(res.status).toBe(400);
+  expect(applyStatusChange).not.toHaveBeenCalled();
+});
+
 it('takes the dates an Undo puts back, and refuses ones that are not dates', async () => {
   await change({
     gameId: 7,
@@ -123,6 +179,14 @@ it('takes the dates an Undo puts back, and refuses ones that are not dates', asy
     expect.anything(),
     user!.id,
     expect.objectContaining({ startedAt: '2026-11-13T13:57:21.123+00:00', lastPlayedAt: null }),
+  );
+
+  // That it had never been started is taken too: a game put back as finished.
+  await change({ gameId: 7, status: 'finished', undo: true, startedAt: null });
+  expect(applyStatusChange).toHaveBeenLastCalledWith(
+    expect.anything(),
+    user!.id,
+    expect.objectContaining({ status: 'finished', undo: true, startedAt: null }),
   );
 
   const refused = await change({ gameId: 7, status: 'playing', undo: true, startedAt: 'soon' });

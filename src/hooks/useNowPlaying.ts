@@ -10,7 +10,7 @@ import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/client/game-status';
 import { buildCompletionSummary, type GameSummaryData } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
-import { UNDO_MS } from '@/lib/undo';
+import { sinceNow, UNDO_MS } from '@/lib/undo';
 import { nextPlayable } from '@/lib/games/release-date';
 import {
   useInvalidateQueries,
@@ -112,10 +112,12 @@ export function useNowPlaying(userId: string | null) {
     // Started by an Undo (the game was moved away a moment ago), it says so,
     // for the history, and comes back as it was: started when it had been,
     // not just now ("Playing since" would jump to today otherwise).
-    mutationFn: ({ game, undo }: { game: GameWithImage; undo?: boolean }) =>
-      undo
+    // `undoAgoMs`: how long ago it was moved away, when this is that move's Undo.
+    mutationFn: ({ game, undoAgoMs }: { game: GameWithImage; undoAgoMs?: number }) =>
+      undoAgoMs !== undefined
         ? updateGameStatus(game.id, 'playing', {
             undo: true,
+            undoAgoMs,
             startedAt: game.started_at,
             lastPlayedAt: game.last_played_at ?? null,
           })
@@ -143,8 +145,8 @@ export function useNowPlaying(userId: string | null) {
   });
 
   /** Starts a game, once: the server takes it off the queue if it was queued. */
-  const start = (game: GameWithImage, undo = false) =>
-    once(`play:${game.id}`, () => pickMutation.mutateAsync({ game, undo }));
+  const start = (game: GameWithImage, undoAgoMs?: number) =>
+    once(`play:${game.id}`, () => pickMutation.mutateAsync({ game, undoAgoMs }));
   /** The playing game leaving (finished, dropped, queued or to the backlog), once. */
   const stop = (game: GameWithImage, send: () => Promise<unknown>) => once(`stop:${game.id}`, send);
 
@@ -188,12 +190,14 @@ export function useNowPlaying(userId: string | null) {
   // Moving the playing game away takes it off Home in one click on a quiet
   // link, so say where it went and offer to bring it back (starting it again
   // also takes it off the queue).
-  const offerUndo = (game: GameWithImage, where: 'queue' | 'backlog') =>
+  const offerUndo = (game: GameWithImage, where: 'queue' | 'backlog') => {
+    const since = sinceNow();
     toast(`Moved ${game.name} to your ${where}`, {
       id: QUEUE_UNDO_TOAST,
       duration: UNDO_MS,
-      action: { label: 'Undo', onClick: () => void start(game, true) },
+      action: { label: 'Undo', onClick: () => void start(game, since()) },
     });
+  };
 
   const moveToQueueMutation = useMutation({
     scope: QUEUE_SCOPE,

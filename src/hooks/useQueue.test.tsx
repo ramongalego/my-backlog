@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useAddToQueue, useQueue, useRemoveFromQueue } from '@/hooks/useQueue';
 import { toast } from 'sonner';
-import { addToQueue, removeFromQueue } from '@/lib/client/queue';
+import { addToQueue, removeFromQueue, reorderQueue } from '@/lib/client/queue';
 import { QUEUE_UNDO_TOAST } from '@/lib/games/queue-items';
 import { loadQueue } from '@/lib/data/loaders';
 import type { QueueItem } from '@/types/games';
@@ -53,11 +53,28 @@ function setup() {
 const shown = (result: { current: { queue: QueueItem[] } }) =>
   result.current.queue.map((q) => q.game_id);
 
+/**
+ * Stops the clock (the timers stay real), so a test can let an exact time
+ * pass between a removal and its Undo.
+ */
+let clock: jest.SpyInstance | undefined;
+function stopClock() {
+  let now = Date.parse('2026-11-17T12:00:00Z');
+  clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+  return { pass: (ms: number) => void (now += ms) };
+}
+
+afterEach(() => {
+  clock?.mockRestore();
+  clock = undefined;
+});
+
 beforeEach(() => {
   server = [item(1), item(2), item(3), item(4)];
   saves = [];
   jest.mocked(toast).mockClear();
   jest.mocked(addToQueue).mockReset().mockResolvedValue(undefined);
+  jest.mocked(reorderQueue).mockReset().mockResolvedValue(undefined);
   jest
     .mocked(loadQueue)
     .mockReset()
@@ -147,6 +164,35 @@ it('puts a removed game back once, however many times Undo is pressed', async ()
 
   await waitFor(() => expect(addToQueue).toHaveBeenCalled());
   expect(addToQueue).toHaveBeenCalledTimes(1);
+  // Sent as an Undo: with how long ago the game was taken off, for the history.
+  expect(addToQueue).toHaveBeenCalledWith(4, expect.any(Number));
+});
+
+it('tells the server how long the Undo waited: the time since the removal was saved', async () => {
+  const time = stopClock();
+  const { result } = setup();
+  await waitFor(() => expect(shown(result)).toEqual([1, 2, 3, 4]));
+
+  act(() => result.current.remove(2));
+  await waitFor(() => expect(saves).toHaveLength(1));
+  // The save itself takes a while: the Undo is timed from when it's done,
+  // as the toast appears.
+  time.pass(4_000);
+  await act(async () => saves[0].finish());
+  await waitFor(() => expect(toast).toHaveBeenCalled());
+  const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
+    string,
+    { action: { onClick: () => void } },
+  ];
+
+  // The toast waits while its tab is in the background: a minute and a half.
+  time.pass(90_000);
+  act(() => options.action.onClick());
+
+  await waitFor(() => expect(addToQueue).toHaveBeenCalledWith(2, 90_000));
+  // Back in its old place, second: the server adds it last.
+  await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([1, 2, 3, 4]));
+  expect(addToQueue).toHaveBeenCalledTimes(1);
 });
 
 describe('adding a game to the queue', () => {
@@ -178,6 +224,8 @@ describe('adding a game to the queue', () => {
 
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
     expect(addToQueue).toHaveBeenCalledTimes(1);
+    // An ordinary add, not an Undo: no time goes with it.
+    expect(addToQueue).toHaveBeenCalledWith(9);
     expect(toast.success).toHaveBeenCalledTimes(1);
   });
 

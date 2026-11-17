@@ -20,6 +20,22 @@ describe('addToQueue', () => {
     });
   });
 
+  it('should send how long ago the game was taken off when it is an Undo, and only then', async () => {
+    mockFetch.mockResolvedValue({ ok: true });
+    const sent = () => JSON.parse(mockFetch.mock.calls.at(-1)![1].body);
+
+    await addToQueue(42, 90_000);
+    expect(sent()).toEqual({ gameId: 42, undoAgoMs: 90_000 });
+
+    // Pressed the moment the toast appeared: no time at all is still an Undo.
+    await addToQueue(42, 0);
+    expect(sent()).toEqual({ gameId: 42, undoAgoMs: 0 });
+
+    await addToQueue(42);
+    expect(sent()).toEqual({ gameId: 42 });
+    expect(sent()).not.toHaveProperty('undoAgoMs');
+  });
+
   it('should throw with the API error when the request fails', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

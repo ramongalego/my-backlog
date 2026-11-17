@@ -98,7 +98,29 @@ describe('an Undo', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true, count: 2 });
-    expect(restoreGames).toHaveBeenCalledWith(expect.anything(), user!.id, games);
+    // No time said with it (a page loaded before Undos were timed).
+    expect(restoreGames).toHaveBeenCalledWith(expect.anything(), user!.id, games, undefined);
+    expect(applyStatusChanges).not.toHaveBeenCalled();
+  });
+
+  it('passes on how long ago the move it undoes was made', async () => {
+    const res = await move({ restore: games, agoMs: 90_000 });
+
+    expect(res.status).toBe(200);
+    expect(restoreGames).toHaveBeenCalledWith(expect.anything(), user!.id, games, 90_000);
+
+    // Pressed the moment the toast appeared.
+    await move({ restore: games, agoMs: 0 });
+    expect(restoreGames).toHaveBeenLastCalledWith(expect.anything(), user!.id, games, 0);
+  });
+
+  it.each([
+    ['a time before the move', -1],
+    ['a time that is not a number', '90000'],
+    ['no time, said as null', null],
+  ])('refuses %s for how long ago the move was', async (_, agoMs) => {
+    expect((await move({ restore: games, agoMs })).status).toBe(400);
+    expect(restoreGames).not.toHaveBeenCalled();
     expect(applyStatusChanges).not.toHaveBeenCalled();
   });
 

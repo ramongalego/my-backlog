@@ -44,6 +44,21 @@ it('sends an Undo as the games to write back', async () => {
   expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({ restore: [was] });
 });
 
+it('says how long ago the move was with its Undo, when it is told', async () => {
+  mockFetch.mockResolvedValue(answer(200, { success: true, count: 1 }));
+  const sent = () => JSON.parse(mockFetch.mock.calls.at(-1)![1].body);
+
+  await restoreGameStatuses([was], 90_000);
+  expect(sent()).toEqual({ restore: [was], agoMs: 90_000 });
+
+  // Pressed the moment the toast appeared: no time at all is still sent.
+  await restoreGameStatuses([was], 0);
+  expect(sent()).toEqual({ restore: [was], agoMs: 0 });
+
+  await restoreGameStatuses([was]);
+  expect(sent()).not.toHaveProperty('agoMs');
+});
+
 it("throws with the server's status and reason when it refuses", async () => {
   mockFetch.mockResolvedValue(answer(429, { error: 'Too many requests' }));
 

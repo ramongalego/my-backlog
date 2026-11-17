@@ -8,11 +8,15 @@ async function assertOk(res: Response, action: string): Promise<void> {
   throw new Error(`${action} failed (${res.status})${detail}`);
 }
 
-export async function addToQueue(gameId: number): Promise<void> {
+/**
+ * Puts a game last on the queue. As an Undo of taking it off, `undoAgoMs` is
+ * how long ago that was (`sinceNow`, lib/undo.ts), for the history.
+ */
+export async function addToQueue(gameId: number, undoAgoMs?: number): Promise<void> {
   const res = await fetch('/api/queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId }),
+    body: JSON.stringify({ gameId, ...(undoAgoMs !== undefined ? { undoAgoMs } : {}) }),
   });
   await assertOk(res, 'Add to queue');
 }

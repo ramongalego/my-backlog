@@ -8,7 +8,7 @@ import { bulkChanges, type BulkGame, type GameRestore } from '@/lib/games/bulk-s
 import type { BulkStatus } from '@/lib/games/status';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import type { StatusChange } from '@/lib/games/status-rules';
-import { UNDO_MS } from '@/lib/undo';
+import { sinceNow, UNDO_MS } from '@/lib/undo';
 import { useInvalidateQueries, usePatchGamesList } from './useGameMutations';
 
 const MOVED_TOAST = 'bulk-move';
@@ -45,9 +45,10 @@ export function useBulkStatus(userId: string | null) {
   };
 
   const undo = useMutation({
-    mutationFn: (games: GameRestore[]) => restoreGameStatuses(games),
-    onMutate: (games) => ({ previousList: gamesList.patchRows(games) }),
-    onError: (err, _games, context) => failed(err, context?.previousList),
+    mutationFn: ({ games, agoMs }: { games: GameRestore[]; agoMs: number }) =>
+      restoreGameStatuses(games, agoMs),
+    onMutate: ({ games }) => ({ previousList: gamesList.patchRows(games) }),
+    onError: (err, _undo, context) => failed(err, context?.previousList),
     onSettled: () => statusChanged(),
   });
 
@@ -59,6 +60,7 @@ export function useBulkStatus(userId: string | null) {
     onSuccess: (previous, { said }) => {
       // One Undo per move, however many times it's clicked.
       let undone = false;
+      const since = sinceNow();
       toast(said, {
         // The same toast each time, so a new move takes the last one's place:
         // only the latest move can be undone. (Undoing an older one after a
@@ -70,7 +72,7 @@ export function useBulkStatus(userId: string | null) {
           onClick: () => {
             if (undone) return;
             undone = true;
-            undo.mutate(previous);
+            undo.mutate({ games: previous, agoMs: since() });
           },
         },
       });

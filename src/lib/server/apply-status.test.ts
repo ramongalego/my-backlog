@@ -4,6 +4,7 @@ import {
   applyStatusChanges,
   promoteNextFromQueue,
   restoreGames,
+  undoAgoSeconds,
 } from '@/lib/server/apply-status';
 
 type Row = Record<string, unknown>;
@@ -154,9 +155,58 @@ describe('applyStatusChange', () => {
 
     const result = await applyStatusChange(client, 'u', { gameId: 1, status: 'playing' });
 
-    expect(result).toEqual({ ok: true, paused: [] });
+    // It says when the game was started, as any change does.
+    expect(result).toEqual({ ok: true, paused: [], startedAt: '2026-10-30T19:24:07Z' });
     expect(tables.games[0].started_at).toBe('2026-10-30T19:24:07Z');
     expect(log).not.toContain('rpc apply_status_change');
+  });
+
+  describe('saying when the game had been started before the change, for its Undo', () => {
+    it('gives the start date a finished game had, which playing it again replaces', async () => {
+      const { client, tables } = fakeSupabase({
+        games: [
+          game(1, 'playing'),
+          { ...game(2, 'finished'), started_at: '2025-08-01T10:00:00+00:00' },
+        ],
+        playing_queue: [],
+      });
+
+      const result = await applyStatusChange(client, 'u', {
+        gameId: 2,
+        status: 'playing',
+        pausePlaying: true,
+      });
+
+      expect(result).toEqual({
+        ok: true,
+        paused: [{ id: 1, name: 'Game 1' }],
+        startedAt: '2025-08-01T10:00:00+00:00',
+      });
+      // The game itself is started from now.
+      expect(tables.games[1].started_at).not.toBe('2025-08-01T10:00:00+00:00');
+    });
+
+    it('gives none for a game that had never been started', async () => {
+      const { client } = fakeSupabase({
+        games: [{ ...game(1, 'backlog'), started_at: null }],
+        playing_queue: [],
+      });
+
+      const result = await applyStatusChange(client, 'u', { gameId: 1, status: 'playing' });
+
+      expect(result).toEqual({ ok: true, paused: [], startedAt: null });
+    });
+
+    it('gives it for a change that stops the game too', async () => {
+      const { client } = fakeSupabase({
+        games: [{ ...game(1, 'playing'), started_at: '2026-10-30T19:24:07Z' }],
+        playing_queue: [],
+      });
+
+      const result = await applyStatusChange(client, 'u', { gameId: 1, status: 'finished' });
+
+      expect(result).toEqual({ ok: true, paused: [], startedAt: '2026-10-30T19:24:07Z' });
+    });
   });
 
   it('keeps one game playing by moving the old one back to the backlog', async () => {
@@ -238,7 +288,7 @@ describe('applyStatusChange', () => {
     });
   });
 
-  it('marks every game an Undo writes, and none of an ordinary change', async () => {
+  it('marks every game an Undo writes, with how long ago its change was, and none of an ordinary change', async () => {
     const { client } = fakeSupabase({
       games: [game(1, 'playing'), game(2, 'backlog')],
       playing_queue: [],
@@ -250,19 +300,58 @@ describe('applyStatusChange', () => {
       status: 'playing',
       pausePlaying: true,
       undo: true,
+      undoAgoMs: 90_000,
     });
     expect(rpc).toHaveBeenLastCalledWith('apply_status_change', {
       p_updates: [
-        { id: 1, update: { status: 'backlog' }, undo: true },
-        { id: 2, update: { status: 'playing', started_at: expect.any(String) }, undo: true },
+        { id: 1, update: { status: 'backlog' }, undo: true, ago: 90 },
+        {
+          id: 2,
+          update: { status: 'playing', started_at: expect.any(String) },
+          undo: true,
+          ago: 90,
+        },
       ],
       p_pause_ids: [1],
     });
 
-    await applyStatusChange(client, 'u', { gameId: 2, status: 'backlog' });
+    // An ordinary change has neither, even one sent with a time.
+    await applyStatusChange(client, 'u', { gameId: 1, status: 'playing', undoAgoMs: 90_000 });
     const [, sent] = rpc.mock.calls.at(-1) as unknown as [string, { p_updates: object[] }];
-    expect(sent.p_updates.every((item) => !('undo' in item))).toBe(true);
+    expect(sent.p_updates.map((item) => Object.keys(item))).toEqual([
+      ['id', 'update'],
+      ['id', 'update'],
+    ]);
   });
+
+  it.each([
+    ['none, when the Undo comes without one (an older page)', undefined, 0],
+    ['none, pressed as the toast appeared', 0, 0],
+    ['a moment, rounded up to a whole second', 1, 1],
+    ['a minute and a half', 90_000, 90],
+    ['a little over, rounded up', 90_001, 91],
+    ['a week, which counts as a day', 7 * 24 * 60 * 60 * 1000, 86_400],
+  ])(
+    "tells the database how long ago an Undo's change was, in whole seconds: %s",
+    async (_, undoAgoMs, ago) => {
+      const { client } = fakeSupabase({
+        games: [game(1, 'playing'), game(2, 'backlog')],
+        playing_queue: [],
+      });
+      const rpc = jest.spyOn(client, 'rpc');
+
+      await applyStatusChange(client, 'u', { gameId: 2, status: 'playing', undo: true, undoAgoMs });
+
+      const [, sent] = rpc.mock.calls[0] as unknown as [
+        string,
+        { p_updates: { id: number; undo?: true; ago?: number }[] },
+      ];
+      expect(sent.p_updates.map(({ id, undo, ago }) => ({ id, undo, ago }))).toEqual([
+        { id: 1, undo: true, ago },
+        { id: 2, undo: true, ago },
+      ]);
+    },
+  );
 
   describe('an Undo that starts a game again', () => {
     const stopped = () =>
@@ -326,6 +415,19 @@ describe('applyStatusChange', () => {
       expect(tables.games[0].last_played_at).toBe('2026-11-17T15:15:00+00:00');
     });
 
+    it('starts it from now when it had no start date to put back', async () => {
+      const { client, tables } = stopped();
+      await applyStatusChange(client, 'u', {
+        gameId: 1,
+        status: 'playing',
+        undo: true,
+        startedAt: null,
+        lastPlayedAt: null,
+      });
+      expect(Date.parse(tables.games[0].started_at as string)).toBeGreaterThan(Date.now() - 5000);
+      expect(tables.games[0].last_played_at).toBeNull();
+    });
+
     it("doesn't take one for any other status", async () => {
       const { client, tables } = stopped();
       await applyStatusChange(client, 'u', {
@@ -335,6 +437,73 @@ describe('applyStatusChange', () => {
         startedAt: '2020-01-01T00:00:00+00:00',
       });
       expect(tables.games[0]).toMatchObject({ status: 'wont_play', started_at: null });
+    });
+  });
+
+  describe('an Undo that puts a game back as finished or dropped', () => {
+    // Played instead of another by mistake: starting it stamped its start with now.
+    const STAMPED = '2026-11-17T15:15:00+00:00';
+    const switchedTo = () =>
+      fakeSupabase({
+        games: [{ ...game(1, 'playing'), started_at: STAMPED }],
+        playing_queue: [],
+      });
+
+    it.each([
+      ['finished', { finishedAt: '2025-08-20' }, { finished_at: '2025-08-20' }],
+      ['dropped', { droppedAt: '2025-08-20' }, { dropped_at: '2025-08-20' }],
+    ] as const)('puts back when a %s game had been started', async (status, dates, saved) => {
+      const { client, tables } = switchedTo();
+      await applyStatusChange(client, 'u', {
+        gameId: 1,
+        status,
+        ...dates,
+        notes: 'Loved it',
+        rating: 9,
+        undo: true,
+        startedAt: '2025-08-01T10:00:00+00:00',
+      });
+      expect(tables.games[0]).toMatchObject({
+        status,
+        ...saved,
+        notes: 'Loved it',
+        rating: 9,
+        started_at: '2025-08-01T10:00:00+00:00',
+      });
+    });
+
+    it.each(['finished', 'dropped'] as const)(
+      'puts back that a %s game had no start date',
+      async (status) => {
+        const { client, tables } = switchedTo();
+        await applyStatusChange(client, 'u', { gameId: 1, status, undo: true, startedAt: null });
+        expect(tables.games[0]).toMatchObject({ status, started_at: null });
+      },
+    );
+
+    it('leaves the start date alone when it is not told one, as an Undo from an older page', async () => {
+      const { client, tables } = switchedTo();
+      const rpc = jest.spyOn(client, 'rpc');
+
+      await applyStatusChange(client, 'u', { gameId: 1, status: 'finished', undo: true });
+
+      expect(tables.games[0]).toMatchObject({ status: 'finished', started_at: STAMPED });
+      const [, sent] = rpc.mock.calls[0] as unknown as [string, { p_updates: { update: Row }[] }];
+      expect(sent.p_updates[0].update).not.toHaveProperty('started_at');
+    });
+
+    it.each([
+      ['a date', '2025-08-01T10:00:00+00:00'],
+      ['none', null],
+    ])("doesn't take %s from a change that isn't an Undo", async (_, startedAt) => {
+      const { client, tables } = switchedTo();
+      const rpc = jest.spyOn(client, 'rpc');
+
+      await applyStatusChange(client, 'u', { gameId: 1, status: 'finished', startedAt });
+
+      expect(tables.games[0]).toMatchObject({ status: 'finished', started_at: STAMPED });
+      const [, sent] = rpc.mock.calls[0] as unknown as [string, { p_updates: { update: Row }[] }];
+      expect(sent.p_updates[0].update).not.toHaveProperty('started_at');
     });
   });
 
@@ -464,7 +633,7 @@ describe('moving the playing game to the queue (queueAtTop)', () => {
       queueAtTop: true,
     });
 
-    expect(result).toEqual({ ok: true, paused: [] });
+    expect(result).toEqual({ ok: true, paused: [], startedAt: '2026-10-30T19:24:07Z' });
     // Back in the backlog as any game moved there: started afresh next time.
     expect(tables.games[0]).toMatchObject({ status: 'backlog', started_at: null });
     expect(queueOrder(tables.playing_queue)).toEqual([1, 2, 3]);
@@ -607,6 +776,66 @@ describe('applyStatusChanges (several games at once)', () => {
     expect(sent.p_updates.map((item) => item.undo)).toEqual([true]);
   });
 
+  it.each([
+    ['none, when the Undo comes without one (an older page)', undefined, 0],
+    ['a minute and a half', 90_000, 90],
+    ['a little over, rounded up', 90_001, 91],
+    ['a week, which counts as a day', 7 * 24 * 60 * 60 * 1000, 86_400],
+  ])(
+    'tells the database how long ago the move an Undo takes back was, for every game: %s',
+    async (_, agoMs, ago) => {
+      const { client } = library();
+      const rpc = jest.spyOn(client, 'rpc');
+      const back = {
+        status: 'backlog' as const,
+        started_at: null,
+        finished_at: null,
+        dropped_at: null,
+        notes: null,
+        rating: null,
+        last_played_at: null,
+      };
+
+      const result = await restoreGames(
+        client,
+        'u',
+        [
+          { id: 1, ...back },
+          { id: 2, ...back },
+          { id: 3, ...back },
+        ],
+        agoMs,
+      );
+
+      expect(result).toEqual({ ok: true, count: 3 });
+      const [, sent] = rpc.mock.calls[0] as unknown as [
+        string,
+        { p_updates: { id: number; undo?: true; ago?: number }[] },
+      ];
+      expect(sent.p_updates.map(({ id, undo, ago }) => ({ id, undo, ago }))).toEqual([
+        { id: 1, undo: true, ago },
+        { id: 2, undo: true, ago },
+        { id: 3, undo: true, ago },
+      ]);
+    },
+  );
+
+  it('sends a move itself as an ordinary change: not an Undo, and with no time', async () => {
+    const { client } = library();
+    const rpc = jest.spyOn(client, 'rpc');
+
+    await applyStatusChanges(client, 'u', [
+      { gameId: 1, status: 'hidden' },
+      { gameId: 3, status: 'hidden' },
+    ]);
+
+    const [, sent] = rpc.mock.calls[0] as unknown as [string, { p_updates: object[] }];
+    expect(sent.p_updates.map((item) => Object.keys(item))).toEqual([
+      ['id', 'update'],
+      ['id', 'update'],
+    ]);
+  });
+
   it("refuses an Undo for a game that isn't the user's, or that is being played now", async () => {
     const back = {
       status: 'backlog' as const,
@@ -701,6 +930,31 @@ describe('applyStatusChanges (several games at once)', () => {
     expect(result).toMatchObject({ ok: true, count: 450 });
     expect(result.ok && result.previous).toHaveLength(450);
     expect(tables.games.every((g) => g.status === 'hidden')).toBe(true);
+  });
+});
+
+describe("undoAgoSeconds (how long ago an Undo's change was, as the database takes it)", () => {
+  it('is none when the Undo comes without a time', () => {
+    expect(undoAgoSeconds(undefined)).toBe(0);
+    expect(undoAgoSeconds(0)).toBe(0);
+  });
+
+  it('rounds up to a whole second, so it never says less time than passed', () => {
+    expect(undoAgoSeconds(1)).toBe(1);
+    expect(undoAgoSeconds(999)).toBe(1);
+    expect(undoAgoSeconds(1000)).toBe(1);
+    expect(undoAgoSeconds(1001)).toBe(2);
+    expect(undoAgoSeconds(90_000)).toBe(90);
+    expect(undoAgoSeconds(89_999.5)).toBe(90);
+  });
+
+  it('is a day at most', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    expect(undoAgoSeconds(DAY_MS - 1)).toBe(86_400);
+    expect(undoAgoSeconds(DAY_MS)).toBe(86_400);
+    expect(undoAgoSeconds(DAY_MS + 1)).toBe(86_400);
+    expect(undoAgoSeconds(7 * DAY_MS)).toBe(86_400);
+    expect(undoAgoSeconds(DAY_MS - 1000)).toBe(86_399);
   });
 });
 

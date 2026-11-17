@@ -23,7 +23,24 @@ interface PausedGame {
 const GAME_NOT_FOUND = 'P0002';
 
 type StatusChangeResult =
-  { ok: true; paused: PausedGame[] } | { ok: false; status: 404 | 500; error: string };
+  | {
+      ok: true;
+      paused: PausedGame[];
+      /** When the game had been started, before this change: for its Undo to put back. */
+      startedAt?: string | null;
+    }
+  | { ok: false; status: 404 | 500; error: string };
+
+/** The longest an Undo's change can be said to be ago: the history looks back no further. */
+const MAX_UNDO_AGO_SECONDS = 24 * 60 * 60;
+
+/**
+ * How long ago an Undo's change was made, in whole seconds, as the database
+ * takes it (apply_status_change, "ago").
+ */
+export function undoAgoSeconds(ms: number | undefined): number {
+  return Math.min(Math.ceil((ms ?? 0) / 1000), MAX_UNDO_AGO_SECONDS);
+}
 
 /**
  * Sets a game's status for a user, server side: the status route and the
@@ -58,7 +75,9 @@ export async function applyStatusChange(
 
   // Already playing (Play sent twice, or started in another tab): nothing to
   // change. Saving it again would move its start date to now.
-  if (status === 'playing' && target.status === 'playing') return { ok: true, paused: [] };
+  if (status === 'playing' && target.status === 'playing') {
+    return { ok: true, paused: [], startedAt: target.started_at };
+  }
 
   // A game paused for another one keeps its start date while it waits in the
   // queue, and picking it up again carries on from there. (Taking it off the
@@ -78,10 +97,17 @@ export async function applyStatusChange(
   // Only one game can be playing: any other one goes back to the backlog, or
   // is paused at the top of the queue. Those come first in the list, since the
   // database allows one playing game at any moment.
-  // An Undo marks every game it writes, for the history (apply_status_change).
-  const updates: { id: number; update: ReturnType<typeof statusUpdate>; undo?: true }[] = [];
+  // An Undo marks every game it writes, for the history, and says how long
+  // ago the change it undoes was made (apply_status_change).
+  const updates: {
+    id: number;
+    update: ReturnType<typeof statusUpdate>;
+    undo?: true;
+    ago?: number;
+  }[] = [];
+  const ago = undoAgoSeconds(change.undoAgoMs);
   const item = (id: number, update: ReturnType<typeof statusUpdate>) =>
-    undo ? { id, update, undo: true as const } : { id, update };
+    undo ? { id, update, undo: true as const, ago } : { id, update };
   const paused: PausedGame[] = [];
   if (status === 'playing') {
     const { data: others, error: playingError } = await supabase
@@ -106,6 +132,12 @@ export async function applyStatusChange(
     if (change.startedAt) update.started_at = change.startedAt;
     if (change.lastPlayedAt !== undefined) update.last_played_at = change.lastPlayedAt;
   }
+  // An Undo that puts a game back as finished or dropped (it was played
+  // instead of another, by mistake) puts back when it had been started too:
+  // starting it stamped that with now, and "days to finish" reads it.
+  if (undo && (status === 'finished' || status === 'dropped') && change.startedAt !== undefined) {
+    update.started_at = change.startedAt;
+  }
   updates.push(item(gameId, withLastPlayed(target, update)));
 
   // The games that go to the top of the queue: one paused for another, or
@@ -126,7 +158,7 @@ export async function applyStatusChange(
     return failed(error);
   }
 
-  return { ok: true, paused };
+  return { ok: true, paused, startedAt: target.started_at };
 }
 
 /** As many ids as one read asks for: a longer list wouldn't fit in the request's address. */
@@ -182,7 +214,7 @@ async function readBulkTargets(
 
 async function saveBulk(
   supabase: SupabaseClient,
-  updates: { id: number; update: object; undo?: true }[],
+  updates: { id: number; update: object; undo?: true; ago?: number }[],
 ): Promise<{ ok: true } | BulkFailure> {
   const { error } = await supabase.rpc('apply_status_change', {
     p_updates: updates,
@@ -247,13 +279,15 @@ export async function applyStatusChanges(
  * transaction. Not through the rules, which would clear or stamp things.
  * Each is sent as an Undo, so the history takes the move back out instead of
  * recording a second one (a game moved from Finished and back isn't finished
- * twice), however long the toast waited.
+ * twice), however long the toast waited: `agoMs` is how long that was.
  */
 export async function restoreGames(
   supabase: SupabaseClient,
   userId: string,
   games: GameRestore[],
+  agoMs?: number,
 ): Promise<{ ok: true; count: number } | BulkFailure> {
+  const ago = undoAgoSeconds(agoMs);
   const byGame = new Map(games.map((game) => [game.id, game]));
   const ids = [...byGame.keys()];
 
@@ -276,6 +310,7 @@ export async function restoreGames(
           last_played_at: game.last_played_at,
         },
         undo: true as const,
+        ago,
       };
     }),
   );

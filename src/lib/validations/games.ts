@@ -29,10 +29,15 @@ export const gameStatusSchema = z.object({
   // like any other; the history folds it into the change it undoes, however
   // long the toast waited, instead of recording a second one (game_events).
   undo: z.boolean().optional(),
-  // With an Undo that starts a game again (it was moved off Now Playing a
-  // moment ago): when it had been started and last played, to put back.
-  // Starting a game stamps the first with now, and stopping one the second.
-  startedAt: isoDate.optional(),
+  // With an Undo: how long ago the change it undoes was made, in
+  // milliseconds, as the browser timed it. The history takes the Undo out of
+  // the event that change is in, and never out of an older one.
+  undoAgoMs: z.number().min(0).optional(),
+  // With an Undo that puts a game back as it was (started again after being
+  // moved off Now Playing, or finished again after being played by mistake):
+  // when it had been started and last played. Starting a game stamps the
+  // first with now, and stopping one the second.
+  startedAt: isoDate.nullable().optional(),
   lastPlayedAt: isoDate.nullable().optional(),
 });
 
@@ -69,6 +74,8 @@ export const bulkRestoreSchema = z.object({
     )
     .min(1)
     .max(MAX_BULK_CHANGES, `No more than ${MAX_BULK_CHANGES} games at once`),
+  // How long ago the move it undoes was made, in milliseconds (see undoAgoMs).
+  agoMs: z.number().min(0).optional(),
 });
 
 // Choosing a game's art: the image picked, or null for the original.

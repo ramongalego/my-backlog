@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { undoAgoSeconds } from '@/lib/server/apply-status';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import {
   queueAddRequestSchema,
@@ -32,7 +33,24 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return jsonError('Invalid gameId', 400);
   }
-  const { gameId } = parsed.data;
+  const { gameId, undoAgoMs } = parsed.data;
+
+  // Back on the queue by Undo: saved through add_to_queue, which tells the
+  // history it is one, so taking the game off and putting it back leaves
+  // nothing however long the toast waited. Until that function is there (its
+  // migration not applied yet), it is added the ordinary way below.
+  if (undoAgoMs !== undefined) {
+    const { error: undoError } = await supabase.rpc('add_to_queue', {
+      p_game_id: gameId,
+      p_undo_ago: undoAgoSeconds(undoAgoMs),
+    });
+    if (!undoError) return NextResponse.json({ success: true });
+    if (undoError.code === '23503') return jsonError('Game not found', 404);
+    if (undoError.code !== 'PGRST202' && undoError.code !== '42883') {
+      console.error(undoError);
+      return jsonError('Failed to add to queue', 500);
+    }
+  }
 
   // Get max position for the user's queue. Two adds at once can read the same
   // max and share a position (it isn't unique); the next reorder renumbers it.
