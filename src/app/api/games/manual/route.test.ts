@@ -13,8 +13,9 @@ const inserted: Record<string, unknown>[] = [];
 const updated: Record<string, unknown>[] = [];
 const queueInserts: Record<string, unknown>[] = [];
 let insertError: { code: string } | null = null;
-// The user's Steam entry for the game, if any.
-let steamRow: { id: number; name: string; status: string } | null = null;
+// The user's Steam entry for the game, if any: on Steam ('PC'), or on the
+// console it was moved to before.
+let steamRow: { id: number; name: string; status: string; platform: string } | null = null;
 // The game added by hand before, on some console, if any.
 let manualRow: { id: number; name: string; status: string } | null = null;
 let alreadyQueued = false;
@@ -225,7 +226,12 @@ describe('a game you own on Steam', () => {
       name: 'Castlevania Dominus Collection',
       steamAppIds: [2369900],
     });
-    steamRow = { id: 7, name: 'Castlevania Dominus Collection', status: 'backlog' };
+    steamRow = {
+      id: 7,
+      name: 'Castlevania Dominus Collection',
+      status: 'backlog',
+      platform: 'PC',
+    };
   });
 
   it('moves your Steam entry to the console instead of adding it twice', async () => {
@@ -247,6 +253,56 @@ describe('a game you own on Steam', () => {
     expect(body).toMatchObject({ id: 7, moved: true });
     // Already in the backlog: nothing else changes.
     expect(applyStatusChange).not.toHaveBeenCalled();
+  });
+
+  it("starts the console copy at no hours when none are entered: Steam's were for PC", async () => {
+    await post({ igdbId: 314944, platform: 'Switch', status: 'backlog' });
+    expect(updated[0]).toEqual({
+      platform: 'Switch',
+      igdb_id: 314944,
+      playtime_forever: 0,
+      last_played_at: null,
+    });
+  });
+
+  // Saved through Add game a second time, to mark it finished, say. Its hours
+  // and last-played date are the console's by now, not Steam's.
+  describe('and already moved to a console', () => {
+    beforeEach(() => {
+      steamRow = { ...steamRow!, platform: 'Switch' };
+    });
+
+    it('keeps its hours and last-played date when the hours are left blank', async () => {
+      const { status, body } = await post({
+        igdbId: 314944,
+        platform: 'Switch',
+        status: 'finished',
+        date: '2026-10-20',
+      });
+      expect(status).toBe(200);
+      expect(updated[0]).toEqual({ platform: 'Switch', igdb_id: 314944 });
+      expect(body).toMatchObject({ id: 7, moved: true });
+      expect(applyStatusChange).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.any(String),
+        expect.objectContaining({ gameId: 7, status: 'finished', finishedAt: '2026-10-20' }),
+      );
+    });
+
+    it('saves the hours entered, and still leaves the last-played date', async () => {
+      await post({ igdbId: 314944, platform: 'Switch', status: 'backlog', hoursPlayed: 12 });
+      expect(updated[0]).toEqual({ platform: 'Switch', igdb_id: 314944, playtime_forever: 720 });
+    });
+
+    it('saves 0 hours when 0 is what was entered', async () => {
+      await post({ igdbId: 314944, platform: 'Switch', status: 'backlog', hoursPlayed: 0 });
+      expect(updated[0]).toEqual({ platform: 'Switch', igdb_id: 314944, playtime_forever: 0 });
+    });
+
+    it('keeps them when it moves on to another console', async () => {
+      await post({ igdbId: 314944, platform: 'PS5', status: 'backlog' });
+      expect(updated[0]).toEqual({ platform: 'PS5', igdb_id: 314944 });
+    });
   });
 
   it('starts it when you pick Playing', async () => {

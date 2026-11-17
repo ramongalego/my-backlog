@@ -7,7 +7,7 @@ import { getAddableGameDetails } from '@/lib/server/manual-details';
 import { getMainStoryHours } from '@/lib/hltb/api';
 import { applyStatusChange } from '@/lib/server/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
-import { STEAM_PLATFORM } from '@/lib/games/consoles';
+import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
 import { releaseYear } from '@/lib/games/release-date';
 import { chooseArt } from '@/lib/games/art';
 
@@ -69,11 +69,12 @@ export async function POST(request: NextRequest) {
   // Already in your Steam library: move that entry to this console rather than
   // listing the game twice. It keeps its Steam details, history and place in
   // the queue; the hours become the ones you enter here (Steam's are for PC).
-  let steamGame: { id: number; name: string; status: string } | null = null;
+  let steamGame: { id: number; name: string; status: string; platform: string | null } | null =
+    null;
   if (details.steamAppIds.length) {
     const { data, error: lookupError } = await supabase
       .from('games')
-      .select('id, name, status')
+      .select('id, name, status, platform')
       .eq('user_id', user.id)
       .eq('source', 'steam')
       .in('app_id', details.steamAppIds)
@@ -126,17 +127,30 @@ export async function POST(request: NextRequest) {
     ? null
     : await mainStoryHours(details.name, releaseYear(details.release_date));
 
+  // The hours entered, for a game that otherwise keeps the ones it has.
+  const enteredHours =
+    hoursPlayed !== undefined ? { playtime_forever: Math.round(hoursPlayed * 60) } : {};
+  // A Steam game moved to a console before holds the console's hours and
+  // last-played date by now, not Steam's. Saving it here again (to mark it
+  // finished, say, with the hours left blank) keeps them, as for a game added
+  // by hand.
+  const alreadyOnConsole = playsOnConsole(steamGame?.platform);
+
   const { data: game, error } = steamGame
     ? await supabase
         .from('games')
-        .update({
-          platform,
-          igdb_id: igdbId,
-          playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
-          // Steam's last-played date is for the PC copy; the next sync after
-          // moving it back to Steam restores it.
-          last_played_at: null,
-        })
+        .update(
+          alreadyOnConsole
+            ? { platform, igdb_id: igdbId, ...enteredHours }
+            : {
+                platform,
+                igdb_id: igdbId,
+                playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
+                // Steam's last-played date is for the PC copy; the next sync
+                // after moving it back to Steam restores it.
+                last_played_at: null,
+              },
+        )
         .eq('user_id', user.id)
         .eq('id', steamGame.id)
         .select('id')
@@ -144,12 +158,7 @@ export async function POST(request: NextRequest) {
     : manualGame
       ? await supabase
           .from('games')
-          .update({
-            platform,
-            ...(hoursPlayed !== undefined
-              ? { playtime_forever: Math.round(hoursPlayed * 60) }
-              : {}),
-          })
+          .update({ platform, ...enteredHours })
           .eq('user_id', user.id)
           .eq('id', manualGame.id)
           .select('id')
