@@ -148,6 +148,11 @@
     /* Reserve the scrollbar's width even when a modal locks scrolling, so the
        page doesn't widen and shift sideways while the modal is open. */
     scrollbar-gutter: stable;
+    /* The header is fixed over the top of every page (65px from `sm`). When
+       the keyboard moves focus to something above the screen, or a link goes
+       to a place on the page, the browser scrolls it to the top edge: without
+       this it ends up under the header, focused but out of sight. */
+    scroll-padding-top: 5rem;
   }
 
   body {
