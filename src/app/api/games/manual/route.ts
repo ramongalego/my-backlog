@@ -7,7 +7,12 @@ import { getAddableGameDetails } from '@/lib/server/manual-details';
 import { getMainStoryHours } from '@/lib/hltb/api';
 import { applyStatusChange } from '@/lib/server/apply-status';
 import { DEMOTED } from '@/lib/games/status-rules';
-import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
+import {
+  knownConsole,
+  playsOnConsole,
+  shortPlatformName,
+  STEAM_PLATFORM,
+} from '@/lib/games/consoles';
 import { releaseYear } from '@/lib/games/release-date';
 import { chooseArt } from '@/lib/games/art';
 
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
   const parsed = addManualGameSchema.safeParse(body);
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
-  const { igdbId, platform, status, hoursPlayed, date, notes, rating, art } = parsed.data;
+  const { igdbId, status, hoursPlayed, date, notes, rating, art } = parsed.data;
 
   let details;
   try {
@@ -65,6 +70,16 @@ export async function POST(request: NextRequest) {
     return jsonError('Game search is unavailable right now', 503);
   }
   if (!details) return jsonError('Game not found', 404);
+
+  // A console typed under Other is saved as the app or the player already
+  // calls it, when it is one: "switch 2" and "Nintendo Switch 2" are Switch 2,
+  // and "commodore 64" is the Commodore 64 typed for another game. Otherwise
+  // the filters would list one console twice.
+  const typed = parsed.data.platform.replace(/\s+/g, ' ').trim();
+  const platform =
+    knownConsole(typed, details.platforms.map(shortPlatformName)) ??
+    knownConsole(typed, await consolesInLibrary(supabase, user.id)) ??
+    typed;
 
   // Already in your Steam library: move that entry to this console rather than
   // listing the game twice. It keeps its Steam details, history and place in
@@ -267,4 +282,26 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ id: game.id, name, warning, moved: !!existing });
+}
+
+/**
+ * The consoles the player's games are on, as they were saved: what a console
+ * typed by hand is matched against. A read that fails matches nothing, and
+ * the console is saved as typed.
+ */
+async function consolesInLibrary(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('games')
+    .select('platform')
+    .eq('user_id', userId)
+    .neq('platform', STEAM_PLATFORM);
+  if (error) {
+    console.error('Reading the consoles in the library failed:', error);
+    return [];
+  }
+  const names = (data ?? []).map((row: { platform: string | null }) => row.platform);
+  return [...new Set(names.filter((name): name is string => !!name))];
 }

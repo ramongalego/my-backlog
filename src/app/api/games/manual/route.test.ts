@@ -19,6 +19,8 @@ let steamRow: { id: number; name: string; status: string; platform: string } | n
 // The game added by hand before, on some console, if any.
 let manualRow: { id: number; name: string; status: string } | null = null;
 let alreadyQueued = false;
+// The consoles the player's games are on, as saved; null when reading them fails.
+let libraryConsoles: string[] | null = [];
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
@@ -44,6 +46,7 @@ jest.mock('@/lib/supabase/server', () => ({
           return builder;
         },
         in: () => builder,
+        neq: () => builder,
         order: () => builder,
         limit: () => builder,
         single: async () =>
@@ -60,7 +63,14 @@ jest.mock('@/lib/supabase/server', () => ({
             };
           return { data: { position: 2 }, error: null };
         },
-        then: (resolve: (v: unknown) => unknown) => resolve({ error: null }),
+        then: (resolve: (v: unknown) => unknown) =>
+          resolve(
+            table === 'games' && columns === 'platform'
+              ? libraryConsoles === null
+                ? { data: null, error: { message: 'down' } }
+                : { data: libraryConsoles.map((platform) => ({ platform })), error: null }
+              : { error: null },
+          ),
       };
       return builder;
     },
@@ -106,6 +116,7 @@ beforeEach(() => {
   steamRow = null;
   manualRow = null;
   alreadyQueued = false;
+  libraryConsoles = [];
   jest.mocked(getGameDetails).mockResolvedValue(details);
   jest.mocked(applyStatusChange).mockResolvedValue({ ok: true, paused: [] });
 });
@@ -412,5 +423,51 @@ describe('when its time to beat was last looked up', () => {
     await add();
     expect(inserted[0].main_story_hours).toBeNull();
     expect('hltb_checked_at' in inserted[0]).toBe(false);
+  });
+});
+
+describe('a console typed by hand', () => {
+  const add = (platform: string) => post({ igdbId: 1, platform, status: 'backlog' });
+
+  it.each([
+    ['switch 2', 'Switch 2'],
+    ['Nintendo Switch 2', 'Switch 2'],
+    ['  Switch   2 ', 'Switch 2'],
+    ['ps5', 'PS5'],
+  ])('is saved as the console the app knows: "%s" is %s', async (typed, saved) => {
+    expect((await add(typed)).status).toBe(200);
+    expect(inserted[0].platform).toBe(saved);
+  });
+
+  it("is saved as the game's own console, spelled the app's way, when IGDB lists one with no short name", async () => {
+    jest.mocked(getGameDetails).mockResolvedValue({ ...details, platforms: ['Xbox One'] });
+    await add('xbox one');
+    expect(inserted[0].platform).toBe('Xbox One');
+  });
+
+  it('is saved as the player spelled it for another game', async () => {
+    libraryConsoles = ['Commodore 64', 'Switch 2'];
+    await add('commodore 64');
+    expect(inserted[0].platform).toBe('Commodore 64');
+  });
+
+  it('is saved as typed, tidied, when nothing knows it', async () => {
+    await add('  Commodore   64 ');
+    expect(inserted[0].platform).toBe('Commodore 64');
+  });
+
+  it('is saved as typed when the library cannot be read', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    libraryConsoles = null;
+    expect((await add('commodore 64')).status).toBe(200);
+    expect(inserted[0].platform).toBe('commodore 64');
+    jest.restoreAllMocks();
+  });
+
+  it('is refused as PC, typed any way, for a game that is already on Steam', async () => {
+    jest.mocked(getGameDetails).mockResolvedValue({ ...details, steamAppIds: [2369900] });
+    steamRow = { id: 7, name: 'Fire Emblem', status: 'backlog', platform: 'PC' };
+    expect((await add('pc')).status).toBe(400);
+    expect(updated).toEqual([]);
   });
 });

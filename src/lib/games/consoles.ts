@@ -72,3 +72,22 @@ const SHORT_PLATFORM_NAMES: Record<string, string> = {
 export function shortPlatformName(name: string): string {
   return SHORT_PLATFORM_NAMES[name] ?? name;
 }
+
+/** A console's name as compared: case, spaces and punctuation don't matter. */
+const comparable = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/**
+ * The name the app already uses for a console typed by hand, so one console
+ * is never listed twice: its short name, typed short or as IGDB spells it in
+ * full ("switch2" and "Nintendo Switch 2" are Switch 2), or else one of
+ * `others` spelled another way (the game's own consoles, or the ones the
+ * player has typed before). Null for a console it doesn't know.
+ */
+export function knownConsole(typed: string, others: readonly string[] = []): string | null {
+  const key = comparable(typed);
+  if (!key) return null;
+  for (const [full, short] of Object.entries(SHORT_PLATFORM_NAMES)) {
+    if (comparable(full) === key || comparable(short) === key) return short;
+  }
+  return others.find((name) => comparable(name) === key) ?? null;
+}
