@@ -120,8 +120,8 @@ const sections: LegalSection[] = [
       <p>
         You may stop using the Service and delete your account at any time from{' '}
         <Link href="/profile">your Profile</Link>. We may suspend or terminate an account that
-        violates these terms or puts the Service or other users at risk. Sections 3, 8 and 9 survive
-        termination.
+        violates these terms or puts the Service or other users at risk. Sections 3, 8, 9 and 10
+        survive termination.
       </p>
     ),
   },
@@ -157,6 +157,18 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: 'governing-law',
+    title: 'Governing law',
+    body: (
+      <p>
+        These terms are governed by the law of England and Wales, and disputes about them or about
+        the Service are for the courts of England and Wales. If you are a consumer living in another
+        country, you keep the protection of that country&apos;s mandatory consumer law, and you may
+        bring a claim in its courts.
+      </p>
+    ),
+  },
+  {
     id: 'changes',
     title: 'Changes to these terms',
     body: (
@@ -179,7 +191,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of Service"
-      effective="November 16, 2026"
+      effective="November 17, 2026"
       intro={
         <p>
           These Terms of Service govern your use of the MyBacklog website and app (the
