@@ -135,9 +135,9 @@ create table favorite_games (
 
 -- A history of what a player does with their games: a game's row only holds
 -- how things stand now, so a game arriving and each change to its status,
--- dates, rating, hours or platform is kept here as it happens (the triggers
--- below write it, and say how; nothing reads it yet). See the three
--- migrations/20261117_game_events*.sql.
+-- dates, rating, hours or platform, and its going on or off the queue, is
+-- kept here as it happens (the triggers below write it, and say how; nothing
+-- reads it yet). See migrations/20261117_game_events*.sql.
 create table game_events (
   id bigint generated always as identity primary key,
   user_id uuid not null,
@@ -145,12 +145,13 @@ create table game_events (
   -- What happened: the game arrived (added by hand, or bought on Steam since
   -- the library was imported), its status moved (which carries any dates and
   -- rating saved with it), a date, rating or platform was changed by itself,
-  -- or only the hours changed.
-  kind text not null check (kind in ('added', 'status', 'edit', 'playtime')),
+  -- it went on or off the queue, or only the hours changed.
+  kind text not null check (kind in ('added', 'status', 'edit', 'queue', 'playtime')),
   -- Each column that changed, as [before, after]: status, started_at,
   -- finished_at, dropped_at, rating, playtime_forever (minutes), platform,
-  -- and last_played_at when it changed along with one of those. For a game
-  -- arriving, it is what the game started with, every "before" null.
+  -- queued (whether it is on the queue), and last_played_at when it changed
+  -- along with one of those. For a game arriving, it is what the game started
+  -- with, every "before" null.
   changes jsonb not null,
   -- When the first change of the event was made, and the last one folded
   -- into it (changes within 30 seconds of each other are one event).
@@ -321,6 +322,11 @@ create trigger on_auth_user_created
 -- (apply_status_change, "undo": true) is folded in however late it comes:
 -- its toast waits while the tab is in the background.
 --
+-- The queue. Being queued is one more thing about a game, "queued", changed
+-- by what happens in playing_queue: so starting a queued game is one event
+-- (its status, and off the queue) and pausing a game for another is one (back
+-- to the backlog, and onto the queue). Reordering the queue is not recorded.
+--
 -- Reading hours. playtime_forever is a running total for one platform, and
 -- moving a game to another platform replaces it. The time played is the sum
 -- of its increases, leaving out any change recorded in the same event as a
@@ -408,6 +414,7 @@ as $$
   select case
     when p_changes ? 'status' then 'status'
     when p_changes ?| array['started_at', 'finished_at', 'dropped_at', 'rating', 'platform'] then 'edit'
+    when p_changes ? 'queued' then 'queue'
     when p_changes ? 'playtime_forever' then 'playtime'
   end;
 $$;
@@ -432,38 +439,39 @@ revoke execute on function public.game_event_net(jsonb, jsonb) from public, anon
 revoke execute on function public.game_event_kind(jsonb) from public, anon, authenticated;
 revoke execute on function public.game_event_arrival(jsonb) from public, anon, authenticated;
 
--- A change to a game already in the library.
-create or replace function public.record_game_event()
-returns trigger
+-- Takes a set of changes to one game into its history: folded into the
+-- game's last event when that is part of the same sitting (or the change is
+-- an Undo), a new event otherwise. Called by the triggers, which catch
+-- whatever goes wrong in here.
+create or replace function public.game_event_record(p_user uuid, p_game bigint, p_changes jsonb)
+returns void
 language plpgsql
 security definer
 set search_path = ''
 set timezone = 'UTC'
 as $$
 declare
-  v_changes jsonb;
   v_net jsonb;
   v_kind text;
   v_undoing boolean;
   v_last public.game_events%rowtype;
 begin
-  v_changes := public.game_event_changes(
-    public.game_event_snapshot(old),
-    public.game_event_snapshot(new)
-  );
+  if p_changes = '{}'::jsonb then
+    return;
+  end if;
   -- Set by apply_status_change for a change the app sends as an Undo.
   v_undoing := coalesce(current_setting('mybacklog.undoing', true), '') = 'true';
 
   select e.* into v_last
   from public.game_events e
-  where e.user_id = new.user_id and e.game_id = new.id
+  where e.user_id = p_user and e.game_id = p_game
   order by e.id desc
   limit 1;
 
   -- Part of the same sitting, or the Undo of it: the event becomes the net
   -- change.
   if found and (v_undoing or v_last.updated_at > now() - interval '30 seconds') then
-    v_net := public.game_event_net(v_last.changes, v_changes);
+    v_net := public.game_event_net(v_last.changes, p_changes);
     if v_last.kind = 'added' then
       update public.game_events
       set changes = public.game_event_arrival(v_net), updated_at = now()
@@ -475,14 +483,33 @@ begin
       set kind = public.game_event_kind(v_net), changes = v_net, updated_at = now()
       where id = v_last.id;
     end if;
-    return null;
+    return;
   end if;
 
-  v_kind := public.game_event_kind(v_changes);
+  v_kind := public.game_event_kind(p_changes);
   if v_kind is not null then
     insert into public.game_events (user_id, game_id, kind, changes)
-    values (new.user_id, new.id, v_kind, v_changes);
+    values (p_user, p_game, v_kind, p_changes);
   end if;
+end;
+$$;
+
+revoke execute on function public.game_event_record(uuid, bigint, jsonb) from public, anon, authenticated;
+
+-- A change to a game already in the library.
+create or replace function public.record_game_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+set timezone = 'UTC'
+as $$
+begin
+  perform public.game_event_record(
+    new.user_id,
+    new.id,
+    public.game_event_changes(public.game_event_snapshot(old), public.game_event_snapshot(new))
+  );
   return null;
 exception when others then
   raise warning 'record_game_event: % (%)', sqlerrm, sqlstate;
@@ -568,6 +595,41 @@ create trigger games_record_changed
     or old.platform is distinct from new.platform
   )
   execute function public.record_game_event();
+
+-- A game put on the queue, or taken off it. Not when the game itself is
+-- going (removing a game takes its queue entry and its history with it).
+create or replace function public.record_queue_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+set timezone = 'UTC'
+as $$
+begin
+  if tg_op = 'INSERT' then
+    perform public.game_event_record(new.user_id, new.game_id, '{"queued": [false, true]}'::jsonb);
+  elsif exists (select 1 from public.games g where g.id = old.game_id) then
+    perform public.game_event_record(old.user_id, old.game_id, '{"queued": [true, false]}'::jsonb);
+  end if;
+  return null;
+exception when others then
+  raise warning 'record_queue_event: % (%)', sqlerrm, sqlstate;
+  return null;
+end;
+$$;
+
+revoke execute on function public.record_queue_event() from public, anon, authenticated;
+
+-- Not on update: that is the queue being reordered.
+create trigger playing_queue_record_added
+  after insert on playing_queue
+  for each row
+  execute function public.record_queue_event();
+
+create trigger playing_queue_record_removed
+  after delete on playing_queue
+  for each row
+  execute function public.record_queue_event();
 
 -- Atomically reorders the caller's queue (validated, RLS still applies).
 create or replace function public.reorder_queue(p_game_ids bigint[])

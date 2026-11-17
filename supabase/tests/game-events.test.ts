@@ -17,12 +17,17 @@ const MIGRATIONS = [
   '20261117_game_events.sql',
   '20261117_game_events_added.sql',
   '20261117_game_events_merged.sql',
+  '20261117_game_events_queue.sql',
 ].map((file) => sqlFile('migrations', file));
 
 /** Takes the history out of a database, as it was before the first migration. */
 const UNINSTALL = `
   drop trigger if exists games_record_added on games;
   drop trigger if exists games_record_changed on games;
+  drop trigger if exists playing_queue_record_added on playing_queue;
+  drop trigger if exists playing_queue_record_removed on playing_queue;
+  drop function if exists public.record_queue_event();
+  drop function if exists public.game_event_record(uuid, bigint, jsonb);
   drop function if exists public.record_games_added();
   drop function if exists public.record_game_event();
   drop function if exists public.game_event_snapshot(public.games);
@@ -102,19 +107,42 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
    */
   const changeAll = (
     items: { id: number; update: Record<string, unknown> }[],
-    { undo = false, userId = player, timeZone = undefined as string | undefined } = {},
+    {
+      undo = false,
+      userId = player,
+      timeZone = undefined as string | undefined,
+      /** Games put at the top of the queue in the same save: one paused for another. */
+      toQueue = [] as number[],
+    } = {},
   ) =>
     db.asUser(
       userId,
-      'select apply_status_change($1::jsonb)',
-      [JSON.stringify(items.map((item) => (undo ? { ...item, undo: true } : item)))],
+      'select apply_status_change($1::jsonb, $2::bigint[])',
+      [JSON.stringify(items.map((item) => (undo ? { ...item, undo: true } : item))), toQueue],
       timeZone,
     );
   const change = (
     id: number,
     update: Record<string, unknown>,
-    options: { undo?: boolean; userId?: string; timeZone?: string } = {},
+    options: { undo?: boolean; userId?: string; timeZone?: string; toQueue?: number[] } = {},
   ) => changeAll([{ id, update }], options);
+
+  /** Puts a game on the player's queue, or takes it off, as the queue's route does. */
+  const queue = (id: number, position = 0) =>
+    db.asUser(
+      player,
+      'insert into playing_queue (user_id, game_id, position) values ($1, $2, $3)',
+      [player, id, position],
+    );
+  const unqueue = (id: number) =>
+    db.asUser(player, 'delete from playing_queue where game_id = $1', [id]);
+  const queued = async () =>
+    (
+      await db.query<{ game_id: number }>(
+        'select game_id from playing_queue where user_id = $1 order by position',
+        [player],
+      )
+    ).map((row) => row.game_id);
 
   /** A write to the player's own game that isn't a status change, as its routes make. */
   const write = (id: number, set: string, params: unknown[] = []) =>
@@ -633,6 +661,163 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
     });
   });
 
+  describe('the queue', () => {
+    it('records a game going on the queue, and coming off it later', async () => {
+      const game = await addGame();
+      await queue(game);
+      expect(await eventsOf(game)).toEqual([{ kind: 'queue', changes: { queued: [false, true] } }]);
+
+      await later();
+      await unqueue(game);
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'queue', changes: { queued: [false, true] } },
+        { kind: 'queue', changes: { queued: [true, false] } },
+      ]);
+    });
+
+    it('leaves no trace of a game queued and taken straight off again', async () => {
+      const game = await addGame();
+      await queue(game);
+      await unqueue(game);
+      expect(await countEvents()).toBe(0);
+    });
+
+    it('records nothing when the queue is reordered', async () => {
+      const games = [await addGame({ igdb_id: 1 }), await addGame({ igdb_id: 2 })];
+      await queue(games[0], 0);
+      await queue(games[1], 1);
+      await later();
+      const before = await countEvents();
+
+      await db.asUser(player, 'select reorder_queue($1::bigint[])', [[games[1], games[0]]]);
+      expect(await queued()).toEqual([games[1], games[0]]);
+      expect(await countEvents()).toBe(before);
+    });
+
+    it('is one event when a queued game is started: its status, and off the queue', async () => {
+      const game = await addGame();
+      await queue(game);
+      await later();
+      // The save takes a game that leaves the backlog off the queue itself.
+      await change(game, { status: 'playing', started_at: '2026-11-17T20:00:00Z' });
+
+      expect(await queued()).toEqual([]);
+      expect((await eventsOf(game)).slice(1)).toEqual([
+        {
+          kind: 'status',
+          changes: {
+            status: ['backlog', 'playing'],
+            started_at: [null, '2026-11-17T20:00:00+00:00'],
+            queued: [true, false],
+          },
+        },
+      ]);
+    });
+
+    it('is one event when a game is paused for another: back to the backlog, and onto the queue', async () => {
+      const playing = await addGame({ status: 'playing', started_at: '2026-11-13T13:57:00Z' });
+      const next = await addGame({ name: 'Celeste', igdb_id: 2 });
+      await changeAll(
+        [
+          { id: playing, update: { status: 'backlog' } },
+          { id: next, update: { status: 'playing', started_at: '2026-11-17T20:00:00Z' } },
+        ],
+        { toQueue: [playing] },
+      );
+
+      expect(await queued()).toEqual([playing]);
+      expect(await eventsOf(playing)).toEqual([
+        { kind: 'status', changes: { status: ['playing', 'backlog'], queued: [false, true] } },
+      ]);
+    });
+
+    it('is part of the arrival of a game added by hand straight to the queue', async () => {
+      const [game] = await arrive([{ name: 'Metroid Dread', platform: 'Switch' }]);
+      await queue(game);
+      expect(await eventsOf(game)).toEqual([
+        {
+          kind: 'added',
+          changes: {
+            status: [null, 'backlog'],
+            platform: [null, 'Switch'],
+            queued: [null, true],
+          },
+        },
+      ]);
+    });
+
+    it('leaves no trace of a switch to a queued game that is undone, late, with its queue put back', async () => {
+      const a = await addGame({ status: 'playing', started_at: '2026-11-13T13:57:00Z' });
+      const b = await addGame({ name: 'Celeste', igdb_id: 2 });
+      const c = await addGame({ name: 'Hollow Knight', igdb_id: 3 });
+      await queue(c, 0);
+      await queue(b, 1);
+      await later(60 * 60);
+      const before = await db.query('select id, kind, changes from game_events order by id');
+
+      // Play on B's queue row: A is paused at the top of the queue, B starts.
+      await changeAll(
+        [
+          { id: a, update: { status: 'backlog' } },
+          { id: b, update: { status: 'playing', started_at: '2026-11-17T20:00:00Z' } },
+        ],
+        { toQueue: [a] },
+      );
+      expect(await queued()).toEqual([a, c]);
+
+      // Ten minutes later, Undo: A is switched back to (pausing B at the top),
+      // B's start is cleared, and the queue goes back in its old order.
+      await later(600);
+      await changeAll(
+        [
+          { id: b, update: { status: 'backlog' } },
+          { id: a, update: { status: 'playing' } },
+        ],
+        { undo: true, toQueue: [b] },
+      );
+      await change(b, { status: 'backlog', started_at: null }, { undo: true });
+      await db.asUser(player, 'select reorder_queue($1::bigint[])', [[c, b]]);
+
+      expect(await queued()).toEqual([c, b]);
+      expect(await db.query('select id, kind, changes from game_events order by id')).toEqual(
+        before,
+      );
+    });
+
+    it("doesn't record a queued game being removed from the library as coming off the queue", async () => {
+      const kept = await addGame({ igdb_id: 1 });
+      const removed = await addGame({ name: 'Celeste', igdb_id: 2 });
+      await queue(kept, 0);
+      await queue(removed, 1);
+      await later();
+
+      await db.asUser(player, 'delete from games where id = $1', [removed]);
+
+      expect(await queued()).toEqual([kept]);
+      expect(await eventsOf(removed)).toEqual([]);
+      expect(await eventsOf(kept)).toHaveLength(1);
+    });
+
+    it('goes with a deleted account, queue and all', async () => {
+      const game = await addGame();
+      await queue(game);
+      await db.query('delete from auth.users where id = $1', [player]);
+      expect(await countEvents()).toBe(0);
+    });
+
+    it('still saves the queue when the history refuses the row', async () => {
+      const game = await addGame();
+      await db.exec('alter table game_events add constraint refuse_all check (false) not valid');
+      try {
+        await queue(game);
+      } finally {
+        await db.exec('alter table game_events drop constraint refuse_all');
+      }
+      expect(await queued()).toEqual([game]);
+      expect(await countEvents()).toBe(0);
+    });
+  });
+
   describe('an Undo the app sends as one', () => {
     it('is folded into the change it undoes however late it comes', async () => {
       const games = await Promise.all(
@@ -782,7 +967,10 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       const snapshot = async () =>
         (
           await db.query<{ row: Record<string, unknown> }>(
-            'select public.game_event_snapshot(g) as row from games g where g.id = $1',
+            `select public.game_event_snapshot(g) || jsonb_build_object(
+               'queued', exists (select 1 from playing_queue q where q.game_id = g.id)
+             ) as row
+             from games g where g.id = $1`,
             [game],
           )
         )[0].row;
@@ -798,7 +986,7 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       const statuses = ['backlog', 'playing', 'finished', 'dropped', 'wont_play', 'hidden'];
 
       for (let step = 0; step < 120; step++) {
-        const what = random(6);
+        const what = random(7);
         if (what === 0) {
           await change(
             game,
@@ -822,6 +1010,11 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
           await write(game, `playtime_forever = ${random(5000)}, last_played_at = '${day()}'`);
         } else if (what === 4) {
           await write(game, `rating = ${random(11)}, finished_at = '${day()}'`);
+        } else if (what === 5) {
+          // On the queue, or off it. (A status change away from the backlog
+          // takes a game off by itself.)
+          if ((await queued()).includes(game)) await unqueue(game);
+          else await queue(game);
         } else {
           await write(game, `last_played_at = '${day()}', name = 'Hades ${step}'`);
         }
@@ -832,7 +1025,7 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       const state: Record<string, unknown> = { ...before };
       const events = await eventsOf(game);
       for (const event of events) {
-        expect(['status', 'edit', 'playtime']).toContain(event.kind);
+        expect(['status', 'edit', 'queue', 'playtime']).toContain(event.kind);
         expect(Object.keys(event.changes).length).toBeGreaterThan(0);
         for (const [column, [was, isNow]] of Object.entries(event.changes)) {
           // When it was last played also changes by itself, unrecorded.
@@ -893,10 +1086,12 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
                 'public.game_event_changes(jsonb, jsonb)',
                 'public.game_event_net(jsonb, jsonb)',
                 'public.game_event_kind(jsonb)',
-                'public.game_event_arrival(jsonb)'
+                'public.game_event_arrival(jsonb)',
+                'public.game_event_record(uuid, bigint, jsonb)',
+                'public.record_queue_event()'
               ]) as fn`,
       );
-      expect(rows).toHaveLength(14);
+      expect(rows).toHaveLength(18);
       expect(rows.filter((row) => row.allowed)).toEqual([]);
     });
   });
@@ -1051,12 +1246,25 @@ describe('the migrations', () => {
       set created_at = created_at - interval '1 minute', updated_at = updated_at - interval '1 minute'`);
     await move(first, 'backlog');
     expect(await kinds(first)).toEqual(['status', 'status']);
+
+    // The fourth: the queue joins in, and what is there stays.
+    await db.exec(MIGRATIONS[3]);
+    expect(await kinds(first)).toEqual(['status', 'status']);
+    await db.exec(`update game_events
+      set created_at = created_at - interval '1 minute', updated_at = updated_at - interval '1 minute'`);
+    await db.asUser(
+      player,
+      'insert into playing_queue (user_id, game_id, position) values ($1, $2, 0)',
+      [player, first],
+    );
+    expect(await kinds(first)).toEqual(['status', 'status', 'queue']);
   });
 
   it('can each be applied again without harm', async () => {
     for (const migration of MIGRATIONS) await db.exec(migration);
     for (const migration of MIGRATIONS) await db.exec(migration);
     await db.exec(MIGRATIONS[2]);
+    await db.exec(MIGRATIONS[3]);
 
     const game = await addGame('Hades');
     await db.exec(`update game_events

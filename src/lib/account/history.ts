@@ -8,9 +8,10 @@ export interface HistoryEvent {
    * `added`: the game arrived, and `changes` is what it started with (every
    * "before" null). `status`: its status moved, with any dates and rating
    * saved with it. `edit`: a date, the rating or the platform changed by
-   * itself. `playtime`: only the hours changed.
+   * itself. `queue`: it went on the queue or came off it (`queued`), and
+   * nothing else. `playtime`: only the hours changed.
    */
-  kind: 'added' | 'status' | 'edit' | 'playtime';
+  kind: 'added' | 'status' | 'edit' | 'queue' | 'playtime';
   /** Each value that changed, as [before, after]. Hours are in minutes. */
   changes: Record<string, [unknown, unknown]>;
   /** When it was logged, which can be days after it happened. */
