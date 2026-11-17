@@ -27,7 +27,8 @@ function Row({ entry, onOpen }: { entry: ActivityEntry; onOpen: (gameId: number)
         onClick={() => onOpen(entry.id)}
         className={`${ACTIVITY_ROW} group -mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 text-left transition-colors hover:bg-ink-800/50`}
       >
-        <CoverThumb src={entry.header_image} alt="" />
+        {/* The row is what's pressed: its art brightens with it, as art does everywhere. */}
+        <CoverThumb src={entry.header_image} alt="" interactive />
         <span className="block min-w-0 flex-1">
           <TruncatedText className="block font-medium text-ink-100 transition-colors group-hover:text-ink-50 lg:truncate">
             {entry.name}

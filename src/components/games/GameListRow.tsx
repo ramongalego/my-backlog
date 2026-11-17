@@ -63,7 +63,13 @@ export function GameListRow({
           : 'cursor-pointer hover:bg-ink-900'
       } ${selection?.selected ? 'bg-ink-900' : ''}`}
     >
-      <CoverThumb src={game.header_image} alt="" className={LIST_THUMB}>
+      <CoverThumb
+        src={game.header_image}
+        alt=""
+        className={LIST_THUMB}
+        // The row is what's pressed: its art brightens with it, unless it can't be ticked.
+        interactive={!selection || selection.selectable}
+      >
         {selection?.selectable && (
           <SelectTick selected={selection.selected} className="absolute top-1 left-1" />
         )}
