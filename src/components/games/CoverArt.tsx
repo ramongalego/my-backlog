@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { GameArt } from './GameArt';
-import { Gamepad2, Pencil } from 'lucide-react';
+import { Gamepad2 } from 'lucide-react';
 import { ArtTags } from './ArtTags';
 
 /** Steam header capsules are 460×215; every game image in the app uses this ratio. */
@@ -13,12 +13,23 @@ const RADIUS = {
 };
 
 /**
+ * Art that can be pressed brightens under the pointer, and that is all: no
+ * icon drawn over it, nothing darkened, and its edge left as it is. Only the
+ * picture brightens (not the badges on it, nor the blurred copy behind box
+ * art, which is `aria-hidden`); art with no picture goes a tone lighter.
+ */
+const PRESSABLE =
+  'transition-colors group-hover:bg-ink-800 [&>img:not([aria-hidden])]:transition-[filter] [&>img:not([aria-hidden])]:duration-200 group-hover:[&>img:not([aria-hidden])]:brightness-115';
+
+/**
  * A game's header image at the shared ratio, with a hairline inner edge so
  * dark art doesn't melt into the page. Size it with a width class; height
- * follows from the ratio. `children` render on top (badges, hover overlays);
+ * follows from the ratio. `children` render on top (badges);
  * `platform`, for games added by hand, puts the console in the bottom-left, and
  * `releaseDate` an "Out Nov 5" tag beside it for a game that isn't out yet.
- * Inside a `group`, set `interactive` to brighten the edge on hover.
+ * Where the art can be pressed (it opens its game, or picks it), put the
+ * `group` class on what is pressed and set `interactive`: the art brightens
+ * while the pointer is on it (see PRESSABLE).
  */
 export function CoverArt({
   src,
@@ -50,7 +61,7 @@ export function CoverArt({
   return (
     <div
       className={`relative ${COVER_ASPECT} overflow-hidden bg-ink-900 ${RADIUS[rounded]} after:pointer-events-none after:absolute after:inset-0 after:ring-1 after:ring-inset after:ring-white/8 ${
-        interactive ? 'after:transition-colors group-hover:after:ring-white/20' : ''
+        interactive ? PRESSABLE : ''
       } ${className}`}
     >
       {src ? (
@@ -68,21 +79,6 @@ export function CoverArt({
   );
 }
 
-/**
- * Darkens the art and shows a pencil on hover. Place inside CoverArt when the
- * art opens the game's details; needs a `group` ancestor.
- */
-export function CoverEditHint() {
-  return (
-    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-      <Pencil
-        className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
 /** Small cover for list rows (queue, diary, stats): 64px wide on phones, 112px from `sm`. */
 const THUMB_WIDTH = 'w-16 sm:w-28';
 
@@ -90,11 +86,14 @@ export function CoverThumb({
   src,
   alt,
   className = THUMB_WIDTH,
+  interactive,
   children,
 }: {
   src: string | null | undefined;
   alt: string;
   className?: string;
+  /** As CoverArt's: the art can be pressed, and brightens under the pointer. */
+  interactive?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -106,6 +105,7 @@ export function CoverThumb({
       // soft, even on 1x screens.
       sizes="(max-width: 640px) 128px, 224px"
       quality={90}
+      interactive={interactive}
       className={`shrink-0 ${className}`}
     >
       {children}

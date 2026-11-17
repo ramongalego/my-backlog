@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ExternalLink, MessageSquarePlus } from 'lucide-react';
 import { Rating } from '@/components/games/Rating';
-import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
+import { CoverArt } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
 import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/DiaryNote';
 import type { DiaryEntry } from '@/hooks/useDiaryPage';
@@ -99,7 +99,6 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
           interactive
           platform={consoleOf(entry)}
         >
-          <CoverEditHint />
           {/* On phones the date rides on the art. */}
           {entry.finished_at && (
             // Drawn by CSS: the date is in the row's headings, and as text

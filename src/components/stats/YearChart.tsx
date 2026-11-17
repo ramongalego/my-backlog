@@ -76,7 +76,7 @@ export function YearChart({ stats }: { stats: Stats }) {
       {view === 'finished' && undated > 0 && data.length > 0 && (
         <p className="mt-4 text-xs text-ink-500">
           {plural(undated, 'finished game')} without a finish date{' '}
-          {undated === 1 ? "isn't" : "aren't"} counted here.
+          {undated === 1 ? "isn't" : "aren't"} counted here
         </p>
       )}
     </Panel>

@@ -4,7 +4,7 @@ import { Rating } from './Rating';
 import type { GameItem } from '@/lib/data/loaders';
 import { openGameLabel, selectGameLabel } from '@/lib/games/game-label';
 import { SelectTick } from './SelectTick';
-import { CoverArt, CoverEditHint } from './CoverArt';
+import { CoverArt } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { QueuedBadge } from './QueuedBadge';
 import { StatusBadge } from './StatusBadge';
@@ -49,14 +49,14 @@ export function GameCard({
     // cards, so a large library scrolls smoothly without DOM virtualization.
     // contain-intrinsic-size reserves an approximate height so the scrollbar
     // stays stable before a card is first rendered.
-    <div className="group min-w-0 [content-visibility:auto] [contain-intrinsic-size:auto_14rem]">
+    <div className="min-w-0 [content-visibility:auto] [contain-intrinsic-size:auto_14rem]">
       <button
         onClick={(e) =>
           selection ? selection.selectable && selection.onToggle(e.shiftKey) : onOpenDetail(game.id)
         }
         aria-pressed={selection ? selection.selected : undefined}
         aria-disabled={selection && !selection.selectable ? true : undefined}
-        className={`relative block w-full rounded-lg select-none focus-visible:-outline-offset-2 ${
+        className={`group relative block w-full rounded-lg select-none focus-visible:-outline-offset-2 ${
           selection && !selection.selectable ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
         }`}
         aria-label={selection ? selectGameLabel(game, selection, queued, art) : label}
@@ -65,16 +65,13 @@ export function GameCard({
           src={game.header_image}
           alt=""
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 296px"
-          interactive
+          // Brightens under the pointer, unless it can't be ticked.
+          interactive={!selection || selection.selectable}
           platform={consoleOf(game)}
           releaseDate={game.release_date}
         >
-          {selection ? (
-            selection.selectable && (
-              <SelectTick selected={selection.selected} className="absolute top-2 left-2" />
-            )
-          ) : (
-            <CoverEditHint />
+          {selection?.selectable && (
+            <SelectTick selected={selection.selected} className="absolute top-2 left-2" />
           )}
           <div className="absolute top-2 right-2">
             {queued ? <QueuedBadge /> : showStatus && <StatusBadge status={status} />}

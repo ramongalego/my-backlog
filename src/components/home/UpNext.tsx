@@ -55,11 +55,7 @@ export function UpNext({
           href="/playing-queue"
           className="group flex min-w-0 items-center gap-3 sm:gap-4 rounded-lg"
         >
-          <CoverThumb
-            src={upNext.game.header_image}
-            alt=""
-            className="w-20 sm:w-28 group-hover:brightness-110 transition-[filter]"
-          />
+          <CoverThumb src={upNext.game.header_image} alt="" className="w-20 sm:w-28" interactive />
           <span className="min-w-0">
             <TruncatedText className="block font-medium text-ink-100 group-hover:text-ink-50 transition-colors truncate">
               {upNext.game.name}

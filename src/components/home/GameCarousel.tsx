@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
+import { CoverArt } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
 import { QueuedBadge } from '@/components/games/QueuedBadge';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
@@ -282,7 +282,6 @@ export function GameCarousel({
                       platform={consoleOf(game)}
                       releaseDate={game.release_date}
                     >
-                      <CoverEditHint />
                       {queuedIds?.has(game.id) && (
                         <QueuedBadge className="absolute top-2 right-2" />
                       )}

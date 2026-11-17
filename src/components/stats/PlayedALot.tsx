@@ -1,6 +1,6 @@
 'use client';
 
-import { CoverEditHint, CoverThumb } from '@/components/games/CoverArt';
+import { CoverThumb } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
 import type { Stats } from '@/lib/stats/compute';
 import { Button } from '@/components/ui/Button';
@@ -39,9 +39,7 @@ export function PlayedALot({
                 aria-label={`Update ${name}`}
                 className="group shrink-0 rounded-md cursor-pointer"
               >
-                <CoverThumb src={header_image} alt="" className="w-16">
-                  <CoverEditHint />
-                </CoverThumb>
+                <CoverThumb src={header_image} alt="" className="w-16" interactive />
               </button>
               <div className="flex-1 min-w-0">
                 <TruncatedText as="p" className="text-sm font-medium text-ink-200 truncate">

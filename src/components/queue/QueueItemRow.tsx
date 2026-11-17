@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Tooltip, TooltipText } from '@/components/ui/Tooltip';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CoverArt, CoverEditHint } from '@/components/games/CoverArt';
+import { CoverArt } from '@/components/games/CoverArt';
 import { GameMetaRow } from '@/components/games/GameCardInfo';
 import { consoleOf } from '@/lib/games/consoles';
 import type { QueueItem } from '@/types/games';
@@ -103,7 +103,6 @@ export function QueueItemRow({
           platform={consoleOf(item.game)}
           releaseDate={item.game.release_date}
         >
-          <CoverEditHint />
           {/* On phones the position rides on the art. */}
           {/* Drawn by CSS: it repeats the number beside the row, and as text
               inside the button it would have to be in the button's name. */}
