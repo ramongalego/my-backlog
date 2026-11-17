@@ -40,6 +40,29 @@ it('says when the change is an Undo, and only then', async () => {
   });
 });
 
+it('sends when the game had been started and last played with an Undo that starts it again', async () => {
+  await updateGameStatus(7, 'playing', {
+    undo: true,
+    startedAt: '2026-11-13T13:57:00+00:00',
+    lastPlayedAt: null,
+  });
+  expect(sentBody()).toEqual({
+    gameId: 7,
+    status: 'playing',
+    undo: true,
+    startedAt: '2026-11-13T13:57:00+00:00',
+    lastPlayedAt: null,
+  });
+
+  // Nothing to put back: the server starts it from now.
+  await updateGameStatus(7, 'playing', { undo: true, startedAt: null });
+  expect(sentBody()).toEqual({ gameId: 7, status: 'playing', undo: true });
+
+  // And never without an Undo.
+  await updateGameStatus(7, 'playing', { startedAt: '2026-11-13T13:57:00+00:00' });
+  expect(sentBody()).toEqual({ gameId: 7, status: 'playing' });
+});
+
 it("throws with the server's reason when the change is refused", async () => {
   mockFetch.mockResolvedValue({
     ok: false,

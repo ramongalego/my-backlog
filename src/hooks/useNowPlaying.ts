@@ -110,10 +110,15 @@ export function useNowPlaying(userId: string | null) {
     scope: QUEUE_SCOPE,
     // The status route also takes the game off the queue if it was queued.
     // Started by an Undo (the game was moved away a moment ago), it says so,
-    // for the history.
+    // for the history, and comes back as it was: started when it had been,
+    // not just now ("Playing since" would jump to today otherwise).
     mutationFn: ({ game, undo }: { game: GameWithImage; undo?: boolean }) =>
       undo
-        ? updateGameStatus(game.id, 'playing', { undo: true })
+        ? updateGameStatus(game.id, 'playing', {
+            undo: true,
+            startedAt: game.started_at,
+            lastPlayedAt: game.last_played_at ?? null,
+          })
         : updateGameStatus(game.id, 'playing'),
     onMutate: async ({ game }) => {
       // An Undo still on screen (the last game, moved to the backlog) would

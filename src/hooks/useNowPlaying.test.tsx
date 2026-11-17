@@ -173,8 +173,14 @@ describe('clicks that land before the page has redrawn', () => {
     expect(completeGame).toHaveBeenCalledTimes(1);
   });
 
-  it('starts the game again as an Undo when the toast for moving it away is pressed', async () => {
-    const { result } = setup();
+  it('starts the game again as it was when the toast for moving it away is pressed', async () => {
+    const { result } = setup({
+      nowPlaying: {
+        ...playing,
+        started_at: '2026-11-13T13:57:00+00:00',
+        last_played_at: '2026-11-16T12:11:00+00:00',
+      },
+    });
     act(() => result.current.moveToBacklog());
     await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
     expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'backlog');
@@ -185,10 +191,22 @@ describe('clicks that land before the page has redrawn', () => {
     ];
     act(() => options.action.onClick());
 
-    // Said to be an Undo, for the history; a game started from the queue isn't.
+    // Said to be an Undo, for the history, and with when it had been started
+    // and last played: it comes back "playing since Nov 13", not since today.
     await waitFor(() =>
-      expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', { undo: true }),
+      expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', {
+        undo: true,
+        startedAt: '2026-11-13T13:57:00+00:00',
+        lastPlayedAt: '2026-11-16T12:11:00+00:00',
+      }),
     );
+  });
+
+  it('starts a game from the queue the usual way: from now, and not as an Undo', async () => {
+    const { result } = setup({ queue: [queued], nowPlaying: null });
+    act(() => result.current.pickFromQueue(2));
+    await waitFor(() => expect(updateGameStatus).toHaveBeenCalled());
+    expect(updateGameStatus).toHaveBeenLastCalledWith(2, 'playing');
   });
 
   it('takes the same action again once the first has been saved', async () => {

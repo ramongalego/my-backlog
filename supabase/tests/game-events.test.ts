@@ -677,6 +677,33 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       ]);
     });
 
+    it('leaves no trace of a game stopped and started again, now that its dates are put back', async () => {
+      const game = await addGame({
+        platform: 'Switch 2',
+        status: 'playing',
+        started_at: '2026-11-13T13:57:00Z',
+        last_played_at: '2026-11-16T12:11:00Z',
+      });
+      // Now Playing, "move to backlog": the start date goes, last played is stamped.
+      await change(game, {
+        status: 'backlog',
+        started_at: null,
+        last_played_at: '2026-11-17T15:15:00Z',
+      });
+      await later(600);
+      // Its Undo, as the app sends it: started when it had been, last played as before.
+      await change(
+        game,
+        {
+          status: 'playing',
+          started_at: '2026-11-13T13:57:00Z',
+          last_played_at: '2026-11-16T12:11:00Z',
+        },
+        { undo: true },
+      );
+      expect(await eventsOf(game)).toEqual([]);
+    });
+
     it('keeps what it did not put back', async () => {
       const game = await addGame({ status: 'playing', started_at: '2026-11-01T18:00:00Z' });
       await change(game, { status: 'backlog', started_at: null });

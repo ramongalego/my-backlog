@@ -29,6 +29,11 @@ export const gameStatusSchema = z.object({
   // like any other; the history folds it into the change it undoes, however
   // long the toast waited, instead of recording a second one (game_events).
   undo: z.boolean().optional(),
+  // With an Undo that starts a game again (it was moved off Now Playing a
+  // moment ago): when it had been started and last played, to put back.
+  // Starting a game stamps the first with now, and stopping one the second.
+  startedAt: isoDate.optional(),
+  lastPlayedAt: isoDate.nullable().optional(),
 });
 
 export type GameStatusBody = z.infer<typeof gameStatusSchema>;

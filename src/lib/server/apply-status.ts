@@ -99,6 +99,13 @@ export async function applyStatusChange(
 
   const update = statusUpdate(change);
   if (resuming) delete update.started_at;
+  // An Undo that starts the game again puts it back as it was: started when
+  // it had been (not now), and last played when it had been (stopping it
+  // stamped that). Only an Undo: a game started the usual way starts now.
+  if (undo && status === 'playing') {
+    if (change.startedAt) update.started_at = change.startedAt;
+    if (change.lastPlayedAt !== undefined) update.last_played_at = change.lastPlayedAt;
+  }
   updates.push(item(gameId, withLastPlayed(target, update)));
 
   // The games that go to the top of the queue: one paused for another, or

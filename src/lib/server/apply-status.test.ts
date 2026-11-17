@@ -264,6 +264,80 @@ describe('applyStatusChange', () => {
     expect(sent.p_updates.every((item) => !('undo' in item))).toBe(true);
   });
 
+  describe('an Undo that starts a game again', () => {
+    const stopped = () =>
+      fakeSupabase({
+        games: [
+          {
+            ...game(1, 'backlog'),
+            source: 'manual',
+            platform: 'Switch 2',
+            started_at: null,
+            last_played_at: '2026-11-17T15:15:00+00:00',
+          },
+        ],
+        playing_queue: [],
+      });
+
+    it('puts back when it had been started and last played', async () => {
+      const { client, tables } = stopped();
+      await applyStatusChange(client, 'u', {
+        gameId: 1,
+        status: 'playing',
+        undo: true,
+        startedAt: '2026-11-13T13:57:00+00:00',
+        lastPlayedAt: '2026-11-16T12:11:00+00:00',
+      });
+      expect(tables.games[0]).toMatchObject({
+        status: 'playing',
+        started_at: '2026-11-13T13:57:00+00:00',
+        last_played_at: '2026-11-16T12:11:00+00:00',
+      });
+    });
+
+    it('puts back that it had never been played', async () => {
+      const { client, tables } = stopped();
+      await applyStatusChange(client, 'u', {
+        gameId: 1,
+        status: 'playing',
+        undo: true,
+        startedAt: '2026-11-13T13:57:00+00:00',
+        lastPlayedAt: null,
+      });
+      expect(tables.games[0].last_played_at).toBeNull();
+    });
+
+    it('starts it from now when it is not told when, as an Undo from an older page', async () => {
+      const { client, tables } = stopped();
+      await applyStatusChange(client, 'u', { gameId: 1, status: 'playing', undo: true });
+      expect(Date.parse(tables.games[0].started_at as string)).toBeGreaterThan(Date.now() - 5000);
+      expect(tables.games[0].last_played_at).toBe('2026-11-17T15:15:00+00:00');
+    });
+
+    it("doesn't take a start date from a change that isn't an Undo", async () => {
+      const { client, tables } = stopped();
+      await applyStatusChange(client, 'u', {
+        gameId: 1,
+        status: 'playing',
+        startedAt: '2020-01-01T00:00:00+00:00',
+        lastPlayedAt: null,
+      });
+      expect(Date.parse(tables.games[0].started_at as string)).toBeGreaterThan(Date.now() - 5000);
+      expect(tables.games[0].last_played_at).toBe('2026-11-17T15:15:00+00:00');
+    });
+
+    it("doesn't take one for any other status", async () => {
+      const { client, tables } = stopped();
+      await applyStatusChange(client, 'u', {
+        gameId: 1,
+        status: 'wont_play',
+        undo: true,
+        startedAt: '2020-01-01T00:00:00+00:00',
+      });
+      expect(tables.games[0]).toMatchObject({ status: 'wont_play', started_at: null });
+    });
+  });
+
   it('says the game is gone if it was removed while the change was being saved', async () => {
     const { client, tables } = fakeSupabase({ games: [game(1, 'backlog')], playing_queue: [] });
     const rpc = client.rpc.bind(client);

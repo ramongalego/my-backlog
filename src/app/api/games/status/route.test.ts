@@ -110,3 +110,21 @@ it('passes an Undo on as one, and an ordinary change as not', async () => {
 
   expect((await change({ gameId: 7, status: 'backlog', undo: 'yes' })).status).toBe(400);
 });
+
+it('takes the dates an Undo puts back, and refuses ones that are not dates', async () => {
+  await change({
+    gameId: 7,
+    status: 'playing',
+    undo: true,
+    startedAt: '2026-11-13T13:57:21.123+00:00',
+    lastPlayedAt: null,
+  });
+  expect(applyStatusChange).toHaveBeenLastCalledWith(
+    expect.anything(),
+    user!.id,
+    expect.objectContaining({ startedAt: '2026-11-13T13:57:21.123+00:00', lastPlayedAt: null }),
+  );
+
+  const refused = await change({ gameId: 7, status: 'playing', undo: true, startedAt: 'soon' });
+  expect(refused.status).toBe(400);
+});

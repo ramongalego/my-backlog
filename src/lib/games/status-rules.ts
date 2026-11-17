@@ -11,7 +11,7 @@ interface GameUpdate {
   dropped_at?: string | null;
   notes?: string | null;
   rating?: number | null;
-  last_played_at?: string;
+  last_played_at?: string | null;
 }
 
 /**

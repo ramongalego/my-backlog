@@ -22,6 +22,12 @@ export async function updateGameStatus(
      * recording a second one, however long the toast waited to be pressed.
      */
     undo?: boolean;
+    /**
+     * With an Undo that starts the game again: when it had been started and
+     * last played, so it comes back as it was and not as started just now.
+     */
+    startedAt?: string | null;
+    lastPlayedAt?: string | null;
   },
 ): Promise<{ paused: { id: number; name: string }[] }> {
   const res = await fetch('/api/games/status', {
@@ -37,6 +43,8 @@ export async function updateGameStatus(
       ...(opts?.pausePlaying ? { pausePlaying: true } : {}),
       ...(opts?.queueAtTop ? { queueAtTop: true } : {}),
       ...(opts?.undo ? { undo: true } : {}),
+      ...(opts?.undo && opts.startedAt ? { startedAt: opts.startedAt } : {}),
+      ...(opts?.undo && opts.lastPlayedAt !== undefined ? { lastPlayedAt: opts.lastPlayedAt } : {}),
     }),
   });
 
