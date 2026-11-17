@@ -140,14 +140,15 @@ export interface AccountExport {
    * "added" (a game added by hand, or bought on Steam after the library was
    * imported), "status" (with the dates and rating saved with it), "edit" (a
    * date, the rating or the platform changed by itself), "queue" (it went on
-   * or came off the queue) or "playtime" (the hours). `changes` names each
-   * value that changed, as [before, after] (`queued` is whether it is on the
-   * queue),
-   * with every "before" null for a game being added; hours are in minutes,
-   * and dates are in UTC. Changes made within 30 seconds of each other are
-   * one entry, holding what they came to; a change that was undone leaves
-   * none. `at` is when it was logged. Kept from November 2026 on.
-   * (lib/account/history.ts reads time played from it.)
+   * or came off the queue), "favorite" (it became one of the favorites or
+   * stopped being one), "note" (it got a note or lost it) or "playtime" (the
+   * hours). `changes` names each value that changed, as [before, after]
+   * (`queued`, `favorite` and `noted` are whether it is on the queue, is a
+   * favorite and has a note), with every "before" null for a game being
+   * added; hours are in minutes, and dates are in UTC. Changes made within 30
+   * seconds of each other are one entry, holding what they came to; a change
+   * that was undone leaves none. `at` is when it was logged. Kept from
+   * November 2026 on. (lib/account/history.ts reads time played from it.)
    */
   history: { gameId: number; kind: string; changes: unknown; at: string }[];
   /**
