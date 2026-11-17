@@ -3,6 +3,9 @@
  */
 import type { NextRequest } from 'next/server';
 import { PATCH } from '@/app/api/games/manual/[id]/route';
+import { steamHoursOf } from '@/lib/server/steam-hours';
+
+jest.mock('@/lib/server/steam-hours', () => ({ steamHoursOf: jest.fn() }));
 
 const updates: Record<string, unknown>[] = [];
 // The game's hours saved so far, in minutes; null when it isn't found.
@@ -42,9 +45,21 @@ const saveHours = async (hoursPlayed: number) => {
   return res?.status;
 };
 
+const moveBackToSteam = async () => {
+  const res = await PATCH(
+    new Request('http://localhost/api/games/manual/7', {
+      method: 'PATCH',
+      body: JSON.stringify({ playOnSteam: true }),
+    }) as unknown as NextRequest,
+    { params: Promise.resolve({ id: '7' }) },
+  );
+  return res?.status;
+};
+
 beforeEach(() => {
   updates.length = 0;
   playtime = 300;
+  jest.mocked(steamHoursOf).mockReset().mockResolvedValue(null);
 });
 
 it('makes today the last-played date when you log more hours', async () => {
@@ -63,4 +78,43 @@ it("refuses a game that isn't on a console, or isn't yours", async () => {
   playtime = null;
   expect(await saveHours(6)).toBe(404);
   expect(updates).toHaveLength(0);
+});
+
+describe('moving a game back to Steam', () => {
+  it("saves Steam's hours and last-played date with the move, in one write", async () => {
+    jest.mocked(steamHoursOf).mockResolvedValue({
+      playtime_forever: 3050,
+      last_played_at: '2026-11-16T22:15:00.000Z',
+    });
+
+    expect(await moveBackToSteam()).toBe(200);
+
+    expect(steamHoursOf).toHaveBeenCalledWith(expect.anything(), expect.any(String), 7);
+    expect(updates).toEqual([
+      {
+        platform: 'PC',
+        igdb_id: null,
+        playtime_forever: 3050,
+        last_played_at: '2026-11-16T22:15:00.000Z',
+      },
+    ]);
+  });
+
+  it('saves a Steam total of none, and no last-played date, for a game never played there', async () => {
+    jest.mocked(steamHoursOf).mockResolvedValue({ playtime_forever: 0, last_played_at: null });
+    await moveBackToSteam();
+    expect(updates).toEqual([
+      { platform: 'PC', igdb_id: null, playtime_forever: 0, last_played_at: null },
+    ]);
+  });
+
+  it("still moves the game when Steam can't say, leaving its hours for the next sync", async () => {
+    expect(await moveBackToSteam()).toBe(200);
+    expect(updates).toEqual([{ platform: 'PC', igdb_id: null }]);
+  });
+
+  it("doesn't ask Steam when only the hours are being saved", async () => {
+    await saveHours(6);
+    expect(steamHoursOf).not.toHaveBeenCalled();
+  });
 });

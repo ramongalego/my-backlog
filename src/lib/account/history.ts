@@ -8,10 +8,17 @@ export interface HistoryEvent {
    * `added`: the game arrived, and `changes` is what it started with (every
    * "before" null). `status`: its status moved, with any dates and rating
    * saved with it. `edit`: a date, the rating or the platform changed by
-   * itself. `queue`: it went on the queue or came off it (`queued`), and
-   * nothing else. `playtime`: only the hours changed.
+   * itself. `queue`: it went on the queue or came off it (`queued`).
+   * `favorite`: it became one of the favorites or stopped being one.
+   * `note`: it got a note or lost it (`noted`: never the note's words).
+   * `playtime`: only the hours changed. An event of one kind can carry the
+   * others' values too, when they changed in the same sitting.
+   *
+   * To count finishes, count a finish date being set (`finished_at` going to
+   * a new day), not the status becoming "finished": a game moved off Finished
+   * by mistake and back keeps its date, and that is the same finish.
    */
-  kind: 'added' | 'status' | 'edit' | 'queue' | 'playtime';
+  kind: 'added' | 'status' | 'edit' | 'queue' | 'favorite' | 'note' | 'playtime';
   /** Each value that changed, as [before, after]. Hours are in minutes. */
   changes: Record<string, [unknown, unknown]>;
   /** When it was logged, which can be days after it happened. */
@@ -36,34 +43,26 @@ interface Play {
  * played is that total going up. Not every change to it is play:
  * - the hours a game arrives with were played before it was here;
  * - moving a game to another platform replaces its hours (a Steam game moved
- *   to a console takes the hours entered for the console, and Steam's come
- *   back when it is moved back), so the first total after a move is where
- *   counting starts again;
- * - a total that goes down is a correction.
+ *   to a console takes the hours entered for the console, and Steam's are
+ *   saved with the move when it is moved back), so hours that change in the
+ *   same event as the platform are the new platform's total;
+ * - a total that goes down is a correction, and one that comes from or goes
+ *   to no value says nothing.
  *
  * Hours can change in an event of any kind: a status change saved in the same
- * sitting as a Steam refresh carries both.
+ * sitting as a Steam refresh carries both. Hours logged after a move that
+ * kept them (one console to another) are play like any other.
+ *
+ * Two things this can't see. Steam counts tools and soundtracks as games, and
+ * their hours change too: leave out events of a game whose `type` isn't
+ * "game". And if Steam couldn't be asked when a game was moved back to it,
+ * its total arrives with the next sync, by itself, and reads as played then.
  */
 export function playsOf(events: readonly HistoryEvent[]): Play[] {
   const plays: Play[] = [];
-  // Moved to another platform, with the hours there not yet known.
-  let startingAgain = false;
   for (const event of events) {
     const hours = event.changes.playtime_forever;
-    if (event.kind === 'added') {
-      startingAgain = false;
-      continue;
-    }
-    if ('platform' in event.changes) {
-      // Hours saved with the move are the new platform's starting total.
-      startingAgain = !hours;
-      continue;
-    }
-    if (!hours) continue;
-    if (startingAgain) {
-      startingAgain = false;
-      continue;
-    }
+    if (!hours || event.kind === 'added' || 'platform' in event.changes) continue;
     const [before, after] = hours;
     if (typeof before !== 'number' || typeof after !== 'number' || after <= before) continue;
     const playedOn = event.changes.last_played_at?.[1];

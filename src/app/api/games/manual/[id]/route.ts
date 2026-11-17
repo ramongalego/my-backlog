@@ -5,6 +5,7 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { gameIdSchema } from '@/lib/validations/common';
 import { updateManualGameSchema } from '@/lib/validations/games';
 import { STEAM_PLATFORM } from '@/lib/games/consoles';
+import { steamHoursOf } from '@/lib/server/steam-hours';
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -30,8 +31,7 @@ async function authorize(request: NextRequest, { params }: Context) {
 
 /**
  * Saves the hours played, which consoles don't report, or moves a Steam game
- * you'd moved to a console back to Steam. Its Steam playtime returns with the
- * next sync, which no longer skips it.
+ * you'd moved to a console back to Steam, with the hours Steam has for it.
  */
 export async function PATCH(request: NextRequest, context: Context) {
   const auth = await authorize(request, context);
@@ -69,11 +69,21 @@ export async function PATCH(request: NextRequest, context: Context) {
     played = minutes > current.playtime_forever;
   }
 
+  // Back on Steam, its hours are Steam's again. They are asked for now and
+  // saved with the move, in one write: the history reads hours that change
+  // along with the platform as the other platform's total, and hours that
+  // change by themselves later as time played. If Steam can't say just now,
+  // the game moves anyway and the next sync brings them.
+  const steam =
+    'playOnSteam' in parsed.data
+      ? await steamHoursOf(auth.supabase, auth.userId, auth.gameId)
+      : null;
+
   const query =
     'playOnSteam' in parsed.data
       ? auth.supabase
           .from('games')
-          .update({ platform: STEAM_PLATFORM, igdb_id: null })
+          .update({ platform: STEAM_PLATFORM, igdb_id: null, ...steam })
           .eq('source', 'steam')
       : auth.supabase
           .from('games')

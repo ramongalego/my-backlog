@@ -65,14 +65,67 @@ describe('playsOf', () => {
       }),
       // An hour on the console.
       event('playtime', { playtime_forever: hours(300, 360) }),
-      // Played on Steam again: the console's hours stay until the next sync.
-      event('edit', { platform: ['Xbox', 'PC'] }),
-      // The sync brings Steam's total back: not 45 hours played overnight.
-      event('playtime', { playtime_forever: hours(360, 3050) }),
+      // Played on Steam again: Steam's total is saved with the move. Not 45
+      // hours played overnight.
+      event('edit', { platform: ['Xbox', 'PC'], playtime_forever: hours(360, 3050) }),
       // Then real play on Steam.
       event('playtime', { playtime_forever: hours(3050, 3110) }),
     ]);
     expect(plays.map((play) => play.minutes)).toEqual([60, 60]);
+  });
+
+  it('counts the hours logged after a move that kept them: one console to another', () => {
+    expect(
+      playsOf([
+        event('edit', { platform: ['PS4', 'PS5'] }),
+        event('playtime', { playtime_forever: hours(300, 420) }),
+      ]).map((play) => play.minutes),
+    ).toEqual([120]);
+  });
+
+  it('counts the first hours logged on a console for a Steam game that had none', () => {
+    expect(
+      playsOf([
+        event('edit', { platform: ['PC', 'Switch'] }),
+        event('playtime', { playtime_forever: hours(0, 720) }),
+      ]).map((play) => play.minutes),
+    ).toEqual([720]);
+  });
+
+  it('counts the first session on Steam for a game moved back with no hours either side', () => {
+    expect(
+      playsOf([
+        event('edit', { platform: ['Switch', 'PC'] }),
+        event('playtime', { playtime_forever: hours(0, 90) }),
+      ]).map((play) => play.minutes),
+    ).toEqual([90]);
+  });
+
+  it('counts what was played across a move and a move back in one sitting', () => {
+    // The history folds the two moves away and keeps the hours as they ended.
+    expect(
+      playsOf([event('playtime', { playtime_forever: hours(3000, 3050) })]).map(
+        (play) => play.minutes,
+      ),
+    ).toEqual([50]);
+  });
+
+  it('says nothing about hours that come from or go to no value', () => {
+    expect(
+      playsOf([
+        event('playtime', { playtime_forever: [300, null] }),
+        event('playtime', { playtime_forever: [null, 3050] }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('counts hours that changed along with a favorite or a note', () => {
+    expect(
+      playsOf([
+        event('favorite', { favorite: [false, true], playtime_forever: hours(100, 130) }),
+        event('note', { noted: [false, true], playtime_forever: hours(130, 190) }),
+      ]).map((play) => play.minutes),
+    ).toEqual([30, 60]);
   });
 
   it("doesn't count more hours entered for a console than Steam had, when the game is moved", () => {
