@@ -62,6 +62,12 @@ export interface ActivityEntry {
   day: string | null;
   /** Your rating, where one of them is about it: a finish, a drop, a rating. */
   rating: number | null;
+  /**
+   * A bulk move (Games, Select): the games moved the same way at the same
+   * moment, each its own entry, newest first. The entry itself says what was
+   * done to all of them, with the first game's id, name and art.
+   */
+  games?: ActivityEntry[];
 }
 
 /** One event of the history, as the Profile page loads it. */
@@ -94,6 +100,12 @@ interface Item {
 
 /** How many entries the list holds at most: it is what was done lately, not all of it. */
 export const RECENT_ACTIVITY = 50;
+
+/**
+ * This many games or more moved the same way at the same moment are one
+ * bulk move. Fewer read as well one by one.
+ */
+const BULK_AT_LEAST = 3;
 
 /** Things done to one game this close together, with nothing else between, are one entry. */
 const SAME_GO_MS = 12 * 60 * 60 * 1000;
@@ -159,7 +171,8 @@ function linesOf(newestFirst: Item[]): ActivityLine[] {
  * Everything to show, newest first, by when each thing was logged (a game
  * finished or dropped before there was a history, by its day). The game
  * being played has its line where its start falls, like any other. Lines
- * about one game that follow each other within twelve hours are one entry. A
+ * about one game that follow each other within twelve hours are one entry,
+ * and so is a bulk move: three or more games moved the same way at once. A
  * hidden game is left out, as is a game that is no longer in the library,
  * and a finished or dropped game saved without a date has no place in time.
  */
@@ -248,10 +261,10 @@ export function recentActivity(
     else runs.push([item]);
   }
 
-  return runs.slice(0, RECENT_ACTIVITY).map((run) => {
+  const made = runs.map((run) => {
     const [newest] = run;
     const { game } = newest;
-    return {
+    const entry: ActivityEntry = {
       // The run's first line: more done to the game since keeps the row its own.
       key: run.at(-1)!.key,
       id: game.id,
@@ -263,7 +276,42 @@ export function recentActivity(
       day: newest.day,
       rating: run.find((item) => item.rating !== null)?.rating ?? null,
     };
+    // One thing done to one game, logged at a moment: what a bulk move is made of.
+    return { entry, at: run.length === 1 && newest.at.includes('T') ? newest.at : null };
   });
+
+  // A bulk move is one entry: games that follow each other, each with one
+  // line of the same kind (and day), logged at the same moment. A bulk move
+  // is saved in one go, so its games share the moment to the microsecond.
+  const sameMove = (a: (typeof made)[number], b: (typeof made)[number]) =>
+    a.at !== null &&
+    a.at === b.at &&
+    a.entry.lines[0].kind === b.entry.lines[0].kind &&
+    a.entry.lines[0].on === b.entry.lines[0].on;
+  const entries: ActivityEntry[] = [];
+  for (let i = 0; i < made.length;) {
+    let end = i + 1;
+    while (end < made.length && sameMove(made[i], made[end])) end++;
+    const group = made.slice(i, end).map((one) => one.entry);
+    if (group.length >= BULK_AT_LEAST) {
+      const [first] = group;
+      entries.push({
+        ...first,
+        key: `bulk-${group.at(-1)!.key}`,
+        name: `${group.length} games`,
+        // What was done to all of them; each game keeps its own rating.
+        lines: [
+          { kind: first.lines[0].kind, ...(first.lines[0].on ? { on: first.lines[0].on } : {}) },
+        ],
+        rating: null,
+        games: group,
+      });
+    } else {
+      entries.push(...group);
+    }
+    i = end;
+  }
+  return entries.slice(0, RECENT_ACTIVITY);
 }
 
 /** "Oct 9", or "Oct 9, 2025" for a day in another year. */

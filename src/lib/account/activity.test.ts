@@ -510,6 +510,96 @@ describe('recentActivity, several things about one game', () => {
   });
 });
 
+describe('recentActivity, a bulk move', () => {
+  const library = Array.from({ length: 6 }, (_, i) => game({ id: i + 1, name: `Game ${i + 1}` }));
+  /** Games marked Won't Play, each at the given moment. */
+  const wontPlay = (ids: number[], when: string) =>
+    ids.map((id) => event(id, 'status', { status: ['backlog', 'wont_play'] }, when));
+  const moment = '2026-11-17T23:43:38.586384+00:00';
+
+  it('is one entry: what was done to all of them, the games inside it, newest first', () => {
+    const entries = recentActivity(library, null, wontPlay([1, 2, 3, 4], moment));
+    expect(entries).toHaveLength(1);
+    const [bulk] = entries;
+    expect(bulk).toMatchObject({
+      name: '4 games',
+      lines: [{ kind: 'wont_play' }],
+      day: toLocalIsoDate(new Date(moment)),
+      rating: null,
+    });
+    // The newest first, as the list is: the last event logged leads.
+    expect(bulk.games!.map((one) => one.id)).toEqual([4, 3, 2, 1]);
+    expect(bulk.games!.every((one) => kinds(one).join() === 'wont_play')).toBe(true);
+    // The first game's art.
+    expect(bulk.id).toBe(4);
+  });
+
+  it('needs three games: two moved together stay two', () => {
+    const entries = recentActivity(library, null, wontPlay([1, 2], moment));
+    expect(entries.map((e) => [e.id, e.games])).toEqual([
+      [2, undefined],
+      [1, undefined],
+    ]);
+  });
+
+  it("doesn't join games moved a moment apart: each move stands alone", () => {
+    const entries = recentActivity(library, null, [
+      ...wontPlay([1, 2, 3], moment),
+      ...wontPlay([4], '2026-11-17T23:42:04.536395+00:00'),
+    ]);
+    expect(entries.map((e) => e.games?.length ?? e.name)).toEqual([3, 'Game 4']);
+  });
+
+  it("doesn't join games moved the same moment in different ways", () => {
+    const entries = recentActivity(library, null, [
+      ...wontPlay([1, 2, 3], moment),
+      event(4, 'status', { status: ['backlog', 'hidden'] }, moment),
+      event(5, 'status', { status: ['wont_play', 'backlog'] }, moment),
+    ]);
+    expect(entries.map((e) => e.games?.length ?? kinds(e).join())).toEqual(['backlog', 3]);
+  });
+
+  it("leaves a game with more than one line out of it: that isn't one thing done", () => {
+    const entries = recentActivity(library, null, [
+      event(1, 'queue', { queued: [false, true] }, '2026-11-17T23:40:00+00:00'),
+      ...wontPlay([1, 2, 3, 4], moment),
+    ]);
+    // Game 1 was queued minutes before, so its row holds both.
+    expect(entries.map((e) => e.games?.map((one) => one.id) ?? kinds(e))).toEqual([
+      [4, 3, 2],
+      ['queued', 'wont_play'],
+    ]);
+  });
+
+  it('counts as one of the fifty', () => {
+    const many = Array.from({ length: 60 }, (_, i) => game({ id: i + 1 }));
+    const entries = recentActivity(many, null, [
+      ...many
+        .slice(0, 10)
+        .map((one) => event(one.id, 'status', { status: ['backlog', 'wont_play'] }, moment)),
+      ...many
+        .slice(10)
+        .map((one, i) =>
+          event(
+            one.id,
+            'queue',
+            { queued: [false, true] },
+            `2026-11-1${i % 7}T0${i % 9}:00:00+00:00`,
+          ),
+        ),
+    ]);
+    expect(entries).toHaveLength(RECENT_ACTIVITY);
+    expect(entries.filter((e) => e.games)).toHaveLength(1);
+  });
+
+  it('is never made of what the games say about a time before the history', () => {
+    const before = [1, 2, 3].map((id) => finished(id, '2026-03-01'));
+    const entries = recentActivity(before, null);
+    expect(entries.every((e) => !e.games)).toBe(true);
+    expect(entries).toHaveLength(3);
+  });
+});
+
 describe('activityDay', () => {
   const now = new Date(2026, 10, 15);
 

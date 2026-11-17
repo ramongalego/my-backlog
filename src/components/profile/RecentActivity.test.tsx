@@ -78,7 +78,7 @@ it('says what happened to each game, when, and where it was played', () => {
   const [playing, finished, dropped] = rows();
   // A line like any other: what happened, with no "since", then that it is
   // the one being played. Its day is beside it.
-  expect(playing).toHaveTextContent(/^Ocarina of Time Playing now on Switch 2$/);
+  expect(playing).toHaveTextContent(/^Ocarina of Time Started playing on Switch 2$/);
   expect(finished).toHaveTextContent(/^Fire Emblem: Fortune's Weave Finished on Switch 2 9\/10$/);
   // A Steam game played on Steam names no platform, as on its card.
   expect(dropped).toHaveTextContent(/^Super Meat Boy Dropped$/);
@@ -96,7 +96,7 @@ it('colors each by its status, as everywhere else', () => {
       ]}
     />,
   );
-  expect(screen.getByText('Playing now')).toHaveClass('text-accent-400');
+  expect(screen.getByText('Started playing')).toHaveClass('text-accent-400');
   expect(screen.getByText('Finished')).toHaveClass('text-emerald-400');
   expect(screen.getByText('Dropped')).toHaveClass('text-rose-400');
 });
@@ -109,13 +109,12 @@ it('keeps orange for the game being played: a start of one that is not is neutra
     />,
   );
   const [playing, started] = rows();
-  expect(within(playing).getByText('Playing now')).toHaveClass('text-accent-400');
+  expect(within(playing).getByText('Started playing')).toHaveClass('text-accent-400');
   expect(within(started).getByText('Started playing')).toHaveClass('text-ink-300');
   expect(within(started).getByText('Started playing')).not.toHaveClass('text-accent-400');
-  expect(within(playing).queryByText('Started playing')).not.toBeInTheDocument();
 });
 
-it('says the game being played is, in words, and not one started once and since stopped', () => {
+it('says the game being played started, in the past tense like every line', () => {
   render(
     <RecentActivity
       onOpen={onOpen}
@@ -126,14 +125,14 @@ it('says the game being played is, in words, and not one started once and since 
     />,
   );
   const [playing, started] = rows();
-  expect(playing).toHaveTextContent(/^Hades Playing now$/);
+  expect(playing).toHaveTextContent(/^Hades Started playing$/);
   expect(started).toHaveTextContent(/^Celeste Started playing$/);
-  expect(within(started).queryByText('Playing now')).not.toBeInTheDocument();
+  expect(screen.queryByText('Playing now')).not.toBeInTheDocument();
   // In the row's name too.
-  expect(screen.getByRole('button', { name: 'Hades Playing now' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Hades Started playing' })).toBeInTheDocument();
 });
 
-it('says "Playing now" on the line of the start only, in a row with more lines', () => {
+it('colors the start of the game being played only, in a row with more lines', () => {
   render(
     <RecentActivity
       onOpen={onOpen}
@@ -148,14 +147,15 @@ it('says "Playing now" on the line of the start only, in a row with more lines',
     />,
   );
   const [row] = rows();
-  expect(lineOf(row, 'Playing now')).toHaveTextContent(/^Playing now$/);
-  expect(within(row).getAllByText('Playing now')).toHaveLength(1);
-  expect(row).toHaveTextContent(/^Hades Added to queue Playing now Played 45m on Switch$/);
+  expect(lineOf(row, 'Started playing')).toHaveTextContent(/^Started playing$/);
+  expect(within(row).getByText('Started playing')).toHaveClass('text-accent-400');
+  expect(within(row).getByText('Added to queue')).not.toHaveClass('text-accent-400');
+  expect(row).toHaveTextContent(/^Hades Added to queue Started playing Played 45m on Switch$/);
 });
 
 it('shows a game being played without a day when its start is not known', () => {
   render(<RecentActivity onOpen={onOpen} entries={[entry({ kind: 'playing', day: null })]} />);
-  expect(rows()[0]).toHaveTextContent(/^Test Game Playing now$/);
+  expect(rows()[0]).toHaveTextContent(/^Test Game Started playing$/);
 });
 
 it('leads on to the Diary', () => {
@@ -492,7 +492,7 @@ describe('the days', () => {
   it('carries a day on under the same date when Show more adds to it', () => {
     const many = Array.from({ length: 8 }, (_, i) => on(`event-${i + 1}`, '2026-11-17'));
     render(<RecentActivity onOpen={onOpen} entries={many} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Show 2 more' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
     expect(days()).toEqual([activityDay('2026-11-17')]);
     expect(rows()).toHaveLength(8);
   });
@@ -503,8 +503,7 @@ describe('a long list', () => {
     Array.from({ length: count }, (_, i) =>
       entry({ key: `event-${i}`, id: i + 1, name: `Game ${i + 1}`, kind: 'added' }),
     );
-  // "Show 6 more": it says how many the next press adds.
-  const showMore = () => screen.queryByRole('button', { name: /^Show \d+ more$/ });
+  const showMore = () => screen.queryByRole('button', { name: 'Show more' });
   const showFewer = () => screen.queryByRole('button', { name: 'Show fewer' });
   const heading = () => screen.getByRole('heading', { level: 2, name: 'Recent activity' });
 
@@ -537,23 +536,14 @@ describe('a long list', () => {
     expect(screen.getByRole('button', { name: /^Game 13 / })).toHaveFocus();
   });
 
-  it('says how many the next press adds: six, or fewer when fewer are left', () => {
-    render(<RecentActivity onOpen={onOpen} entries={many(14)} />);
-    expect(showMore()).toHaveAccessibleName('Show 6 more');
+  it('says "Show more" however many are left, and adds what there is', () => {
+    render(<RecentActivity onOpen={onOpen} entries={many(8)} />);
+    expect(showMore()).toHaveAccessibleName('Show more');
+    expect(screen.queryByRole('button', { name: /^Show \d/ })).not.toBeInTheDocument();
 
     fireEvent.click(showMore()!);
-    expect(showMore()).toHaveAccessibleName('Show 2 more');
-  });
-
-  it('says "Show 2 more" when two are left, and "Show 1 more" for one', () => {
-    const { unmount } = render(<RecentActivity onOpen={onOpen} entries={many(8)} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Show 2 more' }));
     expect(rows()).toHaveLength(8);
     expect(showMore()).not.toBeInTheDocument();
-    unmount();
-
-    render(<RecentActivity onOpen={onOpen} entries={many(7)} />);
-    expect(showMore()).toHaveAccessibleName('Show 1 more');
   });
 
   it('is a text button with a chevron, not an underlined link', () => {
@@ -598,8 +588,8 @@ describe('a long list', () => {
     expect(rows()).toHaveLength(6);
     expect(screen.getByRole('button', { name: /^Game 6 / })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Game 7 / })).not.toBeInTheDocument();
-    // As it began: Show more adds six again, and there is nothing to go back from.
-    expect(showMore()).toHaveAccessibleName('Show 6 more');
+    // As it began: Show more is back, and there is nothing to go back from.
+    expect(showMore()).toBeInTheDocument();
     expect(showFewer()).not.toBeInTheDocument();
   });
 
@@ -632,5 +622,64 @@ describe('a long list', () => {
 
     rerender(<RecentActivity onOpen={onOpen} entries={many(15)} />);
     expect(screen.getByRole('link', { name: 'Diary' })).toHaveFocus();
+  });
+});
+
+describe('a bulk move', () => {
+  const games = ['The Vagrant', 'Wizard of Legend', 'Hacknet'].map((name, i) =>
+    entry({ key: `event-${10 + i}`, id: 10 + i, name, kind: 'wont_play', day: '2026-11-17' }),
+  );
+  const bulk = entry({
+    key: 'bulk-event-12',
+    id: 10,
+    name: '3 games',
+    kind: 'wont_play',
+    day: '2026-11-17',
+    games,
+  });
+  const toggle = () => screen.getByRole('button', { name: "3 games Marked Won't Play" });
+
+  it('is one row: how many games and what was done to them, the games folded away', () => {
+    render(<RecentActivity onOpen={onOpen} entries={[bulk]} />);
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /^The Vagrant/ })).not.toBeInTheDocument();
+    // The count on the art is drawn, not read: the row's name says it.
+    expect(toggle().querySelector('[data-chip="3"]')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('opens to the games, each its own row that opens its dialog, and folds them away again', () => {
+    render(<RecentActivity onOpen={onOpen} entries={[bulk]} />);
+    fireEvent.click(toggle());
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true');
+    const list = document.getElementById(toggle().getAttribute('aria-controls')!)!;
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    // Opening it opens no dialog.
+    expect(onOpen).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: "Hacknet Marked Won't Play" }));
+    expect(onOpen).toHaveBeenCalledWith(12);
+
+    fireEvent.click(toggle());
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /^Hacknet/ })).not.toBeInTheDocument();
+  });
+
+  it('counts as one of the six rows', () => {
+    const others = Array.from({ length: 5 }, (_, i) =>
+      entry({ key: `event-${i}`, id: i + 1, name: `Game ${i + 1}`, kind: 'added' }),
+    );
+    render(<RecentActivity onOpen={onOpen} entries={[bulk, ...others]} />);
+    fireEvent.click(toggle());
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Game 5 / })).toBeInTheDocument();
+  });
+
+  it('takes the focus when it is the first row Show more adds', () => {
+    const before = Array.from({ length: 6 }, (_, i) =>
+      entry({ key: `event-${i}`, id: i + 1, name: `Game ${i + 1}`, kind: 'added' }),
+    );
+    render(<RecentActivity onOpen={onOpen} entries={[...before, bulk]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(toggle()).toHaveFocus();
   });
 });

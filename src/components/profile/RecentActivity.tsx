@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useRef, useState } from 'react';
+import { Fragment, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronDown,
@@ -55,9 +55,10 @@ const LINE: Record<
   ActivityKind,
   { icon: LucideIcon; text: string; what: (line: ActivityLine) => string }
 > = {
-  // The game being played says so, in the playing color and in its own
-  // words: a start of one that isn't any more is "Started playing", neutral.
-  playing: { ...STATUS_STYLE.playing, what: () => 'Playing now' },
+  // Every line is something done, in the past tense: the game being played
+  // has its start in the playing color, a start of one that isn't any more
+  // is neutral.
+  playing: { ...STATUS_STYLE.playing, what: () => 'Started playing' },
   started: { icon: STATUS_STYLE.playing.icon, text: NEUTRAL, what: () => 'Started playing' },
   finished: { ...STATUS_STYLE.finished, what: () => 'Finished' },
   dropped: { ...STATUS_STYLE.dropped, what: () => 'Dropped' },
@@ -146,6 +147,71 @@ function Row({
           </span>
         </span>
       </button>
+    </li>
+  );
+}
+
+/**
+ * A bulk move (Games, Select) as one row: how many games and what was done to
+ * them, with the first one's art and the count on it. Pressing it opens the
+ * games under it, each its own row that opens its dialog, and pressing it
+ * again folds them away.
+ */
+function BulkRow({
+  entry,
+  games,
+  onOpen,
+  buttonRef,
+}: {
+  entry: ActivityEntry;
+  games: ActivityEntry[];
+  onOpen: (gameId: number) => void;
+  buttonRef?: (button: HTMLElement | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const { icon: Icon, text, what } = LINE[entry.lines[0].kind];
+  const on = entry.lines[0].on;
+  return (
+    <li>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        aria-controls={listId}
+        className={`${ACTIVITY_ROW} group -mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 text-left transition-colors hover:bg-ink-800/50`}
+      >
+        {/* The first game's art, with how many there are on it: the count is
+            said in the row's text, so the chip is drawn, not read. */}
+        <CoverThumb src={entry.header_image} alt="" interactive>
+          <span
+            aria-hidden="true"
+            data-chip={games.length}
+            className="absolute right-1.5 bottom-1.5 rounded-md bg-ink-950/90 px-1.5 py-0.5 text-xs font-medium text-ink-100 tabular-nums before:content-[attr(data-chip)]"
+          />
+        </CoverThumb>
+        <span className="block min-w-0 flex-1">
+          <span className="block font-medium text-ink-100 transition-colors group-hover:text-ink-50">
+            {entry.name}
+          </span>{' '}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
+            <span className={`inline-flex items-center gap-1 ${text}`}>
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {what(entry.lines[0])}
+            </span>{' '}
+            {on && <span>{activityDay(on)}</span>}
+          </span>
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-ink-400 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      {/* Indented under the row it opened from, a lighter rule between them. */}
+      <ul id={listId} hidden={!open} className="divide-y divide-ink-800/40 pl-6 sm:pl-10">
+        {open && games.map((game) => <Row key={game.key} entry={game} onOpen={onOpen} />)}
+      </ul>
     </li>
   );
 }
@@ -246,16 +312,26 @@ export function RecentActivity({
                   <span className={ACTIVITY_DATE} aria-hidden="true" />
                 )}
                 <ul className={ACTIVITY_ROWS}>
-                  {day.rows.map(({ entry, index }) => (
-                    // By what it is about: a row (and the focus on it) stays
-                    // when its game's dialog changes what happened to it.
-                    <Row
-                      key={entry.key}
-                      entry={entry}
-                      onOpen={onOpen}
-                      buttonRef={focusIfNew(index)}
-                    />
-                  ))}
+                  {day.rows.map(({ entry, index }) =>
+                    entry.games ? (
+                      <BulkRow
+                        key={entry.key}
+                        entry={entry}
+                        games={entry.games}
+                        onOpen={onOpen}
+                        buttonRef={focusIfNew(index)}
+                      />
+                    ) : (
+                      // By what it is about: a row (and the focus on it) stays
+                      // when its game's dialog changes what happened to it.
+                      <Row
+                        key={entry.key}
+                        entry={entry}
+                        onOpen={onOpen}
+                        buttonRef={focusIfNew(index)}
+                      />
+                    ),
+                  )}
                 </ul>
               </div>
             ))}
@@ -266,7 +342,7 @@ export function RecentActivity({
             <div className="mt-2 flex flex-wrap gap-x-5">
               {more > 0 && (
                 <button type="button" onClick={showMore} className={DISCLOSE}>
-                  Show {more} more
+                  Show more
                   <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               )}
