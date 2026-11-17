@@ -4,6 +4,7 @@
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/suggest/route';
 import { fetchAllRows } from '@/lib/supabase/paginate';
+import { recordPick } from '@/lib/server/picks';
 
 type Row = Record<string, unknown>;
 
@@ -36,6 +37,7 @@ jest.mock('@/lib/server/rate-limit', () => ({
     };
   },
 }));
+jest.mock('@/lib/server/picks', () => ({ recordPick: jest.fn() }));
 jest.mock('openai', () =>
   jest.fn().mockImplementation(() => ({ chat: { completions: { create } } })),
 );
@@ -137,6 +139,7 @@ beforeEach(() => {
   refused = [];
   limitsChecked.length = 0;
   create.mockReset().mockImplementation(answerWithFirstOffered());
+  jest.mocked(recordPick).mockReset().mockResolvedValue(41);
   library();
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -242,6 +245,75 @@ describe('the pick', () => {
     );
     const { data } = await (await suggest()).json();
     expect(data.reasoning).toBe('Start tonight. More at today.');
+  });
+});
+
+describe('keeping the pick', () => {
+  it('keeps it with the answers, the reason, the model and what it was for, and returns its id', async () => {
+    const res = await suggest({ mood: 'relaxed', energy: 'low', time: 'long', mode: 'queue' });
+    const { data } = await res.json();
+
+    expect(data.pickId).toBe(41);
+    expect(recordPick).toHaveBeenCalledTimes(1);
+    expect(recordPick).toHaveBeenCalledWith({
+      userId: 'user-1',
+      gameId: data.game.id,
+      mode: 'queue',
+      attempt: 1,
+      questions: {
+        answers: { mood: 'relaxed', energy: 'low', time: 'long' },
+        reasoning: data.reasoning,
+        model: expect.any(String),
+      },
+    });
+  });
+
+  it('is a pick to play when the request does not say what it is for', async () => {
+    await suggest();
+    expect(jest.mocked(recordPick).mock.calls[0][0].mode).toBe('play');
+  });
+
+  it('counts the games passed on this sitting: the pick after two rerolls is the third', async () => {
+    await suggest({ mood: 'relaxed', energy: 'low', time: 'long', excludeGameIds: [1, 2] });
+    expect(jest.mocked(recordPick).mock.calls[0][0].attempt).toBe(3);
+  });
+
+  it('refuses a request for something a pick cannot be for', async () => {
+    const res = await suggest({ mood: 'relaxed', energy: 'low', time: 'long', mode: 'later' });
+    expect(res.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
+    expect(recordPick).not.toHaveBeenCalled();
+  });
+
+  it("still gives the pick when it couldn't be kept", async () => {
+    jest.mocked(recordPick).mockResolvedValue(null);
+    const res = await suggest();
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.game.name).toBeTruthy();
+    expect(data.pickId).toBeNull();
+  });
+
+  it('keeps nothing when no pick was made', async () => {
+    create.mockRejectedValue(new Error('down'));
+    expect((await suggest()).status).toBe(503);
+
+    refused = ['suggestion:user-1'];
+    expect((await suggest()).status).toBe(429);
+
+    user = null;
+    expect((await suggest()).status).toBe(401);
+
+    expect(recordPick).not.toHaveBeenCalled();
+  });
+
+  it('keeps one pick when the model had to be asked twice', async () => {
+    create.mockImplementationOnce(async () => ({
+      choices: [{ message: { content: 'not json' } }],
+    }));
+    expect((await suggest()).status).toBe(200);
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(recordPick).toHaveBeenCalledTimes(1);
   });
 });
 

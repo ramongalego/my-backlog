@@ -58,7 +58,7 @@ interface Request {
   op: 'exec' | 'query' | 'close';
   sql?: string;
   params?: unknown[];
-  as?: { role: 'authenticated' | 'anon'; userId?: string; timeZone?: string };
+  as?: { role: 'authenticated' | 'anon' | 'service_role'; userId?: string; timeZone?: string };
 }
 
 export interface TestDatabase {
@@ -80,6 +80,11 @@ export interface TestDatabase {
   ): Promise<T[]>;
   /** Runs one statement as a signed-out visitor. */
   asVisitor<T = Row>(sql: string, params?: unknown[]): Promise<T[]>;
+  /**
+   * Runs one statement as the app's server does with its own key: the
+   * `service_role` role, which row-level security doesn't apply to.
+   */
+  asServer<T = Row>(sql: string, params?: unknown[]): Promise<T[]>;
   close(): Promise<void>;
 }
 
@@ -130,6 +135,8 @@ export async function createDatabase(): Promise<TestDatabase> {
       }) as Promise<T[]>,
     asVisitor: <T>(sql: string, params?: unknown[]) =>
       send({ op: 'query', sql, params, as: { role: 'anon' } }) as Promise<T[]>,
+    asServer: <T>(sql: string, params?: unknown[]) =>
+      send({ op: 'query', sql, params, as: { role: 'service_role' } }) as Promise<T[]>,
     close: async () => {
       await send({ op: 'close' });
       await worker.terminate();

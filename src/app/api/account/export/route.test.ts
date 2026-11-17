@@ -94,6 +94,22 @@ beforeEach(() => {
         created_at: '2026-03-20T21:00:00Z',
       },
     ],
+    game_picks: [
+      {
+        game_id: 1,
+        kind: 'questions',
+        mode: 'play',
+        mood: 'relaxed',
+        energy: 'low',
+        time: 'short',
+        attempt: 1,
+        reasoning: 'Short and gentle.',
+        model: 'a-model',
+        outcome: 'played',
+        created_at: '2026-03-01T20:00:00Z',
+        answered_at: '2026-03-01T20:00:07Z',
+      },
+    ],
   };
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -134,6 +150,22 @@ it('sends everything as a JSON file to download, never cached', async () => {
       at: '2026-03-20T21:00:00Z',
     },
   ]);
+  expect(data.picks).toEqual([
+    {
+      gameId: 1,
+      kind: 'questions',
+      for: 'play',
+      mood: 'relaxed',
+      energy: 'low',
+      time: 'short',
+      attempt: 1,
+      reason: 'Short and gentle.',
+      model: 'a-model',
+      outcome: 'played',
+      at: '2026-03-01T20:00:00Z',
+      answeredAt: '2026-03-01T20:00:07Z',
+    },
+  ]);
 });
 
 it('sends the games as a CSV file when asked for one', async () => {
@@ -154,6 +186,7 @@ it("reads only the player's own rows, in every table", async () => {
     'service:support_tickets',
     'user:favorite_games',
     'user:game_events',
+    'user:game_picks',
     'user:games',
     'user:player_insights',
     'user:playing_queue',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,15 +11,22 @@ import { SuggestionWizard } from './SuggestionWizard';
 import { SuggestionResult } from './SuggestionResult';
 import { SuggestionLoading } from './SuggestionLoading';
 import { SuggestionError } from './SuggestionError';
-import type { SuggestionResult as Suggestion } from '@/lib/suggest/types';
+import type { PickOutcome, SuggestionResult as Suggestion } from '@/lib/suggest/types';
 import type { QueueItem } from '@/types/games';
 import { findRandomBacklogGame, RANDOM_ROLL_MS, type RandomGame } from '@/lib/client/random-pick';
+import { recordPickOutcome, recordRandomPick } from '@/lib/client/picks';
 import { prefersReducedMotion } from '@/lib/motion';
 
 /** Leaving it to chance: rolling, then the game it landed on (or why it couldn't). */
 type Chance =
   | { phase: 'rolling' }
-  | { phase: 'result'; game: RandomGame; roll: number }
+  | {
+      phase: 'result';
+      game: RandomGame;
+      roll: number;
+      /** The pick as the server kept it: its id, or null when it couldn't be kept. */
+      pickId: Promise<number | null>;
+    }
   | { phase: 'error'; message: string };
 
 interface SuggestionModalProps {
@@ -54,7 +61,7 @@ export function SuggestionModal({
     retry,
     reset,
     isLoading,
-  } = useSuggestion();
+  } = useSuggestion(mode);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   // Picked once per opening, so the shuffle doesn't change mid-flick. Queued
@@ -68,36 +75,92 @@ export function SuggestionModal({
     );
   });
 
+  // What the player does with a pick is kept with it (game_picks): once for
+  // each pick, however many times its buttons are pressed. `pick` is the
+  // pick on screen (the suggestion, or the game chance landed on).
+  const answered = useRef(new WeakSet<object>());
+  const answer = (
+    pick: object,
+    pickId: Promise<number | null> | number | null | undefined,
+    outcome: PickOutcome,
+  ) => {
+    if (answered.current.has(pick)) return;
+    answered.current.add(pick);
+    void Promise.resolve(pickId).then((id) => recordPickOutcome(id, outcome));
+  };
+  // The main button starts the game, or queues it while another is played.
+  const taken: PickOutcome = mode === 'queue' ? 'queued' : 'played';
+
   const handlePick = () => {
     if (suggestion) {
+      answer(suggestion, suggestion.pickId, taken);
       onPick(suggestion.game);
       onClose();
     }
   };
-  const playNow =
-    mode === 'queue' && onPlayNow
-      ? (game: Suggestion['game']) => () => {
-          onPlayNow(game);
-          onClose();
-        }
-      : undefined;
+  // With a game playing, a pick can be played now instead of queued.
+  const offersPlayNow = mode === 'queue' && !!onPlayNow;
+  const playNow = (
+    pick: object,
+    pickId: Promise<number | null> | number | null | undefined,
+    game: Suggestion['game'],
+  ) => {
+    answer(pick, pickId, 'played');
+    onPlayNow?.(game);
+    onClose();
+  };
 
   // For the queue, instead of answering the questions: a random backlog game,
   // rolled for like Home's Random, then yours to add or roll again.
   const [chance, setChance] = useState<Chance | null>(null);
   const [rolls, setRolls] = useState(0);
+  // A roll on its way: its buttons are still there until the next redraw, and
+  // a second press before then would roll, and keep, a second pick.
+  const rolling = useRef(false);
+  // The games chance has landed on this opening, for which pick each one is.
+  const landed = useRef(0);
+  // Whether the picker is still open: a roll that ends after it closed landed
+  // on a game nobody saw, which is no pick.
+  const open = useRef(true);
+  useEffect(() => {
+    open.current = true;
+    return () => {
+      open.current = false;
+    };
+  }, []);
   const leaveToChance = async () => {
-    if (!user) return;
+    if (!user || rolling.current) return;
+    rolling.current = true;
+    try {
+      await roll(user.id);
+    } finally {
+      rolling.current = false;
+    }
+  };
+  const roll = async (userId: string) => {
+    // Rolling again passes on the game it had landed on.
+    if (chance?.phase === 'result') answer(chance, chance.pickId, 'rerolled');
     setChance({ phase: 'rolling' });
     setRolls((n) => n + 1);
-    const rolling = covers.length >= 2 && !prefersReducedMotion();
+    const animated = covers.length >= 2 && !prefersReducedMotion();
     const [found] = await Promise.all([
-      findRandomBacklogGame(user.id),
-      rolling ? new Promise((resolve) => setTimeout(resolve, RANDOM_ROLL_MS)) : null,
+      findRandomBacklogGame(userId),
+      animated ? new Promise((resolve) => setTimeout(resolve, RANDOM_ROLL_MS)) : null,
     ]);
+    if (!open.current) return;
     setChance(
       'game' in found
-        ? { phase: 'result', game: found.game, roll: rolls + 1 }
+        ? {
+            phase: 'result',
+            game: found.game,
+            roll: rolls + 1,
+            // Kept with the picks; not waited for to show the game.
+            pickId: recordRandomPick({
+              gameId: found.game.id,
+              mode,
+              attempt: (landed.current += 1),
+            }),
+          }
         : {
             phase: 'error',
             message:
@@ -153,10 +216,20 @@ export function SuggestionModal({
           key={chance.roll}
           suggestion={{ game: chance.game, reasoning: '' }}
           onPick={() => {
+            // Rolling again already: this game has been passed on.
+            if (rolling.current) return;
+            answer(chance, chance.pickId, taken);
             onPick(chance.game);
             onClose();
           }}
-          onPlayNow={playNow?.(chance.game)}
+          onPlayNow={
+            offersPlayNow
+              ? () => {
+                  if (rolling.current) return;
+                  playNow(chance, chance.pickId, chance.game);
+                }
+              : undefined
+          }
           onReroll={leaveToChance}
           cooldownRemaining={0}
           isLoading={false}
@@ -194,7 +267,11 @@ export function SuggestionModal({
           key={suggestion.game.id}
           suggestion={suggestion}
           onPick={handlePick}
-          onPlayNow={playNow?.(suggestion.game)}
+          onPlayNow={
+            offersPlayNow
+              ? () => playNow(suggestion, suggestion.pickId, suggestion.game)
+              : undefined
+          }
           onReroll={reroll}
           cooldownRemaining={cooldownRemaining}
           isLoading={isLoading}

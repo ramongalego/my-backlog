@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { rerollRequestSchema } from '@/lib/validations/common';
+import { recordPickOutcome } from '@/lib/server/picks';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return jsonError('Invalid gameId', 400);
   }
-  const { gameId } = parsed.data;
+  const { gameId, pickId } = parsed.data;
 
   // Counts the reroll and stamps it, so the penalty fades (see record_game_reroll).
   const { error } = await supabase.rpc('record_game_reroll', { p_game_id: gameId });
@@ -40,6 +41,10 @@ export async function POST(request: NextRequest) {
     console.error('Failed to record reroll:', error);
     // Non-critical error, don't fail the request
   }
+
+  // The pick passed on is kept as rerolled (game_picks), when it was kept.
+  // Only a pick of this game: the reroll counted above is this game's.
+  if (pickId !== undefined) await recordPickOutcome(user.id, pickId, 'rerolled', gameId);
 
   return NextResponse.json({ success: true });
 }

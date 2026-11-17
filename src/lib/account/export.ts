@@ -60,6 +60,21 @@ export interface ExportRows {
   supportMessages: { type: string; message: string; created_at: string }[];
   /** The history of changes to the games (game_events), oldest first. */
   history: { game_id: number; kind: string; changes: unknown; created_at: string }[];
+  /** What Pick My Game and Random picked (game_picks), oldest first. */
+  picks: {
+    game_id: number;
+    kind: string;
+    mode: string;
+    mood: string | null;
+    energy: string | null;
+    time: string | null;
+    attempt: number;
+    reasoning: string | null;
+    model: string | null;
+    outcome: string | null;
+    created_at: string;
+    answered_at: string | null;
+  }[];
 }
 
 export interface ExportedGame {
@@ -135,6 +150,31 @@ export interface AccountExport {
    * (lib/account/history.ts reads time played from it.)
    */
   history: { gameId: number; kind: string; changes: unknown; at: string }[];
+  /**
+   * The games Pick My Game and Random picked, oldest first. `kind` is
+   * "questions" (picked from the three answers, which are `mood`, `energy`
+   * and `time`, with the `reason` shown and the `model` that wrote it) or
+   * "random". `for` is "play" (nothing was being played) or "queue" (a game
+   * was, so the pick was for the queue). `attempt` is which pick of the
+   * sitting it was: 2 is the pick after one reroll. `outcome` is the button
+   * pressed: "played", "queued" or "rerolled", or null when the picker was
+   * closed without choosing ("unseen" when it was closed before the pick
+   * arrived), with `answeredAt` when that was. Kept from November 2026 on.
+   */
+  picks: {
+    gameId: number;
+    kind: string;
+    for: string;
+    mood: string | null;
+    energy: string | null;
+    time: string | null;
+    attempt: number;
+    reason: string | null;
+    model: string | null;
+    outcome: string | null;
+    at: string;
+    answeredAt: string | null;
+  }[];
 }
 
 /** A finish or drop date is saved as a day (midnight UTC): the day is read straight off it. */
@@ -209,6 +249,22 @@ export function buildExport(rows: ExportRows, now = new Date()): AccountExport {
         kind: event.kind,
         changes: event.changes,
         at: event.created_at,
+      })),
+    picks: rows.picks
+      .filter((pick) => listed.has(pick.game_id))
+      .map((pick) => ({
+        gameId: pick.game_id,
+        kind: pick.kind,
+        for: pick.mode,
+        mood: pick.mood,
+        energy: pick.energy,
+        time: pick.time,
+        attempt: pick.attempt,
+        reason: pick.reasoning,
+        model: pick.model,
+        outcome: pick.outcome,
+        at: pick.created_at,
+        answeredAt: pick.answered_at,
       })),
   };
 }

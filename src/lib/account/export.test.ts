@@ -40,6 +40,7 @@ const rows = (over: Partial<ExportRows> = {}): ExportRows => ({
   sharePages: [],
   supportMessages: [],
   history: [],
+  picks: [],
   ...over,
 });
 
@@ -237,6 +238,75 @@ describe('buildExport', () => {
         kind: 'playtime',
         changes: { playtime_forever: [600, 660] },
         at: '2026-11-18T09:00:00Z',
+      },
+    ]);
+  });
+
+  it('includes what Pick My Game and Random picked, with the answers and what was done with it', () => {
+    const fromQuestions = {
+      game_id: 7,
+      kind: 'questions',
+      mode: 'play',
+      mood: 'relaxed',
+      energy: 'low',
+      time: 'short',
+      attempt: 2,
+      reasoning: 'Short and gentle.',
+      model: 'a-model',
+      outcome: 'played',
+      created_at: '2026-11-17T21:00:00Z',
+      answered_at: '2026-11-17T21:00:09Z',
+    };
+    const atRandom = {
+      game_id: 7,
+      kind: 'random',
+      mode: 'queue',
+      mood: null,
+      energy: null,
+      time: null,
+      attempt: 1,
+      reasoning: null,
+      model: null,
+      outcome: null,
+      created_at: '2026-11-18T09:00:00Z',
+      answered_at: null,
+    };
+    const data = buildExport(
+      rows({
+        games: [game({ id: 7, name: 'Hades' })],
+        // The last is of a game that isn't in the file.
+        picks: [fromQuestions, atRandom, { ...atRandom, game_id: 99 }],
+      }),
+      NOW,
+    );
+    expect(data.picks).toEqual([
+      {
+        gameId: 7,
+        kind: 'questions',
+        for: 'play',
+        mood: 'relaxed',
+        energy: 'low',
+        time: 'short',
+        attempt: 2,
+        reason: 'Short and gentle.',
+        model: 'a-model',
+        outcome: 'played',
+        at: '2026-11-17T21:00:00Z',
+        answeredAt: '2026-11-17T21:00:09Z',
+      },
+      {
+        gameId: 7,
+        kind: 'random',
+        for: 'queue',
+        mood: null,
+        energy: null,
+        time: null,
+        attempt: 1,
+        reason: null,
+        model: null,
+        outcome: null,
+        at: '2026-11-18T09:00:00Z',
+        answeredAt: null,
       },
     ]);
   });

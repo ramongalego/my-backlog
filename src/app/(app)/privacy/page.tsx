@@ -40,7 +40,7 @@ const sections: LegalSection[] = [
             ],
             [
               'Library',
-              'The games you add, with the status, hours played, dates, rating and notes you record for each, plus your queue and your favorite games. We also keep a history of each game, which records when it was added, when its status, dates, rating, hours or platform changed, with what they were before, and when it went on or came off your queue.',
+              'The games you add, with the status, hours played, dates, rating and notes you record for each, plus your queue and your favorite games. We also keep a history of each game, which records when it was added, when its status, dates, rating, hours or platform changed, with what they were before, and when it went on or came off your queue. When Pick My Game or Random picks a game, we keep the pick: the game, your answers to the questions, the reason given, and whether you played it, queued it or rerolled.',
             ],
             [
               'Steam',

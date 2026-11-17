@@ -16,6 +16,9 @@ const appIdSchema = z.number().int().positive().max(2_147_483_647);
 /** A game's row id (games.id). */
 export const gameIdSchema = z.number().int().positive();
 
+/** A kept pick's id (game_picks.id). */
+export const pickIdSchema = z.number().int().positive();
+
 export const syncSingleRequestSchema = z.object({
   appId: appIdSchema,
   name: z.string().trim().min(1).max(500).optional(),
@@ -35,6 +38,8 @@ export const queueAddRequestSchema = z.object({
 
 export const rerollRequestSchema = z.object({
   gameId: gameIdSchema,
+  /** The kept pick being passed on (game_picks.id), when it was kept. */
+  pickId: pickIdSchema.optional(),
 });
 
 export const queueReorderRequestSchema = z.object({

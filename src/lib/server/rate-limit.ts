@@ -234,6 +234,9 @@ export const RATE_LIMITS = {
   // Recording a reroll (it lowers that game's odds next time). Each one comes
   // with a suggestion request, which has its own, tighter limit above.
   suggestionReroll: { limit: 60, windowMs: 60 * 1000 },
+  // Keeping a random pick, and what was done with a pick (game_picks). A roll
+  // takes a couple of seconds, so this only stops scripts filling the table.
+  pickRecord: { limit: 60, windowMs: 60 * 1000 },
   // Global circuit breaker on AI suggestions: bounds the
   // daily OpenAI spend however many accounts are used.
   suggestionGlobal: { limit: 3000, windowMs: 24 * 60 * 60 * 1000 },

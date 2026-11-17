@@ -7,8 +7,10 @@ import type {
   MoodType,
   EnergyLevel,
   TimeCommitment,
+  PickMode,
 } from '@/lib/suggest/types';
 import { MAX_PREVIOUS_REASONINGS } from '@/lib/validations/suggest';
+import { recordPickOutcome } from '@/lib/client/picks';
 
 type WizardStep = 'mood' | 'energy' | 'time' | 'loading' | 'result';
 
@@ -40,7 +42,8 @@ interface UseSuggestionReturn {
 
 const COOLDOWN_SECONDS = 15;
 
-export function useSuggestion(): UseSuggestionReturn {
+/** `mode`: what the pick is for (to play, or for the queue), kept with each pick. */
+export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
   const [step, setStep] = useState<WizardStep>('mood');
   const [answers, setAnswers] = useState<Partial<SuggestionPreferences>>({});
   const [suggestion, setSuggestion] = useState<SuggestionResult | null>(null);
@@ -56,9 +59,15 @@ export function useSuggestion(): UseSuggestionReturn {
   // day's picks, so an answer, Reroll or Try again pressed twice asks once.
   const asking = useRef(false);
 
+  // Whether the picker is still open. A pick that arrives after it closed
+  // was never shown.
+  const open = useRef(true);
+
   // Cleanup cooldown interval on unmount
   useEffect(() => {
+    open.current = true;
     return () => {
+      open.current = false;
       if (cooldownIntervalRef.current) {
         clearInterval(cooldownIntervalRef.current);
       }
@@ -99,6 +108,7 @@ export function useSuggestion(): UseSuggestionReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...preferences,
+          mode,
           excludeGameIds: excludedGameIdsRef.current,
           // The latest few: the server takes no more, and refused the
           // request once a sitting had seen more picks than that.
@@ -110,6 +120,13 @@ export function useSuggestion(): UseSuggestionReturn {
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to get suggestion');
+      }
+
+      // The server kept the pick as it made it; the picker closed while it
+      // was on its way, so it's kept as never seen.
+      if (!open.current) {
+        recordPickOutcome(data.data?.pickId, 'unseen');
+        return;
       }
 
       // Track this reasoning for future rerolls
@@ -172,11 +189,15 @@ export function useSuggestion(): UseSuggestionReturn {
     // Add current suggestion to exclusion list
     excludedGameIdsRef.current = [...excludedGameIdsRef.current, suggestion.game.id];
 
-    // Increment reroll count in background (fire and forget)
+    // Increment reroll count in background (fire and forget). With the pick's
+    // id, when the server kept it, so the pick is kept as passed on.
     fetch('/api/suggest/reroll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameId: suggestion.game.id }),
+      body: JSON.stringify({
+        gameId: suggestion.game.id,
+        ...(suggestion.pickId != null ? { pickId: suggestion.pickId } : {}),
+      }),
     }).catch(() => {
       // Ignore errors - this is non-critical
     });

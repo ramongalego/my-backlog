@@ -13,6 +13,7 @@ import type { GameForSuggestion, SuggestionContext } from '@/lib/suggest/types';
 import { suggestRequestSchema } from '@/lib/validations/suggest';
 import { AI_MODEL, OPENAI_OPTIONS, isOutOfBudget } from '@/lib/server/ai-model';
 import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
+import { recordPick } from '@/lib/server/picks';
 
 // Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
 export const maxDuration = 60;
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? 'Invalid preferences', 400);
   }
 
-  const { mood, energy, time, excludeGameIds, previousReasonings } = parsed.data;
+  const { mood, energy, time, mode, excludeGameIds, previousReasonings } = parsed.data;
   const preferences = { mood, energy, time };
   const userId = user.id;
 
@@ -278,6 +279,17 @@ export async function POST(request: NextRequest) {
       : jsonError("Couldn't get a suggestion. Please try again.", 502);
   }
 
+  // Kept for later study (game_picks): the answers, the game, the reason. The
+  // games passed on so far this sitting are the ones excluded, so this pick is
+  // the next. Best effort: the pick is the player's whether or not it's kept.
+  const pickId = await recordPick({
+    userId,
+    gameId: suggestedGame.id,
+    mode,
+    attempt: excludeGameIds.length + 1,
+    questions: { answers: preferences, reasoning, model: AI_MODEL },
+  });
+
   return NextResponse.json({
     success: true,
     data: {
@@ -299,6 +311,7 @@ export async function POST(request: NextRequest) {
         platform: suggestedGame.platform,
       },
       reasoning,
+      pickId,
     },
   });
 }

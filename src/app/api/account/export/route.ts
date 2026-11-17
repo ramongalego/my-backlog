@@ -48,70 +48,90 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
       return data as T | null;
     };
-    const [profile, games, queue, favorites, insights, sharePages, supportMessages, history] =
-      await Promise.all([
-        read<{
-          steam_id: string | null;
-          steam_username: string | null;
-          display_name: string | null;
-        }>(
-          supabase
-            .from('profiles')
-            .select('steam_id, steam_username, display_name')
-            .eq('id', user.id)
-            .maybeSingle(),
-        ),
-        fetchAllRows<ExportGameRow>((from, to) =>
-          supabase
-            .from('games')
-            .select(
-              'id, name, source, platform, app_id, steam_app_id, status, rating, notes, started_at, finished_at, dropped_at, playtime_forever, last_played_at, created_at, header_image, art_chosen',
-            )
-            .eq('user_id', user.id)
-            // What the library lists: not the soundtracks and tools Steam
-            // counts as owned. A game whose details haven't synced yet has no
-            // type, and is the player's all the same.
-            .or('type.eq.game,type.is.null')
-            .order('id')
-            .range(from, to),
-        ),
-        read<ExportRows['queue']>(
-          supabase.from('playing_queue').select('game_id, position').eq('user_id', user.id),
-        ),
-        read<ExportRows['favorites']>(
-          supabase.from('favorite_games').select('game_id, position').eq('user_id', user.id),
-        ),
-        read<ExportRows['insights']>(
-          supabase
-            .from('player_insights')
-            .select('tone, headline, paragraphs, signature, generated_at')
-            .eq('user_id', user.id)
-            .order('tone'),
-        ),
-        read<ExportRows['sharePages']>(
-          service
-            .from('shared_completions')
-            .select('id, game_name, rating, playtime_minutes, created_at')
-            .eq('user_id', user.id)
-            .order('created_at'),
-        ),
-        read<ExportRows['supportMessages']>(
-          service
-            .from('support_tickets')
-            .select('type, message, created_at')
-            .eq('user_id', user.id)
-            .order('created_at'),
-        ),
-        // It grows with every change to a game, so it's read in pages too.
-        fetchAllRows<ExportRows['history'][number]>((from, to) =>
-          supabase
-            .from('game_events')
-            .select('game_id, kind, changes, created_at')
-            .eq('user_id', user.id)
-            .order('id')
-            .range(from, to),
-        ),
-      ]);
+    const [
+      profile,
+      games,
+      queue,
+      favorites,
+      insights,
+      sharePages,
+      supportMessages,
+      history,
+      picks,
+    ] = await Promise.all([
+      read<{
+        steam_id: string | null;
+        steam_username: string | null;
+        display_name: string | null;
+      }>(
+        supabase
+          .from('profiles')
+          .select('steam_id, steam_username, display_name')
+          .eq('id', user.id)
+          .maybeSingle(),
+      ),
+      fetchAllRows<ExportGameRow>((from, to) =>
+        supabase
+          .from('games')
+          .select(
+            'id, name, source, platform, app_id, steam_app_id, status, rating, notes, started_at, finished_at, dropped_at, playtime_forever, last_played_at, created_at, header_image, art_chosen',
+          )
+          .eq('user_id', user.id)
+          // What the library lists: not the soundtracks and tools Steam
+          // counts as owned. A game whose details haven't synced yet has no
+          // type, and is the player's all the same.
+          .or('type.eq.game,type.is.null')
+          .order('id')
+          .range(from, to),
+      ),
+      read<ExportRows['queue']>(
+        supabase.from('playing_queue').select('game_id, position').eq('user_id', user.id),
+      ),
+      read<ExportRows['favorites']>(
+        supabase.from('favorite_games').select('game_id, position').eq('user_id', user.id),
+      ),
+      read<ExportRows['insights']>(
+        supabase
+          .from('player_insights')
+          .select('tone, headline, paragraphs, signature, generated_at')
+          .eq('user_id', user.id)
+          .order('tone'),
+      ),
+      read<ExportRows['sharePages']>(
+        service
+          .from('shared_completions')
+          .select('id, game_name, rating, playtime_minutes, created_at')
+          .eq('user_id', user.id)
+          .order('created_at'),
+      ),
+      read<ExportRows['supportMessages']>(
+        service
+          .from('support_tickets')
+          .select('type, message, created_at')
+          .eq('user_id', user.id)
+          .order('created_at'),
+      ),
+      // It grows with every change to a game, so it's read in pages too.
+      fetchAllRows<ExportRows['history'][number]>((from, to) =>
+        supabase
+          .from('game_events')
+          .select('game_id, kind, changes, created_at')
+          .eq('user_id', user.id)
+          .order('id')
+          .range(from, to),
+      ),
+      // One for every pick made, so in pages as well.
+      fetchAllRows<ExportRows['picks'][number]>((from, to) =>
+        supabase
+          .from('game_picks')
+          .select(
+            'game_id, kind, mode, mood, energy, time, attempt, reasoning, model, outcome, created_at, answered_at',
+          )
+          .eq('user_id', user.id)
+          .order('id')
+          .range(from, to),
+      ),
+    ]);
     rows = {
       account: {
         email: user.email ?? null,
@@ -127,6 +147,7 @@ export async function GET(request: NextRequest) {
       sharePages: sharePages ?? [],
       supportMessages: supportMessages ?? [],
       history,
+      picks,
     };
   } catch (error) {
     // All of it or none: a file missing a part would pass for a full copy.

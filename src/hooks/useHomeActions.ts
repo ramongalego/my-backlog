@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { findRandomBacklogGame, RANDOM_ROLL_MS } from '@/lib/client/random-pick';
+import { recordRandomPick } from '@/lib/client/picks';
 import { nextPlayable } from '@/lib/games/release-date';
 import { useSetGameStatus } from '@/hooks/useGameMutations';
 import { useNowPlaying } from './useNowPlaying';
@@ -117,6 +118,9 @@ export function useHomeActions(userId: string | null) {
       setRollCovers(null);
       return;
     }
+    // Kept with the picks (game_picks). Random starts its game at once, so
+    // the pick and what was done with it are one. Not waited for.
+    void recordRandomPick({ gameId: picked.id, mode: 'play', attempt: 1, outcome: 'played' });
     setRolledGameId(picked.id);
     // Starting it shows it at once (before the server answers), so the roll
     // ends with the game in its place.

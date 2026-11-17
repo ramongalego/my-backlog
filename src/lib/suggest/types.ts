@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { suggestRequestSchema } from '@/lib/validations/suggest';
+import type { pickOutcomeSchema, suggestRequestSchema } from '@/lib/validations/suggest';
 import type { CandidateGame, ScoredCandidate } from './shortlist';
 
 // Derived from the zod schema so the allowed values live in exactly one place.
@@ -11,6 +11,12 @@ export type MoodType = SuggestRequest['mood'];
 export type EnergyLevel = SuggestRequest['energy'];
 
 export type TimeCommitment = SuggestRequest['time'];
+
+/** What a pick is for: to play now, or for the queue while another game is played. */
+export type PickMode = SuggestRequest['mode'];
+
+/** What the player did with a pick: started it, queued it, rolled again, or never saw it. */
+export type PickOutcome = z.infer<typeof pickOutcomeSchema>['outcome'];
 
 export interface SuggestionPreferences {
   mood: MoodType;
@@ -59,4 +65,6 @@ export interface SuggestionResult {
     platform?: string | null;
   };
   reasoning: string;
+  /** The pick as kept by the server (game_picks.id); null when it couldn't be kept. */
+  pickId?: number | null;
 }

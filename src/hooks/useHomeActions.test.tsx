@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useHomeActions } from '@/hooks/useHomeActions';
+import { recordRandomPick } from '@/lib/client/picks';
 
 const pick = jest.fn();
 jest.mock('@/hooks/useNowPlaying', () => ({
@@ -14,6 +15,7 @@ jest.mock('@/hooks/useGameMutations', () => ({
   usePatchGamesList: () => ({ patch: jest.fn(), restore: jest.fn() }),
   useSetGameStatus: () => ({ mutate: jest.fn(), isPending: false }),
 }));
+jest.mock('@/lib/client/picks', () => ({ recordRandomPick: jest.fn() }));
 jest.mock('sonner', () => ({
   toast: Object.assign(jest.fn(), { error: jest.fn(), info: jest.fn() }),
 }));
@@ -71,6 +73,7 @@ beforeEach(() => {
   candidates = [{ id: 3, release_date: 'Feb 24, 2017' }];
   fetchedId = null;
   pick.mockReset();
+  jest.mocked(recordRandomPick).mockReset().mockResolvedValue(41);
   window.scrollTo = jest.fn();
 });
 
@@ -115,8 +118,56 @@ it('picks one game, however many times Random is pressed before the page shows i
   });
 
   expect(pick).toHaveBeenCalledTimes(1);
+  expect(recordRandomPick).toHaveBeenCalledTimes(1);
 
   // And again later, once that pick is done.
   await act(() => result.current.handleRandomPick());
   expect(pick).toHaveBeenCalledTimes(2);
+  expect(recordRandomPick).toHaveBeenCalledTimes(2);
+});
+
+it('has the random pick kept, as a pick to play that was played', async () => {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useHomeActions('u'), { wrapper });
+
+  await act(() => result.current.handleRandomPick());
+
+  expect(recordRandomPick).toHaveBeenCalledTimes(1);
+  expect(recordRandomPick).toHaveBeenCalledWith({
+    gameId: hollowKnight.id,
+    mode: 'play',
+    attempt: 1,
+    outcome: 'played',
+  });
+});
+
+it("starts the game without waiting for the pick to be kept, or minding that it wasn't", async () => {
+  // Never answers.
+  jest.mocked(recordRandomPick).mockReturnValue(new Promise(() => {}));
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useHomeActions('u'), { wrapper });
+
+  await act(() => result.current.handleRandomPick());
+  expect(pick).toHaveBeenCalledWith(hollowKnight);
+
+  jest.mocked(recordRandomPick).mockResolvedValue(null);
+  await act(() => result.current.handleRandomPick());
+  expect(pick).toHaveBeenCalledTimes(2);
+});
+
+it('keeps nothing when there was no game to pick', async () => {
+  candidates = [];
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useHomeActions('u'), { wrapper });
+
+  await act(() => result.current.handleRandomPick());
+
+  expect(pick).not.toHaveBeenCalled();
+  expect(recordRandomPick).not.toHaveBeenCalled();
 });
