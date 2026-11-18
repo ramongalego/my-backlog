@@ -49,6 +49,19 @@ it('leads to the profile, and closes on the way', () => {
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });
 
+it('leads to Ko-fi in a new tab, and closes on the way', () => {
+  render(<UserMenu user={user} name="Player" avatar={null} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+
+  const support = screen.getByRole('menuitem', { name: 'Support MyBacklog' });
+  expect(support).toHaveAttribute('href', 'https://ko-fi.com/mistkai');
+  expect(support).toHaveAttribute('target', '_blank');
+  expect(support).toHaveAttribute('rel', 'noopener noreferrer');
+
+  fireEvent.click(support);
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+});
+
 it('moves through its items with the arrow keys, the link included', () => {
   render(<UserMenu user={user} name="Player" avatar={null} onRefresh={jest.fn()} />);
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));

@@ -19,9 +19,11 @@ const sections: LegalSection[] = [
     body: (
       <p>
         MyBacklog helps you track the video games you own, including your backlog, the game you are
-        playing and the games you have finished. The Service is currently free of charge. We may
-        add, change or remove features, and we may suspend or discontinue the Service. Where
-        practical, we will give you advance notice of a shutdown so that you can export your data.
+        playing and the games you have finished. The Service is currently free of charge. If you
+        support it on Ko-fi, that is a voluntary gift: it does not unlock any features, and Ko-fi
+        handles the payment under its own terms. We may add, change or remove features, and we may
+        suspend or discontinue the Service. Where practical, we will give you advance notice of a
+        shutdown so that you can export your data.
       </p>
     ),
   },
@@ -190,7 +192,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of Service"
-      effective="November 17, 2026"
+      effective="November 18, 2026"
       intro={
         <p>
           These Terms of Service govern your use of the MyBacklog website and app (the

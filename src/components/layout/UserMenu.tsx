@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { ChevronDown, Loader2, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
+import { ChevronDown, Heart, Loader2, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
+import { SUPPORT_URL } from '@/lib/contact';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/layout/SupportModal';
 import { manualRefreshWait } from '@/hooks/useLibraryRefresh';
@@ -257,6 +258,24 @@ export function UserMenu({
             <Bug className="w-4 h-4" aria-hidden="true" />
             <span>Report an issue</span>
           </button>
+
+          <a
+            href={SUPPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === ' ') {
+                e.preventDefault();
+                e.currentTarget.click();
+              }
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
+          >
+            <Heart className="w-4 h-4" aria-hidden="true" />
+            <span>Support MyBacklog</span>
+          </a>
 
           <button
             role="menuitem"

@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { Footer } from '@/components/layout/Footer';
 
-it('links to the policies and gives a way to write to us', () => {
+it('links to the policies, a way to write to us and a way to chip in', () => {
   render(<Footer />);
   const nav = screen.getByRole('navigation', { name: 'Footer' });
   expect(within(nav).getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
@@ -10,6 +10,9 @@ it('links to the policies and gives a way to write to us', () => {
     'href',
     'mailto:contact@mybacklog.co',
   );
+  const support = within(nav).getByRole('link', { name: 'Support MyBacklog' });
+  expect(support).toHaveAttribute('href', 'https://ko-fi.com/mistkai');
+  expect(support).toHaveAttribute('target', '_blank');
 });
 
 it('says whose site it is, this year', () => {

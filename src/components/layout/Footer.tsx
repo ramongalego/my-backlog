@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Gamepad2 } from 'lucide-react';
-import { CONTACT_EMAIL } from '@/lib/contact';
+import { CONTACT_EMAIL, SUPPORT_URL } from '@/lib/contact';
 
 // py-1 -my-1: about 24px to tap, without moving anything.
 const LINK = '-my-1 py-1 text-ink-400 transition-colors hover:text-ink-100';
@@ -37,6 +37,9 @@ export function Footer() {
             </Link>
             <a href={`mailto:${CONTACT_EMAIL}`} className={LINK}>
               Contact
+            </a>
+            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className={LINK}>
+              Support MyBacklog
             </a>
           </nav>
         </div>
