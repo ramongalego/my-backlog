@@ -72,12 +72,12 @@ describe('buildInsightMessages', () => {
     expect(data('roast')).not.toHaveProperty('ratings');
   });
 
-  it('gives the roast only the facts worth a joke, not everything', () => {
-    // Handed every fact, the model recited them all instead of landing three.
-    for (const fact of ['totalHours', 'topTags', 'averageRating', 'playingNow']) {
+  it('gives the roast the facts worth a joke, not its taste', () => {
+    // Handed every fact, the model recited them all instead of landing a few.
+    for (const fact of ['averageRating', 'favorites', 'platforms', 'ratedAboveCritics']) {
       expect(data('roast')).not.toHaveProperty(fact);
     }
-    expect(data('roast').mostPlayed).toHaveLength(1);
+    expect(data('roast').mostPlayed.length).toBeLessThanOrEqual(3);
   });
 
   it('tells both tones that a game not played in years is in the past', () => {
