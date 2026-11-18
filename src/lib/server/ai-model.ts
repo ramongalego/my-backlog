@@ -1,11 +1,20 @@
 import 'server-only';
 
 /**
- * Chosen over gpt-4o-mini and five others: it follows the writing rules far
- * more closely for about a third less. Reasoning is off wherever it's used:
- * the app works out the facts and the model only writes.
+ * Pick My Game. Chosen over gpt-4o-mini and five others: it follows the
+ * writing rules far more closely for about a third less. Reasoning is off: the
+ * app works out the facts and the model only writes.
  */
 export const AI_MODEL = 'gpt-6-luna';
+
+/**
+ * The player profile and roast on Stats. In a side-by-side test of both tones
+ * (Nov 2026) Luna recited the facts and Sol made them land, for about a third
+ * of a cent each, and they're written rarely. Sol has no "none" reasoning, so
+ * it runs at INSIGHT_REASONING.
+ */
+export const INSIGHT_MODEL = 'gpt-6.2-sol';
+export const INSIGHT_REASONING = 'low';
 
 /**
  * Timeout in ms. The SDK's defaults are ten minutes and two silent retries, on

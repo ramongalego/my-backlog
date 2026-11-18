@@ -31,16 +31,24 @@ const RULES: Record<InsightTone, string> = {
     `This is about taste, not habits: no backlog, no to-do list, nothing about what they're playing at the moment.`,
     `3 short paragraphs, 2 to 3 sentences each. Warm, perceptive and specific, like a friend who knows games and has looked through their shelf.`,
     `The headline names the kind of player they are, e.g. "A JRPG loyalist who finishes what they love".`,
+    `Each paragraph makes one point and shows it with one or two of their games, by name. Keep sentences under 25 words.`,
+    `If you can't name a game that shows a point, leave the point out: no abstractions like "structure beneath the drama".`,
+    `No "it's not X, it's Y", "speaks to", "the common thread", "quietly" or "a testament to".`,
     ...SHARED_RULES,
   ].join('\n'),
   roast: [
-    `You roast someone's game library. They asked for it and they want to be destroyed.`,
-    `Tone: sharp, condescending and brutal. Go for what's most embarrassing: the games they never launched, opened once or dropped, the backlog they'll die before clearing, the hours sunk into one game, the gap between what they buy and what they play. Mock their taste too.`,
-    `Use the exact names and numbers: they are what makes it sting.`,
-    `3 to 4 short paragraphs, 2 to 3 sentences each. Each one lands one clear joke, then moves on. Mean tweet energy, not an essay.`,
-    `End with a paragraph that sounds like a compliment but is one last insult.`,
+    `You are a roast comic. Someone handed you their game library and asked to be roasted. Make them wince, then laugh.`,
+    `Pick the three most damning facts and build one joke on each. Leave the rest out: a roast that covers everything hits nothing.`,
+    `Each joke is a setup and a hit, with the hit on the last words of the sentence.`,
+    `At most one number per joke, and only when the number is the punchline (11 minutes of Final Fantasy, 1 game finished last year).`,
+    `Exaggerate and compare: say what it's like, don't restate the stat. Name the games.`,
+    `Never explain a joke or say what it means. No "apparently", no "that's not X, it's Y", no "your X says A, your Y says B".`,
+    `Shape: a headline that is the meanest line, then three short paragraphs of one or two sentences, then a last line that starts like a compliment and turns into an insult on its final words.`,
     `Roast only their gaming: their library, hours, habits and taste. Never their race, ethnicity, religion, gender, sexuality, disability, body or appearance, and no slurs.`,
-    `The headline is the most brutal line, under 70 characters.`,
+    // Examples set the tone where adjectives ("brutal") alone made it a report.
+    `Two roasts of other people, for the tone only. Never reuse their lines or their games:`,
+    `Headline: "Steam should start charging you rent". "Half your library has never been launched. Somewhere, a Valve accountant weeps with joy." "Cyberpunk 2077 got 14 minutes. Night City has seen longer relationships." "You dropped Dark Souls after three hours. The game said You Died and you took it personally." "Honestly, you have incredible taste in games. Shame about the playing part."`,
+    `Headline: "412 games, 9 finished, zero shame". "At your pace the backlog goes in your will." "200 hours in Stardew Valley and you still can't finish anything you planted." "You rated Tetris a 4. Even the blocks stopped falling for you." "You really are a collector. Of receipts."`,
     ...SHARED_RULES,
   ].join('\n'),
 };
@@ -48,7 +56,8 @@ const RULES: Record<InsightTone, string> = {
 /**
  * The facts each tone is written from. The profile gets the player's taste
  * and the roast gets their failures, so the two say different things rather
- * than the same thing in two voices.
+ * than the same thing in two voices. The roast gets only the facts worth a
+ * joke: handed everything, it recites everything.
  */
 function factsFor(facts: PlayerFacts, tone: InsightTone) {
   if (tone === 'profile') {
@@ -72,24 +81,19 @@ function factsFor(facts: PlayerFacts, tone: InsightTone) {
   }
   return {
     libraryGames: facts.libraryGames,
-    totalHours: facts.totalHours,
-    backlog: facts.backlog,
-    finished: facts.finished,
+    backlogGames: facts.backlog.games,
+    backlogNeverStarted: facts.backlog.neverStarted,
+    backlogStoryHours: facts.backlog.storyHours,
     finishedLastYear: facts.finishedLastYear,
-    dropped: facts.dropped,
-    finishRatePct: facts.finishRatePct,
-    droppedWithinTwoHours: facts.droppedEarly,
-    droppedAfterRealTime: facts.droppedLate,
-    startedNeverFinished: facts.startedNotFinished,
-    steam: facts.steam,
-    mostPlayed: facts.mostPlayed.slice(0, 3),
+    steamGames: facts.steam?.games ?? null,
+    steamNeverLaunched: facts.steam?.neverLaunched ?? null,
+    openedOnceThenNever: facts.steam?.openedOnce.slice(0, 3) ?? null,
+    droppedAfterRealTime: facts.droppedLate.slice(0, 2),
+    startedNeverFinished: facts.startedNotFinished.slice(0, 2),
+    mostPlayed: facts.mostPlayed.slice(0, 1),
     topGameShareOfAllHoursPct: facts.topGameSharePct,
-    topTags: facts.topTags.slice(0, 5),
-    tagsFinishedLeast: facts.finishesLeast,
-    lowestRated: facts.ratings.lowest,
-    averageRating: facts.ratings.average,
+    lowestRated: facts.ratings.lowest.slice(0, 1),
     markedWontPlay: facts.wontPlay,
-    playingNow: facts.playingNow,
   };
 }
 
@@ -120,6 +124,14 @@ export const INSIGHT_RESPONSE_FORMAT = {
   },
 };
 
+/**
+ * The rules forbid em dashes, but a model slips one in now and then; a comma
+ * reads right wherever one has turned up.
+ */
+function withoutEmDashes(text: string): string {
+  return text.replace(/\s*\u{2014}\s*/gu, ', ');
+}
+
 /** With any link or address taken out; null when the answer isn't an Insight. */
 export function parseInsight(raw: string): Insight | null {
   let data: unknown;
@@ -130,8 +142,9 @@ export function parseInsight(raw: string): Insight | null {
   }
   const { headline, paragraphs } = (data ?? {}) as Partial<Insight>;
   if (typeof headline !== 'string' || !Array.isArray(paragraphs)) return null;
-  const text = paragraphs.filter((p): p is string => typeof p === 'string').map(stripLinks);
+  const clean = (text: string) => withoutEmDashes(stripLinks(text));
+  const text = paragraphs.filter((p): p is string => typeof p === 'string').map(clean);
   const kept = text.filter(Boolean);
-  if (!stripLinks(headline) || kept.length === 0) return null;
-  return { headline: stripLinks(headline), paragraphs: kept };
+  if (!clean(headline) || kept.length === 0) return null;
+  return { headline: clean(headline), paragraphs: kept };
 }

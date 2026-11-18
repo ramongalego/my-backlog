@@ -11,7 +11,12 @@ import {
 } from '@/lib/profile/prompt';
 import { insightSignature, type SavedInsight } from '@/lib/profile/saved';
 import { insightRequestSchema } from '@/lib/validations/insights';
-import { AI_MODEL, OPENAI_OPTIONS, isOutOfBudget } from '@/lib/server/ai-model';
+import {
+  INSIGHT_MODEL,
+  INSIGHT_REASONING,
+  OPENAI_OPTIONS,
+  isOutOfBudget,
+} from '@/lib/server/ai-model';
 import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
 import { jsonError } from '@/lib/server/api-response';
 import { getOpenAIApiKey } from '@/lib/server/env';
@@ -101,10 +106,11 @@ export async function POST(request: NextRequest) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !insight && !outOfBudget; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
-        model: AI_MODEL,
+        model: INSIGHT_MODEL,
         messages,
-        reasoning_effort: 'none',
-        max_completion_tokens: 700,
+        reasoning_effort: INSIGHT_REASONING,
+        // The reasoning counts too (about 250 in all in testing); only what's used is paid for.
+        max_completion_tokens: 2000,
         response_format: INSIGHT_RESPONSE_FORMAT,
       });
       insight = parseInsight(completion.choices[0]?.message?.content ?? '');

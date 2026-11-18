@@ -65,11 +65,19 @@ describe('buildInsightMessages', () => {
     expect(data('roast').droppedAfterRealTime).toEqual([
       { name: 'Gave Up', hours: 20, lastPlayedYearsAgo: null },
     ]);
-    expect(data('roast').steam).toMatchObject({
-      neverLaunched: 1,
-      openedOnce: [{ name: 'Opened Once', minutes: 5 }],
+    expect(data('roast')).toMatchObject({
+      steamNeverLaunched: 1,
+      openedOnceThenNever: [{ name: 'Opened Once', minutes: 5 }],
     });
     expect(data('roast')).not.toHaveProperty('ratings');
+  });
+
+  it('gives the roast only the facts worth a joke, not everything', () => {
+    // Handed every fact, the model recited them all instead of landing three.
+    for (const fact of ['totalHours', 'topTags', 'averageRating', 'playingNow']) {
+      expect(data('roast')).not.toHaveProperty(fact);
+    }
+    expect(data('roast').mostPlayed).toHaveLength(1);
   });
 
   it('tells both tones that a game not played in years is in the past', () => {
@@ -89,6 +97,17 @@ describe('buildInsightMessages', () => {
 });
 
 describe('parseInsight', () => {
+  it('swaps an em dash for a comma, which the rules ask for and a model sometimes forgets', () => {
+    const raw = JSON.stringify({
+      headline: 'A finisher — mostly',
+      paragraphs: ['Those tags won’t guarantee your affection—or your finish.'],
+    });
+    expect(parseInsight(raw)).toEqual({
+      headline: 'A finisher, mostly',
+      paragraphs: ['Those tags won’t guarantee your affection, or your finish.'],
+    });
+  });
+
   it('reads a headline and paragraphs', () => {
     const raw = JSON.stringify({ headline: 'A finisher', paragraphs: ['One.', 'Two.'] });
     expect(parseInsight(raw)).toEqual({ headline: 'A finisher', paragraphs: ['One.', 'Two.'] });
