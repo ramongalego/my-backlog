@@ -1,12 +1,13 @@
 'use client';
 
-import { Fragment, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type FocusEvent } from 'react';
 import Link from 'next/link';
 import {
   ChevronDown,
   Clock,
   Heart,
   HeartOff,
+  History,
   ListMinus,
   ListPlus,
   MonitorSmartphone,
@@ -42,6 +43,7 @@ import {
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
 const SECTION_ID = 'profile-activity';
+const LIST_ID = 'profile-activity-list';
 
 // py-1: about 28px to hit, in a line of its own under the list.
 const DISCLOSE =
@@ -93,16 +95,17 @@ function Row({
   onOpen: (gameId: number) => void;
   buttonRef?: (button: HTMLElement | null) => void;
 }) {
+  const [line] = entry.lines;
+  const { icon: Icon, text, what } = LINE[line.kind];
   // A move says where to: the platform isn't said twice.
   const library = useLibraryPlatforms();
-  const platform = entry.lines.some((line) => line.kind === 'moved')
-    ? null
-    : platformToSay(entry, library);
+  const platform = line.kind === 'moved' ? null : platformToSay(entry, library);
   return (
     <li>
       <button
         ref={buttonRef}
         type="button"
+        data-games={entry.id}
         onClick={() => onOpen(entry.id)}
         className={`${ACTIVITY_ROW} group -mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 text-left transition-colors hover:bg-ink-800/50`}
       >
@@ -114,35 +117,17 @@ function Row({
           </TruncatedText>{' '}
           {/* A finish or a drop says its own day when that isn't the day it was
               logged. */}
-          <span className="mt-0.5 flex flex-col text-sm text-ink-500">
-            {entry.lines.map((line, index) => {
-              const { icon: Icon, text, what } = LINE[line.kind];
-              const latest = index === entry.lines.length - 1;
-              return (
-                // The lines of one row never reorder: more is only added after.
-                <Fragment key={index}>
-                  {index > 0 && (
-                    // Under the icons, as wide as one: three dots, top to bottom.
-                    <span
-                      aria-hidden="true"
-                      className="my-0.5 ml-[6px] block h-3 w-0 border-l-2 border-dotted border-ink-500"
-                    />
-                  )}
-                  <span className="flex flex-wrap items-center gap-x-2">
-                    <span className={`inline-flex items-center gap-1 ${text}`}>
-                      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                      {what(line)}
-                    </span>{' '}
-                    {line.on && <span>{activityDay(line.on)}</span>}{' '}
-                    {latest && platform && <span>on {platform}</span>}{' '}
-                    {/* The rating, on the line it came with (a finish, a drop). */}
-                    {line.rating != null && line.kind !== 'rated' && (
-                      <Rating rating={line.rating} className="ml-auto shrink-0" />
-                    )}
-                  </span>{' '}
-                </Fragment>
-              );
-            })}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
+            <span className={`inline-flex items-center gap-1 ${text}`}>
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {what(line)}
+            </span>{' '}
+            {line.on && <span>{activityDay(line.on)}</span>}{' '}
+            {platform && <span>on {platform}</span>}{' '}
+            {/* The rating it came with (a finish, a drop). */}
+            {line.rating != null && line.kind !== 'rated' && (
+              <Rating rating={line.rating} className="ml-auto shrink-0" />
+            )}
           </span>
         </span>
       </button>
@@ -150,27 +135,37 @@ function Row({
   );
 }
 
-/** A bulk move (Games, Select) as one row that unfolds into a row per game. */
-function BulkRow({
+/**
+ * A bulk move (Games, Select), or several things done to one game in a row, as
+ * one row that unfolds into a row for each.
+ */
+function GroupRow({
   entry,
-  games,
+  members,
   onOpen,
   buttonRef,
 }: {
   entry: ActivityEntry;
-  games: ActivityEntry[];
+  members: ActivityEntry[];
   onOpen: (gameId: number) => void;
   buttonRef?: (button: HTMLElement | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const { icon: Icon, text, what } = LINE[entry.lines[0].kind];
-  const on = entry.lines[0].on;
+  const {
+    icon: Icon,
+    text,
+    what,
+  } = entry.updates
+    ? { icon: History, text: NEUTRAL, what: () => `${members.length} updates` }
+    : LINE[entry.lines[0].kind];
+  const on = entry.updates ? undefined : entry.lines[0].on;
   return (
     <li>
       <button
         ref={buttonRef}
         type="button"
+        data-games={[...new Set(members.map((one) => one.id))].join(' ')}
         onClick={() => setOpen((was) => !was)}
         aria-expanded={open}
         aria-controls={listId}
@@ -180,14 +175,14 @@ function BulkRow({
         <CoverThumb src={entry.header_image} alt="" interactive>
           <span
             aria-hidden="true"
-            data-chip={games.length}
+            data-chip={members.length}
             className="absolute right-1.5 bottom-1.5 rounded-md bg-ink-950/90 px-1.5 py-0.5 text-xs font-medium text-ink-100 tabular-nums before:content-[attr(data-chip)]"
           />
         </CoverThumb>
         <span className="block min-w-0 flex-1">
-          <span className="block font-medium text-ink-100 transition-colors group-hover:text-ink-50">
+          <TruncatedText className="block font-medium text-ink-100 transition-colors group-hover:text-ink-50 lg:truncate">
             {entry.name}
-          </span>{' '}
+          </TruncatedText>{' '}
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-ink-500">
             <span className={`inline-flex items-center gap-1 ${text}`}>
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -202,7 +197,7 @@ function BulkRow({
         />
       </button>
       <ul id={listId} hidden={!open} className="divide-y divide-ink-800/40 pl-6 sm:pl-10">
-        {open && games.map((game) => <Row key={game.key} entry={game} onOpen={onOpen} />)}
+        {open && members.map((one) => <Row key={one.key} entry={one} onOpen={onOpen} />)}
       </ul>
     </li>
   );
@@ -227,6 +222,16 @@ function DayStamp({ day }: { day: string }) {
   );
 }
 
+/**
+ * Focuses the row a game is in now, its own or a group's (rows fold into a group
+ * as more is done to a game); false when it has none.
+ */
+export function focusActivityRow(gameId: number): boolean {
+  const row = document.querySelector<HTMLElement>(`#${LIST_ID} [data-games~="${gameId}"]`);
+  row?.focus();
+  return !!row;
+}
+
 /** A list, where the favorites above are art, so the two don't read as the same row twice. */
 export function RecentActivity({
   entries,
@@ -237,6 +242,19 @@ export function RecentActivity({
   onOpen: (gameId: number) => void;
 }) {
   const [shown, setShown] = useState(ACTIVITY_PAGE);
+  // The row last focused, and its game. When the list changes under it (its
+  // game's dialog changed something, and its rows folded into a group), the
+  // focus goes on to the row that game is in now, not back to the page.
+  const focused = useRef<{ row: HTMLElement; game: number } | null>(null);
+  const noteFocus = (event: FocusEvent) => {
+    const row = (event.target as HTMLElement).closest<HTMLElement>('[data-games]');
+    focused.current = row ? { row, game: Number(row.dataset.games!.split(' ')[0]) } : null;
+  };
+  useEffect(() => {
+    const was = focused.current;
+    if (!was || was.row.isConnected || document.activeElement !== document.body) return;
+    focusActivityRow(was.game);
+  }, [entries]);
   // The first row "Show more" adds takes the focus, so the keyboard and a screen
   // reader carry on where the list grew (the button goes once everything shows).
   const firstNew = useRef<number | null>(null);
@@ -262,11 +280,25 @@ export function RecentActivity({
   };
 
   // The rows showing, in runs of the same day.
-  const days: { day: string | null; rows: { entry: ActivityEntry; index: number }[] }[] = [];
+  // Keyed by the day, not its first row: a new row at the top of a day would
+  // otherwise redraw the whole day, and lose the focus on a row in it.
+  const days: {
+    key: string;
+    day: string | null;
+    rows: { entry: ActivityEntry; index: number }[];
+  }[] = [];
   entries.slice(0, shown).forEach((entry, index) => {
     const last = days.at(-1);
-    if (last && last.day === entry.day) last.rows.push({ entry, index });
-    else days.push({ day: entry.day, rows: [{ entry, index }] });
+    if (last && last.day === entry.day) {
+      last.rows.push({ entry, index });
+      return;
+    }
+    const again = days.filter((one) => one.day === entry.day).length;
+    days.push({
+      key: `${entry.day ?? 'unknown'}-${again}`,
+      day: entry.day,
+      rows: [{ entry, index }],
+    });
   });
 
   return (
@@ -286,9 +318,9 @@ export function RecentActivity({
     >
       {entries.length > 0 ? (
         <>
-          <div className={ACTIVITY_LIST}>
+          <div id={LIST_ID} className={ACTIVITY_LIST} onFocus={noteFocus}>
             {days.map((day) => (
-              <div key={day.rows[0].entry.key} className={ACTIVITY_DAY}>
+              <div key={day.key} className={ACTIVITY_DAY}>
                 {/* The day is said once, for all of its rows. */}
                 {day.day ? (
                   <DayStamp day={day.day} />
@@ -297,11 +329,11 @@ export function RecentActivity({
                 )}
                 <ul className={ACTIVITY_ROWS}>
                   {day.rows.map(({ entry, index }) =>
-                    entry.games ? (
-                      <BulkRow
+                    entry.games || entry.updates ? (
+                      <GroupRow
                         key={entry.key}
                         entry={entry}
-                        games={entry.games}
+                        members={entry.games ?? entry.updates!}
                         onOpen={onOpen}
                         buttonRef={focusIfNew(index)}
                       />

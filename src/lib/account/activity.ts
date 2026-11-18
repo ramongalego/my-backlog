@@ -36,16 +36,16 @@ export interface ActivityLine {
   on?: string;
 }
 
-/** What happened to one game in one go: one row of the list. */
+/** One thing done to a game, or a group of them: one row of the list. */
 export interface ActivityEntry {
-  /** Unique in the list, and stays the same as more is done to the game. */
+  /** Unique in the list. */
   key: string;
   id: number;
   name: string;
   header_image: string | null;
   source: string;
   platform: string | null;
-  /** Oldest first. */
+  /** One, but for a group: what was done to its games, or each of a game's updates, oldest first. */
   lines: ActivityLine[];
   /** "YYYY-MM-DD" the latest line was logged, which the list groups by; null when unknown. */
   day: string | null;
@@ -56,6 +56,8 @@ export interface ActivityEntry {
    * was done to all of them, with the first game's id, name and art.
    */
   games?: ActivityEntry[];
+  /** For several things done to one game in a row, each its own entry, newest first. */
+  updates?: ActivityEntry[];
 }
 
 export interface ActivityEvent extends HistoryEvent {
@@ -88,6 +90,9 @@ export const RECENT_ACTIVITY = 50;
 /** More than this many games in a row with the same thing done on one day are one row. */
 const GROUP_MORE_THAN = 3;
 
+/** More than this many things done to one game in a row are one row, which unfolds. */
+const SAME_GAME_MORE_THAN = 2;
+
 /**
  * Time played, a move and a rating each say something of their own, and only
  * one game is being played, so those never group.
@@ -107,7 +112,7 @@ const GROUPABLE = new Set<ActivityKind>([
   'note',
 ]);
 
-/** Things done to one game this close together, with nothing else between, are one entry. */
+/** Things done to one game this close together on one day, with nothing else between, are a run. */
 const SAME_GO_MS = 12 * 60 * 60 * 1000;
 
 /** A day saved as midnight UTC ("2026-11-16T00:00:00+00:00"): read straight off it. */
@@ -152,18 +157,20 @@ function told(event: ActivityEvent): Told | null {
   return play ? { kind: 'played', minutes: play.minutes } : null;
 }
 
-/** Oldest first, with time played in a row added up. */
-function linesOf(newestFirst: Item[]): ActivityLine[] {
-  const lines: ActivityLine[] = [];
-  for (const { line } of [...newestFirst].reverse()) {
-    const last = lines.at(-1);
-    if (line.kind === 'played' && last?.kind === 'played') {
-      lines[lines.length - 1] = { ...last, minutes: (last.minutes ?? 0) + (line.minutes ?? 0) };
+/** Newest first, with time played in a row added up into one. */
+function updatesOf(newestFirst: Item[]): Item[] {
+  const updates: Item[] = [];
+  for (const item of [...newestFirst].reverse()) {
+    const last = updates.at(-1);
+    if (item.line.kind === 'played' && last?.line.kind === 'played') {
+      // The newer one's day and moment, the older one's key.
+      const minutes = (last.line.minutes ?? 0) + (item.line.minutes ?? 0);
+      updates[updates.length - 1] = { ...item, key: last.key, line: { ...last.line, minutes } };
     } else {
-      lines.push(line);
+      updates.push(item);
     }
   }
-  return lines;
+  return updates.reverse();
 }
 
 /**
@@ -248,29 +255,48 @@ export function recentActivity(
     const run = runs.at(-1);
     const last = run?.at(-1);
     const gap = last ? Date.parse(last.at) - Date.parse(item.at) : NaN;
-    if (run && last && last.game.id === item.game.id && gap <= SAME_GO_MS) run.push(item);
+    // Never across days: a group sits under one day, so each of its updates is
+    // on the day it shows under.
+    const sameGo =
+      last && last.game.id === item.game.id && gap <= SAME_GO_MS && last.day === item.day;
+    if (run && sameGo) run.push(item);
     else runs.push([item]);
   }
 
-  const made = runs.map((run) => {
-    const [newest] = run;
-    const { game } = newest;
-    const entry: ActivityEntry = {
-      // The run's first line: more done to the game since keeps the row its own.
-      key: run.at(-1)!.key,
+  const made = runs.flatMap((run) => {
+    const { game } = run[0];
+    const about = {
       id: game.id,
       name: game.name,
       header_image: game.header_image,
       source: game.source,
       platform: game.platform,
-      lines: linesOf(run),
-      day: newest.day,
-      rating: run.find((item) => item.rating !== null)?.rating ?? null,
     };
-    // One thing done to one game, logged on a day: what a group is made of.
+    const updates = updatesOf(run).map((item): ActivityEntry => ({
+      ...about,
+      key: item.key,
+      lines: [item.line],
+      day: item.day,
+      rating: item.rating,
+    }));
+    if (updates.length > SAME_GAME_MORE_THAN) {
+      const entry: ActivityEntry = {
+        ...about,
+        // The run's first update: more done to the game since keeps the row its own.
+        key: `updates-${updates.at(-1)!.key}`,
+        lines: updates.map((one) => one.lines[0]).reverse(),
+        day: updates[0].day,
+        rating: updates.find((one) => one.rating !== null)?.rating ?? null,
+        updates,
+      };
+      return [{ entry, groupable: false }];
+    }
+    // One thing done to one game, logged on a day: what a group of games is made
+    // of. A game with more done to it in a row stays out of one.
+    const [newest] = run;
     const groupable =
       run.length === 1 && newest.at.includes('T') && GROUPABLE.has(newest.line.kind);
-    return { entry, groupable };
+    return updates.map((entry) => ({ entry, groupable }));
   });
 
   // Games moved one by one group the same as games moved together (Games, Select).

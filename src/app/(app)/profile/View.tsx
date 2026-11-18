@@ -12,7 +12,7 @@ import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
 import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { DisconnectSteamDialog } from '@/components/profile/DisconnectSteamDialog';
-import { RecentActivity } from '@/components/profile/RecentActivity';
+import { focusActivityRow, RecentActivity } from '@/components/profile/RecentActivity';
 import { PlaysOn } from '@/components/profile/PlaysOn';
 import { AccountPanel } from '@/components/profile/AccountPanel';
 import { useProfilePage } from '@/hooks/useProfilePage';
@@ -29,20 +29,25 @@ export default function ProfileView() {
   >(null);
   const favoritesRow = useRef<FavoriteGamesHandle>(null);
   // Which section a game's dialog was opened from. If the change it saves
-  // takes that game out of the section (a favorite hidden, a finished game
-  // put back in the backlog), focus goes to the section, not to the page.
-  const openedFrom = useRef<'favorites' | 'activity'>('favorites');
+  // takes the row it was opened from away, focus goes to the row that game is
+  // in now (its rows in Recent activity fold into a group), or else to the
+  // section (a favorite hidden, a game removed), not to the page.
+  const openedFrom = useRef<{ section: 'favorites' | 'activity'; game: number } | null>(null);
   const openFavorite = (gameId: number) => {
-    openedFrom.current = 'favorites';
+    openedFrom.current = { section: 'favorites', game: gameId };
     profile.openGame(gameId);
   };
   const openActivity = (gameId: number) => {
-    openedFrom.current = 'activity';
+    openedFrom.current = { section: 'activity', game: gameId };
     profile.openGame(gameId);
   };
   const focusOpenedFrom = () => {
-    if (openedFrom.current === 'favorites') favoritesRow.current?.focus();
-    else document.getElementById('profile-activity')?.focus();
+    const from = openedFrom.current;
+    if (from?.section === 'activity') {
+      if (!focusActivityRow(from.game)) document.getElementById('profile-activity')?.focus();
+    } else {
+      favoritesRow.current?.focus();
+    }
   };
 
   if (profile.loading) return <ProfilePageSkeleton />;

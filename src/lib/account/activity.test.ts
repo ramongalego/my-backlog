@@ -323,7 +323,8 @@ describe('recentActivity, from the history', () => {
     ]);
     expect(entries.map((e) => [e.id, kinds(e)])).toEqual([
       [8, ['favorite']],
-      [7, ['queued', 'unqueued']],
+      [7, ['unqueued']],
+      [7, ['queued']],
     ]);
   });
 
@@ -396,101 +397,101 @@ describe('recentActivity, several things about one game', () => {
       },
       at(hour, day),
     );
+  /** What the list shows: a game's updates folded into one, or a single row's kind. */
+  const shown = (entries: ActivityEntry[]) =>
+    entries.map((e) => (e.updates ? e.updates.map(kinds).flat() : kinds(e).join()));
 
-  it('is one entry, its lines in the order they happened, with the latest day and the rating', () => {
+  it('is a row each for two things done in a row', () => {
+    const entries = recentActivity([hades], null, [started(11), queued(9)]);
+    expect(shown(entries)).toEqual(['started', 'queued']);
+    expect(entries.every((e) => e.lines.length === 1)).toBe(true);
+  });
+
+  it('is one row for more than two, its updates newest first, with the latest day and rating', () => {
     const entries = recentActivity([hades], null, [done(15), started(11), queued(9)]);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({
+    const [group] = entries;
+    expect(group).toMatchObject({
       id: 7,
-      lines: [{ kind: 'queued' }, { kind: 'started' }, { kind: 'finished' }],
+      name: 'Hades',
       day: toLocalIsoDate(new Date(at(15))),
       rating: 10,
     });
+    expect(shown(entries)).toEqual([['finished', 'started', 'queued']]);
+    // Each update is a row of its own, with its own day and rating.
+    expect(group.updates!.map((one) => [one.id, one.rating])).toEqual([
+      [7, 10],
+      [7, null],
+      [7, null],
+    ]);
   });
 
-  it('is two entries when another game comes between', () => {
+  it('is separate rows when another game comes between', () => {
     const entries = recentActivity([hades, celeste], null, [
       queued(9),
       event(8, 'favorite', { favorite: [false, true] }, at(10)),
       started(11),
+      done(12),
     ]);
-    expect(entries.map((e) => [e.id, kinds(e)])).toEqual([
-      [7, ['started']],
-      [8, ['favorite']],
-      [7, ['queued']],
+    expect(entries.map((e) => [e.id, kinds(e).join()])).toEqual([
+      [7, 'finished'],
+      [7, 'started'],
+      [8, 'favorite'],
+      [7, 'queued'],
     ]);
   });
 
-  it('is two entries when more than twelve hours pass between two lines', () => {
-    const entries = recentActivity([hades], null, [queued(12, 16), started(21, 16), done(10, 17)]);
+  it('stops a run when more than twelve hours pass between two things', () => {
+    const entries = recentActivity([hades], null, [queued(5), started(6), done(19)]);
     // Thirteen hours from the start to the finish.
-    expect(entries.map(kinds)).toEqual([['finished'], ['queued', 'started']]);
+    expect(shown(entries)).toEqual(['finished', 'started', 'queued']);
   });
 
-  it('goes on as one entry while each line is within twelve hours of the last', () => {
-    const entries = recentActivity([hades], null, [queued(8, 16), started(19, 16), done(6, 17)]);
-    expect(entries.map(kinds)).toEqual([['queued', 'started', 'finished']]);
+  it('goes on while each thing is within twelve hours of the last', () => {
+    const entries = recentActivity([hades], null, [queued(6), started(12), done(18)]);
+    expect(shown(entries)).toEqual([['finished', 'started', 'queued']]);
   });
 
-  it('adds up time played in a row', () => {
+  it("stops a run at midnight, so a group's updates are all on the day it shows under", () => {
+    const entries = recentActivity([hades], null, [queued(21, 16), started(23, 16), done(1, 17)]);
+    expect(entries.map((e) => [e.day, shown([e])[0]])).toEqual([
+      [toLocalIsoDate(new Date(at(1, 17))), 'finished'],
+      [toLocalIsoDate(new Date(at(23, 16))), 'started'],
+      [toLocalIsoDate(new Date(at(21, 16))), 'queued'],
+    ]);
+  });
+
+  it('adds up time played in a row, as one update', () => {
     const entries = recentActivity([hades], null, [
       event(7, 'playtime', { playtime_forever: [0, 60] }, at(9)),
       event(7, 'playtime', { playtime_forever: [60, 150] }, at(12)),
       event(7, 'edit', { rating: [null, 8] }, at(13)),
       event(7, 'playtime', { playtime_forever: [150, 180] }, at(14)),
     ]);
-    expect(entries[0].lines).toEqual([
-      { kind: 'played', minutes: 150 },
-      { kind: 'rated', rating: 8 },
+    expect(entries[0].updates!.map((one) => one.lines[0])).toEqual([
       { kind: 'played', minutes: 30 },
+      { kind: 'rated', rating: 8 },
+      { kind: 'played', minutes: 150 },
     ]);
   });
 
-  it('keeps the rating on the line it came with, not on the others', () => {
-    // Finished on the day it was logged, so the line says no day of its own.
-    const finishedOn = toLocalIsoDate(new Date(at(15)));
-    const [entry] = recentActivity([hades], null, [
-      queued(9),
-      started(11),
-      event(
-        7,
-        'status',
-        {
-          status: ['playing', 'finished'],
-          finished_at: [null, `${finishedOn}T00:00:00+00:00`],
-          rating: [null, 10],
-        },
-        at(15),
-      ),
-    ]);
-    expect(entry.lines).toEqual([
-      { kind: 'queued' },
-      { kind: 'started' },
-      { kind: 'finished', rating: 10 },
-    ]);
-    expect(entry.lines[0]).not.toHaveProperty('rating');
-    expect(entry.lines[1]).not.toHaveProperty('rating');
-    expect(entry.rating).toBe(10);
-  });
-
-  it('gives the entry the latest rating of its lines, each line keeping its own', () => {
-    const [entry] = recentActivity([hades], null, [
+  it('gives each row the rating it came with', () => {
+    const entries = recentActivity([hades], null, [
       done(9),
       event(7, 'edit', { rating: [10, 8] }, at(11)),
     ]);
-    expect(entry.lines).toMatchObject([
-      { kind: 'finished', rating: 10 },
-      { kind: 'rated', rating: 8 },
+    expect(entries.map((e) => [kinds(e).join(), e.rating])).toEqual([
+      ['rated', 8],
+      ['finished', 10],
     ]);
-    expect(entry.rating).toBe(8);
+    expect(entries[1].lines[0].rating).toBe(10);
   });
 
-  it('keeps its key as more is done to the game, and gives each entry its own', () => {
+  it('keeps each row its key as more is done to the game, and gives every row its own', () => {
     const first = [queued(9)];
-    const more = [...first, started(11)];
     const [before] = recentActivity([hades], null, first);
-    const [after] = recentActivity([hades], null, more);
-    expect(after.key).toBe(before.key);
+    const after = recentActivity([hades], null, [...first, started(11)]);
+    expect(after.at(-1)!.key).toBe(before.key);
 
     const entries = recentActivity([hades, celeste], null, [
       queued(9),
@@ -498,6 +499,12 @@ describe('recentActivity, several things about one game', () => {
       started(11),
     ]);
     expect(new Set(entries.map((e) => e.key)).size).toBe(3);
+
+    const three = [queued(9), started(11), done(12)];
+    const group = recentActivity([hades], null, three);
+    const more = recentActivity([hades], null, [...three, queued(13)]);
+    expect(more[0].key).toBe(group[0].key);
+    expect(group[0].key).not.toBe(group[0].updates!.at(-1)!.key);
   });
 
   it("doesn't join what the game says with a line of the history from another day", () => {
@@ -599,13 +606,13 @@ describe('recentActivity, a group of games', () => {
     expect(entries).toHaveLength(4);
   });
 
-  it('leaves a game with more than one line out of it: that is more than one thing done', () => {
+  it('leaves out a game with more done to it in a row: that is more than one thing done', () => {
     const entries = recentActivity(library, null, [
       event(1, 'queue', { queued: [false, true] }, '2026-11-17T23:40:00+00:00'),
       ...[1, 2, 3, 4, 5].map((id) => wontPlay(id, moment)),
     ]);
-    // Game 1 was queued minutes before, so its row holds both.
-    expect(shown(entries)).toEqual([[5, 4, 3, 2], '1 queued,wont_play']);
+    // Game 1 was queued minutes before, so its two things stay rows of their own.
+    expect(shown(entries)).toEqual([[5, 4, 3, 2], '1 wont_play', '1 queued']);
   });
 
   it('never groups lines that each say something of their own: time played, a move, a rating', () => {

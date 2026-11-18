@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { RecentActivity } from '@/components/profile/RecentActivity';
+import { focusActivityRow, RecentActivity } from '@/components/profile/RecentActivity';
 import {
   activityDay,
   type ActivityEntry,
@@ -138,27 +138,6 @@ it('says the game being played started, in the past tense like every line', () =
   expect(screen.getByRole('button', { name: 'Hades Started playing' })).toBeInTheDocument();
 });
 
-it('colors the start of the game being played only, in a row with more lines', () => {
-  render(
-    <RecentActivity
-      onOpen={onOpen}
-      entries={[
-        entry({
-          name: 'Hades',
-          source: 'manual',
-          platform: 'Switch',
-          lines: [{ kind: 'queued' }, { kind: 'playing' }, { kind: 'played', minutes: 45 }],
-        }),
-      ]}
-    />,
-  );
-  const [row] = rows();
-  expect(lineOf(row, 'Started playing')).toHaveTextContent(/^Started playing$/);
-  expect(within(row).getByText('Started playing')).toHaveClass('text-accent-400');
-  expect(within(row).getByText('Added to queue')).not.toHaveClass('text-accent-400');
-  expect(row).toHaveTextContent(/^Hades Added to queue Started playing Played 45m on Switch$/);
-});
-
 it('shows a game being played without a day when its start is not known', () => {
   render(<RecentActivity onOpen={onOpen} entries={[entry({ kind: 'playing', day: null })]} />);
   expect(rows()[0]).toHaveTextContent(/^Test Game Started playing$/);
@@ -199,14 +178,11 @@ it('keeps a row, and the focus on it, when more happens to its game', () => {
   rerender(
     <RecentActivity
       onOpen={onOpen}
-      entries={[
-        { ...queued, lines: [{ kind: 'queued' }, { kind: 'finished', rating: 9 }], rating: 9 },
-      ]}
+      entries={[entry({ key: 'event-2', id: 7, kind: 'finished', name: 'Hades' }), queued]}
     />,
   );
-  const finished = screen.getByRole('button', { name: /^Hades Added to queue Finished/ });
-  expect(finished).toBe(row);
-  expect(finished).toHaveFocus();
+  expect(screen.getByRole('button', { name: /^Hades Added to queue/ })).toBe(row);
+  expect(row).toHaveFocus();
 });
 
 describe('what the history adds', () => {
@@ -287,64 +263,72 @@ describe('what the history adds', () => {
   });
 });
 
-describe('several things about one game', () => {
-  const portal = entry({
-    id: 7,
-    name: 'Portal',
-    source: 'manual',
-    platform: 'Switch',
-    lines: [{ kind: 'queued' }, { kind: 'played', minutes: 90 }, { kind: 'finished', rating: 10 }],
-    day: '2026-11-17',
+describe('several things done to one game in a row', () => {
+  const update = (key: string, overrides: Parameters<typeof entry>[0]) =>
+    entry({
+      key,
+      id: 7,
+      name: 'Portal',
+      source: 'manual',
+      platform: 'Switch',
+      day: '2026-11-17',
+      ...overrides,
+    });
+  const updates = [
+    update('event-3', { kind: 'finished', rating: 10 }),
+    update('event-2', { kind: 'played', minutes: 90 }),
+    update('event-1', { kind: 'queued' }),
+  ];
+  const portal = update('updates-event-1', {
+    lines: updates.map((one) => one.lines[0]).reverse(),
     rating: 10,
+    updates,
   });
+  const toggle = () => screen.getByRole('button', { name: 'Portal 3 updates' });
 
-  it('is one row: each thing in the order it happened, the console once, after the last', () => {
+  it('is one row: the game and how many updates, folded away', () => {
     render(<RecentActivity onOpen={onOpen} entries={[portal]} />);
     expect(rows()).toHaveLength(1);
-    expect(
-      screen.getByRole('button', {
-        name: 'Portal Added to queue Played 1h 30m Finished on Switch 10/10',
-      }),
-    ).toBeInTheDocument();
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle().querySelector('[data-chip="3"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('button', { name: /^Portal Finished/ })).not.toBeInTheDocument();
     expect(days()).toEqual([activityDay('2026-11-17')]);
   });
 
-  it('draws the rating inside the line it came with, not at the end of the row', () => {
+  it('opens to each update, newest first, each its own row that opens the game', () => {
     render(<RecentActivity onOpen={onOpen} entries={[portal]} />);
-    const [row] = rows();
-    const rating = within(row).getByText('10/10');
-    const finished = lineOf(row, 'Finished');
-    expect(finished).toContainElement(rating);
-    expect(finished).toHaveTextContent(/^Finished on Switch 10\/10$/);
-    expect(lineOf(row, 'Added to queue')).toHaveTextContent(/^Added to queue$/);
-    expect(lineOf(row, 'Played 1h 30m')).toHaveTextContent(/^Played 1h 30m$/);
-    expect(within(row).getAllByText('10/10')).toHaveLength(1);
-    expect(rating.parentElement!.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    fireEvent.click(toggle());
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true');
+    expect(onOpen).not.toHaveBeenCalled();
+    const list = document.getElementById(toggle().getAttribute('aria-controls')!)!;
+    expect(
+      within(list)
+        .getAllByRole('button')
+        .map((b) => b.textContent!.replace(/\s+/g, ' ').trim()),
+    ).toEqual([
+      'Portal Finished on Switch 10/10',
+      'Portal Played 1h 30m on Switch',
+      'Portal Added to queue on Switch',
+    ]);
+
+    fireEvent.click(within(list).getByRole('button', { name: /^Portal Played/ }));
+    expect(onOpen).toHaveBeenCalledWith(7);
+
+    fireEvent.click(toggle());
+    expect(screen.queryByRole('button', { name: /^Portal Played/ })).not.toBeInTheDocument();
   });
 
-  it('keeps the rating on its finish when more happened to the game after it', () => {
-    render(
-      <RecentActivity
-        onOpen={onOpen}
-        entries={[
-          entry({
-            name: 'Portal',
-            source: 'manual',
-            platform: 'Switch',
-            lines: [{ kind: 'finished', on: '2026-11-10', rating: 9 }, { kind: 'favorite' }],
-            day: '2026-11-17',
-            rating: 9,
-          }),
-        ]}
-      />,
+  it('counts as one of the six rows', () => {
+    const others = Array.from({ length: 5 }, (_, i) =>
+      entry({ key: `event-${i + 10}`, id: i + 20, name: `Game ${i}` }),
     );
-    const [row] = rows();
-    expect(lineOf(row, 'Finished')).toHaveTextContent(
-      new RegExp(`^Finished ${activityDay('2026-11-10')} 9/10$`),
-    );
-    expect(lineOf(row, 'Added to favorites')).toHaveTextContent(/^Added to favorites on Switch$/);
+    render(<RecentActivity onOpen={onOpen} entries={[portal, ...others]} />);
+    expect(rows()).toHaveLength(6);
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
   });
+});
 
+describe('one thing done to a game', () => {
   it('draws the rating last on its line: after the label, its own day and the console', () => {
     render(
       <RecentActivity
@@ -363,25 +347,7 @@ describe('several things about one game', () => {
     expect(lineOf(rows()[0], 'Dropped')).toHaveTextContent(
       new RegExp(`^Dropped ${activityDay('2026-11-10')} on Switch 4/10$`),
     );
-  });
-
-  it('draws each rating on its own line when a finish is rated again', () => {
-    render(
-      <RecentActivity
-        onOpen={onOpen}
-        entries={[
-          entry({
-            lines: [
-              { kind: 'finished', rating: 10 },
-              { kind: 'rated', rating: 8 },
-            ],
-            // The latest of them, which the row doesn't draw a second time.
-            rating: 8,
-          }),
-        ]}
-      />,
-    );
-    expect(rows()[0]).toHaveTextContent(/^Test Game Finished 10\/10 Rated 8\/10$/);
+    expect(within(rows()[0]).getAllByText('4/10')).toHaveLength(1);
   });
 
   it('draws no rating for a line that came without one', () => {
@@ -392,27 +358,6 @@ describe('several things about one game', () => {
       />,
     );
     expect(section().queryByText(/\/10/)).not.toBeInTheDocument();
-  });
-
-  it('has dots between its lines that say nothing aloud', () => {
-    render(<RecentActivity onOpen={onOpen} entries={[portal]} />);
-    const dots = rows()[0].querySelectorAll('.border-dotted');
-    expect(dots).toHaveLength(2);
-    dots.forEach((dot) => expect(dot).toHaveAttribute('aria-hidden', 'true'));
-  });
-
-  it('has no dots in a row about one thing', () => {
-    render(<RecentActivity onOpen={onOpen} entries={[entry({})]} />);
-    expect(rows()[0].querySelector('.border-dotted')).toBeNull();
-  });
-
-  it('counts as one of the six rows', () => {
-    const others = Array.from({ length: 5 }, (_, i) =>
-      entry({ key: `event-${i}`, id: i + 20, name: `Game ${i}` }),
-    );
-    render(<RecentActivity onOpen={onOpen} entries={[portal, ...others]} />);
-    expect(rows()).toHaveLength(6);
-    expect(screen.queryByRole('button', { name: /^Show \d+ more$/ })).not.toBeInTheDocument();
   });
 });
 
@@ -722,5 +667,54 @@ describe('where each game is played, by what the library is on', () => {
       />,
     );
     expect(rows()[0]).not.toHaveTextContent(' on Switch 2');
+  });
+});
+
+describe('the focus, when rows fold into a group', () => {
+  const portal = (key: string, kind: ActivityKind) =>
+    entry({ key, id: 7, name: 'Portal', kind, day: '2026-11-17' });
+  const two = [portal('event-2', 'started'), portal('event-1', 'queued')];
+  const three = [portal('event-3', 'finished'), ...two];
+  const group = entry({
+    key: 'updates-event-1',
+    id: 7,
+    name: 'Portal',
+    day: '2026-11-17',
+    lines: three.map((one) => one.lines[0]).reverse(),
+    updates: three,
+  });
+  const other = entry({ key: 'event-9', id: 8, name: 'Celeste', kind: 'added', day: '2026-11-16' });
+
+  it("goes on to the group its game's rows folded into", () => {
+    const { rerender } = render(<RecentActivity onOpen={onOpen} entries={[...two, other]} />);
+    screen.getByRole('button', { name: /^Portal Added to queue/ }).focus();
+
+    rerender(<RecentActivity onOpen={onOpen} entries={[group, other]} />);
+    expect(screen.getByRole('button', { name: 'Portal 3 updates' })).toHaveFocus();
+  });
+
+  it("stays where it is when it isn't on a row that went", () => {
+    const { rerender } = render(<RecentActivity onOpen={onOpen} entries={[...two, other]} />);
+    const celeste = screen.getByRole('button', { name: /^Celeste/ });
+    celeste.focus();
+
+    rerender(<RecentActivity onOpen={onOpen} entries={[group, other]} />);
+    expect(celeste).toHaveFocus();
+  });
+
+  it("doesn't take the focus when it had moved off the list", () => {
+    const { rerender } = render(<RecentActivity onOpen={onOpen} entries={[...two, other]} />);
+    screen.getByRole('button', { name: /^Portal Added to queue/ }).focus();
+    screen.getByRole('link', { name: 'Diary' }).focus();
+
+    rerender(<RecentActivity onOpen={onOpen} entries={[group, other]} />);
+    expect(screen.getByRole('link', { name: 'Diary' })).toHaveFocus();
+  });
+
+  it('finds the row a game is in now, for a dialog whose opener went', () => {
+    render(<RecentActivity onOpen={onOpen} entries={[group, other]} />);
+    expect(focusActivityRow(7)).toBe(true);
+    expect(screen.getByRole('button', { name: 'Portal 3 updates' })).toHaveFocus();
+    expect(focusActivityRow(99)).toBe(false);
   });
 });
