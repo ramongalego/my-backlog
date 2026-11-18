@@ -1,11 +1,9 @@
 import type { SignInProvider } from '@/lib/account/sign-in';
 
 /**
- * The mark of an account to sign in with, on its button. Google's "G" is in
- * its own four colors, which Google's sign-in rules require as drawn (never
- * one color, never redrawn): the one place a color in the app isn't a token.
- * Discord's mark (from Simple Icons, CC0) is one color, as Discord allows,
- * and takes the text's.
+ * Google's sign-in rules require its "G" as drawn, in its four colors: the one
+ * place a color in the app isn't a token. Discord's mark (Simple Icons, CC0)
+ * takes the text's color, as Discord allows.
  */
 export function ProviderIcon({
   provider,

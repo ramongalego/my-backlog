@@ -10,9 +10,8 @@ export const metadata: Metadata = {
 
 const contact = <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
 
-// Written as the Privacy Policy is: whole sentences, one idea each, no bold
-// lead-ins, no colons setting up a list, straight quotes. The section numbers
-// are referred to from section 7, so reordering the sections means updating it.
+// Written as the Privacy Policy is. Section 7 refers to the section numbers,
+// so reordering the sections means updating it.
 const sections: LegalSection[] = [
   {
     id: 'the-service',

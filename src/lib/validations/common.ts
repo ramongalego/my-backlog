@@ -1,11 +1,7 @@
 import { z } from 'zod';
 import { MAX_BULK_APP_IDS, MAX_HLTB_APP_IDS } from '@/lib/games/sync-limits';
 
-/**
- * Text a user typed, with HTML tags taken out and the ends trimmed. Only what
- * could be a tag goes ("<b>", "</p>", "<!--"): "I <3 it, and 2 > 1" is kept
- * whole, where taking out everything between "<" and ">" lost the middle.
- */
+/** Only what could be a tag goes ("<b>", "</p>", "<!--"), so "I <3 it, and 2 > 1" stays whole. */
 export const safeText = z
   .string()
   .transform((val) => val.replace(/<(?:\/?[a-z]|!)[^>]*>/gi, '').trim());
@@ -34,8 +30,7 @@ export const syncHltbRequestSchema = z.object({
 
 export const queueAddRequestSchema = z.object({
   gameId: gameIdSchema,
-  // An Undo of taking the game off the queue: how long ago that was, in
-  // milliseconds, as the browser timed it (see undoAgoMs in games.ts).
+  // An Undo of taking the game off the queue: ms since then (see undoAgoMs in games.ts).
   undoAgoMs: z.number().min(0).optional(),
 });
 
@@ -49,10 +44,7 @@ export const queueReorderRequestSchema = z.object({
   order: z.array(gameIdSchema).min(1).max(MAX_BULK_APP_IDS),
 });
 
-/**
- * A form's validation issues as one message per field, the first for each, as
- * the form shows them under its fields.
- */
+/** The first issue for each field, as the form shows them under its fields. */
 export function issuesByField<F extends string>(
   issues: readonly { path: readonly PropertyKey[]; message: string }[],
 ): Partial<Record<F, string>> {

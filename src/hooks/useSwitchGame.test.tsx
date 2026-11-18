@@ -48,7 +48,6 @@ function setup(queue: QueueItem[]) {
 const ids = (client: QueryClient) =>
   client.getQueryData<QueueItem[]>(queryKeys.queue.list('u'))?.map((q) => q.game_id);
 
-/** Presses Undo on the switch's toast. */
 async function undo() {
   await waitFor(() => expect(toast).toHaveBeenCalled());
   const [, options] = jest.mocked(toast).mock.calls[0] as unknown as [
@@ -65,10 +64,7 @@ async function undone(result: { current: ReturnType<typeof useSwitchGame> }) {
   await waitFor(() => expect(result.current.isPending).toBe(false));
 }
 
-/**
- * Stops the clock (the timers stay real), so a test can let an exact time
- * pass between a switch and its Undo.
- */
+/** Stops Date.now (timers stay real), so a test can pass an exact time before Undo. */
 let clock: jest.SpyInstance | undefined;
 function stopClock() {
   let now = Date.parse('2026-11-17T12:00:00Z');
@@ -131,18 +127,12 @@ it('undo puts a backlog game back in the backlog in one request, off the queue',
   await act(() => result.current.switchTo(momodora));
   await undone(result);
 
-  // The switch itself was an ordinary change.
   expect(updateGameStatus).toHaveBeenNthCalledWith(1, 2, 'playing', { pausePlaying: true });
-  // The Undo says it is one, and how long ago the switch was, so the history
-  // takes the switch back out instead of recording a second one. Momodora
-  // isn't paused at the top of the queue on the way: starting Zelda again
-  // sends it straight back to the backlog, in the same save.
   expect(updateGameStatus).toHaveBeenNthCalledWith(2, 1, 'playing', {
     pausePlaying: false,
     undo: true,
     undoAgoMs: expect.any(Number),
   });
-  // And that is all of it.
   expect(sentInOrder()).toEqual(['status 2 playing', 'status 1 playing']);
   expect(result.current.playing?.id).toBe(1);
   expect(ids(queryClient)).toEqual([3]);
@@ -160,7 +150,6 @@ it('undo puts a finished game back as finished, with its date, notes and rating'
   );
   await undone(result);
 
-  // Zelda first, which sends Momodora to the backlog; then Momodora as it was.
   expect(updateGameStatus).toHaveBeenNthCalledWith(2, 1, 'playing', {
     pausePlaying: false,
     undo: true,
@@ -173,7 +162,7 @@ it('undo puts a finished game back as finished, with its date, notes and rating'
     rating: 9,
     undo: true,
     undoAgoMs: expect.any(Number),
-    // The switch didn't say it had ever been started: none to put back.
+    // The switch reported no earlier start date.
     startedAt: null,
   });
   expect(sentInOrder()).toEqual(['status 2 playing', 'status 1 playing', 'status 2 finished']);
@@ -182,8 +171,7 @@ it('undo puts a finished game back as finished, with its date, notes and rating'
 });
 
 it('undo puts a finished game back as started when it had been: the date the switch reported', async () => {
-  // Playing Momodora again stamped its start with now; the server answered
-  // the switch with the start date it had before.
+  // The switch stamps the start with now and answers with the one it had before.
   jest.mocked(updateGameStatus).mockResolvedValueOnce({
     paused: [{ id: 1, name: 'Zelda' }],
     startedAt: '2025-08-01T10:00:00+00:00',
@@ -299,14 +287,11 @@ it('undo puts a queued game back in its place', async () => {
   await waitFor(() => expect(ids(queryClient)).toEqual([1, 3]));
   await undone(result);
 
-  // Momodora goes back to its place, so it waits at the top of the queue
-  // (paused) while Zelda starts again.
   expect(updateGameStatus).toHaveBeenNthCalledWith(2, 1, 'playing', {
     pausePlaying: true,
     undo: true,
     undoAgoMs: expect.any(Number),
   });
-  // It wasn't really started: its start date is cleared.
   expect(updateGameStatus).toHaveBeenNthCalledWith(3, 2, 'backlog', {
     undo: true,
     undoAgoMs: expect.any(Number),
@@ -335,7 +320,7 @@ it('undo puts a queued game that was paused itself back in its place, still star
     undo: true,
     undoAgoMs: expect.any(Number),
   });
-  // No write to the backlog, which would clear its start date.
+  // A write to the backlog would clear its start date.
   expect(sentInOrder()).toEqual(['status 2 playing', 'status 1 playing', 'reorder 3,2']);
   expect(ids(queryClient)).toEqual([3, 2]);
 });
@@ -352,12 +337,11 @@ describe('every write of an Undo says how long ago the switch was: the time sinc
     await act(() => result.current.switchTo(momodora));
     await waitFor(() => expect(toast).toHaveBeenCalled());
 
-    // The toast waits while its tab is in the background: a minute and a half.
+    // A toast waits while its tab is in the background.
     time.pass(90_000);
     await undone(result);
 
     expect(sentTimes()).toEqual([
-      // The switch is no Undo: it says no time.
       [2, 'playing', undefined, undefined],
       [1, 'playing', true, 90_000],
     ]);
@@ -462,7 +446,6 @@ it('undoes a switch once, however many times Undo is pressed', async () => {
 
   await waitFor(() => expect(result.current.playing?.id).toBe(1));
   await waitFor(() => expect(result.current.isPending).toBe(false));
-  // The switch, and one Undo.
   expect(sentInOrder()).toEqual(['status 2 playing', 'status 1 playing']);
 });
 

@@ -31,11 +31,7 @@ import {
 import { useFavoriteGames } from './useFavoriteGames';
 import { useLibraryGameDialog } from './useLibraryGameDialog';
 
-/**
- * Everything the Profile page shows, from what the app already knows: the
- * account (name, avatar, email, when it was made, Steam) and the library (the
- * Games page's list, shared, so it's downloaded once).
- */
+/** The library is the Games page's cached list, so it's downloaded once. */
 export function useProfilePage() {
   const { user, profile } = useAuth();
   const userId = user?.id ?? null;
@@ -47,8 +43,7 @@ export function useProfilePage() {
     refetch,
   } = useQuery(queries.gamesList(userId));
   const { data: playing = null } = useQuery(queries.playing(userId));
-  // The history, for Recent activity. If it can't be read, the activity is
-  // what the games themselves say, as it was before there was a history.
+  // If it can't be read, Recent activity falls back to what the games say.
   const { data: history = [] } = useQuery(queries.history(userId));
   // Until the database has said (or if it can't), how the account was made.
   const { data: hasPassword } = useQuery(queries.hasPassword(userId));
@@ -58,7 +53,6 @@ export function useProfilePage() {
   const picked = pickedFavorites(games, favoriteGames.pickedIds);
   /** The picks the page shows: one hidden since, or gone from the library, drops out. */
   const shownPicks = (ids: readonly number[]) => pickedFavorites(games, ids).map((game) => game.id);
-  // A game's dialog, opened from a favorite or an activity row.
   const { gameDialog, openGame } = useLibraryGameDialog(userId);
 
   // A saved change goes into the session the whole app reads, so the
@@ -72,13 +66,11 @@ export function useProfilePage() {
     retry: () => void refetch(),
     name: profileName(profile?.display_name, profile?.steam_username, user?.email),
     avatar: profileAvatar(profile?.avatar_url, profile?.steam_avatar),
-    /** Changing the name and picture, where they're shown. */
     identity: {
       /** The name the player chose, or null when it's the account's. */
       chosenName: profile?.display_name ?? null,
       /** What the name goes back to when the chosen one is cleared. */
       accountName: displayName(profile?.steam_username, user?.email),
-      /** A picture they uploaded, which can be taken off. */
       hasOwnPicture: !!profile?.avatar_url,
       rename: async (name: string | null) => {
         const result = await saveProfileName(name);
@@ -111,9 +103,8 @@ export function useProfilePage() {
     figures: profileFigures(games),
     favorites: picked,
     /**
-     * Whether the picks are known. Until they've loaded the row can't be
-     * changed, and if they couldn't be, it says so: a row drawn empty would
-     * invite picking over the saved ones.
+     * Until 'ready' the row can't be changed: drawn empty, it would invite
+     * picking over the saved ones.
      */
     favoritesState: favoriteGames.ready
       ? ('ready' as const)
@@ -121,18 +112,13 @@ export function useProfilePage() {
         ? ('failed' as const)
         : ('loading' as const),
     retryFavorites: favoriteGames.retry,
-    /**
-     * Changing the favorites, each saved as it's made. They work from the
-     * picks the page shows, so one that was hidden or removed since drops out
-     * of what's saved next.
-     */
+    /** Built on the picks the page shows, so one hidden or removed since drops out. */
     favoriteActions: {
       reorder: favoriteGames.set,
       remove: (game: { id: number; name: string }) =>
         favoriteGames.remove(game.id, game.name, shownPicks),
       forgetUndo: favoriteGames.forgetUndo,
     },
-    /** What the picker needs: the library, the picks, and picking one on or off. */
     favoritePicker: {
       games,
       pickedIds: picked.map((game) => game.id),
@@ -144,12 +130,8 @@ export function useProfilePage() {
         return next;
       },
     },
-    /** Changing how the player signs in. */
     account: {
-      /**
-       * How the account signs in. One made with Google or Discord has no
-       * password until it sets one, so nothing can ask for it.
-       */
+      /** One made with Google or Discord has no password until it sets one. */
       signIn: {
         hasPassword: hasPassword ?? signedUpWithPassword(user),
         providers: linkedProviders(user),
@@ -159,15 +141,11 @@ export function useProfilePage() {
       changePassword,
       changeEmail: async (email: string, password: string) => {
         const result = await changeEmail(email, password);
-        // The account has a new email waiting (or a new email): read it again.
+        // Reread the session for the pending (or new) email.
         if (result.ok) await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
         return result;
       },
-      /**
-       * Downloads a copy of the player's data, as a file the browser saves.
-       * Not offered with no games: there would be nothing in the file but the
-       * account's own email.
-       */
+      /** Not offered with no games: the file would hold only the account's email. */
       downloadData: games.length > 0 ? downloadData : undefined,
       /** Deletes the account; then the page goes to the landing page. */
       deleteAccount: async (proof: DeleteProof) => {
@@ -191,11 +169,9 @@ export function useProfilePage() {
         user?.email ? sendPasswordReset(user.email) : Promise.resolve(false),
     },
     gameDialog,
-    /** Opens a game's dialog, by its id. */
     openGame,
     activity: recentActivity(games, playing, history),
-    // Where the library is played, most games first (then by name), counting
-    // what the Games page would list: hidden games aren't counted, and a
+    // Counted as the Games page lists them: hidden games don't count, and a
     // platform with only hidden games isn't listed.
     platforms: [...countPlatforms(games, 'all')]
       .map(([name, count]) => ({ name, count }))

@@ -13,9 +13,8 @@ const csp = [
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
-  // The art hosts are here, though art is served resized from this site:
-  // a picture that fails that way is fetched straight from its source as a
-  // last try (GameArt), and the art picker shows SteamGridDB's own thumbnails.
+  // Art is served resized from this site, but a picture that fails that way
+  // falls back to its source (GameArt), and the art picker shows SteamGridDB's.
   `img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://avatars.steamstatic.com https://cdn2.steamgriddb.com https://images.igdb.com https://${supabaseHost}/storage/v1/object/public/avatars/`,
   "font-src 'self' data:",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://va.vercel-scripts.com`,
@@ -34,11 +33,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react'],
-    // Reuse visited signed-in pages from the client router cache instead of
-    // re-requesting them (and waiting on their server prefetch) on every
-    // navigation. Their data lives in React Query, which mutations already
-    // invalidate and which refetches each query once it's stale (see
-    // lib/data/queries), so a reused page still shows current data.
+    // Reused pages still show current data: it lives in React Query, which
+    // mutations invalidate and which refetches stale queries (lib/data/queries).
     staleTimes: { dynamic: 300 },
   },
   images: {
@@ -46,15 +42,11 @@ const nextConfig: NextConfig = {
     // One quality: every distinct (image, width, quality) is optimized and
     // billed separately.
     qualities: [90],
-    // Steam's art is at most 920px wide and the optimizer never upscales, so
-    // the larger default widths (1200 up to 3840) each produced the same
-    // picture again as a separate variant. 1080 covers the widest frame the
-    // app draws (the game dialog's art, 544px, on a 2x screen).
+    // Steam's art is at most 920px and the optimizer never upscales, so wider
+    // sizes only duplicate it. 1080 covers the dialog's 544px art at 2x.
     deviceSizes: [640, 750, 828, 1080],
-    // A month, not the default four hours. Every art URL changes when its
-    // picture does (Steam's hashed paths and ?t=, IGDB and SteamGridDB ids),
-    // so a cached variant never goes stale; re-optimizing each one six times
-    // a day was pure cost.
+    // Seconds (a month): every art URL changes when its picture does, so a
+    // cached variant never goes stale.
     minimumCacheTTL: 2678400,
     remotePatterns: [
       {
@@ -82,8 +74,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // The public Steam roast became the player profile on Stats: old roast
-  // links go to the landing page (or Home, once signed in) instead of a 404.
+  // Old roast links go to the landing page (or Home, once signed in), not a 404.
   redirects: async () => [
     { source: '/roast', destination: '/', permanent: true },
     { source: '/roast/:path*', destination: '/', permanent: true },

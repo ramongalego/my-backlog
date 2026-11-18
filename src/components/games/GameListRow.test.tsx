@@ -3,7 +3,7 @@ import { GameListRow } from '@/components/games/GameListRow';
 import type { GameItem } from '@/lib/data/loaders';
 import type { LibraryPlatforms } from '@/lib/games/consoles';
 
-// What the library is played on: not known yet (as before) unless a test sets it.
+// Not known yet unless a test sets it.
 let mockLibrary: LibraryPlatforms | null = null;
 jest.mock('@/hooks/useLibraryMeta', () => ({
   ...jest.requireActual('@/hooks/useLibraryMeta'),

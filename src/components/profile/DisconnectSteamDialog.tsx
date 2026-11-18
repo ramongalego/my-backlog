@@ -12,11 +12,8 @@ import type { ApiResult } from '@/lib/client/request';
 type Result = ApiResult;
 
 /**
- * Unlinks Steam, saying first, plainly, what's lost for good: the Steam games
- * and what was logged on them. Games on other consoles (added by hand, or
- * Steam games moved to one) stay. A copy of it all can be downloaded first.
- * Once it's done the page reloads (the page's part), so this stays saying
- * "Disconnecting…" until then.
+ * Games on other consoles (added by hand, or Steam games moved to one) stay. On
+ * success the page reloads, so this keeps saying "Disconnecting…" until then.
  */
 export function DisconnectSteamDialog({
   steamGames,
@@ -48,8 +45,6 @@ export function DisconnectSteamDialog({
     setError(result.error);
   };
 
-  // What's lost, said as permanent: connecting again brings the games back,
-  // but not what was logged on them.
   const lost =
     steamGames === 1
       ? 'Your Steam game and its rating, notes and finish date will be permanently removed.'

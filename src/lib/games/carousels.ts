@@ -15,7 +15,6 @@ import {
 } from './similarity';
 import { ratingOf } from './rating';
 
-/** A backlog game with what the carousels sort and filter on. */
 export interface CarouselGame extends GameWithImage {
   steam_review_weighted: number | null;
   tags: string[] | null;
@@ -54,8 +53,6 @@ export const EMPTY_CAROUSEL_POOLS: CarouselPools = {
 
 const POOL_SIZE = 20;
 
-// Played this much of the main story and it's probably finished, whatever
-// the status says.
 const PLAYED_OUT_SHARE = 0.8;
 
 // Pick Up Where You Left Off: at least an hour in, and far enough that it
@@ -78,8 +75,6 @@ const byGemRank = (a: CarouselGame, b: CarouselGame) =>
   (a.steam_review_count ?? 0) - (b.steam_review_count ?? 0) ||
   a.id - b.id;
 
-// More Like ...: how close a backlog game must be to the loved game, and how
-// many it needs before the carousel is worth showing.
 const MORE_LIKE_MIN_RATING = 8;
 // Lower than it looks: rarity weighting (tagRarity) keeps broad genres from
 // adding up, so real matches score lower than they would on raw tags.
@@ -88,8 +83,7 @@ const MORE_LIKE_MIN_SCORE = 75;
 export const MORE_LIKE_MIN_GAMES = 3;
 // Same series gets all of it, same franchise half (seriesMatch).
 const SERIES_BONUS = 0.5;
-// How much a game's rating moves it up the row, on top of how alike it is. A
-// game rated 100 gets this much more than one rated MORE_LIKE_MIN_SCORE, about
+// A game rated 100 ranks this much above one rated MORE_LIKE_MIN_SCORE: about
 // the gap between a close match and a looser one.
 const MORE_LIKE_RATING_WEIGHT = 0.4;
 
@@ -147,18 +141,13 @@ function oneEditionEach(games: CarouselGame[]) {
   return games.filter((g) => keep.has(g));
 }
 
-/**
- * The best-loved game (highest rated, then most recently finished) with enough
- * well-reviewed backlog games that play like it, closest first with a nudge for
- * the better rated. Games from the same series or franchise get a head start.
- */
+/** The best-loved game that has enough well-reviewed backlog games like it. */
 function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['moreLike'] {
   const seeds = [...loved]
     .filter((g) => g.rating >= MORE_LIKE_MIN_RATING)
     .sort(
       (a, b) => b.rating - a.rating || (b.finished_at ?? '').localeCompare(a.finished_at ?? ''),
     );
-  // Well enough liked to recommend, by the same rating the rows rank by.
   const worthPlaying = games.filter((g) => (ratingOf(g) ?? 0) >= MORE_LIKE_MIN_SCORE);
 
   // Tags are weighed by how rare they are in this backlog, so a Metroidvania
@@ -189,9 +178,8 @@ function moreLike(games: CarouselGame[], loved: LovedGame[]): CarouselPools['mor
 }
 
 /**
- * Games that arrived after the first Steam import (Steam doesn't expose
- * purchase dates), and every game added by hand: each of those was added on
- * purpose, the first included.
+ * Steam doesn't expose purchase dates, so only games after the first import
+ * count, plus every game added by hand (each was added on purpose).
  */
 function addedSinceFirstSync(games: CarouselGame[], firstImportedAt: string | undefined) {
   const cutoff = firstImportedAt ? Date.parse(firstImportedAt) + FIRST_SYNC_WINDOW_MS : null;
@@ -201,16 +189,7 @@ function addedSinceFirstSync(games: CarouselGame[], firstImportedAt: string | un
     .slice(0, POOL_SIZE);
 }
 
-/**
- * Builds every Home carousel from the backlog (status backlog or none, type
- * game) and the user's loved games. Queued games are filtered out later, in
- * useCarouselPools, so queue changes don't need a refetch. Each pool is ranked; useCarouselPools
- * trims them and keeps a game out of more than one carousel.
- */
-/**
- * The pools without the fields only the ranking needed (tags, categories), so
- * what's sent to the browser is just what the cards show.
- */
+/** Drops the fields only the ranking needs, so the browser gets just what the cards show. */
 export function slimPools(pools: CarouselPools): CarouselPools {
   const slim = (games: CarouselGame[]) =>
     games.map((g) => ({ ...g, tags: null, categories: null }));
@@ -225,6 +204,10 @@ export function slimPools(pools: CarouselPools): CarouselPools {
   };
 }
 
+/**
+ * `backlog` is games with status backlog or none and type game. Queued games are
+ * left in: useCarouselPools drops them, so a queue change needs no refetch.
+ */
 export function buildCarouselPools(
   backlog: CarouselGame[],
   loved: LovedGame[],

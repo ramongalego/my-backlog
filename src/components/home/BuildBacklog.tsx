@@ -22,11 +22,7 @@ interface BuildBacklogProps {
   onConnectSteam: () => void;
 }
 
-/**
- * One of the three places a new backlog fills before Pick My Game opens:
- * a game's art once one is added (or a plain tile when Home has no art for
- * it), otherwise an outline that opens Add game.
- */
+/** A filled slot without art shows a plain tile; an empty one opens Add game. */
 function Slot({
   filled,
   src,
@@ -44,7 +40,6 @@ function Slot({
         className={`relative overflow-hidden rounded-xl bg-ink-800 after:pointer-events-none after:absolute after:inset-0 after:rounded-xl after:ring-1 after:ring-inset after:ring-white/8 ${className}`}
       >
         {src ? (
-          // A new game's art settles into its place.
           <div className="absolute inset-0 animate-overlay-in">
             <GameArt src={src} alt="" sizes="(max-width: 768px) 66vw, 340px" />
           </div>
@@ -71,10 +66,8 @@ function Slot({
 }
 
 /**
- * Home's band for a new backlog, laid out like the others: where the game's
- * art goes, three slots (the games Pick My Game needs), one large and two
- * small, filling with each game's art as it's added. Beside them, how to add
- * them. The slots are the progress, so there's no separate bar.
+ * Home's band for a new backlog: one slot for each game Pick My Game needs,
+ * filling with art as games are added. The slots are the progress bar.
  */
 export function BuildBacklog({
   covers,

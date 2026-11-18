@@ -11,13 +11,12 @@ import { calculateBayesianScore } from '@/lib/games/scoring';
 import { classifyAppType } from '@/lib/games/software';
 import type { GameMetadata } from '@/lib/games/metadata-cache';
 
-/** A fresh snapshot, plus whether HLTB was too busy to be asked (not stored). */
+/** `hltbUnavailable`: HLTB was too busy to ask. Not stored. */
 export type FetchedMetadata = GameMetadata & { hltbUnavailable: boolean };
 
 /**
- * HLTB's answer, with "rate limited" kept apart from "has no time". The time
- * itself is read once the release year is known, which tells a remake from
- * the original it shares a title with.
+ * Keeps "rate limited" apart from "has no time". The time is read once the
+ * release year is known, which tells a remake from its original.
  */
 async function lookUpHours(name: string): Promise<{ times: MainStoryTimes; unavailable: boolean }> {
   try {
@@ -28,18 +27,16 @@ async function lookUpHours(name: string): Promise<{ times: MainStoryTimes; unava
   }
 }
 
-// Fetches a full metadata snapshot for a single app_id from Steam + HLTB.
-// Returns null if Steam store details aren't available (unknown/removed app),
-// and throws SteamUnavailableError if Steam is too busy to say.
+// Null when Steam has no store details (unknown or removed app); throws
+// SteamUnavailableError when Steam is too busy to say.
 export async function fetchGameMetadata(
   appId: number,
   nameHint?: string,
 ): Promise<FetchedMetadata | null> {
   const detailsRequest = getGameDetails(appId);
-  // HLTB searches by name. The library's name (the hint) lets that start
-  // alongside the details, but the result is only kept when the hint is
-  // Steam's own name for the game: everything here goes into the cache every
-  // user reads, and the hint comes from the request.
+  // The hint lets HLTB start alongside the details, but is only kept when it
+  // is Steam's own name: this goes into the cache every user reads, and the
+  // hint comes from the request.
   const hintedHours = nameHint ? lookUpHours(nameHint) : null;
   const noHours = { times: () => null, unavailable: false };
   const hoursRequest = detailsRequest.then(
@@ -52,9 +49,8 @@ export async function fetchGameMetadata(
     () => noHours,
   );
 
-  // The enrichment lookups start alongside the details instead of after them
-  // (they never throw). Their results are dropped for DLC, software and
-  // anything else that turns out not to be a game.
+  // Started alongside the details (they never throw); dropped for anything
+  // that turns out not to be a game.
   const enrichment = Promise.all([
     hoursRequest,
     getStoreItemInfo(appId),
@@ -84,7 +80,7 @@ export async function fetchGameMetadata(
     categories: extracted.categories,
     description: extracted.description,
     release_date: extracted.release_date,
-    // Prefer the 920×430 header so the art stays sharp in large spots.
+    // 920×430 first, so the art stays sharp in large spots.
     header_image: storeItem?.headerImage2x ?? extracted.header_image,
     steam_review_score: steamReviewData?.score ?? null,
     steam_review_count: steamReviewData?.count ?? null,

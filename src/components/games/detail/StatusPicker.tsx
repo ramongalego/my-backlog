@@ -9,7 +9,6 @@ const STATUS_BUTTON =
   'cursor-pointer flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap';
 const STATUS_IDLE = 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-50';
 
-/** The status pills: one per place the game can go. */
 export function StatusPicker({
   options,
   value,
@@ -19,7 +18,7 @@ export function StatusPicker({
   options: DetailStatus[];
   value: DetailStatus;
   onChange: (status: DetailStatus) => void;
-  /** Starting this game pauses the one being played at the top of the queue: say so. */
+  /** The game being played, which starting this one sends to the top of the queue. */
   replacesPlaying: string | null;
 }) {
   return (

@@ -27,15 +27,12 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
   const [energy, setEnergy] = useState<Energy>('High');
   const [time, setTime] = useState<Time>('Long haul');
   const pickedGame = pickGame(mood, energy, time);
-  // The questions settle in one by one as they scroll into view.
   const { ref: pickerRef, inView: pickerInView } = useInView<HTMLDivElement>();
 
   useEffect(() => {
-    // Warm the cache with the exact URLs next/image will request, so picker
-    // results swap in without pop-in. getImageProps keeps this in sync with
-    // the loader config (width snapping, qualities allowlist). Once the picker
-    // is on screen: it's below the fold, and at page load these would compete
-    // with the art the visitor can actually see.
+    // Warms the cache with next/image's exact URLs (getImageProps follows the
+    // loader config), so picks swap in without pop-in. Waits for the picker to
+    // be on screen, so it doesn't compete with the art above the fold.
     if (!pickerInView) return;
     for (const game of PICKER_GAMES) {
       const { props } = getImageProps({ src: game.image, alt: '', width: 56, height: 56 });
@@ -92,11 +89,9 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
             />
             <p className="mt-2 text-xs text-ink-500">{TIME_HINTS[time]}</p>
           </div>
-          {/* The pick settles in last; each new pick then pops in on its own. */}
           <div className={riseIn(pickerInView, 3).className} style={riseIn(pickerInView, 3).style}>
-            {/* Screen readers hear each new pick from this, which stays put: the
-                card below is replaced on every pick, and a region that's just been
-                added often isn't read out. */}
+            {/* Stays put, so each pick is read out: the card below is replaced on
+                every pick, and a region that's just been added often isn't read. */}
             <p className="sr-only" aria-live="polite">
               {`Picked ${pickedGame.title}: about ${pickedGame.hours} hours to beat, critic score ${pickedGame.critic}`}
             </p>
@@ -113,8 +108,7 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-ink-50">{pickedGame.title}</p>
-                {/* As the app shows them: each fact with its icon, no separator to
-                    strand at a line's end when a phone wraps them. */}
+                {/* No separator to strand at a line's end when a phone wraps them. */}
                 <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-ink-400">
                   <span className="inline-flex items-center gap-1 whitespace-nowrap">
                     <Clock className="w-3.5 h-3.5" aria-hidden="true" />~{pickedGame.hours}h to beat
@@ -125,7 +119,6 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
                   </span>
                 </p>
               </div>
-              {/* The demo's pick leads to signing up, where it's your own library. */}
               <Button
                 size="sm"
                 className="shrink-0 cursor-pointer"

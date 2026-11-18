@@ -27,11 +27,9 @@ export function useStatsPage() {
 
   const stats = computeStats(games, categories, queuedGameIds);
 
-  // The player profile shows only once the library says enough about you.
   const profileReady = hasEnoughForProfile(games);
 
-  // A game's dialog, opened from "Played a lot" or the highest rated. Stats
-  // reads the shared games list, so a change shows straight away.
+  // Stats reads the shared games list, so a change in the dialog shows at once.
   const { gameDialog, openGame } = useLibraryGameDialog(userId);
 
   return {
@@ -42,7 +40,6 @@ export function useStatsPage() {
     retry: () => void refetch(),
     profileReady,
     gameDialog,
-    /** Opens a game's dialog, by its id. */
     openGame,
   };
 }

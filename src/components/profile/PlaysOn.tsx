@@ -9,12 +9,7 @@ import { SectionLabel } from '@/components/layout/Page';
 /** As many platforms as the list names until it's opened up. */
 const SHOWN = 5;
 
-/**
- * Where the library is played, the platform with the most games first. Each
- * opens the Games page listing that platform. Past five, the rest are counted
- * in a line that opens the list up to all of them, and closes it again. One
- * left over isn't worth a click: it's shown.
- */
+/** Past five the rest fold away, but one left over isn't worth a click: it's shown. */
 export function PlaysOn({ platforms }: { platforms: { name: string; count: number }[] }) {
   const [open, setOpen] = useState(false);
   const listId = useId();

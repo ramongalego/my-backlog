@@ -23,9 +23,8 @@ async function fetchAuthSession(): Promise<AuthSession> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    // Signed in as far as this browser's cookies go, but not to Supabase
-    // (the account was deleted or signed out elsewhere): the cookies are
-    // cleared and a signed-in page leaves for the landing page.
+    // The cookies say signed in but Supabase doesn't (account deleted, or
+    // signed out elsewhere): clear them and leave a signed-in page.
     if (error) await leaveDeadSession(supabase, error);
     return EMPTY_SESSION;
   }
@@ -39,10 +38,7 @@ async function fetchAuthSession(): Promise<AuthSession> {
   return { user, profile: profile ?? null };
 }
 
-/**
- * Keeps the cached session in sync with Supabase auth events. Mounted once in
- * the app Providers rather than in every useAuth() caller.
- */
+/** Mounted once in the app Providers rather than in every useAuth() caller. */
 export function AuthStateListener() {
   const queryClient = useQueryClient();
 
@@ -71,10 +67,7 @@ export function AuthStateListener() {
   return null;
 }
 
-/**
- * Changes the profile in the signed-in session the whole app reads (header,
- * Profile page), for a change the server has just saved: no refetch needed.
- */
+/** For a change the server has just saved: no refetch needed. */
 export function useUpdateSessionProfile() {
   const queryClient = useQueryClient();
   // Memoized by hand: it's a dependency of the library refresh's callback,

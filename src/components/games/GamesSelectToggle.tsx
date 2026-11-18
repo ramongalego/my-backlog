@@ -2,11 +2,6 @@
 
 import { ListChecks } from 'lucide-react';
 
-/**
- * Turns Select mode on and off, beside the Games page's view switch: ticking
- * games to move several at once. Lit like a chosen chip while it's on; just
- * the icon on phones, where the toolbar is tight.
- */
 export function GamesSelectToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button

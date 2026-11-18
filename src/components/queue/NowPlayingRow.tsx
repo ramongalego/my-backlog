@@ -38,8 +38,7 @@ export function NowPlayingRow({
   const tag = platformTag(game, useLibraryPlatforms());
   const mainStoryHours = game.main_story_hours ?? 0;
   const hoursPlayed = playedHours(game.playtime_forever);
-  // Hours played against the time to beat from 0h on, like the card on Home;
-  // no rating or Deck rating, which help choose a game and this one's chosen.
+  // No rating or Deck rating: they help choose a game, and this one's chosen.
   const hours = (after?: ReactNode) =>
     onSaveHours && platform ? (
       <HoursPlayedEdit
@@ -98,7 +97,6 @@ export function NowPlayingRow({
                 )}
               </div>
             ) : (
-              // The two figures at either end of the bar.
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs">
                   {hours(
@@ -109,7 +107,6 @@ export function NowPlayingRow({
                 </div>
                 <div className="h-1 bg-ink-800 rounded-full overflow-hidden mt-1.5">
                   <div
-                    // New hours (logged, or from Steam) ease the bar to its new length.
                     className="h-full bg-accent-500 rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
                     style={{ width: `${(hoursPlayed / mainStoryHours) * 100}%` }}
                   />

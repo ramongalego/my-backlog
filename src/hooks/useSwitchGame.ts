@@ -22,11 +22,7 @@ import { sinceNow, UNDO_MS } from '@/lib/undo';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 
-/**
- * Where a game was before it was switched to, for Undo to put it back: its
- * status, and for a finished or dropped game what goes with it. Whether it
- * was queued (and where) comes from the queue as it was.
- */
+/** For Undo to put a switched-to game back. Whether it was queued comes from the cached queue. */
 export interface SwitchedFrom {
   status: GameStatus;
   /** Finished or dropped on ("YYYY-MM-DD", or "" for no date). */
@@ -36,9 +32,8 @@ export interface SwitchedFrom {
 }
 
 interface SwitchInput {
-  /** The game to play. */
   game: QueueableGame;
-  /** The game being played, which is paused at the top of the queue. */
+  /** Paused at the top of the queue. */
   playing: GameWithImage;
   from: SwitchedFrom;
   /** Undoing a switch: `game` is the paused game going back to playing, and
@@ -48,30 +43,20 @@ interface SwitchInput {
     order: number[] | null;
     /** Its start date before the switch (set only if it was paused itself). */
     startedAt: string | null;
-    /**
-     * When the paused game had last been played before the switch (pausing it
-     * stamped that), so it goes back to playing as it was. Left out when the
-     * page doesn't know it.
-     */
+    /** The paused game's last-played date before pausing stamped it; undefined when unknown. */
     lastPlayedAt?: string | null;
-    /**
-     * When the switched-to game had been started before the switch, which
-     * stamped it with now: put back with a game that goes back to finished
-     * or dropped.
-     */
+    /** The switched-to game's start date before the switch stamped it, for a
+     * return to finished or dropped. */
     wasStartedAt: string | null;
-    /** How long ago the switch was made, for the history (`sinceNow`). */
+    /** Milliseconds since the switch, for the history (`sinceNow`). */
     agoMs: number;
   };
 }
 
 /**
- * Plays a game while another is playing: the game starts and the one being
- * played is paused at the top of the queue, keeping its start date (one
- * request, `pausePlaying`). Says so in a toast with Undo, which switches back
- * and puts the game switched to back where it was: its place in the queue,
- * the backlog, or its finished or dropped status with date, notes and rating.
- * The queue page's Play and every game dialog's Playing use this.
+ * Plays a game while another is playing, pausing that one at the top of the
+ * queue in one request, with an Undo that puts both back as they were. Used by
+ * the Queue page's Play and every game dialog's Playing.
  */
 export function useSwitchGame(userId: string | null) {
   const queryClient = useQueryClient();
@@ -90,10 +75,8 @@ export function useSwitchGame(userId: string | null) {
       const switched = await updateGameStatus(
         game.id,
         'playing',
-        // Each write of an Undo says it is one, and how long ago the switch
-        // was, for the history. The game switched to goes back to the top of
-        // the queue only if the queue is where it was; otherwise it goes
-        // straight back to the backlog, in the same save.
+        // On Undo, the switched-to game is paused back into the queue only if
+        // it came from there; otherwise it goes to the backlog in the same save.
         undo
           ? {
               pausePlaying: !!undo.order,
@@ -106,14 +89,10 @@ export function useSwitchGame(userId: string | null) {
       if (!undo) return switched;
       const undoing = { undo: true, undoAgoMs: undo.agoMs };
       if (undo.order) {
-        // `playing` (switched to a moment ago) is paused at the top of the
-        // queue now: put it back where it was. It wasn't really started,
-        // unless it was paused itself.
+        // It wasn't really started, unless it had been paused itself.
         if (!undo.startedAt) await updateGameStatus(playing.id, 'backlog', undoing);
         await reorderQueue(undo.order);
       } else if (from.status !== 'backlog') {
-        // Back as it was: finished or dropped again with its date, notes and
-        // rating, and started when it had been.
         await updateGameStatus(playing.id, from.status, {
           ...restoreOptions(from),
           ...undoing,
@@ -196,8 +175,8 @@ export function useSwitchGame(userId: string | null) {
             const queue = queryClient.getQueryData<QueueItem[]>(queueKey) ?? [];
             if (undone || now?.id !== game.id) return;
             undone = true;
-            // Its queue row, or (if the queue hasn't caught up yet) enough of
-            // it to show it playing until the server's answer replaces it.
+            // If the queue hasn't caught up, enough of the game to show it
+            // playing until the server's answer replaces it.
             const pausedRow = queue.find((q) => q.game_id === stopped.id);
             const pausedGame = pausedRow
               ? fromQueueItem(pausedRow)
@@ -229,8 +208,7 @@ export function useSwitchGame(userId: string | null) {
               undo: {
                 order,
                 startedAt: queuedBefore?.game.started_at ?? null,
-                // Only of the game the page had as playing: its row from
-                // before the switch is the one that knows.
+                // Only the page's own row from before the switch knows it.
                 lastPlayedAt: playing.id === stopped.id ? playing.last_played_at : undefined,
                 wasStartedAt: switched.startedAt ?? null,
                 agoMs: since(),
@@ -246,20 +224,15 @@ export function useSwitchGame(userId: string | null) {
   return {
     /** The game being played, which a switch would pause: for the dialogs' wording. */
     playing: playingNow,
-    /**
-     * Plays `game` instead of the game being played. `from`: where the game is
-     * now, for Undo (backlog by default; whether it's queued is looked up).
-     */
+    /** `from`: where `game` is now, for Undo (whether it's queued is looked up). */
     switchTo: async (game: QueueableGame, from: SwitchedFrom = { status: 'backlog' }) => {
-      // Once per game: a second click before the page shows the switch would
-      // send it again (and say "Now playing" twice).
+      // A second click before the page shows the switch would send it again.
       const key = `switch:${game.id}`;
       if (!userId || !inFlight.take(key)) return;
       const done = () => inFlight.release(key);
       try {
-        // Pages that don't show the playing game or the queue may not have them
-        // loaded yet; the switch needs both. What's loaded is used as it is, so
-        // the switch shows at once (the server pauses whatever is really playing).
+        // Some pages haven't loaded these. What's cached is used as is so the
+        // switch shows at once; the server pauses whatever is really playing.
         const [playing] = await Promise.all([
           queryClient.ensureQueryData(queries.playing(userId)),
           queryClient.ensureQueryData(queries.queue(userId)),

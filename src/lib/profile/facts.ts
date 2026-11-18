@@ -1,11 +1,9 @@
-// What a library says about the player, worked out in code: the facts the
-// Profile and Roast tabs on Stats are written from. The model only writes
-// them up, so everything it says is true of the library.
+// Worked out in code so the model on Stats only writes the facts up, and
+// everything it says is true of the library.
 import type { GameItem } from '@/lib/data/loaders';
 import { consoleOf } from '@/lib/games/consoles';
 import { computeStats, countedInStats } from '@/lib/stats/compute';
 
-/** A game as the profile mentions it. */
 interface NamedHours {
   name: string;
   hours: number;
@@ -44,10 +42,7 @@ export interface PlayerFacts {
   storyHoursMedian: { finished: number | null; backlog: number | null };
   playingNow: string | null;
   wontPlay: number;
-  /**
-   * What they love, against what they own: the tags of the games they rated
-   * 8 or more, and the decades those games came out in.
-   */
+  /** The tags and release decades of the games they rated 8 or more. */
   loved: {
     tags: { tag: string; games: number }[];
     decades: { decade: string; games: number }[];
@@ -59,10 +54,7 @@ export interface PlayerFacts {
   };
   /** The share of all their hours that went into their most played game. */
   topGameSharePct: number | null;
-  /**
-   * How their Steam games were (not) played, for the roast. Steam only:
-   * games added by hand often have no hours recorded.
-   */
+  /** Steam only: games added by hand often have no hours recorded. */
   steam: {
     games: number;
     neverLaunched: number;
@@ -106,10 +98,7 @@ const MIN_RATED = 3;
 const MIN_PLAYED_GAMES = 10;
 const PLAYED_MINUTES = 120;
 
-/**
- * Whether the library says enough for a profile. Below this the section isn't
- * shown at all, rather than asking for more.
- */
+/** Below this the section isn't shown at all, rather than asking for more. */
 export function hasEnoughForProfile(games: GameItem[]): boolean {
   const counted = countedInStats(games);
   const ended = counted.filter((g) => g.status === 'finished' || g.status === 'dropped').length;
@@ -124,7 +113,6 @@ const hoursKnown = (g: GameItem) => g.source === 'steam' || g.playtime_forever >
 
 const isBacklog = (g: GameItem) => g.status === 'backlog' || g.status === 'playing' || !g.status;
 
-/** The facts about a player, from their whole library. */
 export function playerFacts(games: GameItem[]): PlayerFacts | null {
   const counted = countedInStats(games);
   const stats = computeStats(counted, {}, new Set());
@@ -275,9 +263,8 @@ function steamFacts(counted: GameItem[]): PlayerFacts['steam'] {
 }
 
 /**
- * What a written profile depends on. It's written again only when one of
- * these changes (a game finished, dropped or rated, or the library grows by
- * ten), not for every hour played.
+ * A profile is written again only when this changes (a game finished, dropped or
+ * rated, or the library grows by ten), not for every hour played.
  */
 export function factsSignature(facts: PlayerFacts): string {
   return [

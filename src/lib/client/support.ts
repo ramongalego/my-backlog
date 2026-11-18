@@ -1,11 +1,8 @@
-// Client helper for /api/support (the "Report an issue" form).
-
 export type TicketType = 'bug' | 'feedback' | 'support';
 
 /**
- * Sends a support ticket. Throws with a message to show the player if it
- * wasn't saved: the server's own (too short, too many tickets), or that the
- * request never got there.
+ * Throws with a message to show the player: the server's own (too short, too
+ * many tickets), or that the request never got there.
  */
 export async function sendSupportTicket(type: TicketType, message: string): Promise<void> {
   let res: Response;

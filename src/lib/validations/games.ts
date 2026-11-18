@@ -3,8 +3,8 @@ import { ADD_STATUSES, BULK_STATUSES, GAME_STATUSES, MAX_BULK_CHANGES } from '@/
 import { MAX_HOURS_PLAYED } from '@/lib/games/playtime';
 import { safeText } from './common';
 
-// A calendar date ("2025-08-20") or a full timestamp as Postgres returns it.
-// Partial matches like "2024-13-99xyz" used to pass and then fail in Postgres.
+// A calendar date ("2025-08-20") or a full timestamp as Postgres returns it. Strict,
+// so a partial match like "2024-13-99xyz" can't pass here and then fail in Postgres.
 const isoDate = z.union([z.iso.date(), z.iso.datetime({ offset: true, local: true })], {
   error: 'Invalid date format',
 });
@@ -25,18 +25,14 @@ export const gameStatusSchema = z.object({
   // Moving the game being played to the queue: with status backlog, it also
   // goes to the top of the queue, in the same save.
   queueAtTop: z.boolean().optional(),
-  // This change is an Undo of the last one (a toast's button). It is saved
-  // like any other; the history folds it into the change it undoes, however
-  // long the toast waited, instead of recording a second one (game_events).
+  // The history folds an Undo into the change it undoes, however long the toast
+  // waited, instead of recording a second one (game_events).
   undo: z.boolean().optional(),
-  // With an Undo: how long ago the change it undoes was made, in
-  // milliseconds, as the browser timed it. The history takes the Undo out of
-  // the event that change is in, and never out of an older one.
+  // With an Undo: ms since the change it undoes, as the browser timed it. The
+  // history takes the Undo out of that change's event, never an older one.
   undoAgoMs: z.number().min(0).optional(),
-  // With an Undo that puts a game back as it was (started again after being
-  // moved off Now Playing, or finished again after being played by mistake):
-  // when it had been started and last played. Starting a game stamps the
-  // first with now, and stopping one the second.
+  // With an Undo that puts a game back as it was: starting a game stamps
+  // startedAt with now, and stopping one lastPlayedAt.
   startedAt: isoDate.nullable().optional(),
   lastPlayedAt: isoDate.nullable().optional(),
 });
@@ -56,8 +52,7 @@ export const bulkStatusSchema = z.object({
     .max(MAX_BULK_CHANGES, `No more than ${MAX_BULK_CHANGES} games at once`),
 });
 
-// A bulk change's Undo: each game with the status and details it had, to be
-// written back as they were.
+// A bulk change's Undo: each game written back as it was.
 export const bulkRestoreSchema = z.object({
   restore: z
     .array(
@@ -83,8 +78,6 @@ export const gameArtSchema = z.object({
   gameId: z.number().int().positive(),
   url: z.string().url().max(500).nullable(),
 });
-
-// ─── Games added by hand ─────────────────────────────────────────────────────
 
 // Hours you've played, entered yourself (consoles don't report playtime).
 const hoursPlayed = z.number().min(0).max(MAX_HOURS_PLAYED);
@@ -112,8 +105,7 @@ export const addManualGameSchema = z.object({
   date: isoDate.optional(),
   notes: gameStatusSchema.shape.notes,
   rating: gameStatusSchema.shape.rating,
-  // Art picked in the dialog before adding (Choose art), instead of the
-  // game's own.
+  // Picked in the dialog before adding (Choose art), instead of the game's own.
   art: z.string().url().max(500).optional(),
 });
 

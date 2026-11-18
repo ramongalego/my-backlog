@@ -17,12 +17,9 @@ interface StoredGame extends CriticScore {
 }
 
 /**
- * Brings a user's critic scores up to date: IGDB's average of critics'
- * reviews, for Steam games (found by their Steam id) and games added by hand
- * (by their IGDB id) alike, so every game can be rated on the same scale.
- * Reviews keep coming in after a release, so it runs with the daily review
- * refresh; only scores that changed are written. A game IGDB no longer has a
- * score for keeps the one it had.
+ * IGDB's scores for Steam and manual games alike, so every game is on the same
+ * scale. Reviews keep coming after a release, so it runs daily. A game IGDB no
+ * longer scores keeps the one it had.
  */
 export async function refreshCriticScores(
   supabase: SupabaseClient,

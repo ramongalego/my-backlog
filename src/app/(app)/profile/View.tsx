@@ -112,7 +112,6 @@ export default function ProfileView() {
         memberSince={profile.memberSince}
         figures={profile.figures}
       />
-      {/* What a profile shows of you, then the account behind it. */}
       <div className={PROFILE_COLUMNS}>
         <div className="min-w-0 space-y-10">
           {profile.favoritesState === 'ready' ? (

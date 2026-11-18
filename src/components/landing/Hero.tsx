@@ -6,12 +6,10 @@ import type { AuthMode } from '@/types/auth';
 import { HERO_SHELF, HERO_TEASES } from './content';
 import { GetStartedButton } from './GetStartedButton';
 
-/** The headline, a tagline that changes, sign-up and sign-in, and a shelf of box art. */
 export function Hero({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
   const [teaseIndex, setTeaseIndex] = useState(0);
 
   useEffect(() => {
-    // Keep the first tagline still for users who asked for reduced motion.
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const id = window.setInterval(() => {
       setTeaseIndex((i) => (i + 1) % HERO_TEASES.length);
@@ -57,7 +55,6 @@ export function Hero({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
           </div>
         </div>
 
-        {/* Shelf of box art */}
         <div
           className="grid grid-cols-3 gap-3 sm:gap-4 max-w-sm sm:max-w-md lg:max-w-none"
           aria-hidden="true"
@@ -68,8 +65,6 @@ export function Hero({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
                 <div
                   key={game.title}
                   // Phones get one row of covers so the shelf doesn't fill the screen.
-                  // On load the covers rise into place one by one, across the top
-                  // row and then the second, like games being set on a shelf.
                   className={`${r > 0 ? 'hidden sm:block ' : ''}relative aspect-[2/3] overflow-hidden rounded-lg bg-ink-900 after:absolute after:inset-0 after:rounded-lg after:ring-1 after:ring-inset after:ring-white/10 animate-rise-in motion-reduce:animate-none`}
                   style={{ animationDelay: `${100 + (r * 3 + c) * 80}ms` }}
                 >

@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
-/** One setting in the Account panel: its label over its value, with its button at the row's end. */
 export function AccountRow({
   label,
   value,
@@ -10,7 +9,6 @@ export function AccountRow({
 }: {
   label: string;
   value: ReactNode;
-  /** A line under the value. */
   note?: ReactNode;
   action?: ReactNode;
 }) {

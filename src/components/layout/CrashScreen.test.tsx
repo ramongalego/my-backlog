@@ -12,7 +12,6 @@ it('says the page failed and offers to try again', () => {
   ).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(retry).toHaveBeenCalledTimes(1);
-  // Logged, so it reaches the server's logs and the browser's console.
   expect(console.error).toHaveBeenCalledWith(error);
   jest.restoreAllMocks();
 });

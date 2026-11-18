@@ -10,9 +10,8 @@ import { steamHoursOf } from '@/lib/server/steam-hours';
 type Context = { params: Promise<{ id: string }> };
 
 /**
- * The signed-in user and the game id, or an error response. Games added by
- * hand can be edited and deleted here; Steam games only once moved to a
- * console (their hours, and moving back), since the rest comes from the sync.
+ * Games added by hand can be edited and deleted here; Steam games only once
+ * moved to a console, since the rest comes from the sync.
  */
 async function authorize(request: NextRequest, { params }: Context) {
   const supabase = await createClient();
@@ -29,10 +28,6 @@ async function authorize(request: NextRequest, { params }: Context) {
   return { supabase, userId: user.id, gameId: id.data };
 }
 
-/**
- * Saves the hours played, which consoles don't report, or moves a Steam game
- * you'd moved to a console back to Steam, with the hours Steam has for it.
- */
 export async function PATCH(request: NextRequest, context: Context) {
   const auth = await authorize(request, context);
   if ('response' in auth) return auth.response;
@@ -49,9 +44,8 @@ export async function PATCH(request: NextRequest, context: Context) {
   // A game added by hand, or a Steam game moved to a console.
   const onConsole = `source.eq.manual,platform.neq.${STEAM_PLATFORM}`;
   const minutes = 'hoursPlayed' in parsed.data ? Math.round(parsed.data.hoursPlayed * 60) : 0;
-  // More hours means you played it, which consoles don't report: today becomes
-  // its last-played date, so it ranks among recently played games like Steam
-  // games do. Fewer is a correction.
+  // More hours means it was played, which consoles don't report, so today
+  // becomes its last-played date. Fewer is a correction.
   let played = false;
   if ('hoursPlayed' in parsed.data) {
     const { data: current, error: lookupError } = await auth.supabase
@@ -69,11 +63,9 @@ export async function PATCH(request: NextRequest, context: Context) {
     played = minutes > current.playtime_forever;
   }
 
-  // Back on Steam, its hours are Steam's again. They are asked for now and
-  // saved with the move, in one write: the history reads hours that change
-  // along with the platform as the other platform's total, and hours that
-  // change by themselves later as time played. If Steam can't say just now,
-  // the game moves anyway and the next sync brings them.
+  // Steam's hours go in the same write as the move: the history reads hours
+  // that change with the platform as that platform's total, not as time played.
+  // If Steam can't say just now, the next sync brings them.
   const steam =
     'playOnSteam' in parsed.data
       ? await steamHoursOf(auth.supabase, auth.userId, auth.gameId)
@@ -101,7 +93,7 @@ export async function PATCH(request: NextRequest, context: Context) {
   return NextResponse.json({ success: true });
 }
 
-/** Removes a game added by hand. Its queue entry goes with it. */
+/** Its queue entry goes with it. */
 export async function DELETE(request: NextRequest, context: Context) {
   const auth = await authorize(request, context);
   if ('response' in auth) return auth.response;

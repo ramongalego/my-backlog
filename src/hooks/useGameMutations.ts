@@ -12,9 +12,6 @@ import {
 import type { GameStatus } from '@/lib/games/status';
 import { moreQueueChangesWaiting } from '@/lib/games/queue-items';
 
-/**
- * Returns targeted invalidation functions for specific query groups.
- */
 export function useInvalidateQueries() {
   const queryClient = useQueryClient();
 
@@ -28,12 +25,8 @@ export function useInvalidateQueries() {
 
   return {
     /**
-     * Invalidate after a status change whose effect on the games list was
-     * already applied in place (usePatchGamesList). Refreshes everything else
-     * it touches: the playing game, the diary, counts, carousels (a game that
-     * leaves the backlog drops out of them) and the queue (the status route
-     * dequeues games that leave the backlog). The list itself isn't
-     * refetched, so a big library isn't downloaded again for one edit.
+     * For a change already patched into the games list (usePatchGamesList).
+     * The list isn't refetched, so a big library isn't downloaded for one edit.
      */
     statusChanged: () => {
       queryClient.invalidateQueries({
@@ -43,12 +36,9 @@ export function useInvalidateQueries() {
       invalidate(queryKeys.library.all, queryKeys.carousels.all);
       invalidateQueue();
     },
-    /**
-     * Invalidate after a queue-only change. "Queued" badges and the carousels'
-     * queued-game filter both read the queue query directly.
-     */
+    /** "Queued" badges and the carousels' queued-game filter read the queue query directly. */
     queue: invalidateQueue,
-    /** Invalidate everything, list included, after the library itself changed (sync, playtime refresh). */
+    /** List included, for when the library itself changed (sync, playtime refresh). */
     gamesAndQueue: () =>
       invalidate(
         queryKeys.games.all,
@@ -60,10 +50,9 @@ export function useInvalidateQueries() {
 }
 
 /**
- * Applies status changes to the cached games list (shared by the Games page
- * and Stats) the same way the server applies them, so the list never has to
- * be downloaded again after an edit. `patch` returns what to hand `restore`
- * if the request fails.
+ * Applies changes to the cached list (Games, Stats) the way the server does,
+ * so it's never downloaded again after an edit. `patch` returns what to hand
+ * `restore` if the request fails.
  */
 export function usePatchGamesList(userId: string | null) {
   const queryClient = useQueryClient();
@@ -118,11 +107,8 @@ export interface StatusEdit {
 }
 
 /**
- * Saves a status change from a detail dialog. The change shows at once in the
- * cached games list (any list fetch in flight is canceled first, so it can't
- * land on top of it) and is undone if the save fails. Callers with another
- * cached view of the game add their own optimistic write with `apply` and
- * undo it in `rollback`.
+ * Callers with another cached view of the game add their own optimistic write
+ * with `apply` and undo it in `rollback`.
  */
 export function useSetGameStatus<V extends StatusEdit = StatusEdit, C = void>(
   userId: string | null,
@@ -150,6 +136,7 @@ export function useSetGameStatus<V extends StatusEdit = StatusEdit, C = void>(
         rating: vars.rating,
       }),
     onMutate: async (vars) => {
+      // A list fetch in flight would land on top of the optimistic write.
       await queryClient.cancelQueries({ queryKey: queryKeys.games.list(userId ?? '') });
       const extra = apply ? await apply(vars) : undefined;
       return { previousList: gamesList.patch(statusChangeFrom(vars)), extra };

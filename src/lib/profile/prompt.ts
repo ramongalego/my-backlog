@@ -1,14 +1,11 @@
-// How the player profile and its roast are written: two tones over the same
-// facts (lib/profile/facts.ts). The rules are the system message and the facts
-// arrive as data in the user message, so nothing in a game's name can change
-// the rules.
+// The rules are the system message and the facts arrive as data in the user
+// message, so nothing in a game's name can change the rules.
 import { stripLinks } from '@/lib/ai-text';
 import { boundedJson } from '@/lib/prompt-limits';
 import { factsSignature, type PlayerFacts } from './facts';
 
 export type InsightTone = 'profile' | 'roast';
 
-/** A written profile, as the model returns it and the app shows it. */
 export interface Insight {
   /** One line that sums the player up. */
   headline: string;
@@ -104,7 +101,6 @@ export function insightSignature(facts: PlayerFacts): string {
   return `v${PROMPT_VERSION}:${factsSignature(facts)}`;
 }
 
-/** The chat messages for one tone: rules first, the facts as data. */
 export function buildInsightMessages(
   facts: PlayerFacts,
   tone: InsightTone,
@@ -115,7 +111,6 @@ export function buildInsightMessages(
   ];
 }
 
-/** Structured output: exactly a headline and a few paragraphs. */
 export const INSIGHT_RESPONSE_FORMAT = {
   type: 'json_schema' as const,
   json_schema: {
@@ -133,10 +128,7 @@ export const INSIGHT_RESPONSE_FORMAT = {
   },
 };
 
-/**
- * The model's answer as an Insight, with any link or address taken out, or
- * null when it isn't one.
- */
+/** With any link or address taken out; null when the answer isn't an Insight. */
 export function parseInsight(raw: string): Insight | null {
   let data: unknown;
   try {

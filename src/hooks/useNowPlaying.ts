@@ -42,10 +42,7 @@ interface CompleteInput {
   rating: number | null;
 }
 
-/**
- * The currently playing game, the queue, and every action on them. Shared by
- * the home page and the playing-queue page so both behave identically.
- */
+/** The playing game, the queue and every action on them, shared by Home and the Queue page. */
 export function useNowPlaying(userId: string | null) {
   const queryClient = useQueryClient();
   const { statusChanged } = useInvalidateQueries();
@@ -71,15 +68,14 @@ export function useNowPlaying(userId: string | null) {
     loadError: queueError,
     retry: retryQueue,
   } = useQueue(userId);
-  // Play, Finish and the two Moves each go once per game, however many
-  // clicks land before the page has redrawn without the button.
+  // Play, Finish and the two Moves go once per game, however many clicks land
+  // before the redraw.
   const { once } = useInFlight();
   const addGameToQueue = useAddToQueue(userId);
   const removeGameFromQueue = useRemoveFromQueue(userId);
 
-  // Snapshot + optimistic write helpers shared by the mutations below. The
-  // status changes are applied to the cached games list (Games page, Stats)
-  // the way the server applies them, instead of refetching the whole list.
+  // Status changes patch the cached games list (Games, Stats) the way the
+  // server applies them, instead of refetching it.
   const snapshot = async (...changes: StatusChange[]) => {
     await Promise.all([
       queryClient.cancelQueries({ queryKey: playingKey }),
@@ -108,11 +104,8 @@ export function useNowPlaying(userId: string | null) {
 
   const pickMutation = useMutation({
     scope: QUEUE_SCOPE,
-    // The status route also takes the game off the queue if it was queued.
-    // Started by an Undo (the game was moved away a moment ago), it says so,
-    // for the history, and comes back as it was: started when it had been,
-    // not just now ("Playing since" would jump to today otherwise).
-    // `undoAgoMs`: how long ago it was moved away, when this is that move's Undo.
+    // `undoAgoMs` (ms since the move away) marks an Undo for the history and
+    // keeps the old start date, or "Playing since" would jump to today.
     mutationFn: ({ game, undoAgoMs }: { game: GameWithImage; undoAgoMs?: number }) =>
       undoAgoMs !== undefined
         ? updateGameStatus(game.id, 'playing', {
@@ -123,8 +116,7 @@ export function useNowPlaying(userId: string | null) {
           })
         : updateGameStatus(game.id, 'playing'),
     onMutate: async ({ game }) => {
-      // An Undo still on screen (the last game, moved to the backlog) would
-      // now start that game over this one: starting a game settles it.
+      // An Undo still on screen would start its game over this one.
       toast.dismiss(QUEUE_UNDO_TOAST);
       const context = await snapshot({ gameId: game.id, status: 'playing' });
       queryClient.setQueryData(playingKey, game);
@@ -152,8 +144,8 @@ export function useNowPlaying(userId: string | null) {
 
   const completeMutation = useMutation({
     scope: QUEUE_SCOPE,
-    // One request saves the finish/drop, counts the library and starts the
-    // next queued game (the promote is best-effort and reported separately).
+    // Also starts the next queued game; that part is best effort and reported
+    // apart (`promoteFailed`).
     mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
       completeGame(game.id, status, { date, notes, rating }),
     onSuccess: ({ counts, promoted, promoteFailed }, { game, status, date, notes, rating }) => {
@@ -164,9 +156,8 @@ export function useNowPlaying(userId: string | null) {
       );
       queryClient.setQueryData(playingKey, promoted);
       if (promoted) dropFromQueue(promoted.id);
-      // The summary opened as soon as it was saved (confirmStatusChange); the
-      // server's counts and next game replace the estimate, unless it's been
-      // closed by now.
+      // The summary opened with an estimate; the server's figures replace it
+      // unless it's been closed.
       if (status === 'finished') {
         const summary = buildCompletionSummary({
           finishedGame: game,
@@ -187,9 +178,8 @@ export function useNowPlaying(userId: string | null) {
     onSettled: () => statusChanged(),
   });
 
-  // Moving the playing game away takes it off Home in one click on a quiet
-  // link, so say where it went and offer to bring it back (starting it again
-  // also takes it off the queue).
+  // One click on a quiet link takes the game off Home, so say where it went
+  // and offer to bring it back.
   const offerUndo = (game: GameWithImage, where: 'queue' | 'backlog') => {
     const since = sinceNow();
     toast(`Moved ${game.name} to your ${where}`, {
@@ -201,9 +191,7 @@ export function useNowPlaying(userId: string | null) {
 
   const moveToQueueMutation = useMutation({
     scope: QUEUE_SCOPE,
-    // One request: back to the backlog and to the top of the queue, as when
-    // it's paused for another game. It's the one most likely to be picked up
-    // again.
+    // To the top of the queue: it's the game most likely to be picked up again.
     mutationFn: (game: GameWithImage) => updateGameStatus(game.id, 'backlog', { queueAtTop: true }),
     onMutate: async (game) => {
       const context = await snapshot({ gameId: game.id, status: 'backlog' });
@@ -239,11 +227,10 @@ export function useNowPlaying(userId: string | null) {
     onSettled: () => statusChanged(),
   });
 
-  // Play on a queued game while another is playing switches to it.
   const switchGame = useSwitchGame(userId);
 
-  // A queued game's status set from its detail dialog. The queue only holds
-  // backlog games, so any other status takes it off (the server does the same).
+  // The queue only holds backlog games, so any other status takes it off (as
+  // on the server).
   const queuedStatusMutation = useSetGameStatus(userId, {
     scope: QUEUE_SCOPE,
     apply: async (vars) => {
@@ -254,10 +241,8 @@ export function useNowPlaying(userId: string | null) {
     rollback,
   });
 
-  // The new order shows at once (see `reorder` below); the mutation only
-  // saves it. Queue mutations run one at a time, so a mutation's own
-  // onMutate can run well after a click, and a second quick reorder would
-  // be worked out from the order before the first.
+  // `reorder` shows the order itself: queue mutations run one at a time, so
+  // an onMutate can run late and a quick second reorder would see stale order.
   const reorderMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: ({
@@ -269,31 +254,25 @@ export function useNowPlaying(userId: string | null) {
     }) => reorderQueue(gameIds),
     onError: (err, { previous, offeredUndo }) => {
       console.error(err);
-      // Back to the order just before this one.
       if (previous) queryClient.setQueryData(queueKey, previous);
       // The move its toast announced didn't happen.
       if (offeredUndo) toast.dismiss(QUEUE_UNDO_TOAST);
       toast.error('Failed to reorder queue');
     },
     onSettled: () => {
-      // Only once the last pending queue change is saved: a refetch between
-      // two quick ones would bring back the order before the second for a
-      // moment.
+      // A refetch between two quick changes would flash the older order.
       if (moreQueueChangesWaiting(queryClient)) return;
       return queryClient.invalidateQueries({ queryKey: queueKey });
     },
   });
 
-  /**
-   * Shows the queue in this order straight away, then saves it. `offeredUndo`:
-   * the caller says the move in a toast, to take down if the save fails.
-   */
+  /** `offeredUndo`: the caller showed an Undo toast, taken down if the save fails. */
   const reorder = (gameIds: number[], offeredUndo = false) => {
     const previous = queryClient.getQueryData<QueueItem[]>(queueKey);
     if (!previous) return;
     const byId = new Map(previous.map((q) => [q.game_id, q]));
-    // Unknown id means the cache and the drag state diverged; let the
-    // refetch catch up instead.
+    // An unknown id means the cache and the drag state diverged; the refetch
+    // catches up.
     if (!gameIds.every((id) => byId.has(id))) return;
     // A refetch still running from an earlier reorder would land on top of
     // this one with the order from before it.
@@ -347,9 +326,8 @@ export function useNowPlaying(userId: string | null) {
       if (!game || (status !== 'finished' && status !== 'dropped')) return;
       void stop(game, () => {
         setStatusModal(null);
-        // Finishing goes straight to the summary, from what's already known: one
-        // more finished game, and the first queued game that's out starts next. The
-        // server's answer fills in the exact figures when it arrives.
+        // The summary opens at once with an estimate; the server's answer
+        // fills in the exact figures.
         if (status === 'finished') {
           const meta = queryClient.getQueryData<LibraryMeta>(queryKeys.library.meta(userId ?? ''));
           const next = nextPlayable(queue);
@@ -403,9 +381,8 @@ export function useNowPlaying(userId: string | null) {
     },
     reorder,
     /**
-     * Moves a queued game to the front of the queue, with Undo. Works from the
-     * cached queue as it is now, so quick moves in a row each build on the
-     * last. False when there's nothing to move (already first, or gone).
+     * Reads the cached queue, so quick moves in a row each build on the last.
+     * False when there's nothing to move (already first, or gone).
      */
     moveToTop: (gameId: number): boolean => {
       const current = queryClient.getQueryData<QueueItem[]>(queueKey) ?? [];
@@ -419,8 +396,7 @@ export function useNowPlaying(userId: string | null) {
         duration: UNDO_MS,
         action: {
           label: 'Undo',
-          // Back to where it was, in the queue as it is by then: other games
-          // moved, added or removed since stay as they are.
+          // Other games moved, added or removed since stay as they are.
           onClick: () => {
             const now = (queryClient.getQueryData<QueueItem[]>(queueKey) ?? []).map(
               (q) => q.game_id,

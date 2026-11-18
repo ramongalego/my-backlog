@@ -53,7 +53,6 @@ it('loads a page as the server rendered it, then shows the player their own day'
     hydrateRoot(container, <Badge />, { onRecoverableError: (e) => mismatches.push(e) });
   });
 
-  // No mismatch on the way in, and the player's day straight after.
   expect(mismatches).toEqual([]);
   expect(container.textContent).toBe('player day');
 });

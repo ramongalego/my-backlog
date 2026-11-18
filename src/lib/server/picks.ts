@@ -2,18 +2,12 @@ import 'server-only';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import type { PickMode, PickOutcome, SuggestionPreferences } from '@/lib/suggest/types';
 
-// What Pick My Game and Random came up with is kept in game_picks, so the
-// picks can be studied later: nothing reads it yet. Only the server writes it
-// (with the secret key), a player reads their own rows. Keeping a pick is best
-// effort: without the table or the key the pick is still made, just not kept,
-// so nothing here throws.
+// Keeping a pick in game_picks is best effort: without the table or the
+// secret key the pick is still made, so nothing here throws.
 
-/**
- * How long keeping a pick may take. A pick from the questions waits for its
- * row's id before it is shown, and a write that hangs must not hang the pick.
- */
+/** A pick from the questions waits for its row's id, so a hung write must not hang it. */
 const WRITE_TIMEOUT_MS = 3000;
-/** The longest reason kept. The model is asked for a few sentences. */
+/** The model is asked for a few sentences. */
 const MAX_REASONING_LENGTH = 2000;
 
 interface PickToRecord {
@@ -22,13 +16,12 @@ interface PickToRecord {
   mode: PickMode;
   /** Which pick of the sitting: 1, then 2 after one reroll, and so on. */
   attempt: number;
-  /** For a pick from the questions: the answers, the reason given and the model that gave it. */
   questions?: { answers: SuggestionPreferences; reasoning: string; model: string };
-  /** What the player did with it, when that is already known (Home's Random starts its game). */
+  /** When already known (Home's Random starts its game). */
   outcome?: PickOutcome;
 }
 
-/** Keeps a pick. Returns its id, or null when it couldn't be kept. */
+/** Null when it couldn't be kept. */
 export async function recordPick(pick: PickToRecord): Promise<number | null> {
   try {
     const db = tryCreateServiceClient();
@@ -70,10 +63,8 @@ export async function recordPick(pick: PickToRecord): Promise<number | null> {
 }
 
 /**
- * Keeps what the player did with a pick. The first answer stands: a pick
- * already answered is left as it is, so a repeated request changes nothing.
- * Only ever the signed-in player's own pick (`userId` is from the session),
- * and with `gameId`, only a pick of that game.
+ * The first answer stands, so a repeated request changes nothing. `userId` is
+ * from the session; with `gameId`, only a pick of that game is answered.
  */
 export async function recordPickOutcome(
   userId: string,

@@ -1,6 +1,3 @@
-// Which console a game is played on. Shared by the server (sync, add route)
-// and the client (tags on art, the detail dialog).
-
 /** The platform every Steam game starts on. */
 export const STEAM_PLATFORM = 'PC';
 
@@ -9,30 +6,20 @@ export function playsOnConsole(platform: string | null | undefined): boolean {
   return !!platform && platform !== STEAM_PLATFORM;
 }
 
-/**
- * The console to show for a game: a game added by hand's console, or the one
- * a Steam game was moved to. None for Steam games played on Steam ("PC" on
- * every card would be noise).
- */
+/** Null for a game played on Steam: "PC" on every card would be noise. */
 export function consoleOf(game: { source?: string; platform?: string | null }): string | null {
   if (game.source === 'manual') return game.platform ?? null;
   return playsOnConsole(game.platform) ? game.platform! : null;
 }
 
-/**
- * The platform a game is listed under (the Games page's platform filter): its
- * console, or PC for a game played on Steam, where the console tag would say
- * nothing. A PC game added by hand (another store) is PC too.
- */
+/** For the Games page's platform filter, so a game on Steam is PC here. */
 export function platformOf(game: { source?: string; platform?: string | null }): string | null {
   return game.platform || (game.source === 'steam' ? STEAM_PLATFORM : null);
 }
 
 /**
- * The last-played date to show for a game: Steam's, for a game played on
- * Steam. A console game's date is still stored (it ranks Pick Up Where You
- * Left Off) but not shown: it only moves when hours are logged or play stops,
- * so "Last played 7 days ago" could be wrong about a game played today.
+ * Null for a console game: its stored date (which ranks Pick Up Where You Left
+ * Off) only moves when hours are logged or play stops, so it could be days off.
  */
 export function steamLastPlayed(game: {
   source?: string;
@@ -73,15 +60,12 @@ export function shortPlatformName(name: string): string {
   return SHORT_PLATFORM_NAMES[name] ?? name;
 }
 
-/** A console's name as compared: case, spaces and punctuation don't matter. */
 const comparable = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /**
- * The name the app already uses for a console typed by hand, so one console
- * is never listed twice: its short name, typed short or as IGDB spells it in
- * full ("switch2" and "Nintendo Switch 2" are Switch 2), or else one of
- * `others` spelled another way (the game's own consoles, or the ones the
- * player has typed before). Null for a console it doesn't know.
+ * The app's name for a console typed by hand, so one console is never listed
+ * twice ("switch2" and "Nintendo Switch 2" are Switch 2). `others` are names the
+ * player or the game already uses. Null for a console it doesn't know.
  */
 export function knownConsole(typed: string, others: readonly string[] = []): string | null {
   const key = comparable(typed);
@@ -92,23 +76,14 @@ export function knownConsole(typed: string, others: readonly string[] = []): str
   return others.find((name) => comparable(name) === key) ?? null;
 }
 
-/**
- * What the library is played on, for saying where a game is played: the
- * platform most of it is on, and how many there are. Hidden games and those
- * on no platform don't count.
- */
+/** Hidden games and games on no platform aren't counted. */
 export interface LibraryPlatforms {
-  /** The platform most of the library is on; null for an empty library. */
+  /** Null for an empty library. */
   main: string | null;
-  /** How many platforms the library is on. */
   count: number;
 }
 
-/**
- * Works out `LibraryPlatforms` from how many games are on each platform. A
- * tie for the most goes to PC, then to the name first in the alphabet, so it
- * doesn't change from one load to the next.
- */
+/** A tie goes to PC, then alphabetically, so `main` is the same on every load. */
 export function libraryPlatforms(counts: ReadonlyMap<string, number>): LibraryPlatforms {
   let main: string | null = null;
   let most = 0;
@@ -123,11 +98,9 @@ export function libraryPlatforms(counts: ReadonlyMap<string, number>): LibraryPl
 }
 
 /**
- * Where a game is played, to say in text (Recent activity, a list row's
- * details): always, PC included, once the library is on more than one
- * platform, so every row answers the same question; never in a library all
- * on one, where it would tell nothing apart. Until the library's platforms
- * are known, a console only, as before.
+ * For text (Recent activity, a row's details): every row names its platform, PC
+ * too, once the library is on more than one; none on a single platform. Until
+ * `library` is known, consoles only.
  */
 export function platformToSay(
   game: { source?: string; platform?: string | null },
@@ -138,10 +111,9 @@ export function platformToSay(
 }
 
 /**
- * Where a game is played, as a tag on its art: only when it isn't where most
- * of the library is, so the tag marks the exception. For a library mostly on
- * Steam, a console's games are tagged; for one mostly on PS5, a Steam game
- * gets "PC". Until the library's platforms are known, a console only, as before.
+ * For a tag on art: only a platform other than the library's main one, so the
+ * tag marks the exception (in a PS5 library, a Steam game gets "PC"). Until
+ * `library` is known, consoles only.
  */
 export function platformTag(
   game: { source?: string; platform?: string | null },

@@ -6,12 +6,9 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
-// Bound the in-memory store so a burst of unique identifiers can't grow it
-// without limit. On overflow we evict the oldest entry (Map preserves insertion
-// order). This is a soft cap — still imperfect for serverless, but keeps a
-// single instance from leaking unbounded memory.
+// So a burst of unique identifiers can't grow the store without limit. The
+// oldest entry goes first (a Map keeps insertion order).
 const MAX_ENTRIES = 10_000;
-// Cleanup runs at most this often to amortize its cost across requests.
 const CLEANUP_INTERVAL_MS = 60_000;
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
@@ -109,14 +106,10 @@ export function ipRateLimitKey(ip: string): string {
 }
 
 /**
- * Like checkRateLimit, but counted in Postgres (consume_rate_limit) so the
- * limit holds across serverless instances and cold starts. Falls back to the
- * in-memory limiter if the service key or the function isn't available.
- *
- * `failClosed` is for budgets that cap spending (the day's OpenAI calls): in
- * production, when the shared count can't be read, the request is refused
- * instead. The in-memory count is per server instance, so falling back to it
- * would quietly multiply the budget by however many instances are running.
+ * Counted in Postgres so the limit holds across serverless instances; in memory
+ * without the service key or the function. `failClosed` refuses instead in
+ * production, for budgets that cap spending: a per-instance count would
+ * multiply the budget by the number of instances.
  */
 export async function checkSharedRateLimit(
   identifier: string,
@@ -157,8 +150,7 @@ function warnSharedLimiterOnce(error: unknown) {
 }
 
 export function getClientIp(request: Request): string {
-  // On Vercel, this header is set server-side and cannot be spoofed by clients.
-  // Prefer it over x-forwarded-for, which is client-controllable.
+  // Set by Vercel, so a client can't spoof it, unlike x-forwarded-for.
   const vercelIp = request.headers.get('x-vercel-forwarded-for');
   if (vercelIp) {
     return vercelIp.split(',')[0].trim();
@@ -173,75 +165,59 @@ export function getClientIp(request: Request): string {
   return 'unknown';
 }
 
-// Pre-configured rate limiters
 export const RATE_LIMITS = {
-  // 60 requests per minute for game status updates
   gameStatus: { limit: 60, windowMs: 60 * 1000 },
-  // Moving several games at once (Games, Select): one request for the lot,
-  // and one more for an Undo.
+  // One request for the lot, and one more for an Undo.
   gameStatusBulk: { limit: 20, windowMs: 60 * 1000 },
-  // Syncing one game's details, per user. A first import asks for every game
-  // the shared cache doesn't have, eight at a time, so this is set well above
-  // what that needs.
+  // Per user. A first import asks for every game the shared cache lacks, eight
+  // at a time, so this is well above that.
   gameSync: { limit: 500, windowMs: 60 * 1000 },
-  // 10 bulk sync requests per minute (each resolves hundreds of games from cache)
+  // Each resolves hundreds of games from cache.
   gameSyncBulk: { limit: 10, windowMs: 60 * 1000 },
-  // Background HowLongToBeat lookups, up to 5 games per request
+  // Up to 5 games per request.
   gameSyncHltb: { limit: 60, windowMs: 60 * 1000 },
-  // IGDB searches while typing in Add game (debounced, so a few per title)
+  // Debounced, so a few per title.
   gameSearch: { limit: 60, windowMs: 60 * 1000 },
-  // Adding games by hand: each one looks up IGDB and HowLongToBeat
+  // Each one looks up IGDB and HowLongToBeat.
   gameAdd: { limit: 30, windowMs: 60 * 1000 },
-  // Choose art: each time the choices are opened, SteamGridDB is asked with
-  // the app's key. Saving a pick is counted under the same allowance.
+  // Each opening asks SteamGridDB with the app's key; saving a pick counts too.
   gameArt: { limit: 30, windowMs: 60 * 1000 },
-  // Adding, removing and reordering the queue: every drag-reorder is a request,
-  // so this only stops scripts, never someone rearranging their queue.
+  // Every drag-reorder is a request, so this only stops scripts.
   queueWrite: { limit: 300, windowMs: 60 * 1000 },
-  // Saving the profile (its favorite games): a handful of presses at most.
+  // A handful of presses at most.
   profileWrite: { limit: 60, windowMs: 60 * 1000 },
-  // Changing the password, per user: each try checks the current password, so
-  // this is what stops someone at an unlocked computer from guessing it.
+  // Each try checks the current password: this stops guessing it at an
+  // unlocked computer.
   accountPassword: { limit: 5, windowMs: 15 * 60 * 1000 },
-  // Uploading a profile picture, per user: each one is stored.
+  // Each one is stored.
   avatarUpload: { limit: 10, windowMs: 60 * 60 * 1000 },
-  // Changing the email, per user: each one sends confirmation emails.
+  // Each one sends confirmation emails.
   accountEmail: { limit: 5, windowMs: 60 * 60 * 1000 },
-  // Downloading a copy of your data, per user: each one reads the whole library.
+  // Each one reads the whole library.
   accountExport: { limit: 10, windowMs: 60 * 60 * 1000 },
-  // Starting to link a Steam account, and verifying the sign-in that comes
-  // back: each makes this server contact Steam. Linking is done once, or a few
-  // times when it goes wrong.
-  // 30, not 10: every press of Connect Steam counts, finished or not (Back
-  // from Steam's page, a second try), and connecting, disconnecting and
-  // connecting again used to run out of tries.
+  // Each makes this server contact Steam. Every press of Connect Steam counts,
+  // finished or not (Back from Steam's page, a second try).
   steamLink: { limit: 30, windowMs: 60 * 60 * 1000 },
-  // 10 requests per hour for Steam refresh
   steamRefresh: { limit: 10, windowMs: 60 * 60 * 1000 },
-  // Support tickets, per user: generous for real use, tight enough to stop spam.
+  // Generous for real use, tight enough to stop spam.
   support: { limit: 10, windowMs: 60 * 60 * 1000 },
-  // Public share pages for finished games, per user
+  // Public share pages for finished games.
   share: { limit: 30, windowMs: 60 * 60 * 1000 },
-  // Rendering a share page's preview image, per visitor (IP). Link-preview
-  // crawlers fetch it once per link, and the CDN caches it for a month, so
-  // this only stops someone rendering in a loop.
+  // Per IP. Crawlers fetch it once per link and the CDN caches it for a month,
+  // so this only stops rendering in a loop.
   shareImage: { limit: 60, windowMs: 60 * 1000 },
-  // 20 requests per minute for AI suggestions (accounts for rerolls)
+  // Allows for rerolls.
   suggestion: { limit: 20, windowMs: 60 * 1000 },
-  // And 100 a day per user: plenty for picking and rerolling, while free
-  // accounts can't be scripted into a big OpenAI bill.
+  // Per user, so free accounts can't be scripted into a big OpenAI bill.
   suggestionDaily: { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
-  // Recording a reroll (it lowers that game's odds next time). Each one comes
-  // with a suggestion request, which has its own, tighter limit above.
+  // Each comes with a suggestion request, which has its own, tighter limit.
   suggestionReroll: { limit: 60, windowMs: 60 * 1000 },
-  // Keeping a random pick, and what was done with a pick (game_picks). A roll
-  // takes a couple of seconds, so this only stops scripts filling the table.
+  // game_picks rows. A roll takes a couple of seconds, so this only stops
+  // scripts filling the table.
   pickRecord: { limit: 60, windowMs: 60 * 1000 },
-  // Global circuit breaker on AI suggestions: bounds the
-  // daily OpenAI spend however many accounts are used.
+  // Caps the day's OpenAI spend however many accounts are used.
   suggestionGlobal: { limit: 3000, windowMs: 24 * 60 * 60 * 1000 },
-  // Writing the player profile or its roast on Stats (OpenAI). Each one is
-  // saved and only written again when the library changes, so this is plenty.
+  // OpenAI. Each is saved and only written again when the library changes.
   insights: { limit: 10, windowMs: 24 * 60 * 60 * 1000 },
   // Global circuit breaker on player profiles, like suggestionGlobal.
   insightsGlobal: { limit: 1000, windowMs: 24 * 60 * 60 * 1000 },

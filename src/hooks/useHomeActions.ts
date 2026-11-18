@@ -51,9 +51,8 @@ export function useHomeActions(userId: string | null) {
     setCarouselModal(null);
 
     if (status === 'playing') {
-      // Not awaited. The dialog closes itself once this returns, and by the
-      // time the server answered that would close whichever dialog had been
-      // opened since. The game shows as playing at once either way.
+      // Not awaited: the dialog closes itself once this returns, and after the
+      // server answered that would close whichever dialog had opened since.
       void handlePickGame(game);
       return;
     }
@@ -61,10 +60,6 @@ export function useHomeActions(userId: string | null) {
     setStatus.mutate({ gameId: game.id, status, date, notes, rating });
   };
 
-  /**
-   * The game dialog's Playing while another game is playing: play this one
-   * instead (the other waits at the top of the queue), shown in the band.
-   */
   const handlePlayInstead = async () => {
     if (!carouselModal) return;
     const { game } = carouselModal;
@@ -73,13 +68,12 @@ export function useHomeActions(userId: string | null) {
     void handleSwitchTo(game).catch((err) => console.error('Failed to switch games:', err));
   };
 
-  /** Plays a game instead of the one being played, shown in the band (with Undo). */
   const handleSwitchTo = async (game: GameWithImage) => {
     window.scrollTo({ top: 0, behavior: scrollBehavior() });
     await nowPlaying.switchTo(game);
   };
 
-  // A carousel game's dialog. Carousels only hold backlog games.
+  // Carousels only hold backlog games.
   const dialogFor = useGameDialog(userId);
   const carouselDialog: GameDialogProps | null = carouselModal && {
     game: carouselModal.game,
@@ -118,8 +112,8 @@ export function useHomeActions(userId: string | null) {
       setRollCovers(null);
       return;
     }
-    // Kept with the picks (game_picks). Random starts its game at once, so
-    // the pick and what was done with it are one. Not waited for.
+    // Random starts its game at once, so the pick and its outcome go together.
+    // Not waited for.
     void recordRandomPick({ gameId: picked.id, mode: 'play', attempt: 1, outcome: 'played' });
     setRolledGameId(picked.id);
     // Starting it shows it at once (before the server answers), so the roll
@@ -146,7 +140,7 @@ export function useHomeActions(userId: string | null) {
     retry: nowPlaying.retry,
     statusModal: nowPlaying.statusModal,
     gameSummary: nowPlaying.gameSummary,
-    /** A carousel game's detail dialog: its props, or null when it's closed. */
+    /** Null when it's closed. */
     carouselDialog,
     handlePickGame,
     handlePlayNext,

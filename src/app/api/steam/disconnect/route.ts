@@ -6,13 +6,9 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { clearLibrary } from '@/lib/server/steam-library';
 
 /**
- * Unlinks the player's Steam account. Its games come out of the library, with
- * their history (as when switching to another Steam account); games added by
- * hand stay, and so do Steam games moved to a console, which become games
- * added by hand. Connecting again imports the library afresh.
- *
- * The games go first, then the profile's Steam fields: if clearing fails the
- * account is still linked and it can simply be tried again.
+ * Steam games come out with their history; games added by hand stay, and so
+ * do Steam games moved to a console, which become games added by hand. The
+ * games go before the profile's Steam fields, so a failed clear can be retried.
  */
 export async function POST() {
   const supabase = await createClient();

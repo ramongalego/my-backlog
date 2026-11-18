@@ -9,24 +9,15 @@ import type { GameStatus } from '@/lib/games/status';
 interface DialogOptions {
   /** The game's status (backlog unless given): only backlog games go on the queue. */
   status?: GameStatus;
-  /**
-   * Where the game is now, for the Undo after playing it instead of another:
-   * its status, and a finished or dropped game's date, notes and rating.
-   */
+  /** For the Undo after playing it instead of another. */
   from?: SwitchedFrom;
-  /**
-   * What "play this instead" does, for a page that does more around it (Home
-   * scrolls to the game it started). By default the game is switched to.
-   */
+  /** For a page that does more around it (Home scrolls to the game it started). */
   onPlayInstead?: () => void | Promise<void>;
 }
 
 /**
- * The parts of a game's dialog that depend on the rest of the library: the
- * game being played, the queue, and the console a game is played on. Every
- * page that opens a library game's dialog takes them from here, so Queue,
- * "play this instead", a console game's hours and Choose art work the same
- * wherever the game is opened. Returns a function of the open game:
+ * Every page takes these from here, so Queue, "play this instead", a console
+ * game's hours and Choose art work the same wherever a game is opened:
  *
  *   <GameDetailModal game={game} {...dialogFor(game)} ... />
  */
@@ -41,9 +32,7 @@ export function useGameDialog(userId: string | null) {
     const playing = switchGame.playing;
     const queued = status === 'backlog' && queuedGameIds.has(game.id);
     return {
-      /** The game's art can be chosen (Choose art). */
       art: { gameId: game.id },
-      /** A console game's hours, and removing it or moving it back to Steam. */
       manual: manualGames.dialogProps(game),
       /** Another game is being played: Playing means playing this one instead. */
       playing:

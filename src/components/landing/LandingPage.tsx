@@ -12,10 +12,6 @@ import { FinalCta } from './FinalCta';
 // The auth forms pull in supabase-js; load them only when the modal opens.
 const AuthModal = dynamic(() => import('@/components/auth/AuthModal').then((m) => m.AuthModal));
 
-/**
- * The public landing page: what MyBacklog does, section by section, each with
- * a sample of the app. Every call to action opens sign-up (or sign-in).
- */
 export function LandingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signup');

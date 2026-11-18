@@ -16,7 +16,7 @@ import {
   type QueueableGame,
 } from '@/lib/games/queue-items';
 
-/** The user's queue. The single cached source for queue items and "queued" badges. */
+/** The single cached source for queue items and "queued" badges. */
 export function useQueue(userId: string | null) {
   const { data: queue = [], isPending, isLoadingError, refetch } = useQuery(queries.queue(userId));
   return {
@@ -29,7 +29,6 @@ export function useQueue(userId: string | null) {
   };
 }
 
-/** Adds a game to the end of the queue, updating badges optimistically. */
 export function useAddToQueue(userId: string | null) {
   const queryClient = useQueryClient();
   const { queue: invalidateQueue } = useInvalidateQueries();
@@ -57,19 +56,16 @@ export function useAddToQueue(userId: string | null) {
   });
 
   return (game: QueueableGame) => {
-    // Queued already: nothing to add (and nothing to say again).
     const queue = queryClient.getQueryData<QueueItem[]>(queueKey);
     if (queue?.some((q) => q.game_id === game.id)) return;
-    // Once per game: a second click before the page shows it queued would
-    // send it again, and be told it's already there.
+    // A second click before the page shows it queued would send it again.
     void once(`queue:${game.id}`, () => mutation.mutateAsync(game));
   };
 }
 
 /**
- * Takes a game off the queue (it stays in the backlog), with a toast that
- * offers Undo: back on the queue in its old place. From the queue page's
- * Move to backlog, and from choosing Backlog in a queued game's dialog.
+ * The game stays in the backlog. Used by the Queue page's Move to backlog and
+ * by choosing Backlog in a queued game's dialog.
  */
 export function useRemoveFromQueue(userId: string | null) {
   const queryClient = useQueryClient();
@@ -101,7 +97,7 @@ export function useRemoveFromQueue(userId: string | null) {
       rollback(context);
       toast.error('Failed to remove game from queue');
     },
-    // One quiet click: say where it went and offer to put it back where it was.
+    // One quiet click: say where it went and offer to put it back.
     onSuccess: (_data, gameId, context) => {
       const index = context?.previousQueue?.findIndex((q) => q.game_id === gameId) ?? -1;
       if (index === -1) return;
@@ -125,8 +121,8 @@ export function useRemoveFromQueue(userId: string | null) {
     onSettled: () => invalidateQueue(),
   });
 
-  // Undo: back on the queue, in its old place (or last, if the queue has
-  // shrunk since). Only that game: anything else that changed meanwhile stays.
+  // Back in its old place, or last if the queue has shrunk since. Anything else
+  // that changed meanwhile stays.
   const restoreMutation = useMutation({
     scope: QUEUE_SCOPE,
     mutationFn: async ({
@@ -136,7 +132,7 @@ export function useRemoveFromQueue(userId: string | null) {
     }: {
       item: QueueItem;
       index: number;
-      /** How long ago it was taken off, for the history. */
+      /** Milliseconds since it was taken off, for the history. */
       agoMs: number;
     }) => {
       // The server adds it last; move it up unless last is where it was.

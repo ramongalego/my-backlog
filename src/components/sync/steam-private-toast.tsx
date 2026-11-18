@@ -5,16 +5,15 @@ import { STEAM_PRIVACY_URL, STEAM_PRIVATE_HELP, STEAM_PRIVATE_TITLE } from '@/li
 const DURATION_MS = 20_000;
 
 /**
- * Steam is connected but shared no library: says why and what to change, with
- * a way straight to the setting. Shown after connecting and after a refresh
- * the player asked for; one at a time.
+ * Steam is connected but shared no library. Called after connecting and after
+ * a refresh the player asked for; the id keeps it to one at a time.
  */
 export function steamPrivateToast() {
   toast.error(STEAM_PRIVATE_TITLE, {
     id: 'steam-private',
     duration: DURATION_MS,
-    // The link sits under the text: as the toast's action button it took a
-    // third of the width, and the text ran to nine lines beside it.
+    // Not the toast's action button: that takes a third of the width, and the
+    // text runs to nine lines beside it.
     description: (
       <>
         {STEAM_PRIVATE_HELP}

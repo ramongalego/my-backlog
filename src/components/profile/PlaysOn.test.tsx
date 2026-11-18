@@ -20,13 +20,11 @@ it('lists each platform with its games, as a link to the Games page listing it',
     'href',
     '/games?platform=PC',
   );
-  // A name with a space is encoded for the address.
   expect(screen.getByRole('link', { name: 'Switch 2 19 games' })).toHaveAttribute(
     'href',
     '/games?platform=Switch%202',
   );
   expect(screen.getByRole('link', { name: 'N64 1 game' })).toBeInTheDocument();
-  // Nothing to open up.
   expect(screen.queryByRole('button')).not.toBeInTheDocument();
 });
 
@@ -39,7 +37,6 @@ it('names five, and opens up to all of them from the line counting the rest', ()
   fireEvent.click(more);
 
   expect(names()).toEqual(['PC', 'Switch 2', 'DS', '3DS', 'GBA', 'PS5', 'PS3', 'N64']);
-  // The same button, now closing it again.
   expect(more).toHaveAttribute('aria-expanded', 'true');
   expect(more).toHaveTextContent('Show fewer');
 });

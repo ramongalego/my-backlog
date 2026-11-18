@@ -10,14 +10,12 @@ import type { AddStatus } from '@/lib/games/status';
 
 const AddGameContext = createContext<{ open: (query?: string) => void } | null>(null);
 
-/** Opens the Add game dialog, optionally with a search filled in. */
 export function useAddGame() {
   const context = use(AddGameContext);
   if (!context) throw new Error('useAddGame must be used inside AddGameProvider');
   return context;
 }
 
-// Where a newly added game shows up, for the toast and its View link.
 function destination(
   status: AddStatus,
   name: string,
@@ -47,11 +45,7 @@ function destination(
   }
 }
 
-/**
- * The Add game dialog for the whole signed-in app: the header button and an
- * empty library search both open it. A new game shows up everywhere at once
- * (games list, Stats, carousels, queue, Diary and the header's count).
- */
+/** For the whole signed-in app: the header button and an empty library search both open it. */
 export function AddGameProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();

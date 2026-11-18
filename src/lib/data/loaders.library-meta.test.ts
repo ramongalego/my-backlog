@@ -4,7 +4,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { loadLibraryMeta } from '@/lib/data/loaders';
 
-// A library: what each game is, as the games table holds it.
 interface Game {
   source: 'steam' | 'manual';
   platform: string | null;

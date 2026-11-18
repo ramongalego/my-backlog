@@ -2,16 +2,14 @@ import 'server-only';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import type { Insight, InsightTone } from '@/lib/profile/prompt';
 
-/** A written profile as saved: with the facts it was written from (their signature). */
+/** `signature` stands for the facts it was written from. */
 export interface SavedInsight extends Insight {
   signature: string;
   generatedAt: string;
 }
 
-// Saved in player_insights, which only the server writes (with the secret
-// key): users read their own rows, but can't put words in the app's mouth.
-// Saving is best effort: without the table or the key the profile is still
-// written, just not kept.
+// Only the server writes player_insights, so users can't put words in the
+// app's mouth. Best effort: without the table or the key, nothing is kept.
 
 export async function getSavedInsight(
   userId: string,

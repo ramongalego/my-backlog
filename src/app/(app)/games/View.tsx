@@ -140,16 +140,12 @@ export default function GamesView() {
         actions={<GamesFilter filter={filter} counts={counts} onFilterChange={setFilter} />}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* What's listed: the search, and the platform when there's more
-              than one to choose between. */}
           <div className="flex min-w-0 items-center gap-2">
             <GamesSearch value={searchQuery} onSearchChange={setSearchQuery} />
             <GamesPlatform platforms={platforms} onGone={focusControls} />
           </div>
-          {/* One row of controls on the same surface, 8px apart: what to act
-              on, how it's laid out, what order it's in. On phones the sort
-              keeps the right edge. They keep their size when the row is tight:
-              the search field is what gives way. */}
+          {/* These keep their size when the row is tight: the search field
+              gives way. */}
           <div ref={controlsRef} className="flex shrink-0 items-center gap-2">
             <GamesSelectToggle on={!!selection} onToggle={toggleSelecting} />
             <GamesViewToggle value={view} onChange={setView} />

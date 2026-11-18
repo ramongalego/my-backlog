@@ -14,9 +14,8 @@ export function SyncProgress({ progress, games }: SyncProgressProps) {
   const currentGame = games[progress.current - 1];
   const percentComplete = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
 
-  // Games go by faster than their covers load, so each cover loads out of
-  // sight and replaces the one on screen only once it's ready. Otherwise most
-  // frames would be the bare name.
+  // Games go by faster than covers load, so each loads out of sight and replaces
+  // the one on screen once ready; otherwise most frames would be the bare name.
   const [cover, setCover] = useState<{ src: string; name: string; order: number } | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
@@ -55,8 +54,7 @@ export function SyncProgress({ progress, games }: SyncProgressProps) {
               </p>
             </div>
             {cover && (
-              // Already in the browser cache, so it's shown as is rather than
-              // re-fetched through the image optimizer.
+              // Already in the browser cache: the image optimizer would fetch it again.
               <Image src={cover.src} alt={cover.name} fill unoptimized className="object-cover" />
             )}
           </>

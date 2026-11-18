@@ -12,8 +12,7 @@ import { isReleased } from '@/lib/games/release-date';
 import type { GameRestore } from '@/lib/games/bulk-status';
 import type { GameWithImage } from '@/types/games';
 
-/** A game paused for another one (`pausePlaying`): reported so the browser
- * can say which, from what the server found playing, not its own guess. */
+/** Reported so the browser names what the server found playing, not its own guess. */
 interface PausedGame {
   id: number;
   name: string;
@@ -26,7 +25,7 @@ type StatusChangeResult =
   | {
       ok: true;
       paused: PausedGame[];
-      /** When the game had been started, before this change: for its Undo to put back. */
+      /** The start date before this change, for its Undo to put back. */
       startedAt?: string | null;
     }
   | { ok: false; status: 404 | 500; error: string };
@@ -34,22 +33,16 @@ type StatusChangeResult =
 /** The longest an Undo's change can be said to be ago: the history looks back no further. */
 const MAX_UNDO_AGO_SECONDS = 24 * 60 * 60;
 
-/**
- * How long ago an Undo's change was made, in whole seconds, as the database
- * takes it (apply_status_change, "ago").
- */
+/** Whole seconds, as apply_status_change's "ago" takes it. */
 export function undoAgoSeconds(ms: number | undefined): number {
   return Math.min(Math.ceil((ms ?? 0) / 1000), MAX_UNDO_AGO_SECONDS);
 }
 
 /**
- * Sets a game's status for a user, server side: the status route and the
- * finish/drop route both use it so the rules live in one place. Only one game
- * can be playing, and the queue only holds backlog games. With `pausePlaying`,
- * the game that was playing goes to the top of the queue instead, and keeps
- * its start date: a paused game picked up again from the queue resumes. With
- * `queueAtTop`, a game going back to the backlog (the one being played, moved
- * to the queue) is put at the top of the queue in the same save.
+ * Shared by the status and finish/drop routes so the rules live in one place.
+ * `pausePlaying` sends the playing game to the top of the queue, keeping its
+ * start date so it resumes; `queueAtTop` puts a game going back to the backlog
+ * at the top of the queue in the same save.
  */
 export async function applyStatusChange(
   supabase: SupabaseClient,
@@ -79,9 +72,8 @@ export async function applyStatusChange(
     return { ok: true, paused: [], startedAt: target.started_at };
   }
 
-  // A game paused for another one keeps its start date while it waits in the
-  // queue, and picking it up again carries on from there. (Taking it off the
-  // queue for the backlog ends that: started again later, it starts afresh.)
+  // A paused game keeps its start date while queued, so picking it up resumes.
+  // Taken off the queue to the backlog, it starts afresh.
   let resuming = false;
   if (status === 'playing' && target.status === 'backlog' && target.started_at) {
     const { data: queued, error: queuedError } = await supabase
@@ -94,11 +86,8 @@ export async function applyStatusChange(
     resuming = !!queued;
   }
 
-  // Only one game can be playing: any other one goes back to the backlog, or
-  // is paused at the top of the queue. Those come first in the list, since the
-  // database allows one playing game at any moment.
-  // An Undo marks every game it writes, for the history, and says how long
-  // ago the change it undoes was made (apply_status_change).
+  // Other playing games come first in the list: the database allows one playing
+  // game at any moment. An Undo marks every game it writes, for the history.
   const updates: {
     id: number;
     update: ReturnType<typeof statusUpdate>;
@@ -125,29 +114,22 @@ export async function applyStatusChange(
 
   const update = statusUpdate(change);
   if (resuming) delete update.started_at;
-  // An Undo that starts the game again puts it back as it was: started when
-  // it had been (not now), and last played when it had been (stopping it
-  // stamped that). Only an Undo: a game started the usual way starts now.
+  // An Undo puts back the start and last-played dates the change stamped; a
+  // game started the usual way starts now.
   if (undo && status === 'playing') {
     if (change.startedAt) update.started_at = change.startedAt;
     if (change.lastPlayedAt !== undefined) update.last_played_at = change.lastPlayedAt;
   }
-  // An Undo that puts a game back as finished or dropped (it was played
-  // instead of another, by mistake) puts back when it had been started too:
-  // starting it stamped that with now, and "days to finish" reads it.
+  // Starting it stamped its start date with now, and "days to finish" reads it.
   if (undo && (status === 'finished' || status === 'dropped') && change.startedAt !== undefined) {
     update.started_at = change.startedAt;
   }
   updates.push(item(gameId, withLastPlayed(target, update)));
 
-  // The games that go to the top of the queue: one paused for another, or
-  // this one, moved there from playing.
   const toTop = paused.map((game) => game.id);
   if (queueAtTop && status === 'backlog') toTop.push(gameId);
 
-  // Saved in one transaction (apply_status_change): every game's new columns,
-  // taking any that left the backlog off the queue, and those games' place at
-  // the top of it. If any part fails, none of it is saved.
+  // One transaction: if any part fails, none of it is saved.
   const { error } = await supabase.rpc('apply_status_change', {
     p_updates: updates,
     p_pause_ids: toTop,
@@ -161,7 +143,7 @@ export async function applyStatusChange(
   return { ok: true, paused, startedAt: target.started_at };
 }
 
-/** As many ids as one read asks for: a longer list wouldn't fit in the request's address. */
+/** A longer id list wouldn't fit in the request's URL. */
 const READ_CHUNK = 200;
 
 type BulkFailure = { ok: false; status: 404 | 409 | 500; error: string };
@@ -179,9 +161,8 @@ const bulkFailed = (err: unknown): BulkFailure => {
 };
 
 /**
- * The user's games with these ids, as they are now. Refuses unless every one
- * is theirs and none is being played: that game is only changed from its own
- * dialog (stopping it can start the next queued game).
+ * Refuses a game being played: it changes only from its own dialog, since
+ * stopping it can start the next queued game.
  */
 async function readBulkTargets(
   supabase: SupabaseClient,
@@ -226,11 +207,9 @@ async function saveBulk(
 }
 
 /**
- * Sets the status of several games at once (Games, Select), by the same rules
- * as one, and saves them in one transaction: all of them, or none. Returns
- * what each game had before (`previous`), which restoreGames writes back for
- * Undo: the rules clear things (a date, a rating, notes) that re-applying the
- * old status wouldn't bring back.
+ * All or none, in one transaction. `previous` is for restoreGames to write back
+ * on Undo: the rules clear things (a date, a rating, notes) that re-applying
+ * the old status wouldn't bring back.
  */
 export async function applyStatusChanges(
   supabase: SupabaseClient,
@@ -274,12 +253,9 @@ export async function applyStatusChanges(
 }
 
 /**
- * Puts several games back exactly as they were (a bulk change's Undo): the
- * status and everything a status change can touch, as given, in one
- * transaction. Not through the rules, which would clear or stamp things.
- * Each is sent as an Undo, so the history takes the move back out instead of
- * recording a second one (a game moved from Finished and back isn't finished
- * twice), however long the toast waited: `agoMs` is how long that was.
+ * A bulk change's Undo, not through the rules, which would clear or stamp
+ * things. Sent as an Undo so the history takes the move out instead of
+ * recording a second one; `agoMs` is how long the toast waited.
  */
 export async function restoreGames(
   supabase: SupabaseClient,
@@ -318,14 +294,9 @@ export async function restoreGames(
 }
 
 /**
- * Starts the first game in the queue that's out, if there is one, and returns
- * it with everything the playing card shows. Games not out yet stay queued, in
- * their places. Throws if the queue had a game but it couldn't be started.
- *
- * With a game already playing, that game is returned and the queue is left
- * alone: a finish sent twice (or after starting a game in another tab) would
- * otherwise start a second queued game and send the first to the backlog,
- * off the queue.
+ * Skips games not out yet, which keep their places. Throws if a game couldn't
+ * be started. With a game already playing, returns it and leaves the queue
+ * alone: a repeated finish would otherwise start a second queued game.
  */
 export async function promoteNextFromQueue(
   supabase: SupabaseClient,

@@ -15,11 +15,8 @@ export const OPEN_ENDED_MIN_MINUTES = 10 * 60;
 const LIST_SIZE = 5;
 
 /**
- * Backlog games that are probably not backlog any more: played past most of
- * their main story, or 10+ hours into a game you play rather than finish.
- * It's the other half of Pick Up Where You Left Off (which leaves these out),
- * shown on Stats as a nudge to mark them finished, dropped or hidden. Queued
- * games are left out: you've just decided to play those.
+ * Backlog games that probably aren't any more, for Stats to nudge (Pick Up Where
+ * You Left Off leaves these out). Queued games are left out: just chosen to play.
  */
 export function playedALot<T extends PlayedGame>(
   games: T[],

@@ -1,5 +1,3 @@
-// Numbers as Stats writes them.
-
 export const count = (n: number) => n.toLocaleString('en-US');
 export const plural = (n: number, word: string) => `${count(n)} ${word}${n === 1 ? '' : 's'}`;
 

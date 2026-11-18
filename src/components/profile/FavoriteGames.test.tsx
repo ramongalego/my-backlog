@@ -8,9 +8,8 @@ jest.mock('next/image', () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
-// A drag can't be acted out in jsdom (nothing has a size), so the drag context
-// is stood in for: the test ends a drag by hand and checks what the row makes
-// of it. Everything else is dnd-kit's own.
+// jsdom can't act out a drag (nothing has a size), so the drag context is stood
+// in for and tests end a drag by hand. Everything else is dnd-kit's own.
 let endDrag: (event: { active: { id: number }; over: { id: number } | null }) => void;
 let startDrag: () => void;
 let instructions: string;
@@ -86,9 +85,7 @@ describe('with none picked yet', () => {
   it('is four empty places, each opening the picker', () => {
     render(<FavoriteGames {...actions} games={[]} />);
     expect(addButtons()).toHaveLength(4);
-    // The places are the way in: there's no separate button for it.
     expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument();
-    // Nothing is filled in for the player: favorites are theirs to pick.
     expect(handles()).toEqual([]);
 
     fireEvent.click(addButtons()[2]);
@@ -125,8 +122,6 @@ describe('with favorites picked', () => {
   });
 
   it('shows the new order from the instant of the drop, before the page has it', () => {
-    // The page's copy arrives a moment later; until then the row would show
-    // the old order, and the drag library animated from it.
     const { rerender } = render(<FavoriteGames {...actions} games={four} />);
     act(() => endDrag({ active: { id: 1 }, over: { id: 3 } }));
     expect(handles()).toEqual([
@@ -185,11 +180,9 @@ describe('with favorites picked', () => {
     render(<FavoriteGames {...actions} games={four} />);
     const x = screen.getByRole('button', { name: 'Remove Hades from your favorites' });
     expect(x).toHaveClass('opacity-0', 'group-hover:opacity-100');
-    // Keyboard focus on the favorite or on the X itself.
     expect(x).toHaveClass('group-has-[:focus-visible]:opacity-100', 'focus-visible:opacity-100');
     // A click on the art focuses it; that alone must not hold the X there.
     expect(x).not.toHaveClass('group-focus-within:opacity-100');
-    // No hover under a finger: always there, with more room to hit.
     expect(x).toHaveClass('pointer-coarse:opacity-100');
     expect(x).toHaveClass('pointer-coarse:before:-inset-2');
   });

@@ -14,7 +14,7 @@ jest.mock('@/lib/client/game-status', () => ({
   updateGameStatuses: jest.fn(),
   restoreGameStatuses: jest.fn(),
 }));
-// (BulkMoveError stays the real class, through requireActual above.)
+// BulkMoveError stays the real class, through requireActual.
 
 const game = (id: number, overrides: Record<string, unknown> = {}) => ({
   id,
@@ -76,10 +76,7 @@ function setup() {
 const undoFromToast = () =>
   (jest.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } }).action;
 
-/**
- * Stops the clock (the timers stay real), so a test can let an exact time
- * pass between a move and its Undo.
- */
+/** Stops Date.now (timers stay real), so a test can pass an exact time before Undo. */
 let clock: jest.SpyInstance | undefined;
 function stopClock() {
   let now = Date.parse('2026-11-17T12:00:00Z');
@@ -106,7 +103,7 @@ it('moves the games on the page at once and saves them in one request', async ()
 
   act(() => result.current.move([hades, celeste, portal] as never, 'hidden'));
 
-  // Before the server answers. Portal was hidden already, so it isn't sent.
+  // Portal was hidden already, so it isn't sent.
   await waitFor(() => expect(list().map((g) => g.status)).toEqual(['hidden', 'hidden', 'hidden']));
   expect(updateGameStatuses).toHaveBeenCalledTimes(1);
   expect(updateGameStatuses).toHaveBeenCalledWith([
@@ -130,11 +127,10 @@ it('undoes a move by sending back exactly what the server said the games had', a
 
   act(() => undoFromToast().onClick());
 
-  // With how long ago the move was, for the history.
   await waitFor(() =>
     expect(restoreGameStatuses).toHaveBeenCalledWith(previous, expect.any(Number)),
   );
-  // The page has them back too, leftovers included, and nothing else is sent.
+  // Leftovers included, and nothing else is sent.
   expect(list()[0]).toMatchObject({
     status: 'backlog',
     finished_at: '2026-04-08T00:00:00+00:00',
@@ -143,7 +139,7 @@ it('undoes a move by sending back exactly what the server said the games had', a
   expect(list()[1]).toMatchObject({ status: 'finished', notes: 'Loved it', rating: 9 });
   expect(list()[2].status).toBe('hidden');
   expect(updateGameStatuses).toHaveBeenCalledTimes(1);
-  // The undo itself isn't offered an undo.
+  // The undo itself offers no Undo.
   expect(toast).toHaveBeenCalledTimes(1);
 });
 
@@ -153,7 +149,7 @@ it('tells the server how long the Undo waited: the time since the move was saved
   act(() => result.current.move([hades, celeste] as never, 'hidden'));
   await waitFor(() => expect(toast).toHaveBeenCalled());
 
-  // The toast waits while its tab is in the background: a minute and a half.
+  // A toast waits while its tab is in the background.
   time.pass(90_000);
   act(() => undoFromToast().onClick());
 

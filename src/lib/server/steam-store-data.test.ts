@@ -66,8 +66,7 @@ it('refreshes Steam games and games added by hand that Steam sells, each by its 
   expect(
     await refreshStoreData(fakeClient([steamGame, handAdded], writes), 'u', fakeClient([], writes)),
   ).toBe(2);
-  // With the art each game already has, so art that hasn't changed isn't
-  // checked again.
+  // So art that hasn't changed isn't checked again.
   expect(getStoreSummaries).toHaveBeenCalledWith(
     [10, 20],
     new Map([

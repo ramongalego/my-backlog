@@ -12,9 +12,8 @@ export interface GameSummaryData {
   gamesFinished: number;
   totalGames: number;
   nextGame: string | null;
-  /** The next game's art, beside its name. */
   nextGameImage?: string | null;
-  /** When you started playing it, for how long it took. */
+  /** For how long it took. */
   startedAt?: string | null;
   /** The finish date chosen (YYYY-MM-DD). */
   finishedAt?: string | null;
@@ -29,11 +28,7 @@ export interface CompletionCounts {
   finishedThisYear?: number;
 }
 
-/**
- * Builds the GameSummaryData shown after finishing a game. Extracted so the
- * home and queue flows produce identical summaries (previously duplicated
- * line-for-line in both hooks).
- */
+/** Shared by the Home and Queue finish flows, so their summaries match. */
 export function buildCompletionSummary({
   finishedGame,
   promoted,

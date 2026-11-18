@@ -1,10 +1,9 @@
-// PostgREST caps every response at `max_rows` (1000 by default), so any query
-// over a user's whole library has to page or it silently truncates large
-// libraries. The builder must apply a stable `.order()` for paging to be
-// consistent.
+// PostgREST caps every response at `max_rows` (1000 by default), so a query
+// over a whole library must page or it silently truncates. Pages need a stable
+// `.order()`.
 const PAGE_SIZE = 1000;
-// Pages requested at once after the first. Most libraries fit in the first
-// page; a 5,000-game one takes two rounds instead of five in a row.
+// Most libraries fit in the first page; a 5,000-game one takes two rounds
+// instead of five.
 const PARALLEL_PAGES = 4;
 
 type PageResult<T> = PromiseLike<{ data: T[] | null; error: unknown }>;
@@ -35,7 +34,7 @@ export async function fetchAllRows<T>(
   }
 }
 
-// Splits ids for `.in()` filters so the request URL stays well under limits.
+// For `.in()` filters, so the request URL stays well under limits.
 export function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));

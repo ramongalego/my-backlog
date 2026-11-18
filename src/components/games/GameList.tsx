@@ -19,15 +19,9 @@ interface GameListProps {
   /** A heading was clicked: sort by it, or reverse it when it's the sort already. */
   onSortChange: (sort: GameSort) => void;
   onOpenDetail: (gameId: number) => void;
-  /** Select mode: each game's part in it. */
   selectionFor?: (game: GameItem) => GameSelection;
 }
 
-/**
- * The Games page's list view: a row per game, under a header that names the
- * columns. A column that has a sort sorts by it, the same sorts as the Sort
- * menu; clicking the one in use reverses it, as the arrow beside Sort does.
- */
 export function GameList({
   games,
   queuedGameIds,

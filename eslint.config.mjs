@@ -62,7 +62,6 @@ const eslintConfig = defineConfig([
   ),
   restrict(['src/components/auth/**', 'src/components/layout/UserMenu.tsx'], [SERVER_ONLY]),
 
-  // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
     '.next/**',

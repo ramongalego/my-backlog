@@ -62,8 +62,6 @@ it('takes removed games off at once, and refreshes only after the last delete is
   });
   expect(diary()).toEqual(['Kept']);
 
-  // The first delete goes through while the second is still on offer: a
-  // refresh now would bring the second one back from the server.
   await act(() => toastOptions(0).onAutoClose());
   expect(deleteManualGame).toHaveBeenCalledWith(1, false);
   expect(statusChanged).not.toHaveBeenCalled();
@@ -83,7 +81,6 @@ it("undoing one removal brings back that game only, not another that's pending",
   expect(diary()).toEqual(['Old game', 'Kept']);
   expect(deleteManualGame).not.toHaveBeenCalledWith(1, false);
 
-  // Undoing doesn't send the delete; the other still goes through.
   await act(() => toastOptions(0).onAutoClose());
   await act(() => toastOptions(1).onAutoClose());
   expect(deleteManualGame).toHaveBeenCalledTimes(1);
@@ -111,8 +108,7 @@ it('takes a deleted game off a games list loaded while its Undo was on offer', a
   const listKey = queryKeys.games.list('u');
   act(() => result.current.remove(1, 'Old game'));
 
-  // Opening Stats meanwhile loads the library from the server, which still
-  // has the game; the list isn't refetched after the delete.
+  // As if Stats loaded the library meanwhile, from a server that still has the game.
   act(() => {
     queryClient.setQueryData(listKey, [entry(1, 'Old game'), entry(3, 'Kept')]);
   });
@@ -130,7 +126,7 @@ it('sends a pending removal as the page goes, rather than losing it with the toa
   await act(async () => {
     window.dispatchEvent(new Event('pagehide'));
   });
-  // Kept alive past the page, and only once: the toast closing later sends nothing.
+  // Kept alive past the page, and sent only once.
   expect(deleteManualGame).toHaveBeenCalledWith(1, true);
   await act(() => toastOptions(0).onAutoClose());
   expect(deleteManualGame).toHaveBeenCalledTimes(1);
@@ -151,15 +147,11 @@ it("takes the toast down once the delete has gone, so Undo can't pretend to rest
   const { result, diary, toastOptions } = setup();
   act(() => result.current.remove(1, 'Old game'));
 
-  // Switching tabs sends the delete; the toast only pauses while hidden, so it
-  // would still be there, Undo and all, on coming back.
   await act(async () => {
     window.dispatchEvent(new Event('pagehide'));
   });
   expect(toast.dismiss).toHaveBeenCalledWith('removed-toast');
 
-  // And a click on an Undo that was still on screen changes nothing: the game
-  // is gone on the server, so it mustn't reappear here.
   act(() => toastOptions(0).action.onClick());
   expect(diary()).toEqual(['Older game', 'Kept']);
 });
@@ -170,7 +162,6 @@ it('removes a game once when Remove is pressed twice, so its Undo still brings i
     result.current.remove(1, 'Old game');
     result.current.remove(1, 'Old game');
   });
-  // One toast: a second would delete the game when it went, Undo or not.
   expect(toast).toHaveBeenCalledTimes(1);
 
   act(() => toastOptions(0).action.onClick());

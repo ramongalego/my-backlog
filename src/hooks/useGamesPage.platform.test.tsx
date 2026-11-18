@@ -85,7 +85,6 @@ beforeEach(() => {
 it('offers no platform filter to a library all on one platform', () => {
   const { page } = open([steam(), steam(), steam()], '?platform=PC');
   expect(page().platforms).toBeNull();
-  // And the address asking for one changes nothing.
   expect(page().visibleGames).toHaveLength(3);
 });
 
@@ -163,7 +162,6 @@ it('keeps the chosen platform in the menu when it has nothing to list', () => {
   });
   expect(page().visibleGames).toEqual([]);
 
-  // Picking another lets it go; back on All it's offered again.
   change(() => page().platforms!.set('PC'));
   expect(page().platforms?.options.map((o) => o.value)).toEqual(['PC', 'Switch 2']);
   change(() => page().setFilter('all'));
@@ -171,7 +169,7 @@ it('keeps the chosen platform in the menu when it has nothing to list', () => {
 });
 
 it('offers no filter under a status whose games are all on one platform, or on none', () => {
-  // The only hidden game is on PC: "All platforms" and "PC" would list the same.
+  // The only hidden game is on PC.
   expect(open(library(), '?filter=hidden').page().platforms).toBeNull();
   // Nothing dropped anywhere.
   expect(open(library(), '?filter=dropped').page().platforms).toBeNull();
@@ -186,7 +184,6 @@ it('comes and goes with the status filter, but stays while a platform is chosen'
   expect(page().platforms).toBeNull();
   change(() => page().setFilter('all'));
 
-  // With PC chosen, Hidden keeps the menu: it's the way back to all platforms.
   change(() => page().platforms!.set('PC'));
   change(() => page().setFilter('hidden'));
   expect(page().platforms).toMatchObject({
@@ -194,13 +191,11 @@ it('comes and goes with the status filter, but stays while a platform is chosen'
     options: [{ value: 'PC', count: 1 }],
     allCount: 1,
   });
-  // And a chosen platform with nothing there keeps it too.
   change(() => page().platforms!.set(''));
   expect(page().platforms).toBeNull();
 });
 
 it("doesn't hide the filter because a search narrowed the page to one platform", () => {
-  // It sits beside the search field: it shouldn't come and go while typing.
   const { page } = open(library(), '?q=metroid');
   expect(page().platforms).toMatchObject({
     options: [{ value: 'Switch 2', count: 1 }],
@@ -219,7 +214,6 @@ it('goes back to everything when the last game on the chosen platform is gone', 
   const { page, client, rerender } = open(games, '?platform=PS5');
   expect(page().visibleGames.map((g) => g.name)).toEqual(['Astro Bot']);
 
-  // Astro Bot is removed from the library.
   act(() =>
     client.setQueryData(
       queryKeys.games.list('user-1'),

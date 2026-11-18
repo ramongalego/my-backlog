@@ -2,10 +2,8 @@ import { platformOf } from '@/lib/games/consoles';
 import type { GameStatus } from '@/lib/games/status';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 
-// A copy of a player's data, to keep or take elsewhere (Profile, Download
-// your data): everything as one JSON file, or the games as a CSV that opens
-// in a spreadsheet. Built here from the rows the route reads, so what goes in
-// a file is decided in one place.
+// Profile's Download your data. Built here from the rows the route reads, so
+// what goes in a file is decided in one place.
 
 export type ExportFormat = 'json' | 'csv';
 
@@ -96,7 +94,6 @@ export interface ExportedGame {
   droppedOn: string | null;
   playtimeMinutes: number;
   lastPlayedAt: string | null;
-  /** When it came into the library. */
   addedAt: string | null;
   /** Its place in the queue and among the favorites, 1 first; null when it has none. */
   queuePosition: number | null;
@@ -125,7 +122,6 @@ export interface AccountExport {
     signature: string;
     writtenAt: string;
   }[];
-  /** The share pages made for finished games. */
   sharePages: {
     id: string;
     game: string;
@@ -136,31 +132,17 @@ export interface AccountExport {
   /** What the player sent through Report a problem. */
   supportMessages: { type: string; message: string; sentAt: string }[];
   /**
-   * What happened to the games above, and when, oldest first. `kind` is
-   * "added" (a game added by hand, or bought on Steam after the library was
-   * imported), "status" (with the dates and rating saved with it), "edit" (a
-   * date, the rating or the platform changed by itself), "queue" (it went on
-   * or came off the queue), "favorite" (it became one of the favorites or
-   * stopped being one), "note" (it got a note or lost it) or "playtime" (the
-   * hours). `changes` names each value that changed, as [before, after]
-   * (`queued`, `favorite` and `noted` are whether it is on the queue, is a
-   * favorite and has a note), with every "before" null for a game being
-   * added; hours are in minutes, and dates are in UTC. Changes made within 30
-   * seconds of each other are one entry, holding what they came to; a change
-   * that was undone leaves none. `at` is when it was logged. Kept from
-   * November 2026 on. (lib/account/history.ts reads time played from it.)
+   * Oldest first, kept from November 2026. `changes` maps each changed value to
+   * [before, after] (every before null for an "added"), hours in minutes, dates
+   * in UTC. Changes within 30 seconds are one entry, and an undone change leaves
+   * none. Read time played with `playsOf` (lib/account/history.ts).
    */
   history: { gameId: number; kind: string; changes: unknown; at: string }[];
   /**
-   * The games Pick My Game and Random picked, oldest first. `kind` is
-   * "questions" (picked from the three answers, which are `mood`, `energy`
-   * and `time`, with the `reason` shown and the `model` that wrote it) or
-   * "random". `for` is "play" (nothing was being played) or "queue" (a game
-   * was, so the pick was for the queue). `attempt` is which pick of the
-   * sitting it was: 2 is the pick after one reroll. `outcome` is the button
-   * pressed: "played", "queued" or "rerolled", or null when the picker was
-   * closed without choosing ("unseen" when it was closed before the pick
-   * arrived), with `answeredAt` when that was. Kept from November 2026 on.
+   * Pick My Game and Random, oldest first, kept from November 2026. `for` is
+   * "queue" when a game was being played. `attempt` 2 is the pick after one
+   * reroll. `outcome` is null when the picker closed without a choice, "unseen"
+   * when it closed before the pick arrived.
    */
   picks: {
     gameId: number;
@@ -181,7 +163,6 @@ export interface AccountExport {
 /** A finish or drop date is saved as a day (midnight UTC): the day is read straight off it. */
 const dayOf = (saved: string | null) => saved?.slice(0, 10) ?? null;
 
-/** Everything, laid out for a person (or another app) to read. */
 export function buildExport(rows: ExportRows, now = new Date()): AccountExport {
   const place = (list: { game_id: number; position: number }[]) =>
     new Map(
@@ -271,11 +252,8 @@ export function buildExport(rows: ExportRows, now = new Date()): AccountExport {
 }
 
 /**
- * One CSV cell. Quoted when it holds a comma, a quote or a line break. Text
- * that a spreadsheet would run as a formula (it starts with =, +, - or @)
- * gets a leading apostrophe, which a spreadsheet shows as plain text: a game
- * is named by Steam or typed in, and notes are typed in. The JSON file has
- * every value exactly as saved.
+ * Text a spreadsheet would run as a formula (starting =, +, - or @) gets a
+ * leading apostrophe: names and notes are typed in. The JSON keeps values as saved.
  */
 function cell(value: string | number | null): string {
   if (value === null) return '';
@@ -304,9 +282,8 @@ const CSV_COLUMNS: [string, (game: ExportedGame) => string | number | null][] = 
 ];
 
 /**
- * The games as a spreadsheet: a row each, by name. Starts with a byte order
- * mark, without which Excel reads the accents and Japanese in names wrongly,
- * and ends lines the way the CSV format asks (CRLF).
+ * Starts with a byte order mark, without which Excel misreads accents and
+ * Japanese in names, and ends lines with CRLF as the CSV format asks.
  */
 export function gamesCsv(games: ExportedGame[]): string {
   const byName = [...games].sort((a, b) => a.name.localeCompare(b.name) || a.id - b.id);

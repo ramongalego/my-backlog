@@ -74,10 +74,7 @@ function setup({ queue = [queued] as unknown[], nowPlaying = playing as unknown 
   return { ...renderHook(() => useNowPlaying('u'), { wrapper }), queryClient };
 }
 
-/**
- * Stops the clock (the timers stay real), so a test can let an exact time
- * pass between a change and its Undo.
- */
+/** Stops Date.now (timers stay real), so a test can pass an exact time before Undo. */
 let clock: jest.SpyInstance | undefined;
 function stopClock() {
   let now = Date.parse('2026-11-17T12:00:00Z');
@@ -114,7 +111,7 @@ it('moves the playing game to the top of the queue, ahead of what was queued', a
     result.current.moveToQueue();
   });
 
-  // At once, before the server answers: nothing playing, and the game first.
+  // Before the server answers.
   await waitFor(() => expect(queryClient.getQueryData(queryKeys.games.playing('u'))).toBeNull());
   const queue = queryClient.getQueryData<{ game_id: number; position: number }[]>(
     queryKeys.queue.list('u'),
@@ -125,7 +122,6 @@ it('moves the playing game to the top of the queue, ahead of what was queued', a
     [3, 2],
   ]);
 
-  // One request does both: back to the backlog, and to the top of the queue.
   await waitFor(() =>
     expect(updateGameStatus).toHaveBeenCalledWith(1, 'backlog', { queueAtTop: true }),
   );
@@ -207,9 +203,6 @@ describe('clicks that land before the page has redrawn', () => {
 
     act(() => undoOf().onClick());
 
-    // Said to be an Undo, with how long ago the move was, for the history,
-    // and with when it had been started and last played: it comes back
-    // "playing since Nov 13", not since today.
     await waitFor(() =>
       expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', {
         undo: true,
@@ -242,7 +235,7 @@ describe('clicks that land before the page has redrawn', () => {
         ),
       );
 
-      // The toast waits while its tab is in the background: a minute and a half.
+      // A toast waits while its tab is in the background.
       time.pass(90_000);
       act(() => {
         undoOf().onClick();
@@ -252,7 +245,6 @@ describe('clicks that land before the page has redrawn', () => {
 
       await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
       await waitFor(() => expect(result.current.isStatusLoading).toBe(false));
-      // The move, and one Undo.
       expect(updateGameStatus).toHaveBeenCalledTimes(2);
       expect(updateGameStatus).toHaveBeenLastCalledWith(1, 'playing', {
         undo: true,
@@ -305,7 +297,6 @@ it('opens the summary as soon as a game is saved as finished, before the server 
 
   act(() => result.current.confirmStatusChange('finished', '2026-10-28', '', 8));
 
-  // From what's already known: one more finished game, the first queued next.
   expect(result.current.statusModal).toBeNull();
   expect(result.current.gameSummary).toMatchObject({
     gameName: 'SteamWorld Dig',
@@ -315,7 +306,6 @@ it('opens the summary as soon as a game is saved as finished, before the server 
     rating: 8,
   });
 
-  // The server's figures replace the estimate.
   await act(async () =>
     answer({
       counts: { gamesFinished: 42, totalGames: 193 },
@@ -364,7 +354,6 @@ describe('switching games from the queue', () => {
 
     act(() => result.current.pickFromQueue(3));
 
-    // Shown before the server answers.
     await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(3));
     expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([1, 2]);
     await waitFor(() =>
@@ -388,20 +377,16 @@ describe('switching games from the queue', () => {
     await waitFor(() => expect(result.current.currentlyPlaying?.id).toBe(1));
     expect(ids(queryClient.getQueryData(queryKeys.queue.list('u')))).toEqual([2, 3]);
     await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([2, 3]));
-    // Each write says it is an Undo, and how long ago the switch was. Metroid
-    // Dread goes back to its place in the queue, so it is paused there first.
     expect(updateGameStatus).toHaveBeenNthCalledWith(2, 1, 'playing', {
       pausePlaying: true,
       undo: true,
       undoAgoMs: expect.any(Number),
     });
-    // It was only playing for a moment: its start date is cleared.
     expect(updateGameStatus).toHaveBeenNthCalledWith(3, 3, 'backlog', {
       undo: true,
       undoAgoMs: expect.any(Number),
     });
     expect(updateGameStatus).toHaveBeenCalledTimes(3);
-    // No second Undo for the undo.
     expect(toast).toHaveBeenCalledTimes(1);
   });
 

@@ -28,8 +28,7 @@ describe('clipping', () => {
   });
 });
 
-// A player can write their own rows directly, so a row can hold anything. One
-// stuffed row must not become a prompt the size of the model's whole context.
+// A player can write their own rows directly, so a row can hold anything.
 describe('a library stuffed with oversized text', () => {
   const stuffed = (id: number): GameItem =>
     ({

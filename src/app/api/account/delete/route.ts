@@ -14,19 +14,11 @@ const bodySchema = z.object({
 });
 
 /**
- * Deletes the signed-in player's account and everything in it, for good. The
- * password is asked for first, so someone at a computer left signed in can't
- * do it, and tries count against the same limit as changing the password.
+ * The password is asked first, so a computer left signed in can't do it. An
+ * account without one types "delete", which only stops a slip. Which is asked
+ * is the account's to decide, never the request's.
  *
- * An account made with Google or Discord has no password to ask for: it types
- * the word "delete" instead, which only stops a slip. Which of the two is
- * asked is the account's to decide, not the request's: one with a password
- * is never deleted without it.
- *
- * Deleting the Supabase Auth user takes every row with it (the profile, its
- * games and so the diary, the queue, favorites, share pages, support tickets:
- * all cascade from it). The profile pictures aren't rows, so they're deleted
- * from storage after it. The session's cookies are cleared on the way out.
+ * Deleting the Auth user cascades to every row; profile pictures aren't rows.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -91,12 +83,10 @@ export async function POST(request: NextRequest) {
     return jsonError("Couldn't delete your account. Please try again.", 500);
   }
 
-  // Then the pictures, which aren't rows and so didn't go with it. After the
-  // account, so a failure here can't leave a profile pointing at a deleted
-  // file; it's logged, since nothing will look in this folder again.
+  // After the account, so a failure can't leave a profile pointing at a
+  // deleted file.
   await deleteAvatars(service, user.id);
 
-  // The session belonged to the account just deleted: clear its cookies.
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
   return NextResponse.json({ ok: true });
 }

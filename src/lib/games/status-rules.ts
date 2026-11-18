@@ -15,9 +15,8 @@ interface GameUpdate {
 }
 
 /**
- * The columns a status change writes. Shared by the server, which saves it,
- * and the browser, which applies the same change to its cached library so it
- * doesn't download the whole library again after every edit.
+ * Shared by the server, which saves it, and the browser, which patches its
+ * cached library with it instead of refetching after every edit.
  */
 export function statusUpdate(
   { status, finishedAt, droppedAt, notes, rating }: Omit<StatusChange, 'gameId'>,
@@ -47,9 +46,8 @@ export function statusUpdate(
 }
 
 /**
- * Applies several status changes to a cached list in one pass (a bulk change
- * can be hundreds of games). None of them starts a game, so no other game is
- * affected.
+ * One pass, as a bulk change can be hundreds of games. Bulk changes never start
+ * a game, so no other game is touched.
  */
 export function applyStatusesToList<
   T extends { id: number; status: string | null; source?: string; platform?: string | null },
@@ -61,7 +59,7 @@ export function applyStatusesToList<
   });
 }
 
-/** A status change from the detail dialogs' fields, where one date input serves finished and dropped. */
+/** The detail dialogs have one date field for both finished and dropped. */
 export function statusChangeFrom(vars: {
   gameId: number;
   status: GameStatus;
@@ -82,21 +80,13 @@ export function statusChangeFrom(vars: {
 /** What starting a game does to whichever other game was playing. */
 export const DEMOTED: GameUpdate = { status: 'backlog', started_at: null };
 
-/**
- * What switching to another game does to the one being played: back to the
- * backlog (and the top of the queue), keeping its start date for when it's
- * picked up again.
- */
+/** Switching away keeps the start date, for when the game is picked up again. */
 export const PAUSED: GameUpdate = { status: 'backlog' };
 
 /**
- * The update, plus a last-played date for a game played on a console, which
- * doesn't report one: so it ranks among recently played games (Pick Up Where
- * You Left Off) and shows when you last played it, like Steam games do.
- * Finishing or dropping it dates it to the day you entered (none without
- * one, as for a game finished long ago); stopping it any other way, to now,
- * unless it was only started a few minutes ago (started by mistake, or a
- * switch undone): that wasn't playing it. Steam reports its own games' dates.
+ * A console reports no last-played date (Steam does), so one is set here for
+ * Pick Up Where You Left Off: the date entered on finishing or dropping, else
+ * now, unless the game was started under NOT_REALLY_PLAYED_MS ago.
  */
 export function withLastPlayed(
   game: {
@@ -119,7 +109,7 @@ export function withLastPlayed(
   return { ...update, last_played_at: now.toISOString() };
 }
 
-/** Stopped this soon after starting, a game doesn't count as played. */
+/** Stopped this soon (started by mistake, a switch undone), a game wasn't played. */
 const NOT_REALLY_PLAYED_MS = 5 * 60 * 1000;
 
 /** Copies the update's fields that the cached row has, so rows keep their shape. */
@@ -129,11 +119,7 @@ function patch<T extends object>(row: T, update: GameUpdate): T {
   return next as T;
 }
 
-/**
- * Applies a status change to a cached list of games the way the server
- * applies it to the table: the game gets the new columns, and starting a game
- * moves any other playing game back to the backlog.
- */
+/** Mirrors the server: starting a game moves any other playing game to the backlog. */
 export function applyStatusToList<
   T extends { id: number; status: string | null; source?: string; platform?: string | null },
 >(games: T[], change: StatusChange, now = new Date()): T[] {

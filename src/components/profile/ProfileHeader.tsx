@@ -17,13 +17,7 @@ const FIGURES: { key: keyof ProfileFigures; label: string; short?: string }[] = 
   { key: 'hours', label: 'Hours played', short: 'Hours' },
 ];
 
-/**
- * The top of the Profile page: who it is, and their library in four figures.
- * The name and picture are changed where they are: a pencil beside the name,
- * and the picture itself. The figures are one strip, parted by hairlines,
- * rather than a row of tiles; it sits right of the name when there's room and
- * under it when there isn't.
- */
+/** The figures are one strip parted by hairlines, not a row of tiles. */
 export function ProfileHeader({
   name,
   avatar,

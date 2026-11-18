@@ -9,12 +9,9 @@ import { playedHours } from '@/lib/games/playtime';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /**
- * How a game rates, as one item in a meta row with a thumbs-up: the rating
- * games are ranked by (ratingOf, the critic and Steam scores together), so a
- * list sorted by Rating reads in order. The tooltip shows the critic score
- * and Steam's score, as it always has. Hidden Gems, ranked by Steam's own score, shows that instead
- * (`preferSteam`), as does a Steam score without its review count, which
- * isn't ranked.
+ * Shows the rating games are ranked by (ratingOf), so a list sorted by Rating
+ * reads in order. Steam's own score shows instead with `preferSteam`, or when
+ * there's no ranked rating (a Steam score without its review count).
  */
 export function GameRating({
   criticScore,
@@ -91,7 +88,7 @@ export function GameRating({
   );
 }
 
-/** HowLongToBeat's main story time, with what the number means in the tooltip. */
+/** HowLongToBeat's main story time, in hours. */
 export function TimeToBeat({
   hours,
   icon = true,
@@ -112,12 +109,8 @@ export function TimeToBeat({
 }
 
 /**
- * Hours played on Steam, with when you last played in the tooltip. Used
- * wherever a game shows its playtime, so it reads the same everywhere.
- * `compact` is the meta-row form, icon and hours like its neighbors. The
- * word "played" still shows when the row is wide enough (`showLabel` forces
- * it), since a bare clock icon next to time-to-beat's clock is ambiguous;
- * elsewhere it reads "5h played".
+ * `compact` is the meta-row form. It still shows "played" when the row is wide
+ * enough, since a bare clock icon next to time-to-beat's clock is ambiguous.
  */
 export function Playtime({
   minutes,
@@ -178,15 +171,9 @@ interface GameMetaRowProps {
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
   hidePlaytimeOnMobile?: boolean;
-  /**
-   * The console the game is played on (consoleOf); none for Steam games played
-   * on Steam. With one, the Deck rating and Steam's last-played date aren't shown.
-   */
+  /** consoleOf: with one, the Deck rating and Steam's last-played date aren't shown. */
   console?: string | null;
-  /**
-   * The platform tag drawn on the game's art beside this row (platformTag),
-   * named here for screen readers; none where the art has no tag.
-   */
+  /** The platform tag drawn on the art beside this row (platformTag), named for screen readers. */
   artTag?: string | null;
 }
 
@@ -218,7 +205,6 @@ export function GameMetaRow({
   if (!artTag && !mainStoryHours && !hasRating && playtimeMinutes < 60 && !deckCompat) return null;
   return (
     <div className="@container flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
-      {/* The platform shows on the art (ConsoleBadge); this is its name for screen readers. */}
       {artTag && <span className="sr-only">On {artTag}</span>}
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {rating}
@@ -249,7 +235,7 @@ interface GameCardInfoProps {
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
-  /** The console the game is played on (consoleOf): no store link, as in GameMetaRow. */
+  /** consoleOf: a console game gets no store link. */
   console?: string | null;
   /** The platform tag drawn on the game's art (platformTag), named for screen readers. */
   artTag?: string | null;

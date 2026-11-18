@@ -21,16 +21,13 @@ import type { AddStatus } from '@/lib/games/status';
 import { defaultConsole, orderConsoles } from './ConsolePicker';
 import { playsOnConsole, STEAM_PLATFORM } from '@/lib/games/consoles';
 
-// The statuses the add dialog offers; a Steam game in another (won't play,
-// hidden) starts on backlog.
+// A Steam game in any other status (won't play, hidden) starts on backlog.
 const ADDABLE = ['backlog', 'playing', 'finished', 'dropped'] as const;
 
-// Wait for a pause in typing before searching.
 const SEARCH_DELAY_MS = 300;
-// How long a result stays highlighted before its details are fetched, so
-// arrowing or moving the mouse past a result doesn't fetch it.
+// So arrowing or moving the mouse past a result doesn't fetch its details.
 const PREFETCH_DELAY_MS = 200;
-// The search's exit animation (animate-drop-out).
+// Matches animate-drop-out.
 const CLOSE_MS = 140;
 
 const detailsQuery = (igdbId: number) => ({
@@ -52,11 +49,7 @@ function BoxArt({ src }: { src: string | null }) {
   );
 }
 
-/**
- * Adds a game from outside Steam: search IGDB, then the chosen game opens in
- * the same detail dialog every game uses, with its console, status (finished
- * games included), hours and "Add to library".
- */
+/** Searches IGDB, then opens the picked game in GameDetailModal to add it. */
 export function AddGameModal({
   userId,
   initialQuery = '',
@@ -88,8 +81,6 @@ export function AddGameModal({
   const queryClient = useQueryClient();
   const { profile } = useAuth();
 
-  // The consoles you've added games on (to suggest them first), plus the game
-  // being played.
   const { data: manualGames = [] } = useQuery(queries.manualGames(userId));
   const { data: playing = null } = useQuery(queries.playing(userId));
   const usedConsoles = [...new Set(manualGames.flatMap((g) => (g.platform ? [g.platform] : [])))];
@@ -117,9 +108,8 @@ export function AddGameModal({
     };
   }, [text]);
 
-  // The picked game's wide art and full platform list. Until they arrive the
-  // header is a placeholder (not the box art, which would be swapped out a
-  // moment later) and the search result's platforms stand in.
+  // Until these arrive the header is a placeholder, not the box art (which would
+  // swap out a moment later), and the result's platforms stand in.
   const { data: details, isPending: detailsPending } = useQuery({
     ...detailsQuery(picked?.igdbId ?? 0),
     enabled: !!picked,
@@ -128,8 +118,7 @@ export function AddGameModal({
   const showResults = text.length >= 2 && searchedFor === text;
   const errorMessage = searchError?.text === text ? searchError.message : null;
 
-  // Fetch the highlighted result's details while you look, so they're
-  // usually there by the time you pick it.
+  // So the details are usually there by the time a result is picked.
   const activeId = showResults ? results[active]?.igdbId : undefined;
   useEffect(() => {
     if (activeId === undefined || picked) return;
@@ -153,11 +142,9 @@ export function AddGameModal({
   };
 
   if (picked) {
-    // Already in the library (from Steam or added by hand): adding it again
-    // moves that entry to the console you pick, so it's only listed once.
+    // Adding a game already in the library moves that entry, so it's only listed once.
     const existing = picked.libraryGame;
     const fromSteam = !!existing?.fromSteam;
-    // The console it's on now, which the picker starts from.
     const currentConsole =
       existing && playsOnConsole(existing.platform) ? existing.platform! : null;
     const preferred = currentConsole ? [currentConsole, ...usedConsoles] : usedConsoles;
@@ -168,8 +155,7 @@ export function AddGameModal({
         .filter((name) => !fromSteam || name !== STEAM_PLATFORM),
       preferred,
     );
-    // Moving a game starts from where it is: its status, and its date, notes
-    // and rating if it's finished or dropped.
+    // A moved game keeps its status, and its date, notes and rating.
     const existingStatus = ADDABLE.find((s) => s === existing?.status);
     return (
       <GameDetailModal
@@ -181,12 +167,10 @@ export function AddGameModal({
           name: picked.name,
           // If the details fail, the box art is all there is.
           header_image: details ? details.header_image : picked.cover,
-          // Adding a game that isn't out yet says so, as its card will.
           release_date: details?.release_date,
         }}
         headerLoading={detailsPending}
-        // Its art can be chosen before it's added. A game already in the
-        // library has art of its own, chosen from its own dialog.
+        // A game already in the library chooses art from its own dialog.
         art={details && !existing ? { igdbId: picked.igdbId } : undefined}
         initialStatus={existingStatus ?? 'backlog'}
         initialDate={existing?.date?.slice(0, 10) ?? null}
@@ -312,7 +296,6 @@ export function AddGameModal({
                   aria-selected={i === active}
                   onClick={() => setPicked(game)}
                   onMouseMove={() => setActive(i)}
-                  // Each new result settles in just after the one above it.
                   style={{ animationDelay: `${Math.min(i, 7) * 25}ms` }}
                   className={`flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors animate-result-in motion-reduce:animate-none ${
                     i === active ? 'bg-ink-800' : ''

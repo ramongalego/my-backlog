@@ -14,10 +14,7 @@ export function parseReleaseDate(text: string | null | undefined): number | null
   return Number.isNaN(reordered) ? null : reordered;
 }
 
-/**
- * The year in a stored release date, exact or not ("Nov 5, 2026", "28 Sep,
- * 2010", "Q2 2027"), or null when it has none ("Coming soon").
- */
+/** Exact dates and vague ones ("Q2 2027") alike; null for "Coming soon". */
 export function releaseYear(text: string | null | undefined): number | null {
   const match = /\b(\d{4})\b/.exec(text ?? '');
   return match ? Number(match[1]) : null;
@@ -26,9 +23,7 @@ export function releaseYear(text: string | null | undefined): number | null {
 const DAY_MS = 24 * 60 * 60 * 1000;
 // In its last week, the tag counts down instead of giving the date.
 const COUNTDOWN_DAYS = 7;
-// Store pages' words for a game with no date yet.
 const NO_DATE_YET = /^(to be announced|coming soon|tba|tbd)$/i;
-// A release known only by year or quarter: "2027", "Q2 2027".
 const VAGUE_DATE = /^(?:Q[1-4] )?(\d{4})$/i;
 
 interface UpcomingRelease {
@@ -39,18 +34,12 @@ interface UpcomingRelease {
 }
 
 /**
- * Whose calendar "today" is read from. A release date is a whole day, so
- * whether a game is out depends on what day it is where you ask:
- *
- * - `local`: the time zone of the machine running the code. In the browser,
- *   the player's; that's the answer the app shows.
- * - `utc`: the same day everywhere. The server renders a page in this and the
- *   browser's first render repeats it (see useReleaseZone), so the two agree
- *   whatever time zone the player is in.
+ * Whose calendar "today" is read from. `local` is the player's in the browser:
+ * the answer the app shows. `utc` is what the server renders and the browser's
+ * first render repeats (see useReleaseZone), so the two always agree.
  */
 export type ReleaseZone = 'local' | 'utc';
 
-/** Midnight at the start of a moment's day, and that day's year, in a zone. */
 function dayOf(time: number, zone: ReleaseZone): { start: number; year: number } {
   const date = new Date(time);
   if (zone === 'utc') {
@@ -64,9 +53,8 @@ function dayOf(time: number, zone: ReleaseZone): { start: number; year: number }
 }
 
 /**
- * A game that isn't out yet, from its stored release date (IGDB's or Steam's
- * display text), or null once it's out or when there's no date at all. It's
- * worked out each time, so the tag goes away on release day by itself.
+ * Null once the game is out or when there's no date. Worked out on each call,
+ * so the tag goes away on release day by itself.
  */
 export function upcomingRelease(
   text: string | null | undefined,
@@ -121,9 +109,8 @@ export function upcomingRelease(
 }
 
 /**
- * Whether a game is out, so it can be started for you: by Pick My Game,
- * Random, or as the next in the queue when you finish one. A game with no date
- * at all counts as out.
+ * Only a released game is started for the player (Pick My Game, Random, the
+ * next in the queue). A game with no date at all counts as out.
  */
 export function isReleased(
   text: string | null | undefined,
@@ -133,10 +120,7 @@ export function isReleased(
   return upcomingRelease(text, now, zone) === null;
 }
 
-/**
- * The queued game that starts next: the first one that's out. Games not out
- * yet keep their places and are skipped until they are.
- */
+/** Games not out yet keep their places in the queue and are skipped. */
 export function nextPlayable<T extends { game: { release_date?: string | null } }>(
   queue: readonly T[],
   now = Date.now(),

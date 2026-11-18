@@ -1,7 +1,4 @@
-/**
- * The console a game added by hand is on, as a small chip on its art. Purely
- * visual (the name is in the game's meta row for screen readers).
- */
+/** Hidden from screen readers: the game's meta row names the console. */
 export function ConsoleBadge({ platform }: { platform: string }) {
   return (
     <span

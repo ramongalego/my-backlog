@@ -14,10 +14,8 @@ const SOURCES = [
 ];
 
 /**
- * The foot of every page, kept quiet: whose site it is, the policies and a
- * way to write to us (the only one for someone signed out, or locked out),
- * and credit for the data the app is built on. The Terms page says the rest:
- * who else it is not affiliated with, and whose trademark Steam is.
+ * Contact is the only way to write for someone signed out or locked out. The Terms
+ * page says the rest: who else it isn't affiliated with, and whose trademark Steam is.
  */
 export function Footer() {
   return (

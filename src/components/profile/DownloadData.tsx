@@ -8,11 +8,8 @@ import type { ExportFormat } from '@/lib/account/export';
 import type { ApiResult } from '@/lib/client/request';
 
 /**
- * A line and the two ways to download a copy of your data, side by side: the
- * games as a spreadsheet, or everything as one file. In the two dialogs that
- * delete what was logged (disconnecting Steam, deleting the account), where
- * it's the last chance to keep it. The Account panel has them in a menu
- * (ExportDataMenu).
+ * For the dialogs that delete what was logged (disconnecting Steam, deleting the
+ * account): the last chance to keep it. The Account panel uses ExportDataMenu.
  */
 export function DownloadData({
   children,

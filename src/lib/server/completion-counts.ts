@@ -2,11 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CompletionCounts } from '@/lib/games/completion';
 
-/**
- * Counts used by the "game finished" summary: how many games the user has
- * finished, and the total library size (excluding hidden). Shared by the home
- * page and the playing-queue page so the two stay in lockstep.
- */
+/** Shared by Home and the queue page so their "game finished" summaries agree. */
 export async function fetchCompletionCounts(
   supabase: SupabaseClient,
   userId: string,

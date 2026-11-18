@@ -8,7 +8,6 @@ import { BREAKDOWN } from './content';
 import { CountUpPercent, riseIn } from './motion';
 import { SectionCopy } from './SectionCopy';
 
-/** The queue, the diary and stats, as a sample panel of each. */
 export function ProgressPreview() {
   const { ref: queueRowsRef, inView: queueRowsInView } = useInView<HTMLOListElement>();
   const { ref: breakdownRef, inView: breakdownInView } = useInView<HTMLDivElement>();

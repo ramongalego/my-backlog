@@ -101,7 +101,7 @@ describe('useLibraryRefresh', () => {
         // What it says, and its link, are checked in UrlErrorToast.test.tsx.
         expect.objectContaining({ id: 'steam-private' }),
       );
-      // Not a refresh: nothing recorded, so trying again isn't held back.
+      // Nothing recorded, so trying again isn't held back.
       expect(outcome.success).toBe(false);
       expect(localStorage.getItem(keys().playtime)).toBeNull();
       expect(mockGamesAndQueue).not.toHaveBeenCalled();
@@ -112,7 +112,6 @@ describe('useLibraryRefresh', () => {
       const { result } = renderHook(() => useLibraryRefresh());
       const background = () => act(async () => void (await result.current.refresh()));
 
-      // A profile made private after joining: the first refresh to find it.
       await background();
       expect(toast.error).toHaveBeenCalledTimes(1);
       expect(toast.error).toHaveBeenCalledWith(
@@ -121,12 +120,12 @@ describe('useLibraryRefresh', () => {
       );
       expect(localStorage.getItem(keys().playtime)).toBeNull();
 
-      // Every later one, on later visits too (it's remembered in the browser).
+      // Remembered in the browser, so later visits stay quiet too.
       await background();
       await background();
       expect(toast.error).toHaveBeenCalledTimes(1);
 
-      // Asking for a refresh still says why, however often.
+      // A refresh you ask for still says why.
       await act(async () => void (await result.current.refresh({ manual: true })));
       expect(toast.error).toHaveBeenCalledTimes(2);
     });
@@ -167,7 +166,6 @@ describe('useLibraryRefresh', () => {
       });
       expect(localStorage.getItem(keys().reviews)).toBeTruthy();
 
-      // The next one, the same day, leaves the scores alone.
       await act(async () => {
         await result.current.refresh();
       });
@@ -215,7 +213,6 @@ describe('useLibraryRefresh', () => {
 
       expect(toast.success).toHaveBeenCalledWith('Your library is up to date');
       expect(mockGamesAndQueue).not.toHaveBeenCalled();
-      // Nothing changed, so nothing is refetched.
     });
 
     it('brings new games in without reloading the page: refetches and asks for a sync check', async () => {

@@ -1,5 +1,3 @@
-// Tag and name matching shared by Pick My Game and the Home carousels.
-
 // Tags that say nothing about how a game plays.
 const GENERIC_TAGS = new Set([
   'Singleplayer',
@@ -39,10 +37,8 @@ const MULTIPLAYER_FOCUS = new Set([
   'Local Multiplayer',
 ]);
 
-// Narrow tags and the broad ones they're a kind of. Steam's tags are finer
-// than the IGDB tags of games added by hand ("2D Platformer" against
-// "Platformer"), so without this a Steam Castlevania and a hand-added one
-// barely match.
+// Steam's tags are finer than IGDB's ("2D Platformer" against "Platformer"), so
+// without this a Steam game and one added by hand barely match.
 const BROADER_TAGS: Record<string, string[]> = {
   '2D Platformer': ['Platformer'],
   '3D Platformer': ['Platformer'],
@@ -60,7 +56,6 @@ const BROADER_TAGS: Record<string, string[]> = {
   'Action Roguelike': ['Roguelike'],
 };
 
-/** A game's tags, each followed by the broader tags it's a kind of. */
 function withBroaderTags(tags: string[] | null): string[] {
   const out = new Set<string>();
   for (const tag of tags ?? []) {
@@ -79,9 +74,8 @@ function tagWeight(index: number) {
 const RARITY_FLOOR = 0.1;
 
 /**
- * How much each tag says among a set of games. A tag on most of them says
- * little (RPG, in a library of JRPGs), a rare one says a lot (Metroidvania),
- * so two games match on what sets them apart rather than on broad genres.
+ * A tag on most of the games says little (RPG, among JRPGs), a rare one a lot
+ * (Metroidvania), so games match on what sets them apart, not on broad genres.
  */
 export function tagRarity(games: { tags: string[] | null }[]): (tag: string) => number {
   const counts = new Map<string, number>();
@@ -91,11 +85,7 @@ export function tagRarity(games: { tags: string[] | null }[]): (tag: string) => 
   return (tag) => Math.log((games.length + 1) / ((counts.get(tag) ?? 0) + 1)) + RARITY_FLOOR;
 }
 
-/**
- * A game's tags, with the broader ones they imply, weighted by position (Steam
- * lists the most voted first) and, when given, by how much each one says
- * (tagRarity).
- */
+/** Weighted by position and, when `rarity` is given, by tagRarity. */
 export function topTags(
   tags: string[] | null,
   limit = 12,
@@ -173,11 +163,7 @@ export function seriesMatch(a: string, b: string) {
 export const EDITION_WORDS =
   /\b(the|definitive|remastered|remaster|complete|goty|game of the year|enhanced|ultimate|deluxe|edition|director's cut|hd|classic|anniversary)\b/g;
 
-/**
- * Collapses editions of the same game: "Ori and the Blind Forest: Definitive
- * Edition" and "Ori and the Blind Forest" share a key. Unlike seriesKey it keeps
- * numbers, so "Portal" and "Portal 2" stay apart.
- */
+/** Unlike seriesKey it keeps numbers, so "Portal" and "Portal 2" stay apart. */
 export function editionKey(name: string) {
   return name
     .toLowerCase()

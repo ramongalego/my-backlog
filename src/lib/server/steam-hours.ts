@@ -3,24 +3,18 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getOwnedGames } from '@/lib/steam/api';
 import { getSteamApiKey } from '@/lib/server/env';
 
-/** What Steam has for one game right now. */
 interface SteamHours {
-  /** Its total, in minutes. */
+  /** In minutes. */
   playtime_forever: number;
-  /** When it was last played on Steam; null when never, or not shared. */
+  /** Null when never played, or not shared. */
   last_played_at: string | null;
 }
 
 /**
- * Steam's hours for one of the player's Steam games, asked for now. Used
- * when a game moves back from a console to Steam, so its Steam total is saved
- * with the move: the history reads hours that change along with the platform
- * as the other platform's total, and hours that change later as time played.
- *
- * Null when Steam can't say: the account isn't linked, Steam doesn't answer,
- * isn't sharing the library or its playtime (every game at 0 minutes, as the
- * sync takes it too), or doesn't list the game. The next sync brings the
- * hours then.
+ * For a game moving back from a console to Steam, so its total is saved with
+ * the move: the history reads hours changed along with the platform as the
+ * other platform's total, and later changes as time played. Null when Steam
+ * can't say (not linked, no answer, playtime not shared, game not listed).
  */
 export async function steamHoursOf(
   supabase: SupabaseClient,

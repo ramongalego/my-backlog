@@ -1,8 +1,7 @@
 import '@testing-library/jest-dom';
 
-// jsdom doesn't implement IntersectionObserver. Components that use it for
-// scroll-triggered animations (e.g., LandingPage) need a no-op polyfill so
-// tests can render without crashing.
+// jsdom lacks IntersectionObserver, used for scroll-triggered animations
+// (LandingPage).
 class IntersectionObserverMock {
   observe() {}
   unobserve() {}

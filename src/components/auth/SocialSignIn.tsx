@@ -8,34 +8,27 @@ import { ProviderIcon } from '@/components/auth/ProviderIcon';
 import { SIGN_IN_PROVIDERS, type SignInProvider } from '@/lib/account/sign-in';
 
 /**
- * What a site is asked beyond the usual. Discord shows its "wants to access
- * your account" screen on every sign-in unless told not to: with
- * `prompt=none` it shows it the first time only, and after that comes
- * straight back. Google already does.
+ * Without `prompt=none` Discord shows its "wants to access your account" screen
+ * on every sign-in, not just the first. Google needs nothing.
  */
 const ASKS: Partial<Record<SignInProvider, Record<string, string>>> = {
   discord: { prompt: 'none' },
 };
 
-/** If the other site's page still hasn't come: the buttons can be pressed again. */
+/** After this long without the other site's page, the buttons work again. */
 const GIVE_UP_MS = 20_000;
 
 /**
- * Signing in with Google or Discord, above the email form in the sign-in and
- * sign-up dialogs: no password to make. A press leaves for that site's page,
- * in the same tab, and comes back through /auth/callback, signed in. Someone
- * new gets an account; someone whose email already has one is signed in to
- * that one (Supabase links the two).
+ * Google and Discord sign-in, above the email form. A press leaves for that
+ * site in the same tab and comes back through /auth/callback; an email that
+ * already has an account is signed in to it (Supabase links the two).
  *
- * The other site's page takes a moment to arrive, so the pressed button's
- * mark turns into a spinner until it does, and both are marked busy, not
- * disabled: the focus stays where it was.
+ * The buttons are marked busy, not disabled, so focus stays where it was.
  */
 export function SocialSignIn() {
   const [leavingFor, setLeavingFor] = useState<SignInProvider | null>(null);
   const [failed, setFailed] = useState(false);
-  // A press on its way. The buttons are marked busy from the next redraw; this
-  // stops a second press before then from starting again.
+  // Busy only applies from the next redraw; this stops a second press before then.
   const leaving = useRef(false);
   const giveUp = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -46,8 +39,7 @@ export function SocialSignIn() {
   };
 
   useEffect(() => {
-    // Back from the other site with the browser's Back button, the page is
-    // shown again as it was left, still saying it's leaving: it isn't any more.
+    // Back from the other site, the browser restores the page still busy.
     const shownAgain = (event: PageTransitionEvent) => {
       if (event.persisted) stay();
     };
@@ -77,7 +69,7 @@ export function SocialSignIn() {
     } catch {
       started = false;
     }
-    // Started: the browser is on its way there, and the button stays busy.
+    // The browser is on its way there, so the button stays busy.
     if (started) return;
     stay();
     setFailed(true);

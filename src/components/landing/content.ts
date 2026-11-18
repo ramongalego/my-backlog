@@ -19,8 +19,7 @@ export const HERO_TEASES = [
   "Like the Hades run you're one boss away from",
 ];
 
-// Box art for the hero shelf, in three columns. The middle column sits lower
-// so the covers read as a stack you're browsing, not a uniform grid.
+// The middle column sits lower so the covers read as a stack, not a uniform grid.
 export const HERO_SHELF: { image: string; title: string; playing?: boolean }[][] = [
   [
     { image: '/lp_eldenring.jpg', title: 'Elden Ring' },

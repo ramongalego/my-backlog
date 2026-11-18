@@ -13,13 +13,11 @@ const inserted: Record<string, unknown>[] = [];
 const updated: Record<string, unknown>[] = [];
 const queueInserts: Record<string, unknown>[] = [];
 let insertError: { code: string } | null = null;
-// The user's Steam entry for the game, if any: on Steam ('PC'), or on the
-// console it was moved to before.
+// The user's Steam entry: on 'PC', or on the console it was moved to.
 let steamRow: { id: number; name: string; status: string; platform: string } | null = null;
-// The game added by hand before, on some console, if any.
 let manualRow: { id: number; name: string; status: string } | null = null;
 let alreadyQueued = false;
-// The consoles the player's games are on, as saved; null when reading them fails.
+// null makes reading the library's consoles fail.
 let libraryConsoles: string[] | null = [];
 
 jest.mock('@/lib/supabase/server', () => ({
@@ -138,8 +136,7 @@ it('adds the game with its IGDB details, console and hours', async () => {
     playtime_forever: 150,
     status: 'backlog',
   });
-  // Its time is looked up with its release year, which tells a remake from
-  // the original it shares a title with.
+  // The release year tells a remake from the original it shares a title with.
   expect(getMainStoryHours).toHaveBeenCalledWith("Fire Emblem: Fortune's Weave", 2026);
   expect(applyStatusChange).not.toHaveBeenCalled();
 });
@@ -164,7 +161,7 @@ it("uses Steam's art, tags and reviews for a game Steam also sells, else IGDB's"
   // Kept apart from app_id, which marks a game in your Steam library.
   expect(inserted[0].app_id).toBeUndefined();
 
-  // Steam unavailable: still added, with IGDB's.
+  // Steam unavailable.
   jest.mocked(getStoreItemInfo).mockResolvedValue(null);
   await post({ igdbId: 1, platform: 'PS4', status: 'backlog' });
   expect(inserted[1]).toMatchObject({ tags: details.tags, header_image: details.header_image });
@@ -173,18 +170,15 @@ it("uses Steam's art, tags and reviews for a game Steam also sells, else IGDB's"
 it("uses SteamGridDB's art when IGDB has no key art and Steam doesn't sell the game", async () => {
   jest.mocked(getStoreItemInfo).mockResolvedValue(null);
   jest.mocked(findWideArt).mockResolvedValue('https://cdn2.steamgriddb.com/grid/shield.png');
-  // IGDB's key art wins when there is some.
   await post({ igdbId: 1, platform: 'Switch', status: 'backlog' });
   expect(findWideArt).not.toHaveBeenCalled();
   expect(inserted[0].header_image).toBe(details.header_image);
 
-  // Without it, SteamGridDB is looked up by name and release year.
   jest.mocked(getGameDetails).mockResolvedValue({ ...details, hasKeyArt: false });
   await post({ igdbId: 1, platform: 'Switch 2', status: 'backlog' });
   expect(findWideArt).toHaveBeenCalledWith(details.name, 2026);
   expect(inserted[1].header_image).toBe('https://cdn2.steamgriddb.com/grid/shield.png');
 
-  // And when it has nothing, IGDB's other art stays.
   jest.mocked(findWideArt).mockResolvedValue(null);
   await post({ igdbId: 1, platform: 'Switch Lite', status: 'backlog' });
   expect(inserted[2].header_image).toBe(details.header_image);
@@ -276,8 +270,7 @@ describe('a game you own on Steam', () => {
     });
   });
 
-  // Saved through Add game a second time, to mark it finished, say. Its hours
-  // and last-played date are the console's by now, not Steam's.
+  // Its hours and last-played date are the console's by now, not Steam's.
   describe('and already moved to a console', () => {
     beforeEach(() => {
       steamRow = { ...steamRow!, platform: 'Switch' };

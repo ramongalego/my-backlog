@@ -11,10 +11,8 @@ interface CarouselRow {
 }
 
 /**
- * Home's rows of games, in order, leaving out any with too few to show.
- * Related rows sit together: games you've started, short games, highly rated
- * ones, then what's new. More Like ... may repeat games from the other rows
- * (see useCarouselPools).
+ * Leaves out rows with too few games. More Like ... may repeat games from the
+ * other rows (see useCarouselPools).
  */
 export function homeCarouselRows(carousels: ReturnType<typeof useHomePage>['carousels']) {
   const rows: CarouselRow[] = [

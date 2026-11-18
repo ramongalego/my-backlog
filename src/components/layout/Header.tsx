@@ -32,11 +32,9 @@ export function Header() {
   const pathname = usePathname();
 
   const isLoading = !authResolved;
-  // What the profile shows: the name and picture the player chose, or Steam's.
   const name = profileName(profile?.display_name, profile?.steam_username, user?.email);
   const avatar = profileAvatar(profile?.avatar_url, profile?.steam_avatar);
 
-  // Re-enable refresh button when the cooldown expires.
   useEffect(() => {
     if (!isRefreshDisabled) return;
     const id = setTimeout(() => setIsRefreshDisabled(false), manualRefreshWait(user?.id));
@@ -175,7 +173,6 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile nav */}
         {mobileMenuOpen && !isLoading && (
           <nav
             id="mobile-navigation"

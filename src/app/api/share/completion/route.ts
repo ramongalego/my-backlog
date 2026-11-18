@@ -12,10 +12,9 @@ import { tryCreateServiceClient } from '@/lib/supabase/service';
 const shareSchema = z.object({ gameId: gameIdSchema });
 
 /**
- * Creates a public share page for a game the player has finished. Everything
- * on the page is read here, from their library: the browser only says which
- * game. Otherwise anyone signed in could publish any text and picture on a
- * page of this site.
+ * Everything on the page is read here from the library and the browser only
+ * says which game, or anyone signed in could publish any text and picture on
+ * this site.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -25,7 +24,7 @@ export async function POST(request: NextRequest) {
 
   if (!user) return jsonError('Unauthorized', 401);
 
-  // Share pages are public, on our domain: counted per user, across servers.
+  // Share pages are public, on this site: counted per user, across servers.
   const rateLimitResult = await checkSharedRateLimit(`share:${user.id}`, RATE_LIMITS.share);
   if (!rateLimitResult.success) return rateLimited(rateLimitResult);
 

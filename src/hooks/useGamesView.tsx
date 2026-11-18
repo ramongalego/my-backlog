@@ -5,9 +5,8 @@ import { GAMES_VIEW_COOKIE, parseGamesView, type GamesView } from '@/lib/games/g
 
 const YEAR_S = 60 * 60 * 24 * 365;
 
-// What the server read from the cookie when it rendered the page. The
-// browser's first render uses the same, so the two agree; from then on the
-// browser reads the cookie itself, which a change of view has just written.
+// The browser's first render uses what the server read from the cookie, so the
+// two agree; after that it reads the cookie itself.
 const ServerView = createContext<GamesView>('grid');
 
 /** Hands the view the server rendered with to the Games page and its skeleton. */
@@ -34,10 +33,7 @@ function writeCookie(view: GamesView) {
   for (const listener of listeners) listener();
 }
 
-/**
- * The Games page's layout, grid or list, and a way to change it. The choice is
- * remembered on this device (in a cookie) until it's changed again.
- */
+/** Remembered on this device, in a cookie. */
 export function useGamesView(): [GamesView, (view: GamesView) => void] {
   const fromServer = useContext(ServerView);
   const view = useSyncExternalStore(subscribe, readCookie, () => fromServer);

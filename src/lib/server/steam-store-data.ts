@@ -7,9 +7,8 @@ import { getStoreSummaries, type SteamReviewData } from '@/lib/steam/store-api';
 
 const UPDATE_CONCURRENCY = 25;
 
-// Popular games gain reviews every day; rewriting every row on each refresh
-// would be wasted work. Only a change in the percentage, or enough new reviews
-// to move the weighted score, is worth saving.
+// Popular games gain reviews every day: only a new percentage, or enough new
+// reviews to move the weighted score, is worth a write.
 const COUNT_CHANGE_RATIO = 0.1;
 
 interface StoredReviews {
@@ -37,11 +36,9 @@ export function reviewsChanged(stored: StoredReviews, fresh: SteamReviewData): b
 const HASHED_PATH = /\/[0-9a-f]{40}\//;
 
 /**
- * Whether Steam's current header is a different picture from the one stored.
- * Steam bumps the `?t=` on every asset URL whenever any of an app's store
- * assets change, so for a hashed path only the path counts: the same path is
- * the same file. Older art lives at a fixed path (`…/header.jpg`) and is
- * replaced in place, so there `?t=` is the only sign it changed.
+ * Steam bumps `?t=` on every asset URL when any of an app's assets change, so
+ * for a hashed path only the path counts. Art at a fixed path (`…/header.jpg`)
+ * is replaced in place, so there `?t=` is the only sign it changed.
  */
 export function headerImageChanged(stored: string | null, current: string): boolean {
   if (!stored) return true;
@@ -52,14 +49,9 @@ export function headerImageChanged(stored: string | null, current: string): bool
 }
 
 /**
- * Brings what a user's games show from the Steam store up to date: review
- * scores, and header art, which Steam swaps for launches, sales and events
- * (a "Preview available now" banner that's gone on release day). Their Steam
- * games, and games added by hand that Steam also sells (steam_app_id). Both
- * are otherwise copied once, when a game's metadata syncs or it's added, and
- * come from the same Steam calls here. The user's own rows are updated with
- * their client; the shared metadata cache only when a service client is
- * available (it's writable by the service role alone). Returns how many games
+ * Review scores and header art (which Steam swaps for launches, sales and
+ * events) are otherwise copied once. The shared cache is updated only with a
+ * service client: only the service role can write it. Returns how many games
  * changed.
  */
 export async function refreshStoreData(

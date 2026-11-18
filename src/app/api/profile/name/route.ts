@@ -6,10 +6,8 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { profileNameSchema } from '@/lib/validations/profile';
 
 /**
- * Sets the name the player's profile shows, or clears it (null), which goes
- * back to the Steam name or the email before its @. Profiles are written by
- * the server only, so it's saved with the service client, for this player's
- * row alone.
+ * null goes back to the Steam name or the email before its @. Profiles are
+ * written by the server only, so the service client saves this player's row.
  */
 export async function PUT(request: NextRequest) {
   const supabase = await createClient();

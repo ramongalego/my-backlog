@@ -25,7 +25,6 @@ const OPTIONS = [
   },
 ];
 
-/** The Games page's grid / list switch, beside Sort. */
 export function GamesViewToggle({
   value,
   onChange,

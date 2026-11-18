@@ -31,10 +31,8 @@ export default function StatsView() {
   const { connect: connectSteam } = useConnectSteam();
   const isSteamConnected = profile?.steam_id != null;
   const { open: openAddGame } = useAddGame();
-  // Which list a game's dialog was opened from. Saving can take the game out
-  // of that list (a top-rated game put back in the backlog, a played-a-lot
-  // game marked finished): focus then goes to the list's heading, or to the
-  // page's title when the whole section went with the game, not to the page.
+  // Saving can take the game out of the list its dialog opened from: focus then
+  // goes to the list's heading, or the page title if the section went too.
   const openedFrom = useRef('stats-highest-rated');
   const openRated = (gameId: number) => {
     openedFrom.current = 'stats-highest-rated';
@@ -81,9 +79,6 @@ export default function StatsView() {
         <StatsStart backlog={stats.backlog} storyHours={stats.estimatedBacklogHours} {...start} />
       ) : (
         <div className="space-y-6">
-          {/* Your games first: where the hours went, then what's left and
-              what you loved, then the patterns, and last what they say
-              about you. */}
           <div className="pb-4">
             <Hours stats={stats} />
           </div>

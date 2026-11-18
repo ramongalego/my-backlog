@@ -5,19 +5,13 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { checkPassword, emailRefusal, passwordCheckRefusal } from '@/lib/server/account';
 import { changeEmailBodySchema } from '@/lib/validations/auth';
 
-/**
- * Where a confirmation link lands: the auth callback, which knows this flow
- * by its name and goes on to the profile.
- */
+/** The auth callback knows this flow by its name. */
 const EMAIL_CHANGE_REDIRECT = '/auth/callback?flow=email-change&next=/profile';
 
 /**
- * Starts changing the signed-in player's email, once their password confirms
- * it's them: a new email is a way into the account (through Forgot password),
- * so it's guarded like changing the password. Supabase emails a link to
- * confirm it (with secure email change on, one to each address), and the
- * email only changes once that's done; until then it's the account's
- * `new_email`, which the profile shows as waiting.
+ * Guarded by the password: a new email is a way into the account through
+ * Forgot password. It only changes once Supabase's link is confirmed; until
+ * then it's the account's `new_email`.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

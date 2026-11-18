@@ -1,7 +1,6 @@
 /**
- * Steam's logo (from Simple Icons, CC0), for Connect Steam buttons. Sized and
- * colored like a lucide icon: pass a width/height class, it fills with
- * currentColor.
+ * Steam's logo, from Simple Icons (CC0). Sized like a lucide icon: pass a
+ * width/height class; it fills with currentColor.
  */
 export function SteamIcon({ className = '' }: { className?: string }) {
   return (

@@ -62,7 +62,6 @@ it('refreshes the library once, however many times Refresh is pressed', async ()
   expect(refresh).toHaveBeenCalledTimes(1);
   expect(toast.loading).toHaveBeenCalledTimes(1);
 
-  // And again once that one is done.
   await act(async () => done({ success: false }));
   await act(async () => {
     fireEvent.click(button);

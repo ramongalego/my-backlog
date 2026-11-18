@@ -48,8 +48,7 @@ export function Button({
       aria-busy={isLoading || undefined}
       {...props}
     >
-      {/* Keep the label visible while loading so the button doesn't change
-          width and the user still sees what action is in flight. */}
+      {/* The label stays while loading, so the width holds and the action stays in view. */}
       {isLoading && <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />}
       {children}
     </button>

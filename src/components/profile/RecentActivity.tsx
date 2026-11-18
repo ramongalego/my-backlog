@@ -47,18 +47,15 @@ const SECTION_ID = 'profile-activity';
 const DISCLOSE =
   'flex cursor-pointer items-center gap-1 py-1 text-sm font-medium whitespace-nowrap text-ink-400 transition-colors hover:text-ink-100';
 
-// Everything that isn't a status stays neutral: a status keeps its color, as
-// everywhere else.
+// A status keeps its color, as everywhere else; everything else stays neutral.
 const NEUTRAL = 'text-ink-300';
 
-/** Each kind's icon and color, and what it says happened, in the past tense. */
 const LINE: Record<
   ActivityKind,
   { icon: LucideIcon; text: string; what: (line: ActivityLine) => string }
 > = {
-  // Every line is something done, in the past tense: the game being played
-  // has its start in the playing color, a start of one that isn't any more
-  // is neutral.
+  // Every line is in the past tense. Only the game still being played has its
+  // start in the playing color.
   playing: { ...STATUS_STYLE.playing, what: () => 'Started playing' },
   started: { icon: STATUS_STYLE.playing.icon, text: NEUTRAL, what: () => 'Started playing' },
   finished: { ...STATUS_STYLE.finished, what: () => 'Finished' },
@@ -84,10 +81,8 @@ const LINE: Record<
 };
 
 /**
- * What happened to one game in one go, as a button that opens the game: to
- * fix a date or a rating where it's seen. Its name is what it shows, read in
- * order: the game and each thing that happened. Its day is said beside it,
- * once for all the rows of that day.
+ * Opens the game, so a date or a rating can be fixed where it's seen. Its day is
+ * said beside it, once for all the rows of that day.
  */
 function Row({
   entry,
@@ -117,9 +112,8 @@ function Row({
           <TruncatedText className="block font-medium text-ink-100 transition-colors group-hover:text-ink-50 lg:truncate">
             {entry.name}
           </TruncatedText>{' '}
-          {/* Each thing that happened on its own line, in the order it did: a
-              few dots between them for the time that passed. A finish or a
-              drop says its own day when that isn't the day it was logged. */}
+          {/* A finish or a drop says its own day when that isn't the day it was
+              logged. */}
           <span className="mt-0.5 flex flex-col text-sm text-ink-500">
             {entry.lines.map((line, index) => {
               const { icon: Icon, text, what } = LINE[line.kind];
@@ -156,12 +150,7 @@ function Row({
   );
 }
 
-/**
- * A bulk move (Games, Select) as one row: how many games and what was done to
- * them, with the first one's art and the count on it. Pressing it opens the
- * games under it, each its own row that opens its dialog, and pressing it
- * again folds them away.
- */
+/** A bulk move (Games, Select) as one row that unfolds into a row per game. */
 function BulkRow({
   entry,
   games,
@@ -187,8 +176,7 @@ function BulkRow({
         aria-controls={listId}
         className={`${ACTIVITY_ROW} group -mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 text-left transition-colors hover:bg-ink-800/50`}
       >
-        {/* The first game's art, with how many there are on it: the count is
-            said in the row's text, so the chip is drawn, not read. */}
+        {/* The count is said in the row's text, so the chip is drawn, not read. */}
         <CoverThumb src={entry.header_image} alt="" interactive>
           <span
             aria-hidden="true"
@@ -213,7 +201,6 @@ function BulkRow({
           aria-hidden="true"
         />
       </button>
-      {/* Indented under the row it opened from, a lighter rule between them. */}
       <ul id={listId} hidden={!open} className="divide-y divide-ink-800/40 pl-6 sm:pl-10">
         {open && games.map((game) => <Row key={game.key} entry={game} onOpen={onOpen} />)}
       </ul>
@@ -221,10 +208,7 @@ function BulkRow({
   );
 }
 
-/**
- * A day, beside its rows: read as one date ("Nov 17"), drawn as a stamp with
- * the day of the month over the month, level with a row's two lines of text.
- */
+/** Read as one date ("Nov 17"), drawn as a stamp level with a row's two lines of text. */
 function DayStamp({ day }: { day: string }) {
   const stamp = activityStamp(day);
   return (
@@ -243,11 +227,7 @@ function DayStamp({ day }: { day: string }) {
   );
 }
 
-/**
- * What the player has been doing: what happened to their games, newest
- * first, a page at a time. A list, where the
- * favorites above are art, so the two don't read as the same row twice.
- */
+/** A list, where the favorites above are art, so the two don't read as the same row twice. */
 export function RecentActivity({
   entries,
   onOpen,
@@ -257,9 +237,8 @@ export function RecentActivity({
   onOpen: (gameId: number) => void;
 }) {
   const [shown, setShown] = useState(ACTIVITY_PAGE);
-  // The first of the rows "Show more" adds takes the focus, so the keyboard
-  // and a screen reader carry on from where the list grew (the button itself
-  // goes once everything is showing).
+  // The first row "Show more" adds takes the focus, so the keyboard and a screen
+  // reader carry on where the list grew (the button goes once everything shows).
   const firstNew = useRef<number | null>(null);
   const showMore = () => {
     firstNew.current = shown;

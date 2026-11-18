@@ -28,12 +28,7 @@ interface GameListRowProps {
   selection?: GameSelection;
 }
 
-/**
- * A game in the Games page's list view: small art and the name, then its
- * details in columns that line up down the list (status, time to beat, rating,
- * hours played, your rating). Below `lg` the columns give way to the meta row
- * the cards use. The whole row opens the game.
- */
+/** Below `lg` the columns give way to the meta row the cards use. */
 export function GameListRow({
   game,
   onOpenDetail,
@@ -43,7 +38,7 @@ export function GameListRow({
   selection,
 }: GameListRowProps) {
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
-  // Where it's played, said in the details line (the thumbnail has no tag).
+  // Said in the details line: the thumbnail has no tag.
   const library = useLibraryPlatforms();
   const platform = showPlatform ? platformToSay(game, library) : null;
   const rated = (game.status === 'finished' || game.status === 'dropped') && game.rating != null;
@@ -54,11 +49,8 @@ export function GameListRow({
   );
 
   return (
-    // The row takes the click, so its figures can still be hovered for their
-    // tooltips, as on the cards (a click on one still opens the game; a tap on
-    // a touchscreen reads the tooltip instead). content-visibility skips laying
-    // out rows off screen; the intrinsic size is a row's usual height, so the
-    // scrollbar holds still.
+    // The row takes the click, so its figures can still be hovered for tooltips.
+    // The intrinsic size is a row's usual height, so the scrollbar holds still.
     <li
       onClick={(e) =>
         selection ? selection.selectable && selection.onToggle(e.shiftKey) : onOpenDetail(game.id)
@@ -98,7 +90,7 @@ export function GameListRow({
           >
             <TruncatedText className="block truncate">{game.name}</TruncatedText>
           </button>
-          {/* Below lg the status rides beside the name; from lg it has a column. */}
+          {/* Hidden from screen readers: the status is in the button's name. */}
           {badge && (
             <span className="lg:hidden shrink-0" aria-hidden="true">
               {badge}
@@ -113,8 +105,7 @@ export function GameListRow({
             {release && <span aria-hidden="true">{release}</span>}
           </p>
         )}
-        {/* Below lg: your rating, then the same meta row as the cards. The meta
-            row sizes its contents to its own width, so it takes the rest. */}
+        {/* The meta row sizes its contents to its own width, so it takes the rest. */}
         <div className="lg:hidden mt-1 flex items-center gap-2.5">
           {rated && (
             <span className="shrink-0" aria-hidden="true">
@@ -137,15 +128,14 @@ export function GameListRow({
         </div>
       </div>
 
-      {/* From lg: columns. The status and your rating are in the row's name. */}
+      {/* The status and your rating are in the row's name. */}
       {showStatus && (
         <div className={LIST_COLUMN.status} aria-hidden="true">
           {badge}
         </div>
       )}
-      {/* The cards' figures without their icons (the headings say what they
-          are), with the same tooltips. Under an hour played isn't shown, as
-          on the cards. */}
+      {/* No icons: the headings say what they are. Under an hour played isn't
+          shown, as on the cards. */}
       <ColumnValue className={LIST_COLUMN.toBeat}>
         {game.main_story_hours ? <TimeToBeat icon={false} hours={game.main_story_hours} /> : null}
       </ColumnValue>
@@ -175,10 +165,7 @@ export function GameListRow({
   );
 }
 
-/**
- * A column's figure. Proportional figures: this face's tabular ones give the
- * decimal point a digit's width ("23 . 4h").
- */
+/** Not tabular-nums: this face's tabular figures give the decimal point a digit's width. */
 function ColumnValue({ className, children }: { className: string; children: React.ReactNode }) {
   return <span className={`${className} text-sm text-ink-300`}>{children}</span>;
 }

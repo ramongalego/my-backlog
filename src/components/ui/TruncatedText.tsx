@@ -4,14 +4,9 @@ import { useRef, useState } from 'react';
 import { TooltipBubble } from './Tooltip';
 
 /**
- * Text cut off with an ellipsis (or clamped to a few lines) that shows the
- * whole of itself the moment the pointer is on it, in the app's tooltip
- * bubble. Only when it's actually cut: a name that fits shows nothing, and a
- * name that wraps on a phone and is cut on a desktop does both.
- *
- * A mouse thing: there's no hover on a touchscreen, and the text is all there
- * for a screen reader already, so the bubble is decorative. It replaces the
- * browser's `title` tooltip, which takes a second to come up.
+ * Shows the whole text in the tooltip bubble on hover, only while it's actually cut.
+ * Mouse only: touchscreens can't hover and screen readers have the full text. It
+ * replaces the browser's `title` tooltip, which takes a second to come up.
  */
 export function TruncatedText({
   children,

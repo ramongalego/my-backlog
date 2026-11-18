@@ -1,10 +1,8 @@
 import { GameArt } from '@/components/games/GameArt';
 
 /**
- * The backlog Pick My Game picks from, as a tilted wall of art: across the top
- * of the questions, and in Home's band while nothing is playing. A small
- * backlog repeats round the wall, offset row by row so a game doesn't sit next
- * to itself. Fills its (positioned) parent; `rows` of four fill a taller one.
+ * A small backlog repeats round the wall, offset row by row so a game doesn't
+ * sit next to itself. Fills its positioned parent; more `rows` fill a taller one.
  */
 export function CoverShelf({
   covers,

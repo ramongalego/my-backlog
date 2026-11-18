@@ -1,7 +1,6 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
-// The app's only raised surface: a slightly lighter block on the page
-// background. No border or shadow; the tone change is the elevation.
+// The app's only raised surface. No border or shadow: the tone change is the elevation.
 
 const PADDING = {
   none: '',

@@ -4,7 +4,6 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAddGame } from './AddGameProvider';
 
-/** The header's Add game button, so a game outside Steam can be added from any page. */
 export function AddGameButton() {
   const { open } = useAddGame();
   return (

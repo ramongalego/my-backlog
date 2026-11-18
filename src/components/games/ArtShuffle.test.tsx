@@ -20,7 +20,6 @@ it('winds down over its duration: fast at first, slow by the end', () => {
       <ArtShuffle covers={covers} sizes="512px" duration={2200} />
     </div>,
   );
-  // How many times the art changes in a stretch of time.
   const changesIn = (ms: number) => {
     let changes = 0;
     for (let t = 0; t < ms; t += 10) {

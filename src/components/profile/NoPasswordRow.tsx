@@ -6,11 +6,8 @@ import { AccountRow } from '@/components/profile/AccountRow';
 import { providerNames, type SignInProvider } from '@/lib/account/sign-in';
 
 /**
- * The Account panel's Password row for an account that has none: one made by
- * signing in with Google or Discord. It says how they sign in, and Set
- * password emails the link that sets one, the same link Forgot password
- * sends: the inbox is what proves it's them, where a password can't. What
- * happened is said in the row, in place of the button once the link is sent.
+ * For an account made with Google or Discord. Set password emails the same link
+ * Forgot password sends: with no password, the inbox is what proves it's them.
  */
 export function NoPasswordRow({
   email,
@@ -19,7 +16,6 @@ export function NoPasswordRow({
 }: {
   /** Where the link goes. */
   email: string | null;
-  /** The accounts they sign in with. */
   providers: readonly SignInProvider[];
   /** Emails the link; whether it was sent. */
   onSendLink: () => Promise<boolean>;

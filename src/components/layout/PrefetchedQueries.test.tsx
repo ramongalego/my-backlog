@@ -104,10 +104,8 @@ it('hydrates a streamed list without a mismatch, then shows it', async () => {
   const { serverText, mismatches, firstRender, text } = await load(PrefetchedQueries);
 
   expect(serverText).toBe('Loading your games');
-  // The browser's first render is what the server sent...
   expect(firstRender).toBe('Loading your games');
   expect(mismatches).toEqual([]);
-  // ...and the list follows straight after.
   expect(text).toBe('3 games');
 });
 
@@ -115,7 +113,6 @@ it('is needed: a plain HydrationBoundary fails to hydrate the same page', async 
   const { serverText, mismatches, text } = await load(HydrationBoundary);
 
   expect(serverText).toBe('Loading your games');
-  // React gives up on the server's HTML and renders the page again.
   expect(mismatches.length).toBeGreaterThan(0);
   expect(text).toBe('3 games');
 });

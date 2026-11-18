@@ -15,12 +15,7 @@ type Field = keyof ChangePasswordFormData;
 
 const EMPTY: ChangePasswordFormData = { currentPassword: '', password: '', confirmPassword: '' };
 
-/**
- * Changes the password from the profile: the current one, then the new one
- * twice. Forgotten the current one? A reset link can be emailed from here,
- * as from the sign-in screen. On success it closes and says so; every other
- * device has been signed out.
- */
+/** A forgotten current password can be reset from here, as from the sign-in screen. */
 export function ChangePasswordDialog({
   email,
   onSubmit,

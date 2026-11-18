@@ -12,7 +12,6 @@ import {
   readImage,
 } from '@/lib/server/avatar';
 
-/** The signed-in player, and the service client their profile is written with. */
 async function signedIn() {
   const supabase = await createClient();
   const {
@@ -22,10 +21,8 @@ async function signedIn() {
 }
 
 /**
- * Sets the player's profile picture: the small square the browser made, sent
- * as the form field `file`. Checked by its own bytes (WebP, PNG or JPEG with
- * a header that reads, at most 512 KB and 1024px a side), stored under a new name in the player's folder, and whatever
- * else is in the folder deleted.
+ * The picture is checked by its own bytes, not its declared type, and stored
+ * under a new name; everything else in the player's folder is then deleted.
  */
 export async function POST(request: NextRequest) {
   const { user, service } = await signedIn();
@@ -88,7 +85,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ avatarUrl });
 }
 
-/** Takes the picture off: the profile goes back to the Steam one, or the initial. */
+/** The profile goes back to the Steam picture, or the initial. */
 export async function DELETE() {
   const { user, service } = await signedIn();
   if (!user) return jsonError('Unauthorized', 401);

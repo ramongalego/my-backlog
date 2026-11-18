@@ -7,11 +7,7 @@ import { EXPORT_CHOICES, useDataDownload } from '@/hooks/useDataDownload';
 import type { ExportFormat } from '@/lib/account/export';
 import type { ApiResult } from '@/lib/client/request';
 
-/**
- * The Account panel's "Export data": a button that opens a small menu of the
- * two files a copy of your data comes as. Choosing one closes the menu and
- * downloads it; the button is busy until the file is here.
- */
+/** The Account panel's Export data menu. The button stays busy until the file is here. */
 export function ExportDataMenu({
   onDownload,
 }: {

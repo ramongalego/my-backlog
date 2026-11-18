@@ -27,7 +27,6 @@ const dropped = (id: number, day: string, rating: number | null = null) =>
     rating,
   });
 
-/** What an entry's lines say happened, in order. */
 const kinds = (entry: ActivityEntry) => entry.lines.map((line) => line.kind);
 
 let lastId = 0;
@@ -124,7 +123,6 @@ describe('recentActivity, from the games', () => {
     const entries = recentActivity(games, null);
     expect(entries).toHaveLength(RECENT_ACTIVITY);
     expect(RECENT_ACTIVITY).toBe(50);
-    // The newest of them: none left out is newer than one kept.
     const kept = new Set(entries.map((e) => e.id));
     const oldestKept = entries.at(-1)!.day!;
     for (const game of games) {
@@ -369,7 +367,6 @@ describe('recentActivity, from the history', () => {
         rating: [null, 9],
       }),
     ]);
-    // The one the history tells, then the one from before there was a history.
     expect(entries.map((e) => [e.id, e.lines, e.day])).toEqual([
       [7, [{ kind: 'finished', on: '2026-11-10', rating: 9 }], loggedOn],
       [8, [{ kind: 'finished' }], '2026-03-01'],
@@ -406,7 +403,6 @@ describe('recentActivity, several things about one game', () => {
     expect(entries[0]).toMatchObject({
       id: 7,
       lines: [{ kind: 'queued' }, { kind: 'started' }, { kind: 'finished' }],
-      // The day the latest of them was logged.
       day: toLocalIsoDate(new Date(at(15))),
       rating: 10,
     });
@@ -643,7 +639,6 @@ describe('recentActivity, a group of games', () => {
       finish(4, '2026-11-11'),
     ]);
     expect(mixed[0].lines).toEqual([{ kind: 'finished' }]);
-    // Each game still says its own day inside the group.
     expect(mixed[0].games!.map((one) => one.lines[0].on)).toEqual([
       '2026-11-11',
       '2026-11-10',

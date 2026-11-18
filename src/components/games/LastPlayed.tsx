@@ -2,7 +2,7 @@
 
 import { formatLastPlayed } from '@/lib/games/last-played';
 
-/** "Last played 3 days ago", from Steam; nothing when Steam doesn't share it. */
+/** From Steam; nothing when Steam doesn't share it. */
 export function LastPlayed({
   lastPlayedAt,
   className = '',

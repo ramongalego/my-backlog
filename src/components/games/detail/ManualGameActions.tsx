@@ -3,10 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
-/**
- * Under a console game's dialog: send a Steam game moved to a console back to
- * Steam, or remove a game added by hand. Each asks first.
- */
 export function ManualGameActions({
   onMoveToSteam,
   onDelete,

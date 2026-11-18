@@ -2,7 +2,6 @@ import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 
 const NOTES_MAX = 1000;
 
-/** Rating and notes, kept for finished and dropped games. */
 export function ReviewFields({
   rating,
   onRatingChange,

@@ -1,8 +1,4 @@
-/**
- * Creates the public share page for a game the signed-in player has finished,
- * and returns its path. The server builds the page from the game itself; only
- * its id is sent.
- */
+/** Returns the page's path. Only the id is sent: the server builds the page from the game. */
 export async function createSharePage(gameId: number): Promise<string> {
   const res = await fetch('/api/share/completion', {
     method: 'POST',

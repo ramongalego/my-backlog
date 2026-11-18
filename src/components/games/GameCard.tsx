@@ -17,15 +17,14 @@ interface GameCardProps {
   game: GameItem;
   onOpenDetail: (gameId: number) => void;
   queued?: boolean;
-  /** Off when the page is already filtered to one status, so every card would say the same thing. */
+  /** Off when the page is filtered to one status: every card would say the same. */
   showStatus?: boolean;
-  /** Off when the page is filtered to one platform, so every card would carry the same tag. */
+  /** Off when the page is filtered to one platform: every card would carry the same tag. */
   showPlatform?: boolean;
   /** Select mode: a click ticks the game instead of opening it. */
   selection?: GameSelection;
 }
 
-/** A game's part in Select mode: whether it's ticked, and whether it can be. */
 export interface GameSelection {
   selected: boolean;
   /** Not the game being played or a queued one. */
@@ -45,17 +44,14 @@ export function GameCard({
   const status = game.status;
   const showRating = (status === 'finished' || status === 'dropped') && game.rating != null;
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
-  // The platform tag on the art, which the button's name says too.
   const library = useLibraryPlatforms();
   const tag = showPlatform ? platformTag(game, library) : null;
   const art = { showStatus, console: tag, release };
   const label = openGameLabel(game, { queued, ...art });
 
   return (
-    // content-visibility lets the browser skip layout/paint for off-screen
-    // cards, so a large library scrolls smoothly without DOM virtualization.
-    // contain-intrinsic-size reserves an approximate height so the scrollbar
-    // stays stable before a card is first rendered.
+    // content-visibility stands in for virtualizing a large library; the
+    // intrinsic size keeps the scrollbar steady before a card first renders.
     <div className="min-w-0 [content-visibility:auto] [contain-intrinsic-size:auto_14rem]">
       <button
         onClick={(e) =>
@@ -72,7 +68,6 @@ export function GameCard({
           src={game.header_image}
           alt=""
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 296px"
-          // Brightens under the pointer, unless it can't be ticked.
           interactive={!selection || selection.selectable}
           platform={tag}
           releaseDate={game.release_date}
@@ -88,10 +83,8 @@ export function GameCard({
             <Rating rating={game.rating!} onArt className="absolute bottom-2 right-2" />
           )}
         </CoverArt>
-        {/* A ticked game is underlined just below its art, the line curving
-            up round the art's bottom corners: the bottom of a rounded outline,
-            cut off at the art's sides. (A whole outline is clipped by the card,
-            which left stray pixels at the top corners.) */}
+        {/* Only the bottom of a rounded outline: a whole one is clipped by the
+            card and leaves stray pixels at the top corners. */}
         {selection?.selected && (
           <span
             aria-hidden="true"

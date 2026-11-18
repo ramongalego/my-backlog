@@ -23,11 +23,7 @@ interface UpNextProps {
   onPickNext: () => void;
 }
 
-/**
- * Up next: the game that takes over when you finish this one, and picking
- * another for the queue. The hinge between the band (now) and the shelf
- * (later). With nothing playing, the queued game is there to start, if it's out.
- */
+/** The game that takes over when this one's finished, and picking another for the queue. */
 export function UpNext({
   queue,
   isPlaying,
@@ -37,8 +33,7 @@ export function UpNext({
   onAddGame,
   onPickNext,
 }: UpNextProps) {
-  // The queued game that starts next: the first that's out. With only games
-  // not out yet in the queue, the first of those, to say when it is.
+  // The first queued game that's out; if none is, the first one, to say when it is.
   const zone = useReleaseZone();
   const playNext = nextPlayable(queue, undefined, zone);
   const upNext = playNext ?? queue[0];
@@ -96,8 +91,6 @@ export function UpNext({
           </Button>
         )
       ) : tooFewToPick ? (
-        // Every backlog game is playing or queued, or too few are left to
-        // choose between: add more instead.
         <Button variant="secondary" className="cursor-pointer" onClick={onAddGame}>
           <Plus className="w-4 h-4" aria-hidden="true" />
           <span>Add a game</span>

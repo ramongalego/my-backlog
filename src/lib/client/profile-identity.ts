@@ -1,18 +1,15 @@
-// Client helpers for the name and picture on the Profile page
-// (/api/profile/name, /api/profile/avatar), and for making the small square
-// picture that's uploaded. They never throw: each says what happened, with a
-// message the page can show as is.
+// These never throw: each says what happened, with a message the page can show as is.
 
 import { apiRequest, json, type ApiResult } from './request';
 
 /** The side of the square picture that's uploaded: twice the largest it's drawn (80px). */
 const AVATAR_SIDE = 256;
-/** What shows through a see-through picture where it's saved as JPEG: the avatar tile's own (ink-800). */
+/** Behind a transparent picture saved as JPEG: the avatar tile's own color (ink-800). */
 const AVATAR_BACKDROP = '#2a2622';
 
 const TOO_MANY = 'Too many changes in a row. Try again later.';
 
-/** Sets the profile's name, or clears it (null) to go back to the one the account has. */
+/** Null clears it, back to the name the account has. */
 export function saveProfileName(name: string | null): Promise<ApiResult<{ name: string | null }>> {
   return apiRequest('/api/profile/name', json('PUT', { name }), {
     failed: "Couldn't save your name. Please try again.",
@@ -20,7 +17,7 @@ export function saveProfileName(name: string | null): Promise<ApiResult<{ name: 
   });
 }
 
-/** Uploads a profile picture already made square (see squareAvatar). */
+/** Already made square (see squareAvatar). */
 export function uploadAvatar(picture: Blob): Promise<ApiResult<{ avatarUrl: string }>> {
   const form = new FormData();
   form.append('file', picture);
@@ -31,7 +28,6 @@ export function uploadAvatar(picture: Blob): Promise<ApiResult<{ avatarUrl: stri
   );
 }
 
-/** Takes the profile picture off. */
 export function removeAvatar(): Promise<ApiResult<{ avatarUrl: null }>> {
   return apiRequest(
     '/api/profile/avatar',
@@ -41,10 +37,8 @@ export function removeAvatar(): Promise<ApiResult<{ avatarUrl: null }>> {
 }
 
 /**
- * A picture the player chose, as the small square that's uploaded: the middle
- * of it, 256px a side, as WebP (or JPEG or PNG where the browser can't make
- * WebP). A phone photo of several megabytes comes out at a few dozen
- * kilobytes. Null when the browser can't read it (a format it doesn't know).
+ * The middle of the picture, 256px a side, as WebP (or JPEG or PNG where the
+ * browser can't make WebP). Null when the browser can't read it.
  */
 export async function squareAvatar(file: Blob): Promise<Blob | null> {
   let bitmap: ImageBitmap;
@@ -79,9 +73,8 @@ export async function squareAvatar(file: Blob): Promise<Blob | null> {
 
   const encode = (type: string) =>
     new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
-  // Safari makes a PNG when asked for WebP; JPEG is smaller then. JPEG has no
-  // transparency, and clear parts would come out black: drawn again over the
-  // avatar tile's own color first.
+  // Safari makes a PNG when asked for WebP; JPEG is smaller then, but clear parts
+  // would come out black, so it's drawn again over the avatar tile's color.
   const webp = await encode('image/webp');
   if (webp?.type === 'image/webp') {
     bitmap.close();

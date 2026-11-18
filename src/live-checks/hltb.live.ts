@@ -1,10 +1,9 @@
 /**
  * @jest-environment node
  */
-// A live check, not a unit test: looks real games up on HowLongToBeat the way
-// the app does, to catch the day HLTB changes its site and the lookup stops
-// working. Run with `npm run check:hltb`; a scheduled GitHub Action runs it
-// daily (.github/workflows/hltb-check.yml). `npm test` leaves it out.
+// A live check, not a unit test: catches the day HLTB changes its site. A
+// GitHub Action runs it daily (.github/workflows/hltb-check.yml); `npm test`
+// leaves it out.
 import { getMainStoryHours } from '@/lib/hltb/api';
 
 // Well-known games with steady times, and the range their main story is in.
@@ -14,9 +13,8 @@ const GAMES: [name: string, min: number, max: number][] = [
   ['Hollow Knight', 20, 35],
 ];
 
-// Anything the lookup logs is a sign of trouble even when a time still comes
-// back: e.g. the search endpoint not found in HLTB's scripts, so the fallback
-// was used, which works only until HLTB renames it.
+// Anything logged is trouble even when a time comes back: e.g. the search
+// endpoint wasn't found, so the fallback was used, which lasts until HLTB renames it.
 const errors: string[] = [];
 beforeAll(() => {
   jest.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
@@ -41,9 +39,8 @@ it.each(GAMES)(
   120_000,
 );
 
-// Two games HLTB lists as "Prey": the 2017 one first (about 16h), the 2006
-// one about 7h. Only passes while HLTB still sends each result's release year
-// (`release_world`); without it the lookup quietly takes the first.
+// HLTB lists the 2017 "Prey" (about 16h) before the 2006 one (about 7h).
+// Without `release_world` in its results, the lookup quietly takes the first.
 it('tells games that share a title apart by release year', async () => {
   const hours = await getMainStoryHours('Prey', 2006);
   expect({ hours, errors }).toEqual({ hours: expect.any(Number), errors: [] });

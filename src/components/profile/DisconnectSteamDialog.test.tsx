@@ -27,7 +27,6 @@ it('says plainly what is lost for good, and what stays', () => {
   expect(screen.getByRole('dialog', { name: 'Disconnect Steam' })).toHaveTextContent(
     'Your 151 Steam games and their ratings, notes and finish dates will be permanently removed. Games on other consoles stay.',
   );
-  // Reconnecting brings the games back, just not what was logged on them.
   expect(screen.getByRole('dialog')).toHaveTextContent(
     'Connecting Steam again brings the games back, but not their ratings, notes or finish dates.',
   );

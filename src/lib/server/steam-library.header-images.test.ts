@@ -54,8 +54,7 @@ describe('getStoreHeaderImages', () => {
   });
 
   it('uses an old-path 920×430 header only when the file is really there', async () => {
-    // Steam lists a header_2x.jpg for some older games that was never
-    // uploaded (Trine 2): checked, and the 460×215 used instead.
+    // Some older games list a header_2x.jpg that was never uploaded (Trine 2).
     mockSteam(
       {
         5: { header: 'header.jpg', header_2x: 'header_2x.jpg' },

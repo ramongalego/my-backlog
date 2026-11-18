@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react';
 import { SECTION_HEADING } from './profile-layout';
 
-/**
- * A section of the Profile page's main column: its title, with one quiet
- * action beside it (a link onwards, or a button), then its content.
- */
+/** `action` is one quiet control beside the title: a link onwards, or a button. */
 export function ProfileSection({
   id,
   title,

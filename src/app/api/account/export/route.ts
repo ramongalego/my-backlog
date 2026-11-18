@@ -15,15 +15,10 @@ import {
 const FAILED = "Couldn't prepare your data. Please try again.";
 
 /**
- * A copy of the signed-in player's data, as a file to download: everything as
- * JSON, or `?format=csv` for the games as a spreadsheet. Only what's theirs:
- * each read is of their own rows. Most go through their own session, so the
- * database's row-level security holds it to them too; share pages and support
- * messages can only be read with the server's key, and are asked for by the
- * player's id.
- *
- * No password is asked: everything in the file is already on the pages a
- * signed-in player can open. It reads the whole library, so it's limited.
+ * Most reads go through the player's session, so row-level security holds
+ * them to their own rows; share pages and support messages need the server's
+ * key and are asked for by the player's id. No password is asked: everything
+ * in the file is already on pages a signed-in player can open.
  */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -77,9 +72,7 @@ export async function GET(request: NextRequest) {
             'id, name, source, platform, app_id, steam_app_id, status, rating, notes, started_at, finished_at, dropped_at, playtime_forever, last_played_at, created_at, header_image, art_chosen',
           )
           .eq('user_id', user.id)
-          // What the library lists: not the soundtracks and tools Steam
-          // counts as owned. A game whose details haven't synced yet has no
-          // type, and is the player's all the same.
+          // Not Steam's soundtracks and tools; a game not synced yet has no type.
           .or('type.eq.game,type.is.null')
           .order('id')
           .range(from, to),

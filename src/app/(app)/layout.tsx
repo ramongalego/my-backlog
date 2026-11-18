@@ -13,17 +13,14 @@ import { cookies } from 'next/headers';
 import { GAMES_VIEW_COOKIE, parseGamesView } from '@/lib/games/games-view';
 import { GamesViewProvider } from '@/hooks/useGamesView';
 
-// The app shell: React Query, the auth-aware header, background library sync
-// and playtime refreshes. The session is resolved here on the server and handed to useAuth, so
-// the header and pages don't wait on a client-side auth round trip. Layouts
-// persist across client navigations, so this runs once per full page load.
+// The session is resolved here so the header and pages don't wait on a client
+// auth round trip. Layouts persist across client navigations: this runs once
+// per full page load.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  // The user's id comes from the session token, which is verified here without
-  // a round trip (the proxy has just refreshed it). Everything below needs
-  // only that id, so the full user record, the profile and the header's count
-  // load together: this is on the path to every page's first paint, and asking
-  // Supabase Auth for the user first held all of it up.
+  // getClaims verifies the token without a round trip (the proxy just
+  // refreshed it), so everything below loads at once: this is on the path to
+  // every page's first paint.
   const { data: session } = await supabase.auth.getClaims();
   const userId = session?.claims?.sub;
 
@@ -40,9 +37,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .select('steam_id, steam_username, steam_avatar, display_name, avatar_url')
         .eq('id', userId)
         .maybeSingle(),
-      // The header's game count. Prefetched here rather than by pages: a query
-      // the header has already created can only be hydrated after mount, which
-      // made the server render a loading state that the client then replaced.
+      // The header's count is prefetched here, not by pages: a query the header
+      // already created only hydrates after mount, so the server would render
+      // a loading state.
       queryClient.prefetchQuery(queries.libraryMeta(userId, supabase)),
     ]);
     user = authUser.data.user;

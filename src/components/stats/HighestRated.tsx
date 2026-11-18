@@ -10,10 +10,6 @@ import { plural } from '@/components/stats/format';
 import { SectionTitle } from '@/components/stats/SectionTitle';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
-/**
- * Your best-rated games as art, beside how your ratings spread. Each opens
- * its game's dialog, as game art does everywhere.
- */
 export function HighestRated({
   stats,
   onOpen,

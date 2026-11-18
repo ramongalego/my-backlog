@@ -31,9 +31,9 @@ export async function fetchWithTimeout(
   }
 }
 
-// Timeout constants for different APIs
+// In milliseconds.
 export const TIMEOUTS = {
-  STEAM_API: 10000, // 10 seconds
-  STEAM_STORE: 15000, // 15 seconds
-  HLTB: 10000, // 10 seconds
+  STEAM_API: 10000,
+  STEAM_STORE: 15000,
+  HLTB: 10000,
 } as const;

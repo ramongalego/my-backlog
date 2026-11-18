@@ -11,10 +11,8 @@ const completeSchema = gameStatusSchema.extend({
 });
 
 /**
- * Finishes or drops the playing game in one request: saves it, then counts
- * the library for the summary while starting the next game in the queue. The
- * browser used to do these one after another, about five round trips before
- * the summary could show.
+ * One request, so the summary doesn't wait on several round trips: saves it,
+ * then counts the library while starting the next game in the queue.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

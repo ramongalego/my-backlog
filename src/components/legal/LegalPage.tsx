@@ -2,25 +2,20 @@ import type { ReactNode } from 'react';
 import { Page, PageHeader } from '@/components/layout/Page';
 
 export interface LegalSection {
-  /** For the link from "On this page": the section's heading id. */
+  /** The heading's id, linked from "On this page". */
   id: string;
   title: string;
   body: ReactNode;
 }
 
-// The text inside a section: paragraphs, lists and links, styled from here so
-// the pages themselves are just their words.
+// Styled from here so the pages themselves are just their words.
 const PROSE =
   'space-y-4 text-base leading-relaxed text-ink-300 ' +
   '[&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_li]:marker:text-ink-600 ' +
   '[&_a]:text-ink-100 [&_a]:underline [&_a]:decoration-ink-600 [&_a]:underline-offset-4 ' +
   '[&_a]:transition-colors hover:[&_a]:decoration-ink-300';
 
-/**
- * A policy page (Privacy, Terms): a document to read, not an app screen. The
- * title with the date it took effect, a short opening, the numbered sections
- * listed as links, then the sections in a column narrow enough to read.
- */
+/** A policy page (Privacy, Terms): a document to read, not an app screen. */
 export function LegalPage({
   title,
   effective,
@@ -28,14 +23,14 @@ export function LegalPage({
   sections,
 }: {
   title: string;
-  /** The date it took effect, written out: "November 16, 2026". */
+  /** Written out: "November 16, 2026". */
   effective: string;
   intro: ReactNode;
   sections: LegalSection[];
 }) {
   return (
     <Page>
-      {/* About 72 characters to a line (a ch is wider than the average letter): a column to read, not to fill. */}
+      {/* About 72 characters to a line: a ch is wider than the average letter. */}
       <div className="max-w-[65ch]">
         <PageHeader title={title} description={`Effective ${effective}`} />
         <div className={PROSE}>{intro}</div>
@@ -77,9 +72,8 @@ export function LegalPage({
 }
 
 /**
- * A table inside a policy: columns from `sm` up, and each row a block with
- * its column names beside the values on a phone, where three columns of
- * sentences don't fit.
+ * On a phone, where three columns of sentences don't fit, each row is a block
+ * with the column names beside the values.
  */
 export function LegalTable({ columns, rows }: { columns: string[]; rows: ReactNode[][] }) {
   return (

@@ -3,15 +3,11 @@
 import { useSyncExternalStore } from 'react';
 import { connectSteam } from '@/lib/client/steam-connect';
 
-// Connecting Steam leaves for Steam's sign-in page, which takes a second or
-// two to arrive: this server asks Steam for the address first. Until then the
-// page is still here, so whatever was pressed has to show it was.
-//
-// Kept outside React, once for the whole page: every Connect Steam control
-// (the header's menu, a page's own button) is busy together, and a second
-// press on any of them starts nothing.
+// Steam's sign-in page takes a second or two to arrive, so whatever was pressed
+// has to show it was. Kept outside React so every Connect Steam control is busy
+// together, and a second press on any of them starts nothing.
 
-/** If Steam's page still hasn't come: the controls can be pressed again. */
+/** After this, if Steam's page still hasn't come, the controls can be pressed again. */
 const GIVE_UP_MS = 20_000;
 
 let connecting = false;
@@ -25,8 +21,8 @@ function set(value: boolean) {
   listeners.forEach((listener) => listener());
 }
 
-// Back from Steam's page with the browser's Back button, the page is shown
-// again as it was left, still saying it's connecting: it isn't any more.
+// Back from Steam with the Back button, the page is restored as it was left,
+// still saying it's connecting.
 const shownAgain = (event: PageTransitionEvent) => {
   if (event.persisted) set(false);
 };
@@ -41,19 +37,14 @@ function subscribe(listener: () => void) {
 function connect() {
   // Also what makes it once per press: `connecting` is set before any redraw.
   if (connecting) return;
-  // Listened for from the first press on, whatever is on screen by then
-  // (adding the same listener again does nothing).
+  // On press, whatever is on screen by then; adding it again does nothing.
   window.addEventListener('pageshow', shownAgain);
   set(true);
   giveUp = setTimeout(() => set(false), GIVE_UP_MS);
   connectSteam();
 }
 
-/**
- * Starting to connect Steam, and whether it's been started: `connect` for a
- * control's press, `connecting` for it to show as busy until Steam's page
- * takes over (see ConnectSteamButton for the usual button).
- */
+/** `connecting` shows a control as busy until Steam's page takes over (see ConnectSteamButton). */
 export function useConnectSteam() {
   const isConnecting = useSyncExternalStore(
     subscribe,

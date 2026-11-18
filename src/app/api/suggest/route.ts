@@ -19,7 +19,6 @@ import { recordPick } from '@/lib/server/picks';
 export const maxDuration = 60;
 
 const MAX_ATTEMPTS = 2;
-// How much of your history the prompt lists by name.
 const MAX_FINISHED_IN_PROMPT = 25;
 const MAX_DROPPED_IN_PROMPT = 10;
 
@@ -60,7 +59,6 @@ function responseFormat(gameIds: number[]) {
 }
 
 export async function POST(request: NextRequest) {
-  // Check for API key configuration
   let openaiApiKey: string;
   try {
     openaiApiKey = getOpenAIApiKey();
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
     return jsonError('AI suggestions not configured', 503);
   }
 
-  // Authentication
   const supabase = await createClient();
   const {
     data: { user },
@@ -78,8 +75,7 @@ export async function POST(request: NextRequest) {
     return jsonError('Unauthorized', 401);
   }
 
-  // Rate limiting per user (not IP) — authenticated endpoint, so each user gets
-  // their own OpenAI quota and shared NATs don't throttle each other.
+  // Per user, not IP, so players behind a shared NAT don't throttle each other.
   const rateLimitResult = await checkSharedRateLimit(
     `suggestion:${user.id}`,
     RATE_LIMITS.suggestion,
@@ -97,7 +93,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Parse and validate request body
   let body: unknown;
   try {
     body = await request.json();
@@ -155,9 +150,8 @@ export async function POST(request: NextRequest) {
   }
 
   const excluded = new Set([...excludeGameIds, ...queuedGames.map((q) => q.game_id)]);
-  // A sequel waits while the game before it is still in the backlog. This runs
-  // on the whole backlog, so a queued or skipped first game still holds it back.
-  // A game that isn't out yet can't be played tonight.
+  // Run on the whole backlog, so a queued or skipped first game still holds
+  // its sequel back.
   const ranked = scoreCandidates(
     withoutLaterEntries(backlogGames).filter(
       (g) => !excluded.has(g.id) && isReleased(g.release_date),
@@ -212,8 +206,8 @@ export async function POST(request: NextRequest) {
     return jsonError('Failed to build suggestion request', 500);
   }
 
-  // Counted only for requests that reach the model. If it can't be counted,
-  // nothing is spent (failClosed).
+  // Counted only for requests that reach the model; failClosed refuses when it
+  // can't be counted.
   const globalLimit = await checkSharedRateLimit(
     'suggestion:global',
     RATE_LIMITS.suggestionGlobal,
@@ -279,9 +273,8 @@ export async function POST(request: NextRequest) {
       : jsonError("Couldn't get a suggestion. Please try again.", 502);
   }
 
-  // Kept for later study (game_picks): the answers, the game, the reason. The
-  // games passed on so far this sitting are the ones excluded, so this pick is
-  // the next. Best effort: the pick is the player's whether or not it's kept.
+  // Best effort: the pick stands whether or not it's kept. The games passed on
+  // this sitting are the excluded ones, so this is the next attempt.
   const pickId = await recordPick({
     userId,
     gameId: suggestedGame.id,

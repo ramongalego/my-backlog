@@ -69,7 +69,6 @@ export default function DiaryView() {
         </EmptyState>
       ) : (
         <div>
-          {/* Dated entries grouped by year → month */}
           {timeline.groups.map((yg, yi) => (
             <div key={yg.year}>
               {selectedYear === ALL_YEARS && (
@@ -101,7 +100,6 @@ export default function DiaryView() {
             </div>
           ))}
 
-          {/* Undated entries */}
           {timeline.undated.length > 0 && (
             <div className="mt-12">
               <SectionLabel className="pb-2 border-b border-ink-800">No date</SectionLabel>

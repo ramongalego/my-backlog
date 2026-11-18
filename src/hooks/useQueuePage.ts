@@ -9,11 +9,7 @@ import { fromQueueItem } from '@/lib/games/queue-items';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameDialogProps } from '@/components/games/GameDetailModal';
 
-/**
- * The Queue page is the game being played and its queue: useNowPlaying's state
- * and actions under their own names (so a search for one finds every use),
- * plus what only this page adds.
- */
+/** useNowPlaying's names kept as they are, so a search for one finds every use. */
 export function useQueuePage() {
   const { user, authResolved } = useAuth();
   const userId = user?.id ?? null;
@@ -21,8 +17,7 @@ export function useQueuePage() {
   const manualGames = useManualGameActions(userId);
   const dialogFor = useGameDialog(userId);
 
-  // The queued game whose details are open; read from the queue each render so
-  // hours saved in the dialog show straight away.
+  // Read from the queue each render so hours saved in the dialog show at once.
   const [openedId, setOpenedId] = useState<number | null>(null);
   const openedItem = nowPlaying.queue.find((q) => q.game_id === openedId);
   const opened = openedItem && fromQueueItem(openedItem);
@@ -51,7 +46,7 @@ export function useQueuePage() {
     isLoading: !authResolved || nowPlaying.isLoading,
     /** The finish and drop dialog's `manual` prop for a game on a console. */
     manualDialogProps: manualGames.dialogProps,
-    /** A queued game's detail dialog: its props, or null when it's closed. */
+    /** Null when it's closed. */
     gameDialog,
     openGame: setOpenedId,
   };

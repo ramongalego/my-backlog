@@ -29,7 +29,6 @@ interface UseDiaryReturn {
   /** The year shown (kept in the URL), or ALL_YEARS; a year with no entries is every year. */
   selectedYear: string;
   setSelectedYear: (year: string) => void;
-  /** The entries as the page lays them out, for that year. */
   timeline: ReturnType<typeof diaryTimeline<DiaryEntry>>;
 }
 
@@ -112,8 +111,6 @@ export function useDiaryPage(): UseDiaryReturn {
     onClose: () => setOpened(null),
     onConfirm: (status: GameStatus, date: string, notes: string, rating: number | null) =>
       diaryMutation.mutate({ gameId: opened.id, status, date, notes, rating }),
-    // Playing it again while another game is being played: Undo puts it back
-    // as finished, with its date, rating and notes.
     ...dialogFor(opened, {
       status: 'finished',
       from: {

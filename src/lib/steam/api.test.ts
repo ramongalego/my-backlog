@@ -8,7 +8,6 @@ afterAll(() => {
   global.fetch = originalFetch;
 });
 
-/** Steam answering GetOwnedGames with `response`. */
 function steamAnswers(response: unknown, status = 200) {
   global.fetch = jest.fn(
     async () => new Response(JSON.stringify({ response }), { status }),

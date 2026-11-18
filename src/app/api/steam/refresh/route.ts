@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
     return jsonError('Unauthorized', 401);
   }
 
-  // Rate limiting per user (not IP) — this is an authenticated endpoint
   const rateLimitResult = await checkSharedRateLimit(
     `steam-refresh:${user.id}`,
     RATE_LIMITS.steamRefresh,
@@ -34,7 +33,6 @@ export async function POST(request: NextRequest) {
     return rateLimited(rateLimitResult);
   }
 
-  // Get user's Steam ID from profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('steam_id, steam_username, steam_avatar')
@@ -44,9 +42,9 @@ export async function POST(request: NextRequest) {
   // Without Steam there's no library to sync, but the games added by hand
   // still get their review and critic scores refreshed below.
   let result: LibrarySyncResult = { newGames: 0, updatedPlaytime: 0, updatedGames: 0 };
-  // Steam shared no library: the profile's game details are private.
+  // Steam shares no library while the profile's game details are private.
   let steamPrivate = false;
-  // The Steam name and picture, when they've changed on Steam since saved.
+  // Set only when the Steam name or picture changed since they were saved.
   let steamProfile: SteamIdentity | null = null;
   if (profile?.steam_id) {
     let apiKey: string;
@@ -76,13 +74,9 @@ export async function POST(request: NextRequest) {
       return jsonError('Steam API failed', 502);
     }
 
-    // Steam took seconds to answer, and the account may have been disconnected
-    // (or switched to another Steam account) meanwhile: then this library is no
-    // longer the player's, and importing it would put it back.
-    // A read that fails says nothing either way: the client answers with an
-    // error rather than throwing, and taking that for a disconnect would delete
-    // the whole library over a timeout. So it's read a second time, and a link
-    // that still can't be read is 'unknown', never 'unlinked'.
+    // The account may have been disconnected or switched while Steam answered,
+    // and importing would put the old library back. A failed read is 'unknown',
+    // never 'unlinked', or a timeout would delete the whole library.
     const steamLink = async (): Promise<'linked' | 'unlinked' | 'unknown'> => {
       for (let attempt = 1; attempt <= 2; attempt++) {
         const { data, error } = await supabase
@@ -107,9 +101,8 @@ export async function POST(request: NextRequest) {
       return jsonError('Failed to update library', 500);
     }
 
-    // Disconnected while the games were being written: take them out again, as
-    // the disconnect meant to. Only when a read showed it: if the link can't be
-    // read, the games stay and the refresh carries on as for a linked account.
+    // Disconnected while the games were written: take them out, as the
+    // disconnect meant to. A link that can't be read leaves them.
     if ((await steamLink()) === 'unlinked') {
       await clearLibrary(supabase, user.id).catch((error) =>
         console.error('Clearing a library imported after disconnecting failed:', error),
@@ -126,15 +119,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Review and critic scores drift slowly, and checking them costs a Steam
-  // call per 50 games and an IGDB call per 500, so the app asks for them about
-  // once a day ({ reviews: false } skips them). The same Steam calls bring
-  // each game's current header art, which Steam swaps for launches and events. A failure here shouldn't fail
-  // the refresh, since the library itself is already up to date.
-  // Games added by hand have their time to beat looked up again in the same
-  // pass: the ones without one, and recent releases, whose time is still
-  // moving (see recheckManualHours).
-  // No body, or a body that isn't an object (`null`), means the default.
+  // Scores, art and manual games' time to beat cost a Steam call per 50 games
+  // and an IGDB call per 500, so the app asks about once a day ({ reviews:
+  // false } skips them). Their failure doesn't fail the refresh.
+  // No body, or one that isn't an object (`null`), means the default.
   const sent: unknown = await request.json().catch(() => null);
   const body: { reviews?: unknown } = sent && typeof sent === 'object' ? sent : {};
   let updatedStoreData = 0;

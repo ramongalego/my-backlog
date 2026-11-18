@@ -21,7 +21,7 @@ interface ArtGame extends GameArtColumns {
 const ART_GAME_COLUMNS =
   'id, name, source, app_id, steam_app_id, release_date, header_image, art_chosen, default_header_image';
 
-/** What the choices are found by, and the art the game has without one. */
+/** `original` is the art the game has without a choice. */
 interface ArtSubject {
   name: string;
   release_date: string | null;
@@ -32,10 +32,8 @@ interface ArtSubject {
 }
 
 /**
- * The art a player can choose for a game: SteamGridDB's wide images for it,
- * and the art it has without a choice (`original`). For one of their games
- * (`?gameId=`), or one they're adding (`?igdbId=`), whose pick is saved with
- * the game when it's added.
+ * For one of the player's games (`?gameId=`) or one being added (`?igdbId=`),
+ * whose pick is saved with the game when it's added.
  */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();

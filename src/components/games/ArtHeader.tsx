@@ -4,9 +4,8 @@ import { GameArt } from '@/components/games/GameArt';
 import { COVER_ASPECT } from '@/components/games/CoverArt';
 
 /**
- * A game's art across the top of a dialog (or a card), whole at the cover
- * ratio so logos aren't cut off, with its name over a gradient at the bottom.
- * `bleed` runs it to the dialog's edges, past the Modal's padding.
+ * Whole at the cover ratio so logos aren't cut off. `bleed` runs it to the
+ * dialog's edges, past the Modal's padding.
  */
 export function ArtHeader({
   src,
@@ -24,7 +23,6 @@ export function ArtHeader({
 }: {
   src: string | null | undefined;
   title: string;
-  /** Under the name, e.g. the genres. */
   subtitle?: ReactNode;
   as?: 'h1' | 'h2';
   bleed?: boolean;
@@ -33,10 +31,7 @@ export function ArtHeader({
   preload?: boolean;
   /** On the art itself, e.g. the reveal when a pick lands. */
   artClassName?: string;
-  /**
-   * New art is on its way (a pick being previewed): a small spinner over the
-   * art that's there, which stays until the new one replaces it.
-   */
+  /** A previewed pick is loading: a spinner over the current art until the new one replaces it. */
   artPending?: boolean;
   /** The art has loaded, or couldn't be. */
   onArtSettled?: () => void;

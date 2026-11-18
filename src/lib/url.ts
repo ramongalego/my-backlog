@@ -1,7 +1,6 @@
 /**
- * The site's public address: the one Vercel gives the production deployment,
- * or, anywhere else (local development), the address it's deployed at. There
- * is no domain of its own yet; when there is, it goes here.
+ * Anywhere but Vercel's production deployment (local development too), the
+ * production address. A domain of its own, when there is one, goes here.
  */
 export function getBaseUrl(): string {
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {

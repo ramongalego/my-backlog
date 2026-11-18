@@ -2,12 +2,9 @@ import { STATUS_STYLE } from './status-style';
 import type { GameStatus } from './status';
 
 /**
- * The accessible name of the control that opens a game, wherever the game is
- * listed (a card, a list row). It includes the badges shown with it, so it
- * matches what's on screen (WCAG 2.5.3, label in name), e.g. "Open details
- * for Celeste, Finished 9/10" or "Open details for Hades, Queued, PS5, Out
- * Nov 5". The order is the order on screen: a name only matches what's shown
- * if the words run the same way.
+ * Includes the badges shown with the game, in on-screen order, so the name
+ * matches what's shown (WCAG 2.5.3, label in name): "Open details for Celeste,
+ * Finished 9/10".
  */
 export function openGameLabel(
   game: { name: string; status: GameStatus; rating: number | null },
@@ -41,9 +38,8 @@ export function openGameLabel(
 }
 
 /**
- * A name with the tags drawn along the bottom of the game's art added, in the
- * order they're drawn (ArtTags): the console, then "Out Nov 5". For a control
- * that contains the art, so its name has every word shown inside it.
+ * For a control that contains the art, so its name has every word drawn on it,
+ * in the order ArtTags draws them.
  */
 export function withArtTags(
   label: string,
@@ -52,19 +48,12 @@ export function withArtTags(
   return [label, console, release].filter(Boolean).join(', ');
 }
 
-/**
- * What a game's button is called in Select mode, where it ticks the game
- * rather than opening it ("Select Hades"), or why it can't be ticked.
- */
+/** In Select mode the button ticks the game ("Select Hades"), or says why it can't. */
 export function selectGameLabel(
   game: { name: string; status: GameStatus; rating: number | null },
   selection: { selectable: boolean },
   queued?: boolean,
-  /**
-   * On a card, where the button holds the art: what's drawn on it, so the
-   * name has those words too (as openGameLabel's does). A list row's button
-   * is only the game's name.
-   */
+  /** What's drawn on the art, where the button holds it (a card, not a list row). */
   art?: { showStatus?: boolean; console?: string | null; release?: string | null },
 ): string {
   if (!selection.selectable) {

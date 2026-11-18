@@ -53,7 +53,6 @@ it('gives the library in four figures, each with its label', () => {
   const read = within(strip)
     .getAllByRole('definition')
     .map((figure) => figure.textContent);
-  // Thousands are grouped.
   expect(read).toEqual(['217', '44', '1', '1,065']);
   expect(within(strip).getByText('Games')).toBeInTheDocument();
   expect(within(strip).getByText('Finished')).toBeInTheDocument();

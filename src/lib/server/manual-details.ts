@@ -1,6 +1,5 @@
 import 'server-only';
-// Server only: the details of a game being added by hand, as the Add game
-// dialog previews them and the add route saves them.
+// For the Add game dialog's preview and the add route.
 import { getGameDetails, type ManualGameDetails } from '@/lib/igdb/api';
 import { getStoreItemInfo } from '@/lib/steam/store-api';
 import { findWideArt } from '@/lib/steamgriddb/api';
@@ -8,7 +7,7 @@ import { parseReleaseDate } from '@/lib/games/release-date';
 import { calculateBayesianScore } from '@/lib/games/scoring';
 
 interface AddableGameDetails extends ManualGameDetails {
-  /** The game's Steam app id when Steam sells it too, for its reviews. */
+  /** When Steam sells it too, for its reviews. */
   steam_app_id: number | null;
   steam_review_score: number | null;
   steam_review_count: number | null;
@@ -16,17 +15,9 @@ interface AddableGameDetails extends ManualGameDetails {
 }
 
 /**
- * IGDB's details, with Steam's art, tags and reviews when Steam also sells the
- * game: its store header is made for the shape every game image here uses,
- * its tags are the words the rest of the library is described in (JRPG,
- * Roguelite...), and its reviews show next to the critic score. Games Steam
- * doesn't sell keep IGDB's, and so does any game when Steam doesn't answer.
- *
- * The art, best first: Steam's header; IGDB's key art (the publisher's own);
- * SteamGridDB's community art in the same shape, often with the logo; then
- * whatever else IGDB has (plain artwork, a screenshot, the box art). Older and
- * many Nintendo games have no key art on IGDB, and its fallbacks for them are
- * a generic image or the box art over a blur.
+ * Steam's art and tags win when Steam sells the game: its header fits the
+ * shape every game image uses, and its tags match the rest of the library.
+ * Art, best first: Steam's, IGDB's key art, SteamGridDB's, then IGDB's rest.
  */
 export async function getAddableGameDetails(igdbId: number): Promise<AddableGameDetails | null> {
   const details = await getGameDetails(igdbId);

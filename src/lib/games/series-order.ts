@@ -2,11 +2,9 @@ import { parseReleaseDate } from './release-date';
 import { EDITION_WORDS, editionKey } from './similarity';
 
 /**
- * Series you can start anywhere, so an older entry waiting in the backlog
- * never holds a newer one back: each game tells its own story, or (The
- * Witcher) nearly everyone starts with the later one. Direct sequels inside
- * them (Final Fantasy VII Rebirth) are left to the model, which knows the
- * stories. Titles are compared without "the", so entries leave it out too.
+ * Series you can start anywhere, so an older entry never holds a newer one
+ * back. Direct sequels in them (Final Fantasy VII Rebirth) are left to the
+ * model. Titles are compared without "the", so entries leave it out too.
  */
 const STANDALONE_SERIES = [
   'final fantasy',
@@ -58,11 +56,8 @@ interface Entry {
 }
 
 /**
- * Splits a title into words, entry numbers and subtitle separators:
- * "Hyperdimension Neptunia Re;Birth2 Sisters Generation" gives the words
- * "hyperdimension neptunia re birth", the number 2, then "sisters generation".
- * Edition words are dropped and four-digit numbers stay words, so "Metro 2033"
- * isn't entry 2033 and "Football Manager 2023" isn't a sequel of 2022.
+ * Four-digit numbers stay words, so "Metro 2033" isn't entry 2033 and
+ * "Football Manager 2023" isn't a sequel of 2022.
  */
 function tokenize(name: string): Token[] {
   const text = name
@@ -105,11 +100,8 @@ function parse(game: { name: string; release_date?: string | null }): Entry {
 }
 
 /**
- * Whether two titles are entries of one series: the same words once numbers
- * are dropped ("Trails of Cold Steel" and "Trails of Cold Steel IV"), or one
- * title continuing the other after a number or subtitle ("The Witcher" and
- * "The Witcher 3: Wild Hunt"). "Portal Knights" isn't a Portal game: nothing
- * marks where Portal ends.
+ * One title must continue the other after a number or subtitle ("The Witcher 3:
+ * Wild Hunt"), so "Portal Knights" isn't a Portal game.
  */
 function sameSeries(a: Entry, b: Entry) {
   if (a.edition === b.edition || !a.words.length || !b.words.length) return false;
@@ -127,7 +119,7 @@ function sameSeries(a: Entry, b: Entry) {
   return false;
 }
 
-/** Whether `a` comes before `b`: by entry number when either has one, else by release date. */
+/** By entry number when either has one, else by release date. */
 function comesBefore(a: Entry, b: Entry) {
   if (a.number !== null || b.number !== null) {
     const na = a.number ?? 1;
@@ -143,10 +135,8 @@ function isStandalone(entry: Entry) {
 }
 
 /**
- * Drops games whose earlier entry is also in the list, so a sequel isn't
- * suggested while the game before it is still waiting in the backlog
- * (Neptunia Re;Birth2 while Re;Birth1 is unplayed). Series whose entries
- * stand alone are left alone.
+ * So a sequel isn't suggested while the game before it is still in the
+ * backlog. STANDALONE_SERIES are left alone.
  */
 export function withoutLaterEntries<T extends { name: string; release_date?: string | null }>(
   games: T[],

@@ -1,9 +1,5 @@
 import { Check } from 'lucide-react';
 
-/**
- * The tick on a game's art in Select mode: an empty ring until the game is
- * picked, then a light disc with a check. Position it with `className`.
- */
 export function SelectTick({
   selected,
   className = '',

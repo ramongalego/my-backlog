@@ -22,7 +22,6 @@ export default function OgImage() {
         position: 'relative',
       }}
     >
-      {/* Gradient accent */}
       <div
         style={{
           position: 'absolute',
@@ -35,7 +34,6 @@ export default function OgImage() {
         }}
       />
 
-      {/* Icon + Title */}
       <div
         style={{
           display: 'flex',
@@ -48,7 +46,6 @@ export default function OgImage() {
         <span style={{ fontSize: '64px', fontWeight: 800 }}>MyBacklog</span>
       </div>
 
-      {/* Tagline */}
       <div
         style={{
           fontSize: '28px',
@@ -60,7 +57,6 @@ export default function OgImage() {
         Play the games you already own
       </div>
 
-      {/* Feature pills */}
       <div
         style={{
           display: 'flex',
@@ -85,7 +81,6 @@ export default function OgImage() {
         ))}
       </div>
 
-      {/* Domain */}
       <div
         style={{
           position: 'absolute',

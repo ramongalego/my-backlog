@@ -6,10 +6,8 @@ import { useLibraryRefresh } from '@/hooks/useLibraryRefresh';
 import { useSyncContext } from './SyncProvider';
 
 /**
- * Keeps playtime current on every signed-in page: refreshes from Steam when
- * the app opens and whenever the tab comes back into view, if the last
- * refresh is older than LIBRARY_REFRESH_STALE_MS. So a game played with the
- * app left open in a tab shows its new hours when you come back to it.
+ * On every signed-in page: refreshes from Steam on open and when the tab comes
+ * back into view, once LIBRARY_REFRESH_STALE_MS has passed since the last one.
  */
 export function PlaytimeRefresher() {
   const { user, authResolved } = useAuth();

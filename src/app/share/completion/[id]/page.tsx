@@ -56,7 +56,6 @@ export default async function SharedCompletionPage({ params }: PageProps) {
     <div className="min-h-screen bg-ink-950">
       <main id="main-content" className="pt-16 pb-16">
         <div className="max-w-lg mx-auto px-6">
-          {/* The same summary the player saw when they finished it. */}
           <Panel padding="none" className="overflow-hidden">
             <ArtHeader
               src={data.header_image}
@@ -79,7 +78,6 @@ export default async function SharedCompletionPage({ params }: PageProps) {
             </div>
           </Panel>
 
-          {/* CTA */}
           <div className="text-center mt-8">
             <Link
               href="/"

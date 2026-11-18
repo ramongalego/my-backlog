@@ -33,11 +33,7 @@ interface AddGameValues {
   art?: string;
 }
 
-/**
- * The game a dialog is about: what its header and summary row show. These are
- * the games table's column names, so a page passes the row it already has;
- * anything the row doesn't carry is simply not shown.
- */
+/** Named as the games table's columns, so a page passes its row; a missing field isn't shown. */
 interface DialogGame {
   name: string;
   header_image: string | null;
@@ -46,21 +42,17 @@ interface DialogGame {
   steam_review_count?: number | null;
   critic_score?: number | null;
   critic_count?: number | null;
-  /** Minutes played. Also what the hours field starts from, for a console game. */
+  /** Minutes. Also the hours field's starting value, for a console game. */
   playtime_forever?: number;
   last_played_at?: string | null;
   deck_compat?: number | null;
-  /** An unreleased game gets "Out Nov 5" in the header, beside its console. */
   release_date?: string | null;
 }
 
 interface GameDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /**
-   * Called on close when what opened the dialog is gone (its row left the
-   * list with the change just saved), for the page to put focus somewhere.
-   */
+  /** On close, when the opener is gone (its row left the list on save): the page places focus. */
   onOpenerGone?: () => void;
   onConfirm?: (
     status: GameStatus,
@@ -69,67 +61,54 @@ interface GameDetailModalProps {
     rating: number | null,
   ) => void | Promise<void>;
   game: DialogGame;
-  /** The header art isn't known yet: a placeholder holds its place. */
+  /** Art not known yet: the header shows a placeholder. */
   headerLoading?: boolean;
   initialStatus: GameStatus;
   /**
-   * The status the game has now, when the dialog opens on another one: Home's
-   * and the Queue's Finish and Drop open it on Finished or Dropped, and that
-   * is already a change to save.
+   * The game's current status, when the dialog opens on another: Finish and
+   * Drop open it on Finished or Dropped, which is already a change to save.
    */
   savedStatus?: GameStatus;
-  /**
-   * The only statuses to offer, when it isn't all of them: Home's and the
-   * Queue's Finish and Drop save one of those two and nothing else.
-   */
+  /** Limits the statuses offered: Finish and Drop offer only those two. */
   statuses?: readonly GameStatus[];
   initialDate?: string | null;
   initialNotes?: string | null;
   initialRating?: number | null;
   /**
-   * Another game is being played (`name`). Playing then means playing this
-   * one instead (`onPlayInstead`: the other goes to the top of the queue),
-   * offered beside Queue; without `onPlayInstead`, Playing isn't offered.
+   * Another game is playing (`name`). With `onPlayInstead`, Playing switches to this
+   * one and sends the other to the top of the queue; without it, Playing isn't offered.
    */
   playing?: { name: string | null; onPlayInstead?: () => void | Promise<void> };
   onAddToQueue?: () => void;
   /**
-   * The game is in the playing queue: its status shows as Queue, and choosing
-   * Backlog takes it off the queue (`onRemove`). Any other status takes it off
-   * too, as the server does for every status but backlog.
+   * Shows the status as Queue, and Backlog calls `onRemove`. Any other status
+   * leaves the queue too, as the server does for every status but backlog.
    */
   queued?: { onRemove: () => void };
-  /**
-   * The game's art can be chosen: a button on the art swaps the dialog's
-   * fields for the images to pick from. A library game's pick is saved there
-   * and then; a game being added (`igdbId`) takes its pick with it (`onAdd`).
-   */
+  /** A library game's pick saves at once; a game being added passes its pick to `onAdd`. */
   art?: ArtGame;
-  /** For games added by hand: their console, hours played you enter, and removal. */
+  /** Games added by hand, or Steam games moved to a console. */
   manual?: {
     platform: string | null;
     onSaveHours: (hours: number) => void | Promise<void>;
-    /** Games added by hand can be removed... */
+    /** Only for games added by hand. */
     onDelete?: () => void;
-    /** ...and Steam games moved to a console can go back to Steam. */
+    /** Only for Steam games moved to a console. */
     onMoveToSteam?: () => void;
   };
-  /**
-   * Adding a game that isn't in the library yet: the same dialog, with the
-   * console to pick and "Add to library" as its action.
-   */
+  /** Set while adding a game that isn't in the library yet. */
   adding?: {
-    /** The game's consoles, best guess first (orderConsoles). */
+    /** Best guess first (orderConsoles). */
     consoles: string[];
     defaultConsole: string;
     year: number | null;
-    /** The game being played now, which starting this one would replace. */
+    /** The game playing now, which starting this one replaces. */
     playingName: string | null;
-    /** You own it on Steam: adding moves that entry to the console instead. */
+    /** Owned on Steam: adding moves that entry to the picked console. */
     fromSteam?: boolean;
     /** The console that Steam entry was already moved to, if any. */
     movedTo?: string | null;
-    /** You added it by hand on this console: adding it again moves it, or just saves. */
+    /** Added by hand on this console: adding again moves it, or just saves. */
     inLibraryOn?: string | null;
     /** Throws with a message to show if the game can't be added. */
     onAdd: (values: AddGameValues) => Promise<void>;
@@ -137,21 +116,16 @@ interface GameDetailModalProps {
   };
 }
 
-/** The dialog's props as a page's hook hands them over: everything but whether it's open. */
 export type GameDialogProps = Omit<GameDetailModalProps, 'isOpen'>;
 
-/**
- * What the last save attempt found. A field's error carries the value it was
- * about, so it shows until that field is changed.
- */
+/** A field's error keeps the value it was about, so it shows until that field changes. */
 interface SaveState {
   rating?: { error: string; value: string };
   hours?: { error: string; value: string };
-  /** The save itself failed (e.g. a game that couldn't be added). */
+  /** The save itself failed, not a field. */
   error?: string;
 }
 
-/** The save button's label: what saving will do, and that it's doing it. */
 function submitLabel(adding: GameDetailModalProps['adding'], platform: string, saving: boolean) {
   const moving =
     !!adding &&
@@ -193,12 +167,10 @@ export function GameDetailModal({
   const [date, setDate] = useState(initialDate || todayIso());
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [rating, setRating] = useState<string>(initialRating != null ? String(initialRating) : '');
-  // The fields as the dialog opened, to tell whether anything has changed.
   const [opened] = useState({ status, hasDate, date, notes, rating });
 
-  // Choose art: the picker takes the fields' place. The header shows the pick
-  // being looked at, then the art saved here, ahead of the page's own copy of
-  // the game catching up.
+  // The header shows the pick being previewed, then the art saved here until
+  // the page's copy of the game catches up.
   const [choosingArt, setChoosingArt] = useState(false);
   const [previewArt, setPreviewArt] = useState<string | null | undefined>(undefined);
   const [savedArt, setSavedArt] = useState<string | null | undefined>(undefined);
@@ -207,14 +179,13 @@ export function GameDetailModal({
   // A pick whose image hasn't arrived in the header yet.
   const [pendingArt, setPendingArt] = useState<string | null>(null);
   const previewPick = (url: string | null) => {
-    // The same art as is showing loads nothing, so there's nothing to wait for.
+    // The art already showing loads nothing, so there'd be nothing to wait for.
     if (url !== headerArt) setPendingArt(url);
     setPreviewArt(url);
   };
   const artButton = useRef<HTMLButtonElement>(null);
   const wasChoosingArt = useRef(false);
-  // Back from the picker, whose buttons are gone: focus returns to the button
-  // that opened it.
+  // The picker's buttons go when it closes: focus returns to the button that opened it.
   useEffect(() => {
     if (wasChoosingArt.current && !choosingArt) artButton.current?.focus();
     wasChoosingArt.current = choosingArt;
@@ -231,13 +202,9 @@ export function GameDetailModal({
   const clearsReview = hadReview && (status === 'wont_play' || status === 'hidden');
   const showHours = !!manual || !!adding;
   const pickedConsole = platform.trim();
-  // Another game is being played and this one can be played instead.
   const switching = disablePlaying && !!onPlayInstead;
 
-  // Save is only offered once something it would save has changed: the
-  // status, a console game's hours, or a finished or dropped game's date,
-  // rating and notes. (Art is saved by its own picker.) Adding a game is
-  // always something to save.
+  // Art isn't counted: its picker saves it.
   const statusChanged = status !== (queued ? 'queue' : (savedStatus ?? initialStatus));
   const hoursChanged = showHours && hours !== initialHours;
   const reviewChanged =
@@ -250,15 +217,13 @@ export function GameDetailModal({
 
   function handleStatusChange(next: DetailStatus) {
     setStatus(next);
-    // Back on the status the dialog opened on: its date as it was, so going
-    // away and back is no change. A game newly finished or dropped gets
-    // today's date ticked.
+    // Back on the opening status, the date is as it was, so going away and back is no change.
     if (next === opened.status) setHasDate(opened.hasDate);
     else if (next === 'finished' || next === 'dropped') setHasDate(true);
   }
 
-  // A save on its way. The button shows it from the next redraw; this stops
-  // a second click or Enter that lands before then from saving twice.
+  // `saving` applies from the next redraw; this stops a second click or Enter
+  // before then from saving twice.
   const submitting = useRef(false);
 
   const [saveState, save, saving] = useActionState(async (): Promise<SaveState> => {
@@ -270,9 +235,8 @@ export function GameDetailModal({
   }, {});
 
   async function saveFields(): Promise<SaveState> {
-    // Check every field before saving any of them, so a bad rating can't
-    // leave the hours saved and the rest not.
-    // The whole number typed: 7.5 isn't quietly saved as 7.
+    // Every field is checked before any is saved, so a bad rating can't leave
+    // the hours saved and the rest not. Number, not parseInt: 7.5 isn't saved as 7.
     const parsedRating = showDateField && rating.trim() !== '' ? Number(rating) : null;
     const ratingError =
       parsedRating === null
@@ -306,13 +270,13 @@ export function GameDetailModal({
           date: showDateField && hasDate ? date : '',
           notes,
           rating: parsedRating,
-          // Picked here and not saved yet. The game's own art is no pick.
+          // The game's own art isn't a pick.
           art: savedArt && savedArt !== game.header_image ? savedArt : undefined,
         });
       } else {
         if (manual && hours !== initialHours) await manual.onSaveHours(parsedHours);
         if (status === 'queue') {
-          // Already queued: nothing to change but the hours above.
+          // Already queued: only the hours above change.
           if (!queued) onAddToQueue?.();
         } else if (status === 'backlog' && queued) {
           queued.onRemove();
@@ -332,11 +296,8 @@ export function GameDetailModal({
   const ratingError = saveState.rating?.value === rating ? saveState.rating.error : null;
   const hoursError = saveState.hours?.value === hours ? saveState.hours.error : null;
 
-  // When adding, the status buttons are the five places a new game can go;
-  // otherwise every status (or the ones the page asked for). While another game is being played, Playing
-  // switches to this one (`switching`), and Queue sits beside it. A queued
-  // game always has Queue, as its status. A game that isn't out yet can't be
-  // started (unless it's the one playing).
+  // A queued game always has Queue, as its status. An unreleased game can't be
+  // started unless it's the one playing.
   const canStart = isReleased(releaseDate) || initialStatus === 'playing';
   const statusOptions: DetailStatus[] = (
     adding
@@ -384,7 +345,7 @@ export function GameDetailModal({
                 type="button"
                 onClick={() => setChoosingArt(true)}
                 aria-label="Choose art"
-                // The close button's twin: a dark disc, so it reads over any art.
+                // Matches the close button: a dark disc reads over any art.
                 className="p-2 rounded-full bg-ink-950/60 text-ink-200 hover:bg-ink-950/85 hover:text-ink-50 transition-colors cursor-pointer"
               >
                 <ImageIcon className="w-5 h-5" aria-hidden="true" />

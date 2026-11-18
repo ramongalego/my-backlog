@@ -10,16 +10,11 @@ export const metadata: Metadata = {
 };
 
 const contact = <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
-/** A link to another company's site. */
 const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
 
-// Every statement here describes what the code does. When what's stored, who
-// it's sent to or how it's deleted changes, this page changes with it, and so
-// does its date.
-//
-// Written plainly, as a person would write it: whole sentences, one idea
-// each, said once. No bold lead-ins on list items, no colons setting up a
-// list, no sentence fragments, straight quotes as in the rest of the app.
+// Every statement here describes what the code does: a change to what's
+// stored, who it's sent to or how it's deleted changes this page and its date.
+// Whole sentences, one idea each, straight quotes; no bold lead-ins or fragments.
 const sections: LegalSection[] = [
   {
     id: 'information-we-collect',

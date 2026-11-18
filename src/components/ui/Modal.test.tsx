@@ -1,9 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Modal } from '@/components/ui/Modal';
 
-// The trap moves focus itself only where Tab would leave the dialog; anywhere
-// else the browser's own Tab does the work. So these press Tab at the edges
-// and check whether the dialog stepped in.
+// The trap only steps in where Tab would leave the dialog, so these press Tab
+// at the edges and check whether it did.
 const tab = (shiftKey = false) => fireEvent.keyDown(document, { key: 'Tab', shiftKey });
 
 const renderDialog = (saveDisabled = false) =>
@@ -41,8 +40,6 @@ it('treats the last enabled control as the last stop when the one after it is di
   renderDialog(true);
   screen.getByRole('button', { name: 'Cancel' }).focus();
 
-  // Before, the disabled Save counted as the last stop, so Tab from Cancel
-  // was left to the browser, which moved on to the page behind.
   tab();
 
   expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();

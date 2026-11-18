@@ -13,21 +13,17 @@ import { removeGameFromPools, type CarouselPools } from './useCarouselPools';
 import type { DiaryEntry, GameItem } from '@/lib/data/loaders';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
-// Games removed but not deleted yet, while their Undo is on offer. Several can
-// be pending at once (removing a few in a row), and each one's delete refreshes
-// the lists from the server, which still has the others: they're kept hidden
-// through that, and through another game's Undo.
+// Removed games waiting out their Undo. Each delete refreshes from the server,
+// which still has the others, so they're kept hidden through that.
 const pendingRemovals = new Set<number>();
 // A delete went through (or a game came back) while others were pending:
 // refresh once they're done.
 let refreshWhenSettled = false;
-// Games deleted since the last refresh. A page opened while their Undo was on
-// offer loaded the library from the server with them still in it, and the
-// games list isn't refetched after an edit, so they're taken off it again.
+// A page loaded mid-Undo has these in its list, and the games list isn't
+// refetched after an edit, so they're taken off it again.
 const deletedIds = new Set<number>();
-// The deletes still waiting on their toast. The toast pauses while the page is
-// in the background and is gone with the page, so a removal would quietly come
-// back after a reload or on leaving: these are sent as the page goes instead.
+// The toast pauses in a background tab and dies with the page, so a removal
+// would quietly come back: these are sent as the page goes instead.
 const unsentDeletes = new Map<number, (keepalive: boolean) => void>();
 // Games on their way back to Steam: one request each, however fast it's pressed.
 const movingToSteam = new Set<number>();
@@ -40,10 +36,8 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * The list with one item put back where it was in an earlier copy of it:
- * after the nearest item before it that's still there, else before the nearest
- * one after it. Everything else stays as it is now, so other removals and
- * Undos in between are kept.
+ * Puts one item back after its nearest earlier neighbor still there, else
+ * before the nearest later one, so other removals and Undos since are kept.
  */
 function reinsert<T>(
   current: T[] | undefined,
@@ -69,9 +63,8 @@ function reinsert<T>(
 }
 
 /**
- * Editing and removing games added by hand, and Steam games moved to a
- * console, from any page's detail dialog. Edits change the cached library in
- * place, like status changes do, so nothing is downloaded again for one edit.
+ * For games added by hand and Steam games moved to a console. Edits patch the
+ * cached library in place, so one edit downloads nothing again.
  */
 export function useManualGameActions(userId: string | null) {
   const queryClient = useQueryClient();
@@ -97,7 +90,6 @@ export function useManualGameActions(userId: string | null) {
     queryClient.setQueryData(keys.playing, snapshot.playing);
   };
 
-  /** Takes every game waiting to be deleted off every cached list. */
   const hidePendingRemovals = () => {
     const kept = (id: number) => !pendingRemovals.has(id);
     queryClient.setQueryData<GameItem[]>(keys.list, (old) => old?.filter((g) => kept(g.id)));
@@ -112,11 +104,8 @@ export function useManualGameActions(userId: string | null) {
     );
   };
 
-  /**
-   * After a removal is sent or undone: once none are pending, refresh what
-   * depends on the library (counts, carousels, Stats) if a delete went through.
-   * Refreshing sooner would bring back the games still waiting to be deleted.
-   */
+  // Refreshing while removals are pending would bring back the games still
+  // waiting to be deleted.
   const settleRemovals = () => {
     if (pendingRemovals.size > 0 || !refreshWhenSettled) return;
     refreshWhenSettled = false;
@@ -129,9 +118,8 @@ export function useManualGameActions(userId: string | null) {
     statusChanged();
   };
 
-  // Every cached copy of the game gets the new hours, so a summary or card
-  // built from any of them (finishing it from Now Playing) shows them. More
-  // hours also makes today its last-played date, as the server records.
+  // Every cached copy gets the hours, so a summary built from any of them shows
+  // them. More hours makes today the last-played date, as on the server.
   const saveHours = async (gameId: number, hours: number) => {
     const minutes = Math.round(hours * 60);
     const now = new Date().toISOString();
@@ -159,21 +147,17 @@ export function useManualGameActions(userId: string | null) {
     statusChanged();
   };
 
-  /**
-   * Takes the game off every list straight away and offers Undo; the delete
-   * itself is sent when the toast goes, so undoing needs no re-adding.
-   */
+  /** The delete is sent when the Undo toast goes, so undoing needs no re-adding. */
   const remove = (gameId: number, name: string) => {
-    // Already removed and waiting on its Undo (Remove pressed twice). A second
-    // toast would delete the game when it went, even after the first's Undo.
+    // Remove pressed twice: a second toast would delete the game when it went,
+    // even after the first's Undo.
     if (pendingRemovals.has(gameId)) return;
     const snapshot = snapshotCaches();
     pendingRemovals.add(gameId);
     hidePendingRemovals();
 
-    // Putting it back (Undo, or a failed delete) returns just this game to
-    // each list, where it was. The carousels are rebuilt once no removals are
-    // pending, so they don't bring back games still waiting to be deleted.
+    // Just this game, in each list. Carousels wait until no removals are
+    // pending, or they'd bring back games still waiting to be deleted.
     const putBack = () => {
       pendingRemovals.delete(gameId);
       refreshWhenSettled = true;
@@ -191,14 +175,14 @@ export function useManualGameActions(userId: string | null) {
     };
 
     let settled = false;
-    // The Undo toast, once it's up (send is defined first, for its callbacks).
+    // Filled in once the toast is up; `send` is defined first, for its callbacks.
     const undoToast: { id?: string | number } = {};
     const send = async (keepalive = false) => {
       if (settled) return;
       settled = true;
       unsentDeletes.delete(gameId);
-      // Sent as the page went into the background: the toast is paused, not
-      // gone, so it's taken down. Its Undo could no longer undo anything.
+      // A background tab pauses the toast rather than closing it, and its Undo
+      // could no longer undo anything.
       if (keepalive) toast.dismiss(undoToast.id);
       try {
         await deleteManualGame(gameId, keepalive);
@@ -208,7 +192,6 @@ export function useManualGameActions(userId: string | null) {
       } catch (err) {
         console.error(err);
         putBack();
-        // The games list isn't refetched on its own, so it's put back here too.
         toast.error(`Couldn't remove ${name}. It's back in your library.`);
       }
       settleRemovals();
@@ -218,7 +201,7 @@ export function useManualGameActions(userId: string | null) {
       action: {
         label: 'Undo',
         onClick: () => {
-          // Already sent (see above): there's nothing left to undo.
+          // Already sent: nothing left to undo.
           if (settled) return;
           settled = true;
           unsentDeletes.delete(gameId);

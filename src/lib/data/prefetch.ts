@@ -14,27 +14,17 @@ import type { queries } from './queries';
 /** One of the shared queries (lib/data/queries), so it matches what the hooks read. */
 type PrefetchQuery = ReturnType<(typeof queries)[keyof typeof queries]> & {
   /**
-   * Don't hold the page for this one: the page renders straight away in its
-   * loading state and the data streams into the same response when it's
-   * ready. For queries that grow with the library, like the games list.
+   * Don't hold the page: it renders in its loading state and the data streams
+   * into the same response. For queries that grow with the library.
    */
   stream?: boolean;
 };
 
 /**
- * Runs the given queries on the server for the signed-in user and returns the
- * dehydrated cache for <PrefetchedQueries>, so client hooks render with data
- * immediately instead of fetching after hydration. A failed query is simply
- * left out and the client fetches it as before.
- *
- * Render it BEFORE the view, as a sibling, not around it:
- *
- *   <><PrefetchedQueries state={state} /><View /></>
- *
- * A query the browser already has (from an earlier page) is hydrated in an
- * effect, and a child's effects run before its parent's. Wrapped around the
- * view, the view's queries subscribed first, found their cached copy stale and
- * fetched it again, although the fresh data had just arrived with the page.
+ * For <PrefetchedQueries>; a failed query is left out and the client fetches it.
+ * Render that BEFORE the view as a sibling, not around it: a query the browser
+ * already has is hydrated in an effect, and a child's effects run first, so the
+ * view would find its copy stale and fetch again data that just arrived.
  */
 export async function prefetchForUser(
   build: (supabase: SupabaseClient, userId: string) => PrefetchQuery[],

@@ -4,10 +4,8 @@ import { CrashScreen } from '@/components/layout/CrashScreen';
 import './globals.css';
 
 /**
- * The last resort: the root layout itself failed, so this page stands in for
- * it and has to bring its own <html>, <body> and styles. It draws the same
- * screen as any other crash (the app's own typeface isn't loaded here, so the
- * text falls back to the system's).
+ * The root layout itself failed, so this brings its own <html>, <body> and
+ * styles; the app's typeface isn't loaded here.
  */
 export default function GlobalError(props: { error: unknown; retry: () => void }) {
   return (

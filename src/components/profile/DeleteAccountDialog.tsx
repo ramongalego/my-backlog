@@ -13,12 +13,9 @@ import type { AccountResult, DeleteProof } from '@/lib/client/account';
 import type { ApiResult } from '@/lib/client/request';
 
 /**
- * Deletes the account, for good: says what goes, offers a copy of it to
- * download first, and asks for the password before doing it. An account
- * with no password (made with Google or Discord) types the word "delete"
- * instead, so it still can't be done by a slip. Once it's done
- * the page leaves for the landing page (the page's part), so this stays
- * saying "Deleting…" until then.
+ * An account with no password (Google or Discord) types the word "delete" instead,
+ * so it can't be done by a slip. On success the page leaves for the landing page,
+ * so this keeps saying "Deleting…" until then.
  */
 export function DeleteAccountDialog({
   hasPassword,
@@ -26,7 +23,6 @@ export function DeleteAccountDialog({
   onDownloadData,
   onClose,
 }: {
-  /** Whether there's a password to ask for. */
   hasPassword: boolean;
   onDelete: (proof: DeleteProof) => Promise<AccountResult>;
   /** Left out when there's nothing to copy (no games): the offer isn't made. */

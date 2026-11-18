@@ -75,9 +75,8 @@ export function SuggestionModal({
     );
   });
 
-  // What the player does with a pick is kept with it (game_picks): once for
-  // each pick, however many times its buttons are pressed. `pick` is the
-  // pick on screen (the suggestion, or the game chance landed on).
+  // A pick's outcome is kept once (game_picks), however many times its buttons
+  // are pressed. `pick` is the suggestion or the game chance landed on.
   const answered = useRef(new WeakSet<object>());
   const answer = (
     pick: object,
@@ -88,7 +87,6 @@ export function SuggestionModal({
     answered.current.add(pick);
     void Promise.resolve(pickId).then((id) => recordPickOutcome(id, outcome));
   };
-  // The main button starts the game, or queues it while another is played.
   const taken: PickOutcome = mode === 'queue' ? 'queued' : 'played';
 
   const handlePick = () => {
@@ -98,7 +96,6 @@ export function SuggestionModal({
       onClose();
     }
   };
-  // With a game playing, a pick can be played now instead of queued.
   const offersPlayNow = mode === 'queue' && !!onPlayNow;
   const playNow = (
     pick: object,
@@ -110,17 +107,17 @@ export function SuggestionModal({
     onClose();
   };
 
-  // For the queue, instead of answering the questions: a random backlog game,
-  // rolled for like Home's Random, then yours to add or roll again.
+  // For the queue, instead of the questions: a random backlog game, rolled like
+  // Home's Random.
   const [chance, setChance] = useState<Chance | null>(null);
   const [rolls, setRolls] = useState(0);
-  // A roll on its way: its buttons are still there until the next redraw, and
-  // a second press before then would roll, and keep, a second pick.
+  // Its buttons stay until the next redraw, so a second press before then
+  // would roll, and keep, a second pick.
   const rolling = useRef(false);
-  // The games chance has landed on this opening, for which pick each one is.
+  // Games landed on this opening, numbering each pick's attempt.
   const landed = useRef(0);
-  // Whether the picker is still open: a roll that ends after it closed landed
-  // on a game nobody saw, which is no pick.
+  // A roll that ends after the picker closed landed on a game nobody saw,
+  // which is no pick.
   const open = useRef(true);
   useEffect(() => {
     open.current = true;

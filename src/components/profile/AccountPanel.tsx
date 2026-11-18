@@ -13,7 +13,6 @@ import type { ExportFormat } from '@/lib/account/export';
 import type { SignInProvider } from '@/lib/account/sign-in';
 import type { ApiResult } from '@/lib/client/request';
 
-/** Opens the dialog that changes a setting. */
 const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
   <Button
     variant="ghost"
@@ -28,15 +27,8 @@ const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
 );
 
 /**
- * How the player signs in, and Steam: the private side of the profile, which
- * only they will see. Email and password are changed from here, each in a
- * dialog; an email waiting for its confirmation link is shown under the one
- * in use. An account made with Google or Discord has no password: its
- * Password row says so and offers Set password (`NoPasswordRow`), and its
- * email can't be changed until it has one, since the password is what
- * confirms that. Steam is connected or disconnected here. Export data (a menu of
- * the two files a copy of your data comes as) and Delete account are behind
- * "More options", so they aren't always on show.
+ * The private side of the profile. An account made with Google or Discord has no
+ * password, so its email can't change until it sets one: the password confirms it.
  */
 export function AccountPanel({
   email,
@@ -53,15 +45,11 @@ export function AccountPanel({
 }: {
   onDisconnectSteam: () => void;
   onDeleteAccount: () => void;
-  /**
-   * Fetches a copy of the player's data, as a file the browser saves. Left
-   * out when there's nothing to copy (no games): Export data isn't shown.
-   */
+  /** Left out when there are no games to copy, which hides Export data. */
   onDownloadData?: (format: ExportFormat) => Promise<ApiResult>;
   email: string | null;
   /** The new email, until its confirmation link is opened. */
   pendingEmail?: string | null;
-  /** How the account signs in: with a password, with Google or Discord, or both. */
   signIn: { hasPassword: boolean; providers: readonly SignInProvider[] };
   onChangeEmail: () => void;
   onChangePassword: () => void;

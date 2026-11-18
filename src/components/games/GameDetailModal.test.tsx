@@ -919,12 +919,10 @@ describe('GameDetailModal as a form', () => {
       it('adds the game with the art picked for it', async () => {
         render(<GameDetailModal {...addingProps} />);
         fireEvent.click(artButton()!);
-        // The picker takes the place of the fields and "Not this game?".
         expect(screen.getByTestId('art-picker')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Not this game?' })).not.toBeInTheDocument();
 
         await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Done' })));
-        // Back on the fields, the header showing the pick.
         expect(document.querySelector('img')).toHaveAttribute('src', PICK);
         expect(screen.getByRole('button', { name: 'Not this game?' })).toBeInTheDocument();
 
@@ -962,7 +960,6 @@ describe('GameDetailModal as a form', () => {
       await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus());
       fireEvent.click(artButton()!);
 
-      // The picker is there; the status fields are kept, out of sight.
       expect(screen.getByTestId('art-picker')).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Status', hidden: true })).not.toBeVisible();
       expect(artButton()).not.toBeInTheDocument();
@@ -972,8 +969,6 @@ describe('GameDetailModal as a form', () => {
         document.querySelector('img'),
       );
 
-      // Saved: the fields are back, the header keeps the new art, and focus
-      // returns to the button that opened the picker.
       await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Done' })));
       expect(screen.queryByTestId('art-picker')).not.toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Status' })).toBeVisible();

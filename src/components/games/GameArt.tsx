@@ -14,25 +14,17 @@ interface GameArtProps {
   onSettled?: () => void;
 }
 
-// How many times a picture that won't load is asked for again. Once more the
-// usual way: the app resizes each picture itself and gives up on a source that
-// takes too long, which a second ask often gets past (large art from
-// SteamGridDB, the first time it's fetched). Then straight from where it's
-// kept, full size, with no time limit. A tile that failed used to stay blank
-// until the page was reloaded.
+// Once more through the app's resizer, which gives up on slow sources (large
+// SteamGridDB art fetched for the first time), then straight from the source.
 const RETRIES = 2;
 
 /**
- * A game's art filling its (positioned) parent. Wide art is cropped to fit;
- * tall box art, for games added by hand without wide artwork, sits whole in
- * the middle over a blurred, enlarged copy of itself, so it fills the frame
- * without losing its top and bottom. Art that fails to load is tried again
- * (see RETRIES) before it's left blank.
+ * Fills its positioned parent. Tall box art sits whole over a blurred copy of
+ * itself, so it fills the frame without losing its top and bottom.
  */
 export function GameArt({ src, alt, sizes, preload, quality, onSettled }: GameArtProps) {
-  // The tries are counted for one picture: a new one starts with them unused.
-  // Not by remounting on a new `src`: the picture that's there stays until
-  // the new one has loaded (the art picker's preview counts on it).
+  // Tries are counted per `src`, not reset by remounting: the old picture stays
+  // until the new one loads (the art picker's preview counts on it).
   const [failures, setFailures] = useState({ src, tries: 0 });
   const tries = failures.src === src ? failures.tries : 0;
   const failed = () => {

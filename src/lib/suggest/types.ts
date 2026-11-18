@@ -2,8 +2,7 @@ import type { z } from 'zod';
 import type { pickOutcomeSchema, suggestRequestSchema } from '@/lib/validations/suggest';
 import type { CandidateGame, ScoredCandidate } from './shortlist';
 
-// Derived from the zod schema so the allowed values live in exactly one place.
-// (Used only in type position, so this import is erased at compile time.)
+// From the zod schema, so the allowed values live in one place.
 type SuggestRequest = z.infer<typeof suggestRequestSchema>;
 
 export type MoodType = SuggestRequest['mood'];

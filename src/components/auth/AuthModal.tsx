@@ -25,11 +25,9 @@ const TITLES: Record<AuthMode, string> = {
 function AuthModalContent({ initialMode, onLoginSuccess }: AuthModalContentProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
-  // The dialog opens with focus on its title, not in a field: nothing is
-  // outlined, no keyboard or saved-password list opens over the form before
-  // a way to sign in is chosen, and Tab goes on to the first button.
-  // Switching form removes the link that was pressed, and focus with it: it
-  // moves to the new form's title the same way.
+  // Focus starts on the title, not a field, so no keyboard or saved-password
+  // list opens before a way to sign in is chosen. Switching form removes the
+  // pressed link, so focus moves to the new form's title.
   const title = useRef<HTMLHeadingElement>(null);
   const shown = useRef(mode);
   useEffect(() => {

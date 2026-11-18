@@ -13,23 +13,15 @@ const RADIUS = {
 };
 
 /**
- * Art that can be pressed brightens under the pointer, and that is all: no
- * icon drawn over it, nothing darkened, and its edge left as it is. Only the
- * picture brightens (not the badges on it, nor the blurred copy behind box
- * art, which is `aria-hidden`); art with no picture goes a tone lighter.
+ * Only the picture brightens: not the badges on it, nor the blurred copy behind
+ * box art (`aria-hidden`). Art with no picture goes a tone lighter.
  */
 const PRESSABLE =
   'transition-colors group-hover:bg-ink-800 [&>img:not([aria-hidden])]:transition-[filter] [&>img:not([aria-hidden])]:duration-200 group-hover:[&>img:not([aria-hidden])]:brightness-115';
 
 /**
- * A game's header image at the shared ratio, with a hairline inner edge so
- * dark art doesn't melt into the page. Size it with a width class; height
- * follows from the ratio. `children` render on top (badges);
- * `platform`, for games added by hand, puts the console in the bottom-left, and
- * `releaseDate` an "Out Nov 5" tag beside it for a game that isn't out yet.
- * Where the art can be pressed (it opens its game, or picks it), put the
- * `group` class on what is pressed and set `interactive`: the art brightens
- * while the pointer is on it (see PRESSABLE).
+ * The inner hairline keeps dark art from melting into the page. Size it with a
+ * width class. With `interactive`, put `group` on what is pressed.
  */
 export function CoverArt({
   src,
@@ -54,7 +46,7 @@ export function CoverArt({
   className?: string;
   /** The platform tag drawn on the art (platformTag). */
   platform?: string | null;
-  /** The game's release date: an unreleased game gets "Out Nov 5" beside the console. */
+  /** An unreleased game gets "Out Nov 5" beside the console. */
   releaseDate?: string | null;
   children?: ReactNode;
 }) {
@@ -79,7 +71,6 @@ export function CoverArt({
   );
 }
 
-/** Small cover for list rows (queue, diary, stats): 64px wide on phones, 112px from `sm`. */
 const THUMB_WIDTH = 'w-16 sm:w-28';
 
 export function CoverThumb({
@@ -92,7 +83,7 @@ export function CoverThumb({
   src: string | null | undefined;
   alt: string;
   className?: string;
-  /** As CoverArt's: the art can be pressed, and brightens under the pointer. */
+  /** As CoverArt's. */
   interactive?: boolean;
   children?: ReactNode;
 }) {

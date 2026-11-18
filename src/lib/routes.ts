@@ -1,7 +1,5 @@
-// Which pages are for signed-in players. Shared by the proxy, which turns
-// signed-out visitors away from them, the browser, which leaves them when it
-// finds its session is gone, and robots.txt, which keeps search engines out
-// of them. Safe to import anywhere.
+// Shared by the proxy (turns signed-out visitors away), the browser (leaves when
+// its session is gone) and robots.txt (keeps search engines out).
 
 export const PROTECTED_ROUTES = [
   '/home',
@@ -12,7 +10,6 @@ export const PROTECTED_ROUTES = [
   '/profile',
 ];
 
-/** Whether a path is one of the signed-in pages (or under one). */
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 }

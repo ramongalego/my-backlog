@@ -49,7 +49,7 @@ describe('isMetadataFresh', () => {
     const now = new Date('2026-06-15T12:00:00Z');
     jest.setSystemTime(now);
 
-    // 89 days, 23 hours, 59 minutes ago - should be fresh
+    // 89 days, 23 hours, 59 minutes ago.
     const justUnder = new Date('2026-03-17T12:01:00Z').toISOString();
     expect(isMetadataFresh(justUnder)).toBe(true);
   });
@@ -79,7 +79,7 @@ describe('calculateBayesianScore', () => {
   it('should weight heavily toward global average (70) for games with 1 review', () => {
     // With 1 review at 100%: (1/101)*100 + (100/101)*70 ≈ 70.3
     const score = calculateBayesianScore(100, 1);
-    expect(score).toBe(70); // Rounds to 70
+    expect(score).toBe(70);
   });
 
   it('should be balanced for games with 100 reviews', () => {
@@ -114,7 +114,6 @@ describe('calculateBayesianScore', () => {
   });
 
   it('should handle exact global average score', () => {
-    // When actual score equals global average, result should be 70 regardless of count
     const score1 = calculateBayesianScore(70, 1);
     const score2 = calculateBayesianScore(70, 100);
     const score3 = calculateBayesianScore(70, 10000);
@@ -132,7 +131,6 @@ describe('calculateBayesianScore', () => {
   });
 
   it('should increase weighted score as review count increases for high-rated games', () => {
-    // A 90% game should have higher weighted score with more reviews
     const fewReviews = calculateBayesianScore(90, 10);
     const manyReviews = calculateBayesianScore(90, 1000);
 
@@ -140,7 +138,6 @@ describe('calculateBayesianScore', () => {
   });
 
   it('should decrease weighted score as review count increases for low-rated games', () => {
-    // A 30% game should have lower weighted score with more reviews
     const fewReviews = calculateBayesianScore(30, 10);
     const manyReviews = calculateBayesianScore(30, 1000);
 

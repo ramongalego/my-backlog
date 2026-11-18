@@ -31,10 +31,8 @@ const COPY: Record<InsightTone, { offer: string; action: string; writing: string
 };
 
 /**
- * What your library says about you: a written player profile, or the same
- * facts as a roast. Stats only shows it once the library says enough
- * (hasEnoughForProfile), and each tone is only fetched when the player asks
- * for it.
+ * Stats shows it only once hasEnoughForProfile, and each tone is fetched only
+ * when the player asks for it.
  */
 export function PlayerProfile({ userId }: { userId: string }) {
   const [tone, setTone] = useState<InsightTone>('profile');
@@ -45,8 +43,7 @@ export function PlayerProfile({ userId }: { userId: string }) {
   const { data, isError, error, refetch, isRefetching } = useQuery({
     queryKey: queryKeys.games.insight(userId, tone),
     queryFn: () => fetchInsight(tone),
-    // Until asked, nothing is fetched; one asked for earlier in this visit
-    // is still in the cache and shows straight away.
+    // One asked for earlier in this visit is still cached and shows at once.
     enabled: asked[tone],
     staleTime: 5 * 60 * 1000,
     // A failure is shown with Try again; retrying by itself would spend more

@@ -15,7 +15,6 @@ it('says how many milliseconds ago the change was made', () => {
   jest.advanceTimersByTime(90_000);
   expect(since()).toBe(90_000);
 
-  // Asked again later, it still counts from when the change was made.
   jest.advanceTimersByTime(1_500);
   expect(since()).toBe(91_500);
 });

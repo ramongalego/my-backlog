@@ -7,12 +7,7 @@ export const dynamic = 'force-dynamic';
 /** How far ahead the file says it's good for. The standard asks for under a year. */
 const VALID_FOR_MS = 180 * 24 * 60 * 60 * 1000;
 
-/**
- * security.txt (RFC 9116), at the address security researchers look for it:
- * where to report a vulnerability. Contact and Expires are the two lines the
- * standard requires. Expires is worked out when the file is asked for, so it
- * never goes stale the way a file written once would.
- */
+/** RFC 9116, which requires Contact and Expires. */
 export function GET() {
   const lines = [
     `Contact: mailto:${CONTACT_EMAIL}`,

@@ -19,10 +19,7 @@ const open = () =>
       onClose={onClose}
     />,
   );
-/**
- * Opened, and past the moment the dialog puts focus on its first field (a
- * frame later): a test that then moves focus itself isn't overtaken by it.
- */
+/** Waits out the dialog's own focus move (a frame later), so it can't overtake a test's. */
 const openAndSettle = async () => {
   open();
   await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
@@ -100,7 +97,6 @@ it("shows the server's refusal on the field it's about, and stays open", async (
   expect(screen.getByText("That isn't your current password")).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
 
-  // Typing again clears what was said about the last try.
   type('Current password', 'Old-pass2');
   expect(screen.queryByText("That isn't your current password")).not.toBeInTheDocument();
 });

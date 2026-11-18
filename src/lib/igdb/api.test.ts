@@ -32,7 +32,7 @@ beforeEach(() => {
 const mkGame = (extra: Record<string, unknown> = {}) => ({
   id: 7,
   name: 'Xenoblade Chronicles X',
-  first_release_date: 1742515200, // 21 Mar 2025
+  first_release_date: 1742515200, // Mar 21, 2025
   platforms: [{ name: 'Nintendo Switch' }],
   cover: { image_id: 'co1' },
   artworks: [{ image_id: 'ar1', width: 1920, height: 1080, artwork_type: 2 }],
@@ -61,10 +61,8 @@ describe('getGameDetails', () => {
       description: 'Explore Mira.',
       release_date: 'Mar 21, 2025',
       header_image: 'https://images.igdb.com/igdb/image/upload/t_1080p/ar1.jpg',
-      // Its Steam listing, to recognize it in your Steam library.
       steamAppIds: [2369900],
       hasKeyArt: true,
-      // Critics' average, rounded, and how many reviews it's from.
       critic_score: 82,
       critic_count: 9,
     });

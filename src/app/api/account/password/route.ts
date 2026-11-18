@@ -6,11 +6,8 @@ import { checkPassword, passwordCheckRefusal, passwordRefusal } from '@/lib/serv
 import { changePasswordBodySchema } from '@/lib/validations/auth';
 
 /**
- * Changes the signed-in player's password, from their profile. The current
- * password is asked for first, so someone at a computer left signed in can't
- * take the account over, and tries are limited across every server, since
- * each one is a guess at it. Every other device is signed out afterwards; this
- * one stays signed in.
+ * The current password is asked first, so a computer left signed in can't be
+ * taken over. Every other device is signed out afterwards.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -49,9 +46,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The current password goes to Supabase too: with "Require current password
-  // when updating" on (Auth settings), it refuses a new password without it.
-  // The check above stays, as it works whichever way that setting is.
+  // Sent to Supabase too, which refuses without it when "Require current
+  // password when updating" is on; the check above works either way.
   const { error } = await supabase.auth.updateUser({
     password: newPassword,
     current_password: currentPassword,

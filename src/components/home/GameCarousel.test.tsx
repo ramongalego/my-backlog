@@ -3,7 +3,7 @@ import { GameCarousel } from '@/components/home/GameCarousel';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
 import type { LibraryPlatforms } from '@/lib/games/consoles';
 
-// What the library is played on: not known yet (as before) unless a test sets it.
+// The library's platforms: unknown unless a test sets them.
 let mockLibrary: LibraryPlatforms | null = null;
 jest.mock('@/hooks/useLibraryMeta', () => ({
   ...jest.requireActual('@/hooks/useLibraryMeta'),

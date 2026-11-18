@@ -110,7 +110,7 @@ describe('syncOwnedGames and last played', () => {
     ]);
 
     const result = await syncOwnedGames(client, 'user', [
-      // Same hours, but now we know when it was last played (first refresh after the change).
+      // Same hours, with a last-played date that wasn't saved yet.
       steamGame(1, 600, '2021-06-29T13:02:00Z'),
       // Played more since.
       steamGame(2, 300, '2026-10-24T20:00:00Z'),

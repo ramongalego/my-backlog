@@ -37,7 +37,6 @@ it("turns into a field holding the chosen name, with the account's as its placeh
   expect(field()).toHaveValue('Ramon');
   expect(field()).toHaveAttribute('placeholder', 'Ankrath');
   expect(field()).toHaveFocus();
-  // The hint takes the place of the line under the name.
   expect(screen.getByText('Leave it empty to use Ankrath')).toBeInTheDocument();
   expect(screen.queryByText('Member since January 2026')).not.toBeInTheDocument();
 });

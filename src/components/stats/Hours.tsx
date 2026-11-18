@@ -6,7 +6,6 @@ import type { Stats } from '@/lib/stats/compute';
 import { count, plural } from '@/components/stats/format';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
-/** Where the hours went: the total, then the games that took most of them. */
 export function Hours({ stats }: { stats: Stats }) {
   const { totalPlaytimeHours: hours, totalPlaytimeDays: days, mostPlayed } = stats;
   if (hours === 0) return null;

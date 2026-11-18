@@ -4,7 +4,7 @@ import type { GameItem } from '@/lib/data/loaders';
 import { ratingOf } from '@/lib/games/rating';
 import type { LibraryPlatforms } from '@/lib/games/consoles';
 
-// What the library is played on: not known yet (as before) unless a test sets it.
+// Not known yet unless a test sets it.
 let mockLibrary: LibraryPlatforms | null = null;
 jest.mock('@/hooks/useLibraryMeta', () => ({
   ...jest.requireActual('@/hooks/useLibraryMeta'),
@@ -86,8 +86,7 @@ function setup(props: Partial<Parameters<typeof GameList>[0]> = {}) {
   return { onOpenDetail, onSortChange, row };
 }
 
-// The figures in a row's columns (from lg), each read out with what it is,
-// without the tooltip that explains it.
+// A row's column figures as read out, without their tooltips.
 const columns = (row: HTMLElement) =>
   [...row.querySelectorAll(':scope > span.text-center')].map((cell) => {
     const figure = cell.cloneNode(true) as HTMLElement;
@@ -130,7 +129,6 @@ it('lists each game with its figures in columns, read out with what they are', (
     `${shown(GAMES[0])} rating`,
     '2.2h played',
   ]);
-  // A console game says which console.
   expect(within(row('Persona 5 Royal')).getByText('PS5')).toBeInTheDocument();
 });
 

@@ -1,8 +1,5 @@
-// Client helpers for the profile's account settings: changing the password
-// and the email, deleting the account, downloading a copy of its data,
-// unlinking Steam (/api/account/…, /api/steam/disconnect), and emailing a
-// password reset link. They never throw: each says what happened, with the
-// server's message for the player and the form field it's about.
+// These never throw: each says what happened, with the server's message for the
+// player and the form field it's about.
 
 import { createClient } from '@/lib/supabase/client';
 import { exportFileName, type ExportFormat } from '@/lib/account/export';
@@ -11,7 +8,6 @@ import { saveFile } from './save-file';
 
 type AccountField = 'currentPassword' | 'password' | 'email';
 
-/** A change to the account: done, or why not. */
 export type AccountResult = ApiResult<object, AccountField>;
 
 /** A change of email, once asked for: waiting for its link, or already made. */
@@ -24,7 +20,6 @@ const FAILED = 'Something went wrong. Please try again.';
 /** Guesses at the password share one limit: five tries in 15 minutes. */
 const TOO_MANY_TRIES = 'Too many tries. Please wait 15 minutes and try again.';
 
-/** Changes the password, checking the current one first. */
 export function changePassword(
   currentPassword: string,
   newPassword: string,
@@ -35,7 +30,6 @@ export function changePassword(
   });
 }
 
-/** Asks for the email to be changed to this one, with the password to confirm it. */
 export function changeEmail(email: string, password: string): Promise<EmailChangeResult> {
   return apiRequest('/api/account/email', json('POST', { email, password }), {
     failed: FAILED,
@@ -43,13 +37,9 @@ export function changeEmail(email: string, password: string): Promise<EmailChang
   });
 }
 
-/**
- * What confirms deleting the account: its password, or for one with no
- * password (made with Google or Discord) the word it's asked to type.
- */
+/** An account with no password (made with Google or Discord) confirms with a typed word. */
 export type DeleteProof = { password: string } | { confirm: string };
 
-/** Deletes the account and everything in it, once the server has checked the proof. */
 export function deleteAccount(proof: DeleteProof): Promise<AccountResult> {
   return apiRequest('/api/account/delete', json('POST', proof), {
     failed: FAILED,
@@ -57,10 +47,6 @@ export function deleteAccount(proof: DeleteProof): Promise<AccountResult> {
   });
 }
 
-/**
- * Downloads a copy of the player's data: everything as a JSON file, or the
- * games as a CSV for a spreadsheet. The browser saves it as any download.
- */
 export async function downloadData(format: ExportFormat): Promise<ApiResult> {
   const result = await apiDownload(`/api/account/export?format=${format}`, {
     failed: "Couldn't prepare your data. Please try again.",

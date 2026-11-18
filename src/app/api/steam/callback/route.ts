@@ -33,10 +33,8 @@ export async function GET(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
   const params = request.nextUrl.searchParams;
 
-  // A library that came through goes to Home, where its import shows as it
-  // happens. Anything else goes back to the page Connect Steam was pressed on
-  // (the start kept it in a cookie), with what went wrong for that page to
-  // say. Every exit clears the one-time cookies.
+  // Success goes to Home to watch the import; anything else goes back to the
+  // page Connect Steam was pressed on, with the error for it to show.
   const from = steamReturnPath(request.cookies.get(STEAM_RETURN_COOKIE)?.value, baseUrl);
   const redirect = (error?: string, to = from) => {
     const response = NextResponse.redirect(withSteamOutcome(to, baseUrl, error));
@@ -58,10 +56,8 @@ export async function GET(request: NextRequest) {
     return redirect('steam_auth_failed');
   }
 
-  // Who it's being linked to, before anything is asked of Steam: verifying the
-  // sign-in makes this server contact Steam, and the state check above only
-  // proves the request carries a cookie matching its own URL, which any client
-  // can arrange. So that's for signed-in players only, and limited.
+  // Verifying makes this server contact Steam, and any client can pass the
+  // state check, so it's for signed-in players only, and rate limited.
   const supabase = await createClient();
   const {
     data: { user },
@@ -75,7 +71,7 @@ export async function GET(request: NextRequest) {
   const limit = await checkSharedRateLimit(`steam-link-verify:${user.id}`, RATE_LIMITS.steamLink);
   if (!limit.success) return redirect('steam_link_limited');
 
-  // Reconstruct the exact returnUrl used during auth (with state) so OpenID verification passes
+  // OpenID verification fails unless this is the exact returnUrl, state included.
   const assertion = await verifyAssertion(
     `${baseUrl}/api/steam/callback?state=${urlState}`,
     request.url,
@@ -129,12 +125,9 @@ export async function GET(request: NextRequest) {
     return redirect('profile_update_failed');
   }
 
-  // The order matters: clear, point the profile at the new account, import.
-  // Whichever step fails, the next refresh puts things right: before the
-  // profile changes it re-imports the old account's games, after it imports
-  // the new one's. Changing the profile first would leave the old games under
-  // the new account for good if clearing then failed, since the next link
-  // would see the same Steam id and never clear.
+  // Order matters: clear, repoint the profile, import; a refresh mends any
+  // failed step. Repointing first would strand the old games if clearing then
+  // failed, since the next link would see the same Steam id and never clear.
   if (switching) {
     try {
       await clearLibrary(supabase, user.id);
@@ -166,9 +159,8 @@ export async function GET(request: NextRequest) {
     return redirect('games_insert_failed');
   }
 
-  // Linked, but Steam shared no games (game details private): say so where
-  // they were, or it looks like connecting did nothing. There's no import to
-  // watch on Home.
+  // Linked, but game details are private: say so, or connecting looks like it
+  // did nothing.
   if (owned.isPrivate) return redirect('steam_private');
   return redirect(undefined, '/home');
 }

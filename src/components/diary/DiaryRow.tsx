@@ -21,23 +21,15 @@ interface DiaryRowProps {
   onSaveNotes: (gameId: number, notes: string) => void;
 }
 
-// From lg the day, rating and buttons line up with the cover, whose height
-// follows from its width at the shared 460:215 ratio (192px → 90px, 224px →
-// 105px). On phones the cover is full width above the text, so they sit on the
-// title line instead. In between (sm to lg: a phone on its side, a small
-// tablet, a folding phone open) the cover is beside the text but the hours and
-// rating stay on the title line: as columns they left the title and the note
-// about 80px.
+// From lg the day, rating and buttons line up with the cover (460:215, so
+// 192px → 90px, 224px → 105px). Below lg the hours and rating stay on the title
+// line: as columns they would leave the title and the note about 80px.
 const COVER_WIDTH = 'w-full sm:w-48 lg:w-56';
 const COVER_SIZES = '(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px';
 const COVER_HEIGHT = 'sm:min-h-[90px] lg:min-h-[105px]';
 const ALIGN_WITH_COVER = 'h-[90px] lg:h-[105px] flex items-center';
 
-/**
- * The hours a finished game took, styled to sit beside the rating: for a
- * finished game it's the number worth seeing with it. The other details are
- * in the modal.
- */
+/** Styled to sit beside the rating; the other details are in the modal. */
 function HoursPlayed({ entry, size = 'sm' }: { entry: DiaryEntry; size?: 'sm' | 'md' }) {
   if (entry.playtime_forever < 60) return null;
   return (
@@ -72,23 +64,18 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const startNote = () => setEditingNote(true);
   const edit = () => onEdit(entry.id);
   const storeUrl = steamStoreUrl(entry);
-  // The platform tag on the art, which the button's name says too.
   const tag = platformTag(entry, useLibraryPlatforms());
 
   return (
-    // content-visibility lets the browser skip laying out and drawing rows
-    // that are off screen, so a diary of hundreds of games scrolls smoothly.
-    // The intrinsic size (a row's usual height: about 19rem stacked on phones,
-    // 8rem side by side) keeps the scrollbar steady until a row is drawn.
+    // content-visibility skips off-screen rows so a long diary scrolls smoothly;
+    // the intrinsic size (a row's usual height) keeps the scrollbar steady.
     <div className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70 [content-visibility:auto] [contain-intrinsic-size:auto_19rem] sm:[contain-intrinsic-size:auto_8rem]">
-      {/* Day — desktop */}
       <div
         className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end w-6 shrink-0 text-sm text-ink-400 tabular-nums`}
       >
         {day ?? ''}
       </div>
 
-      {/* The art opens the entry, as on every other card. */}
       <button
         type="button"
         onClick={edit}
@@ -96,10 +83,9 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         className={`group ${COVER_WIDTH} shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2`}
       >
         <CoverArt src={entry.header_image} alt="" sizes={COVER_SIZES} interactive platform={tag}>
-          {/* On phones the date rides on the art. */}
           {entry.finished_at && (
-            // Drawn by CSS: the date is in the row's headings, and as text
-            // inside the button it would have to be in the button's name.
+            // Drawn by CSS: as text inside the button it would have to be in
+            // the button's name, and the row's headings already say it.
             <span
               aria-hidden="true"
               data-chip={shortDate(entry.finished_at)}
@@ -109,7 +95,6 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         </CoverArt>
       </button>
 
-      {/* Title, the note, and on phones the rating and buttons */}
       <div className={`min-w-0 flex-1 ${COVER_HEIGHT} flex flex-col sm:justify-center`}>
         <div className="flex items-start gap-2">
           {storeUrl ? (
@@ -163,7 +148,6 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
         )}
       </div>
 
-      {/* Hours played, rating and buttons, from lg */}
       <div className={`${ALIGN_WITH_COVER} hidden lg:flex justify-end shrink-0 w-28`}>
         <HoursPlayed entry={entry} size="md" />
       </div>

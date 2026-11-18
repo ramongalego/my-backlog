@@ -13,29 +13,25 @@ import { useInvalidateQueries, usePatchGamesList } from './useGameMutations';
 
 const MOVED_TOAST = 'bulk-move';
 
-/** What to tell the player when a move or its Undo couldn't be saved. */
 function whatWentWrong(err: unknown): string {
   if (err instanceof BulkMoveError) {
     if (err.status === 429) return 'Too many moves in a row. Try again in a moment.';
-    // The server's own words for a move it won't make (the game being played).
+    // A move the server won't make (the game being played), in its own words.
     if (err.status === 409 && err.message) return err.message;
   }
   return "Couldn't move those games. Please try again.";
 }
 
 /**
- * Moves several games to a status at once (Games, Select). The games change on
- * the page straight away and are saved in one request, all or none; a toast
- * says how many moved, with an Undo. The server answers a move with what each
- * game had before, and Undo sends exactly that back, so nothing the move
- * cleared (a date, a rating, notes) is lost.
+ * Saved in one request, all or none. Undo sends back what the server said each
+ * game had before, so nothing the move cleared (a date, rating, notes) is lost.
  */
 export function useBulkStatus(userId: string | null) {
   const gamesList = usePatchGamesList(userId);
   const { statusChanged } = useInvalidateQueries();
 
-  // A move in flight. The button is disabled while one is, but only from the
-  // next render: this stops a second click that lands before it.
+  // The button is disabled only from the next render: this stops a second
+  // click that lands before it.
   const moving = useRef(false);
 
   const failed = (err: unknown, previousList: ReturnType<typeof gamesList.patchMany>) => {
@@ -62,9 +58,8 @@ export function useBulkStatus(userId: string | null) {
       let undone = false;
       const since = sinceNow();
       toast(said, {
-        // The same toast each time, so a new move takes the last one's place:
-        // only the latest move can be undone. (Undoing an older one after a
-        // newer would put games back in between the two.)
+        // Only the latest move can be undone: undoing an older one after a
+        // newer would put games back in between the two.
         id: MOVED_TOAST,
         duration: UNDO_MS,
         action: {
@@ -85,9 +80,8 @@ export function useBulkStatus(userId: string | null) {
 
   return {
     /**
-     * Moves the games to the status; ones already there are left alone.
-     * `onMoved` runs once the move is saved (as its toast appears), or straight
-     * away when there was nothing to move. Not when the save fails.
+     * `onMoved` runs once the move is saved, or straight away when there was
+     * nothing to move; not when the save fails.
      */
     move: (games: BulkGame[], status: BulkStatus, onMoved?: () => void) => {
       if (moving.current) return;

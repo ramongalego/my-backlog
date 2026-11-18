@@ -1,7 +1,5 @@
-// Client helpers for Choose art (/api/games/art). They throw with the server's
-// message, which the picker shows as is.
+// These throw with the server's message, which the Choose art picker shows as is.
 
-/** An image a player can choose for a game: the art, and a small copy to pick it by. */
 interface ArtChoice {
   url: string;
   thumb: string;
@@ -22,10 +20,7 @@ async function check(res: Response): Promise<Response> {
   throw new Error(body?.error ?? 'Something went wrong. Please try again.');
 }
 
-/**
- * The game whose art is being chosen: one in the library, or one being added
- * (by its IGDB id), which has nowhere to save a pick until it's added.
- */
+/** A game being added has only its IGDB id, and nowhere to save a pick until it's added. */
 export type ArtGame = { gameId: number } | { igdbId: number };
 
 export async function fetchArtChoices(game: ArtGame): Promise<GameArtChoices> {

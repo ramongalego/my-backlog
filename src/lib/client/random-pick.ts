@@ -4,10 +4,7 @@ import { isReleased } from '@/lib/games/release-date';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import type { SuggestionResult } from '@/lib/suggest/types';
 
-/**
- * How long a random pick's roll lasts. The pick itself is all but instant;
- * the backlog flicks past this long, slowing down, so it reads as a roll.
- */
+/** The pick itself is all but instant; the backlog flicks past this long so it reads as a roll. */
 export const RANDOM_ROLL_MS = 2200;
 
 /** A randomly picked game: what the playing band and the picker's result card show. */
@@ -17,12 +14,9 @@ const RANDOM_GAME_SELECT =
   'id, app_id, source, platform, name, header_image, main_story_hours, genres, tags, steam_review_score, steam_review_count, critic_score, critic_count, playtime_forever, last_played_at';
 
 /**
- * A random game to play from the backlog: single-player, out already, with a
- * known length and barely started. Never the game you're playing (it isn't
- * backlog) or a queued one (already decided on, as Pick My Game leaves them
- * out). Lists the eligible games' ids and release dates (dates are display
- * text, so "out" can't be asked of the database), then fetches only the one
- * picked, instead of downloading them all to choose one.
+ * Single-player, out already, with a known length and barely started; never a
+ * queued game (as in Pick My Game). Release dates are display text, so "out" is
+ * checked here on ids and dates, and then only the picked game is fetched.
  */
 export async function findRandomBacklogGame(
   userId: string,

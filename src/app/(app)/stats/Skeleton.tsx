@@ -36,7 +36,6 @@ function BarListSkeleton({ rows }: { rows: number }) {
 export function StatsContentSkeleton() {
   return (
     <div className="space-y-6">
-      {/* Hours: the sentence, then the most played art (one large, four small). */}
       <div className="pb-4">
         <Skeleton className="h-8 w-full max-w-2xl" />
         <Skeleton className="h-8 w-56 mt-1" />
@@ -51,7 +50,6 @@ export function StatsContentSkeleton() {
         </div>
       </div>
 
-      {/* Backlog pace: the sentence, the hours line, then the breakdown. */}
       <PanelSkeleton className={PANEL}>
         <SectionTitleSkeleton />
         <Skeleton className="h-8 w-full max-w-xl" />
@@ -64,7 +62,6 @@ export function StatsContentSkeleton() {
         </div>
       </PanelSkeleton>
 
-      {/* Highest rated: art beside the ratings. */}
       <PanelSkeleton className={PANEL}>
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div>

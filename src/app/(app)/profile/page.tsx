@@ -4,8 +4,7 @@ import { queries } from '@/lib/data/queries';
 import ProfileView from './View';
 
 export default async function ProfilePage() {
-  // The Games page's list (the profile's figures, favorites and activity all
-  // come from it) and the game being played, for when it was started.
+  // The profile's figures, favorites and activity all come from the Games list.
   const state = await prefetchForUser((supabase, userId) => [
     // Grows with the library: stream it rather than hold the page for it.
     { ...queries.gamesList(userId, supabase), stream: true },

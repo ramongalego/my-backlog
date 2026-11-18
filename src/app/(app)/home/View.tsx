@@ -82,12 +82,11 @@ export default function HomeView() {
   };
 
   const isSteamConnected = profile?.steam_id != null;
-  // Until there are a few games to choose between, picking one has no point:
-  // Home asks for more, with a bar counting toward them. Finished and dropped
-  // games can't be picked, so they don't count.
+  // Picking needs a few games to choose between. Finished and dropped games
+  // can't be picked, so they don't count.
   const isBuildingBacklog = backlogCount < MIN_GAMES_TO_PICK && !isSyncing && !currentlyPlaying;
-  // Both picks leave queued games out, so once every backlog game is queued
-  // there's nothing left to pick, and a pick would only come back empty.
+  // Both picks leave queued games out, so with every backlog game queued a
+  // pick would come back empty.
   const pickable = backlogCount - queuedGameIds.size;
   const nothingToPick = pickable <= 0;
   // Picking for the queue needs a few games to choose between, like the band.
@@ -111,11 +110,10 @@ export default function HomeView() {
 
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col">
-      {/* Under the fixed header (h-14 / sm:h-16): the top section sits right below it. */}
+      {/* The top padding is the fixed header's height (h-14, sm:h-16). */}
       <main id="main-content" className="pt-14 sm:pt-16 pb-16 flex-1">
-        {/* The lit band: what you're playing (or picking) now, a tone above the
-            shelf of games below, so it reads as the page's subject rather than
-            the first row of the feed. */}
+        {/* A tone above the carousels, so the band reads as the page's subject
+            rather than their first row. */}
         <section className="bg-ink-900">
           <div className={`${PAGE_CONTAINER} py-8 sm:py-12`}>
             {isSyncing ? (
@@ -193,7 +191,6 @@ export default function HomeView() {
           />
         )}
 
-        {/* Game carousels */}
         {!isSyncing && carouselsLoading && <CarouselsLoadingState />}
 
         {!isSyncing && !carouselsLoading && carouselRows.length > 0 && (

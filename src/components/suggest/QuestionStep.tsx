@@ -15,9 +15,8 @@ interface QuestionStepProps<T> {
 }
 
 /**
- * A question's answers as a grid of tiles: two across for four answers, three
- * for three (rows on phones). The number keys choose too. A chosen tile turns
- * light for a moment, so the choice registers before the next question.
+ * The number keys choose too. A chosen tile shows as chosen for a moment, so the
+ * choice registers before the next question.
  */
 export function QuestionStep<T>({ options, onSelect, labelledBy }: QuestionStepProps<T>) {
   const [chosen, setChosen] = useState<T | null>(null);
@@ -31,7 +30,6 @@ export function QuestionStep<T>({ options, onSelect, labelledBy }: QuestionStepP
     timer.current = setTimeout(() => onSelect(value), CHOSEN_MS);
   };
 
-  // 1, 2, 3...: the answer with that number.
   const chooseRef = useRef(choose);
   useEffect(() => {
     chooseRef.current = choose;
@@ -49,8 +47,8 @@ export function QuestionStep<T>({ options, onSelect, labelledBy }: QuestionStepP
     return () => window.removeEventListener('keydown', onKey);
   }, [options]);
 
-  // Each question takes focus as it comes in (the last one's tiles are gone),
-  // so its name is read out and Tab starts at its first answer.
+  // The last question's tiles are gone, so focus moves here: its name is read
+  // out and Tab starts at its first answer.
   const group = useRef<HTMLDivElement>(null);
   useEffect(() => group.current?.focus({ preventScroll: true }), []);
 
@@ -71,7 +69,6 @@ export function QuestionStep<T>({ options, onSelect, labelledBy }: QuestionStepP
             key={String(option.value)}
             type="button"
             onClick={() => choose(option.value)}
-            // Answers settle in one after another, like search results.
             style={{ animationDelay: `${60 + i * 40}ms` }}
             className={`group relative flex gap-3 rounded-xl p-4 text-left transition-[background-color,opacity,scale] duration-150 cursor-pointer active:scale-[0.98] animate-result-in motion-reduce:animate-none ${
               wide ? 'flex-col' : 'items-center sm:flex-col sm:items-start'
@@ -108,7 +105,6 @@ export function QuestionStep<T>({ options, onSelect, labelledBy }: QuestionStepP
                 {option.description}
               </span>
             </span>
-            {/* Its number key, where there's a keyboard. */}
             <kbd
               className={`absolute top-3 right-3 hidden min-w-5 rounded border px-1 text-center font-sans text-xs leading-5 [@media(pointer:fine)]:sm:block ${
                 isChosen ? 'border-ink-400 text-ink-700' : 'border-ink-700 text-ink-500'

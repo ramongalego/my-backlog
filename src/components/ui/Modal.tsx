@@ -20,42 +20,35 @@ interface ModalProps {
    */
   align?: 'center' | 'top';
   /**
-   * Renders the children as they are, without the panel, title or close
-   * button, for a dialog that draws its own (the Add game quick search). It
-   * drops in from the top while the page dims.
+   * Renders the children without the panel, title or close button, for a dialog
+   * that draws its own (the Add game quick search).
    */
   bare?: boolean;
   /**
-   * Opens with focus on the title, not on a control: for a form that
-   * shouldn't open a phone's keyboard, or a saved-password list, before it's
-   * been read. Nothing is outlined, the title is read out, and Tab goes on to
-   * the first field. Without it focus starts on the control marked
-   * `data-autofocus`, or else the first one in the dialog.
+   * Opens with focus on the title, so a phone's keyboard or a saved-password list
+   * doesn't open before the form is read. Tab goes on to the first field.
    */
   startOnTitle?: boolean;
   /** Plays a bare dialog's exit; the parent unmounts it once that's done. */
   closing?: boolean;
   /**
-   * Called on close when the control that opened the dialog is no longer on
-   * the page (the dialog replaced it), so the parent can put focus on what
-   * took its place instead of letting it fall back to the page.
+   * Called on close when the dialog's opener is no longer on the page, so the
+   * parent can place focus instead of letting it fall back to the page.
    */
   onOpenerGone?: () => void;
 }
 
-// xl is a custom 34rem (544px) — a nudge wider than lg (32rem) so a 6-column
-// status grid has a little breathing room without feeling oversized.
+// xl is a nudge wider than lg (32rem), so a 6-column status grid has room.
 const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-[34rem]',
-  // For a grid of game art to pick from (the favorites picker).
+  // The favorites picker's grid of game art.
   '3xl': 'max-w-3xl',
 };
 
-// What Tab can land on. Disabled controls and hidden inputs are left out: the
-// browser skips them, so counting one as the dialog's last stop would let Tab
-// walk out of the dialog instead of wrapping to the top.
+// Disabled controls and hidden inputs are left out: the browser skips them, so
+// counting one as the last stop would let Tab walk out instead of wrapping.
 const FOCUSABLE = [
   'button:not(:disabled)',
   '[href]',
@@ -127,8 +120,6 @@ export function Modal({
     const openedByPointer = !!previousFocus && !previousFocus.matches(':focus-visible');
     document.body.style.overflow = 'hidden';
 
-    // Focus the element marked data-autofocus (e.g. a search box you'll type
-    // into straight away), or else the first focusable element in the dialog.
     const frame = requestAnimationFrame(() => {
       const dialog = dialogRef.current;
       (
@@ -201,8 +192,7 @@ export function Modal({
           {onClose && (
             <button
               onClick={onClose}
-              // A dark disc behind the X, so it reads over a game's art (most
-              // dialogs open with it across the top) as well as on the panel.
+              // The dark disc lets the X read over a game's art, which tops most dialogs.
               className="absolute top-3 right-3 p-2 rounded-full bg-ink-950/60 text-ink-200 hover:bg-ink-950/85 hover:text-ink-50 transition-colors z-10 cursor-pointer"
               aria-label="Close"
             >

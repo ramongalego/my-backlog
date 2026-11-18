@@ -11,13 +11,9 @@ import {
 import type { EnergyLevel, MoodType, SuggestionPreferences, TimeCommitment } from './types';
 
 /**
- * Scores the backlog in code and hands the model a short, shuffled list.
- *
- * Sending the whole backlog sorted by Steam score made the model pick from the
- * top of the list over and over, left the time filter to it, and buried the
- * strongest signals (a sequel to something you loved) among hundreds of lines.
- * Here the hard rules are applied exactly, the taste signals are computed from
- * your ratings, and the model only chooses between good fits and explains why.
+ * Scores the backlog in code and hands the model a short, shuffled list: given
+ * a long sorted one, it picks from the top and misses the strongest signals.
+ * The model only chooses between good fits and explains why.
  */
 
 export interface CandidateGame {
@@ -59,8 +55,7 @@ export interface ScoredCandidate<T extends CandidateGame = CandidateGame> {
   outsideTimeRange: boolean;
 }
 
-// The time ranges the wizard offers, in main-story hours. One session is the
-// same line as Home's Finish It in One Sitting.
+// In main-story hours. Short is the same line as Home's Finish It in One Sitting.
 const TIME_RANGES: Record<TimeCommitment, { min: number; max: number }> = {
   short: { min: 0, max: SHORT_GAME_MAX_HOURS },
   medium: { min: SHORT_GAME_MAX_HOURS, max: 15 },

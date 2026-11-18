@@ -37,11 +37,7 @@ async function mainStoryHours(name: string, year: number | null): Promise<number
   }
 }
 
-/**
- * Adds a game that isn't from Steam (a console game, another store) to the
- * library. Its details come from IGDB (and Steam, for games it sells too) on
- * the server, never from the request, and its time to beat from HowLongToBeat.
- */
+/** A game's details come from IGDB and Steam on the server, never from the request. */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -71,19 +67,16 @@ export async function POST(request: NextRequest) {
   }
   if (!details) return jsonError('Game not found', 404);
 
-  // A console typed under Other is saved as the app or the player already
-  // calls it, when it is one: "switch 2" and "Nintendo Switch 2" are Switch 2,
-  // and "commodore 64" is the Commodore 64 typed for another game. Otherwise
-  // the filters would list one console twice.
+  // A typed console that matches a known one ("switch 2") is saved under that
+  // name, or the filters would list one console twice.
   const typed = parsed.data.platform.replace(/\s+/g, ' ').trim();
   const platform =
     knownConsole(typed, details.platforms.map(shortPlatformName)) ??
     knownConsole(typed, await consolesInLibrary(supabase, user.id)) ??
     typed;
 
-  // Already in your Steam library: move that entry to this console rather than
-  // listing the game twice. It keeps its Steam details, history and place in
-  // the queue; the hours become the ones you enter here (Steam's are for PC).
+  // A game already in the Steam library moves to this console rather than
+  // being listed twice; its hours become the ones entered (Steam's are for PC).
   let steamGame: { id: number; name: string; status: string; platform: string | null } | null =
     null;
   if (details.steamAppIds.length) {
@@ -104,9 +97,8 @@ export async function POST(request: NextRequest) {
   if (steamGame && platform === STEAM_PLATFORM)
     return jsonError("It's already in your Steam library. Pick the console you play it on.", 400);
 
-  // Already added by hand, on this console or another: the same game is one
-  // entry, so it moves to the console you pick (an old copy on the other
-  // console isn't kept). Its hours stay unless you entered new ones.
+  // A game is one entry, so one already added by hand moves to the picked
+  // console. Its hours stay unless new ones were entered.
   let manualGame: { id: number; name: string; status: string } | null = null;
   if (!steamGame) {
     const { data, error: lookupError } = await supabase
@@ -126,9 +118,6 @@ export async function POST(request: NextRequest) {
   }
   const existing = steamGame ?? manualGame;
 
-  // A new game's art: its own, or the one picked in the dialog (kept as a
-  // choice, with its own behind it to go back to). A game already in the
-  // library keeps the art it has.
   const ownArt = {
     header_image: details.header_image,
     art_chosen: false,
@@ -142,13 +131,10 @@ export async function POST(request: NextRequest) {
     ? null
     : await mainStoryHours(details.name, releaseYear(details.release_date));
 
-  // The hours entered, for a game that otherwise keeps the ones it has.
   const enteredHours =
     hoursPlayed !== undefined ? { playtime_forever: Math.round(hoursPlayed * 60) } : {};
-  // A Steam game moved to a console before holds the console's hours and
-  // last-played date by now, not Steam's. Saving it here again (to mark it
-  // finished, say, with the hours left blank) keeps them, as for a game added
-  // by hand.
+  // A Steam game moved to a console earlier holds the console's hours and
+  // last-played date, so blank hours here keep them.
   const alreadyOnConsole = playsOnConsole(steamGame?.platform);
 
   const { data: game, error } = steamGame
@@ -161,8 +147,8 @@ export async function POST(request: NextRequest) {
                 platform,
                 igdb_id: igdbId,
                 playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
-                // Steam's last-played date is for the PC copy; the next sync
-                // after moving it back to Steam restores it.
+                // Steam's date is for the PC copy; the next sync after moving
+                // it back to Steam restores it.
                 last_played_at: null,
               },
         )
@@ -200,8 +186,7 @@ export async function POST(request: NextRequest) {
             steam_review_count: details.steam_review_count,
             steam_review_weighted: details.steam_review_weighted,
             main_story_hours: mainStory,
-            // Just looked up: a new release's time is checked again in a week
-            // (recheckManualHours). Without a time, it's tried again sooner.
+            // recheckManualHours looks again in a week, or sooner without a time.
             ...(mainStory !== null ? { hltb_checked_at: new Date().toISOString() } : {}),
             playtime_forever: Math.round((hoursPlayed ?? 0) * 60),
             metadata_synced: true,
@@ -217,14 +202,13 @@ export async function POST(request: NextRequest) {
     return jsonError('Failed to add the game', 500);
   }
 
-  // The game is in the library either way; if putting it where it was asked
-  // for fails, say so rather than reporting plain success.
+  // The game is saved either way; a status that couldn't be set is a warning,
+  // not plain success.
   const name = existing?.name ?? details.name;
   const where = existing ? `Moved to ${platform}` : 'Added to your backlog';
   let warning: string | undefined;
-  // A moved game keeps its status unless you changed it (restarting
-  // "playing" would reset when you started it); finished and dropped always
-  // save, since the dialog shows their date, notes and rating to edit.
+  // An unchanged "playing" isn't saved again, as that would reset its start
+  // date; finished and dropped always save their date, notes and rating.
   const statusChanged = !existing || existing.status !== status;
   if (
     status === 'finished' ||
@@ -232,9 +216,8 @@ export async function POST(request: NextRequest) {
     (status === 'playing' && statusChanged) ||
     (status === 'backlog' && existing && statusChanged)
   ) {
-    // The same rules as any status change: starting it pauses another playing
-    // game at the top of the queue (as switching does everywhere); finishing
-    // or dropping records date and review.
+    // Starting it pauses another playing game to the top of the queue, as
+    // switching does everywhere.
     const applied = await applyStatusChange(supabase, user.id, {
       gameId: game.id,
       status,
@@ -284,11 +267,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ id: game.id, name, warning, moved: !!existing });
 }
 
-/**
- * The consoles the player's games are on, as they were saved: what a console
- * typed by hand is matched against. A read that fails matches nothing, and
- * the console is saved as typed.
- */
+/** On a failed read it returns none, and the typed console is saved as typed. */
 async function consolesInLibrary(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,

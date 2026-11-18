@@ -13,8 +13,8 @@ let user: { id: string } | null = { id: 'user-1' };
 let steamId: string | null = '76561198000000000';
 let limited = false;
 let steamKey: string | null = 'steam-key';
-// How many of the coming profile reads fail, as a timeout or a 5xx does: the
-// client answers with an error, it doesn't throw.
+// How many coming profile reads fail, as a timeout does: with an error, not
+// a throw.
 let failingReads = 0;
 const limitKeys: string[] = [];
 
@@ -234,7 +234,6 @@ describe('when Steam is disconnected while a refresh is running', () => {
     const res = await refresh();
 
     expect(clearLibrary).toHaveBeenCalledWith(expect.anything(), 'user-1');
-    // Nothing is reported as added, and the old Steam name isn't written back.
     expect(res.body).toMatchObject({ newGames: 0 });
     expect(profileUpdates).toEqual([]);
   });

@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { ProfileSection } from './ProfileSection';
 
 /**
- * In place of the favorites row while the picks aren't known: still loading,
- * or they couldn't be loaded. Never the row itself, drawn empty: picking into
- * it would save over the favorites that didn't load.
+ * Stands in for the favorites row while the picks aren't known. Never draw the row
+ * empty instead: picking into it would save over the favorites that didn't load.
  */
 export function FavoritesUnavailable({
   failed,

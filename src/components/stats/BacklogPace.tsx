@@ -9,8 +9,7 @@ import { formatYears, plural } from '@/components/stats/format';
 import { SectionTitle } from '@/components/stats/SectionTitle';
 import { LibraryBreakdown } from '@/components/stats/LibraryBreakdown';
 
-// How soon you'd like the backlog cleared, for the hours-a-week figure, in
-// months.
+// In months.
 type ClearIn = '60' | '48' | '36' | '24' | '12' | '6';
 const CLEAR_IN: DropdownOption<ClearIn>[] = [
   { value: '60', label: '5 years' },
@@ -31,10 +30,6 @@ function defaultClearIn(yearsAtPace: number | null): ClearIn {
   return CLEAR_IN.find((option) => Number(option.value) < yearsAtPace * 12)?.value ?? '6';
 }
 
-/**
- * How long the backlog would take at your recent finishing rate, what it would
- * take to clear it sooner, and the library it sits in.
- */
 export function BacklogPace({ stats }: { stats: Stats }) {
   const { backlog, finishedLastYear, estimatedBacklogHours } = stats;
   const [clearIn, setClearIn] = useState<ClearIn>(() =>

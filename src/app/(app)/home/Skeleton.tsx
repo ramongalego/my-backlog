@@ -14,28 +14,19 @@ import { queryKeys } from '@/lib/query-keys';
 import { MIN_GAMES_TO_PICK, type LibraryMeta } from '@/lib/data/loaders';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
-// Skeletons for the home dashboard. They use the same sections, padding and
-// tile sizes as HomeView and GameCarousel so the page doesn't shift on load.
+// Same sections, padding and tile sizes as HomeView and GameCarousel, so the
+// page doesn't shift on load.
 
-/** Which of Home's bands to draw, and what goes around it. */
 interface HomeShape {
-  /** A game being played, picking one, or building a backlog first. */
   band: 'playing' | 'picker' | 'building';
-  /**
-   * A game is queued: the Up next strip's thumbnail. Without a game being
-   * played, the strip only shows when one is queued.
-   */
+  /** Without a game being played, the Up next strip only shows when one is queued. */
   queued: boolean;
-  /** Not on Steam: the band's line about connecting it. */
+  /** False draws the band's line about connecting Steam. */
   steamConnected: boolean;
-  /** How many carousel rows to hold space for. */
   carouselRows: number;
 }
 
-/**
- * The usual case for a returning player, so it's the one that doesn't jump
- * when nothing is known yet: a game being played, one queued after it.
- */
+/** The usual case for a returning player, so the one that doesn't jump when nothing is cached. */
 export const PLAYING_SHAPE: HomeShape = {
   band: 'playing',
   queued: true,
@@ -43,11 +34,6 @@ export const PLAYING_SHAPE: HomeShape = {
   carouselRows: 2,
 };
 
-/**
- * Full home skeleton: the band in the shape Home will have (see HomeLoading,
- * which works it out from what's already known), the Up next strip under a
- * game being played, and the carousels.
- */
 function LoadingState({ shape = PLAYING_SHAPE }: { shape?: HomeShape }) {
   return (
     <div className="min-h-screen bg-ink-950 flex flex-col" role="status" aria-busy="true">
@@ -72,11 +58,7 @@ function LoadingState({ shape = PLAYING_SHAPE }: { shape?: HomeShape }) {
   );
 }
 
-/**
- * Mirrors the bands without a game, laid out like the playing band: picking
- * one (PickNext: the backlog wall, then the question) or building a backlog
- * first (BuildBacklog: its three slots, then the count).
- */
+/** Mirrors PickNext and BuildBacklog, the bands without a game. */
 function TextBandLoadingState({ progress, steamNote }: { progress: boolean; steamNote: boolean }) {
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
@@ -91,7 +73,6 @@ function TextBandLoadingState({ progress, steamNote }: { progress: boolean; stea
       )}
       <div className="max-w-xl">
         <Skeleton className="h-8 sm:h-9 lg:h-10 w-3/4" />
-        {/* Two or three lines of text-base. */}
         <div className="mt-3 space-y-2 py-1">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
@@ -108,11 +89,7 @@ function TextBandLoadingState({ progress, steamNote }: { progress: boolean; stea
   );
 }
 
-/**
- * Mirrors GameCarousel: the title, then a row of cards at the carousel's own
- * widths (a page plus the peeking card under the fade). No arrows, since the
- * carousel only shows them on hover.
- */
+/** Mirrors GameCarousel. No arrows, since the carousel only shows them on hover. */
 export function CarouselsLoadingState({ rows = 2 }: { rows?: number }) {
   return (
     <section className={`${PAGE_CONTAINER} mt-12 sm:mt-14 space-y-16`}>
@@ -140,10 +117,6 @@ export function CarouselsLoadingState({ rows = 2 }: { rows?: number }) {
   );
 }
 
-/**
- * Mirrors the Up next strip under the band: the next queued game (or the line
- * saying the queue is empty) and the Pick button.
- */
 function UpNextLoadingState({ queued }: { queued: boolean }) {
   return (
     <div
@@ -165,7 +138,7 @@ function UpNextLoadingState({ queued }: { queued: boolean }) {
   );
 }
 
-/** Mirrors CurrentlyPlaying while the now-playing game is being resolved. */
+/** Mirrors CurrentlyPlaying. */
 export function StatusLoadingState() {
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
@@ -184,7 +157,7 @@ export function StatusLoadingState() {
   );
 }
 
-/** The first cached value under a key prefix (one signed-in user per cache). */
+/** The first match is enough: a cache only ever holds one signed-in user. */
 function cached<T>(queryClient: QueryClient, queryKey: readonly unknown[]): T | undefined {
   return queryClient
     .getQueriesData<T>({ queryKey })
@@ -192,11 +165,7 @@ function cached<T>(queryClient: QueryClient, queryKey: readonly unknown[]): T | 
     .find((data) => data !== undefined);
 }
 
-/**
- * The shape Home will have, from what the app already knows (an earlier page
- * this visit loaded the game being played, the queue, the library's counts).
- * Knowing nothing, the usual case: a game being played.
- */
+/** Works the shape out from what earlier pages this visit already cached. */
 export function homeShape(queryClient: QueryClient): HomeShape {
   const playing = cached<GameWithImage | null>(queryClient, [...queryKeys.games.all, 'playing']);
   if (playing === undefined) return PLAYING_SHAPE;
@@ -210,7 +179,6 @@ export function homeShape(queryClient: QueryClient): HomeShape {
   if (playing) {
     return { ...PLAYING_SHAPE, queued: queue ? queue.length > 0 : true, steamConnected };
   }
-  // With nothing playing, a queued game still shows under the band, to start.
   const queued = !!queue?.length;
 
   const meta = cached<LibraryMeta>(queryClient, [...queryKeys.library.all, 'meta']);
@@ -226,7 +194,6 @@ export function homeShape(queryClient: QueryClient): HomeShape {
   return { band: 'picker', queued, steamConnected, carouselRows: 2 };
 }
 
-/** Home's skeleton, in the shape the page is about to have. */
 export function HomeLoading() {
   const queryClient = useQueryClient();
   return <LoadingState shape={homeShape(queryClient)} />;

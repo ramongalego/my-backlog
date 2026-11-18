@@ -9,11 +9,9 @@ import type { SuggestionPreferences } from '@/lib/suggest/types';
 import { AnswerLine } from './AnswerLine';
 
 /**
- * While a game is picked: art from your backlog flicks past in the frame the
- * picked game will land in, like shuffling through the shelf. Without art to
- * show (or with reduced motion), a spinner. `roll` is a random pick: the art
- * slows to a stop over the roll's set length. `opening`: straight from the
- * questions, the frame opens out from their header to the art's full height.
+ * A spinner without two covers to flick through, or with reduced motion.
+ * `roll`: the art slows to a stop over RANDOM_ROLL_MS. `opening`: straight from
+ * the questions, the frame opens out from their header.
  */
 export function SuggestionLoading({
   covers = [],

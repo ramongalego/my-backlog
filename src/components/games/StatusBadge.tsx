@@ -1,11 +1,7 @@
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import type { GameStatus } from '@/lib/games/status';
 
-/**
- * Small status chip for game art and lists. Playing is solid accent so the
- * game you're on stands out; other statuses are colored text on a dark chip.
- * Backlog is the default state, so pass `showBacklog` only where it isn't implied.
- */
+/** Backlog is the default state, so pass `showBacklog` only where it isn't implied. */
 export function StatusBadge({
   status,
   showBacklog = false,

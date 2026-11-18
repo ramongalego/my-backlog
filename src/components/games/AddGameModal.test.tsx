@@ -81,13 +81,12 @@ it('logs a game you already finished, with its date and rating', async () => {
   await search('fire emblem');
   expect(searchGames).toHaveBeenCalledTimes(1);
 
-  // Arrow keys move through the results; Enter picks.
   const input = screen.getByRole('combobox');
   fireEvent.keyDown(input, { key: 'ArrowDown' });
   fireEvent.keyDown(input, { key: 'ArrowUp' });
   fireEvent.keyDown(input, { key: 'Enter' });
 
-  // The same detail dialog every game uses, with the game's only console picked.
+  // The game's only console is picked.
   expect(screen.getByRole('heading', { name: "Fire Emblem: Fortune's Weave" })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Switch 2' })).toHaveAttribute('aria-pressed', 'true');
 

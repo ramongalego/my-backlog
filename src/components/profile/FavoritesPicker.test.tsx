@@ -202,7 +202,6 @@ it('says what a search found, since focus stays in the field', () => {
   open();
   const search = screen.getByRole('textbox', { name: 'Search your games' });
   const said = () => document.querySelector('[aria-live="polite"].sr-only');
-  // Nothing to say until something is searched for.
   expect(said()).toBeEmptyDOMElement();
 
   fireEvent.change(search, { target: { value: 'pers' } });

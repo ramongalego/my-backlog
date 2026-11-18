@@ -10,9 +10,8 @@ import { CoverShelf } from '@/components/suggest/CoverShelf';
 const WALL_COVERS = 16;
 
 /**
- * The art for the band's wall: a game from each of Home's rows in turn, so it
- * shows the whole backlog rather than one kind of game. Not shuffled, so the
- * server and the browser draw the same wall.
+ * A game from each of Home's rows in turn, so the wall shows the whole backlog.
+ * Not shuffled, so the server and the browser draw the same wall.
  */
 export function wallCovers(rows: { header_image: string | null }[][]): string[] {
   const covers = new Set<string>();
@@ -30,22 +29,13 @@ interface PickNextProps {
   backlogCount: number;
   onPick: () => void;
   onRandom: () => void;
-  /**
-   * Every backlog game is already queued, so there's nothing to pick from
-   * (both picks leave queued games out): point at the queue and at adding
-   * more instead of offering picks that would come back empty.
-   */
+  /** Every backlog game is queued, and both picks leave queued games out. */
   allQueued?: { onOpenQueue: () => void; onAddGame: () => void };
   /** Shown under the buttons, e.g. the nudge to connect Steam. */
   children?: React.ReactNode;
 }
 
-/**
- * Home's band while nothing is playing, laid out like the playing band: your
- * backlog as a tilted wall of art where the game will be, and the question
- * beside it. Random shuffles through that same frame (`RandomRoll`), and the
- * game it lands on takes its place.
- */
+/** Home's band while nothing is playing; `RandomRoll` shuffles through the same frame. */
 export function PickNext({
   covers,
   backlogCount,
@@ -56,8 +46,7 @@ export function PickNext({
 }: PickNextProps) {
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
-      {/* The art opens Pick My Game too; the button beside it is the one to
-          reach by keyboard and screen reader. */}
+      {/* The button beside it is the one to reach by keyboard and screen reader. */}
       <button
         type="button"
         onClick={allQueued ? allQueued.onOpenQueue : onPick}

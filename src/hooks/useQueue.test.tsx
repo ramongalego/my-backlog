@@ -53,10 +53,7 @@ function setup() {
 const shown = (result: { current: { queue: QueueItem[] } }) =>
   result.current.queue.map((q) => q.game_id);
 
-/**
- * Stops the clock (the timers stay real), so a test can let an exact time
- * pass between a removal and its Undo.
- */
+/** Stops Date.now (timers stay real), so a test can pass an exact time before Undo. */
 let clock: jest.SpyInstance | undefined;
 function stopClock() {
   let now = Date.parse('2026-11-17T12:00:00Z');
@@ -102,7 +99,6 @@ it('keeps games removed in quick succession off the list while they are saved on
   const seen: number[][] = [];
   const record = () => seen.push(shown(result));
 
-  // Three removals before the first is saved: all three leave at once.
   act(() => {
     result.current.remove(2);
     result.current.remove(3);
@@ -111,9 +107,6 @@ it('keeps games removed in quick succession off the list while they are saved on
   await waitFor(() => expect(shown(result)).toEqual([1]));
   record();
 
-  // They're saved in turn. After each, the list on screen still has only
-  // game 1: reading the queue back before the last is saved would bring the
-  // ones still waiting back for a moment.
   for (const gameId of [2, 3, 4]) {
     await waitFor(() => expect(saves.some((s) => s.gameId === gameId)).toBe(true));
     await act(async () => {
@@ -124,7 +117,6 @@ it('keeps games removed in quick succession off the list while they are saved on
   }
 
   expect(seen).toEqual([[1], [1], [1], [1]]);
-  // Read once on load, and once more after the last removal.
   await waitFor(() => expect(loadQueue).toHaveBeenCalledTimes(2));
   expect(shown(result)).toEqual([1]);
 });
@@ -164,7 +156,7 @@ it('puts a removed game back once, however many times Undo is pressed', async ()
 
   await waitFor(() => expect(addToQueue).toHaveBeenCalled());
   expect(addToQueue).toHaveBeenCalledTimes(1);
-  // Sent as an Undo: with how long ago the game was taken off, for the history.
+  // An Undo says how long ago the game was taken off.
   expect(addToQueue).toHaveBeenCalledWith(4, expect.any(Number));
 });
 
@@ -175,8 +167,7 @@ it('tells the server how long the Undo waited: the time since the removal was sa
 
   act(() => result.current.remove(2));
   await waitFor(() => expect(saves).toHaveLength(1));
-  // The save itself takes a while: the Undo is timed from when it's done,
-  // as the toast appears.
+  // The Undo is timed from when the save is done, as the toast appears.
   time.pass(4_000);
   await act(async () => saves[0].finish());
   await waitFor(() => expect(toast).toHaveBeenCalled());
@@ -185,12 +176,12 @@ it('tells the server how long the Undo waited: the time since the removal was sa
     { action: { onClick: () => void } },
   ];
 
-  // The toast waits while its tab is in the background: a minute and a half.
+  // A toast waits while its tab is in the background.
   time.pass(90_000);
   act(() => options.action.onClick());
 
   await waitFor(() => expect(addToQueue).toHaveBeenCalledWith(2, 90_000));
-  // Back in its old place, second: the server adds it last.
+  // The server adds it last.
   await waitFor(() => expect(reorderQueue).toHaveBeenCalledWith([1, 2, 3, 4]));
   expect(addToQueue).toHaveBeenCalledTimes(1);
 });
@@ -224,7 +215,7 @@ describe('adding a game to the queue', () => {
 
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
     expect(addToQueue).toHaveBeenCalledTimes(1);
-    // An ordinary add, not an Undo: no time goes with it.
+    // Not an Undo: no time goes with it.
     expect(addToQueue).toHaveBeenCalledWith(9);
     expect(toast.success).toHaveBeenCalledTimes(1);
   });

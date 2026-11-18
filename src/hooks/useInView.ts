@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-/**
- * Whether the element has come into view yet: once it has, it stays true, so
- * an entrance plays once rather than every time it scrolls past.
- */
+/** Stays true once in view, so an entrance plays once, not every time it scrolls past. */
 export function useInView<T extends Element>() {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
@@ -22,8 +19,7 @@ export function useInView<T extends Element>() {
       ([entry]) => {
         if (entry.isIntersecting) setInView(true);
       },
-      // A little of it showing, so the motion is seen rather than finished
-      // below the fold.
+      // So the motion is seen rather than finished below the fold.
       { threshold: 0.2 },
     );
     observer.observe(element);
@@ -33,11 +29,7 @@ export function useInView<T extends Element>() {
   return { ref, inView };
 }
 
-/**
- * The classes and style for one bar of a chart that grows into place when its
- * chart comes into view, the bars a moment apart. Paused (at nothing) until
- * then; with reduced motion, simply there.
- */
+/** A chart bar that grows in once its chart is in view, paused at nothing until then. */
 export function growBar(axis: 'x' | 'y', inView: boolean, index: number) {
   return {
     className: `${axis === 'x' ? 'origin-left animate-grow-x' : 'origin-bottom animate-grow-y'} motion-reduce:animate-none ${inView ? '' : '[animation-play-state:paused]'}`,

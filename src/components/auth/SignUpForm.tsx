@@ -26,8 +26,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [accountExists, setAccountExists] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  // A submit on its way. The button is disabled from the next redraw; this
-  // stops a second press before then from sending the form again.
+  // `disabled` only applies from the next redraw; this stops a second submit before then.
   const submitting = useRef(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,6 +1,6 @@
 import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 
-/** Hours played, for games added by hand (Steam tracks its own). */
+/** Only for games added by hand: Steam tracks its own hours. */
 export function HoursField({
   value,
   onChange,
@@ -11,7 +11,6 @@ export function HoursField({
   value: string;
   onChange: (value: string) => void;
   error: string | null;
-  /** The console it's played on, named in the label. */
   platform?: string | null;
   optional?: boolean;
 }) {

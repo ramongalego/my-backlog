@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
-// Shared page chrome so every signed-in page (and its loading skeleton) uses
-// the same container, top offset under the fixed header, and header spacing.
+// Every signed-in page and its skeleton share this container, the offset under
+// the fixed header, and the header spacing.
 
 export const PAGE_CONTAINER = 'max-w-7xl mx-auto px-4 sm:px-6';
 
-/** Full-height page with the standard container. Modals can be passed as `overlay`. */
+/** Modals go in `overlay`, outside <main>. */
 export function Page({ children, overlay }: { children: ReactNode; overlay?: ReactNode }) {
   return (
     <div className="min-h-screen bg-ink-950">
@@ -17,11 +17,7 @@ export function Page({ children, overlay }: { children: ReactNode; overlay?: Rea
   );
 }
 
-/**
- * Page title, optional one-line description, and optional actions that sit on
- * the right when there's room and wrap below the title when there isn't.
- * `children` renders as a toolbar row under the header (e.g. search + sort).
- */
+/** `children` renders as a toolbar row under the header (search and sort, say). */
 export function PageHeader({
   title,
   id,
@@ -59,7 +55,6 @@ export function PageHeader({
   );
 }
 
-/** Heading for a group of content inside a page (stats cards, queue sections). */
 export function SectionLabel({
   children,
   id,

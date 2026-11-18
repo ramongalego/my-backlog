@@ -10,10 +10,8 @@ const UPDATE_CONCURRENCY = 25;
 const CACHE_LOOKUP_BATCH = 200;
 
 /**
- * Header art for newly imported games, so the library has covers while the
- * metadata sync is still running: the shared cache first, then the store, then
- * Steam's old fixed path for delisted games. Art is nice to have, so a failed
- * lookup just leaves the game without it until its metadata syncs.
+ * So the library has covers while the metadata sync runs. A failed lookup
+ * leaves the game without art until its metadata syncs.
  */
 async function headerImagesFor(
   supabase: SupabaseClient,
@@ -48,12 +46,7 @@ export interface LibrarySyncResult {
   updatedGames: number;
 }
 
-/**
- * Brings a user's `games` rows in line with their Steam library: inserts games
- * they don't have yet and updates changed playtime and last-played dates.
- * Existing rows (status, rating, notes, synced metadata) are never touched
- * otherwise.
- */
+/** Only playtime and last-played dates of existing rows change. */
 export async function syncOwnedGames(
   supabase: SupabaseClient,
   userId: string,
@@ -76,13 +69,10 @@ export async function syncOwnedGames(
   const stored = new Map(existing.map((g) => [g.app_id, g]));
 
   const newGames = steamGames.filter((game) => !stored.has(game.appid));
-  // With "Always keep my total playtime private" on, Steam still lists every
-  // game but reports 0 minutes for each. Written as given, that would replace
-  // the whole library's hours with 0, and write every total again once the
-  // option is turned off, which the history reads as hours played that day.
-  // So when Steam reports no time on any game while a game still played on
-  // Steam has hours here, playtime isn't being shared, and this sync writes
-  // none. (A game moved to a console doesn't count: its hours were entered.)
+  // "Always keep my total playtime private" reports 0 minutes for every game.
+  // Written, that would zero the library's hours, and the history would read
+  // every total written again later as hours played that day. A console
+  // game's hours were entered, so it doesn't count.
   const playtimeHidden =
     steamGames.every((game) => game.playtime_forever === 0) &&
     existing.some((game) => !playsOnConsole(game.platform) && (game.playtime_forever ?? 0) > 0);
@@ -155,20 +145,18 @@ export async function syncOwnedGames(
   };
 }
 
-/** Steam's last-played time as ISO, or null (never played, or not shared). */
+/** Null: never played, or not shared. */
 function lastPlayedAt(game: SteamGame): string | null {
   return game.rtime_last_played ? new Date(game.rtime_last_played * 1000).toISOString() : null;
 }
 
 /**
- * Removes a user's Steam games, used when they link a different Steam account.
- * Their queue entries go with them (the queue references its games); games
- * that didn't come from Steam stay.
+ * For linking a different Steam account. Queue entries go with the games
+ * (the queue references them).
  */
 export async function clearLibrary(supabase: SupabaseClient, userId: string): Promise<void> {
-  // Games moved to a console are console games now: keep them (with their
-  // diary history), as games added by hand. Without the old account's app id,
-  // the new account can own the same game without clashing.
+  // Console games stay, with their diary history, as games added by hand.
+  // Without the old app id, the new account can own the same game.
   const { error: keepError } = await supabase
     .from('games')
     .update({ source: 'manual', app_id: null })

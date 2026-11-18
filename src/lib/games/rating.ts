@@ -1,5 +1,3 @@
-// How a game rates, the same way for Steam games and games added by hand.
-
 /** Fewer reviews than this and one critic's score would stand for the game. */
 export const MIN_CRITIC_REVIEWS = 3;
 
@@ -15,12 +13,9 @@ export function criticScoreOf(game: CriticScored): number | null {
     : null;
 }
 
-// Steam's percent positive runs higher than critics' scores for the same game,
-// most of all near the top (95% on Steam is about 88 from critics), so a game
-// with only Steam reviews would outrank better-reviewed games. These points
-// convert one scale to the other by rank: the Steam score of the game at a
-// given percentile matched to the critic score at the same percentile, among
-// 143 games with plenty of both (October 2026). In between, it's linear.
+// Steam's percent positive runs higher than critics' (95% is about 88), so
+// Steam-only games would outrank better-reviewed ones. Matched by percentile
+// over 143 games with plenty of both (October 2026); linear in between.
 const STEAM_TO_CRITIC: [steam: number, critic: number][] = [
   [0, 0],
   [70, 67],
@@ -36,12 +31,9 @@ const STEAM_TO_CRITIC: [steam: number, critic: number][] = [
   [100, 96],
 ];
 
-// How much a Steam score is trusted grows with its review count: it's read as
-// if it came with this many more reviews at the average (70%). Statistically a
-// few hundred would do, but this many also rewards breadth: a game 96% of
-// 220,000 people liked ranks above one 98% of 12,000 did. Small games pay for
-// it here (93% of 3,000 reads as 84); Hidden Gems, ranked by the raw score
-// among small games, is where they shine instead.
+// A Steam score is read as if it had this many more reviews at STEAM_AVERAGE.
+// More than statistics needs, to reward breadth (96% of 220,000 ranks above 98%
+// of 12,000); small games shine in Hidden Gems instead, ranked by raw score.
 const STEAM_PRIOR_REVIEWS = 2000;
 const STEAM_AVERAGE = 70;
 
@@ -59,22 +51,16 @@ export function steamOnCriticScale(steam: number): number {
   return c0 + ((steam - s0) / (s1 - s0)) * (c1 - c0);
 }
 
-// Critics and players agree only partly: across the same 143 games, the two
-// scores (on one scale) correlate at about 0.5, around an average of 81. So for
-// a game rated by one side only, the other side's likely score is halfway
-// between this one and the average, and their average keeps three-quarters of
-// this score's distance from it. Without that, one glowing score would outrank
-// two that mostly agree (Portal, Steam only, above Baldur's Gate 3).
+// Critics and players correlate at about 0.5 (same 143 games), so a one-sided
+// score keeps three-quarters of its distance from the average. Otherwise one
+// glowing score outranks two that mostly agree (Portal over Baldur's Gate 3).
 const AVERAGE_RATING = 81;
 const ONE_SIDE_WEIGHT = 0.75;
 
 /**
- * The one number games are ranked by (the Rating sort, the rating-based
- * carousels, Pick My Game), on the critic score's scale: the average of the
- * critic score and Steam's review score, so what players think counts as much
- * as what critics did (a game critics loved and players didn't ranks lower).
- * Steam's score is weighted by how many reviews it's from and converted to
- * the critic scale first. A game with only one of them is estimated from it.
+ * The one number every ranking uses (the Rating sort, carousels, Pick My Game),
+ * on the critic scale. Players count as much as critics: a game critics loved
+ * and players didn't ranks lower.
  */
 export function ratingOf(
   game: CriticScored & { steam_review_score?: number | null; steam_review_count?: number | null },

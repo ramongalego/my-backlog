@@ -27,10 +27,9 @@ export const METADATA_COLUMNS =
 
 export type CachedMetadata = GameMetadata & { hltb_attempts: number | null };
 
-// Backoff for games HLTB has no entry for, indexed by consecutive misses,
-// then monthly. New releases often get an entry a few weeks after launch, so
-// the early retries are close together. Without a backoff every user who owns
-// such a game would re-trigger the full ~5-request upstream fetch on each sync.
+// Days to wait after each consecutive HLTB miss. Without it every owner's sync
+// would redo the ~5-request fetch; early waits are short because new releases
+// often get an entry a few weeks after launch.
 const HLTB_BACKOFF_DAYS = [0, 3, 7, 14, 28];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -47,10 +46,9 @@ export function isRecentRelease(releaseDate: string | null, now: number): boolea
 function hltbRetryDue(row: CachedMetadata, now: number): boolean {
   const attempts = row.hltb_attempts ?? 0;
   if (attempts === 0) return true;
-  // Past the table, every further miss waits another month. The wait counts
-  // from synced_at, which an HLTB-only retry doesn't move, so it has to keep
-  // growing: held at 28 days, a game HLTB doesn't have would be due again on
-  // every visit from day 28 until its full refresh.
+  // Past the table, each miss waits another month. The wait counts from
+  // synced_at, which an HLTB-only retry doesn't move, so a flat 28 days would
+  // be due again on every visit.
   const last = HLTB_BACKOFF_DAYS.length - 1;
   const days =
     attempts <= last
@@ -59,7 +57,6 @@ function hltbRetryDue(row: CachedMetadata, now: number): boolean {
   return now - new Date(row.synced_at).getTime() >= days * DAY_MS;
 }
 
-/** One of a user's Steam games, as the per-visit sync check reads it. */
 export interface SyncCheckGame {
   type?: string | null;
   categories?: string[] | null;
@@ -69,23 +66,19 @@ export interface SyncCheckGame {
 }
 
 /**
- * Whether a Steam game is sent to the sync endpoints on this visit: one never
- * synced, one still missing its HLTB time, or a recent release (whose time is
- * still settling). The endpoints answer these from the shared cache and only
- * go upstream when a retry or refresh is due.
+ * Whether a Steam game goes to the sync endpoints on this visit. They answer
+ * from the shared cache and only go upstream when a retry or refresh is due.
  */
 export function needsSyncCheck(game: SyncCheckGame, now: number): boolean {
   if (game.type && game.type !== 'game') return false;
   if (game.categories && !game.categories.includes('Single-player')) return false;
   if (!game.metadata_synced) return true;
-  // Synced with nothing to show for it: Steam has no store page for it any
-  // more (delisted). It has no cache row either, so asking again would fetch
-  // from Steam on every visit for the same answer.
+  // Synced with no type: delisted from Steam, with no cache row, so asking
+  // again would fetch from Steam on every visit for the same answer.
   if (!game.type) return false;
   return game.main_story_hours === null || isRecentRelease(game.release_date ?? null, now);
 }
 
-/** Whether a shared-cache row can be used as-is instead of re-fetching upstream. */
 export function isCacheUsable(row: CachedMetadata | null, now = Date.now()): boolean {
   if (!row || !isMetadataFresh(row.synced_at, now)) return false;
   if (row.type !== 'game') return true;
@@ -95,9 +88,8 @@ export function isCacheUsable(row: CachedMetadata | null, now = Date.now()): boo
 }
 
 /**
- * A row that is fresh apart from a missing HLTB time that is due a retry. Its
- * Steam data can be used straight away while the time is looked up on its own
- * (see /api/games/sync/hltb), instead of re-fetching everything.
+ * Fresh but for an HLTB time due a retry: its Steam data is used as is and the
+ * time is looked up alone (see /api/games/sync/hltb).
  */
 export function needsOnlyHltb(row: CachedMetadata | null, now = Date.now()): boolean {
   return (
@@ -119,12 +111,9 @@ const ENRICHMENT_FIELDS = [
 ] as const;
 
 /**
- * Prepares a freshly fetched snapshot for the shared cache. Enrichment lookups
- * return null on any upstream failure (HLTB down, Steam 429), so previously
- * known values are kept rather than overwritten with null, and the HLTB miss
- * counter is advanced or reset. A lookup HLTB refused (rate limited) isn't a
- * miss: the counter stays put, so the game is retried on the next sync instead
- * of days later.
+ * Enrichment lookups return null on any upstream failure, so known values are
+ * kept instead of nulled. A lookup HLTB refused (rate limited) isn't a miss:
+ * the counter stays, so the next sync retries instead of days later.
  */
 export function mergeForCache(
   fresh: GameMetadata & { hltbUnavailable?: boolean },
@@ -146,11 +135,9 @@ export function mergeForCache(
 }
 
 /**
- * Columns copied from the shared cache onto a user's `games` row. Not the
- * platform: that's the console you play it on, which you can change (a Steam
- * game you play on Switch), so the sync sets it only once, on insert. For a
- * game whose art the player chose (`artChosen`), the cache's art goes behind
- * that choice, as the default to go back to.
+ * Leaves out the platform: the player can move a Steam game to a console, so
+ * the sync sets it only on insert. With `artChosen`, the cache's art becomes
+ * the default behind the player's choice.
  */
 export function toGameRowUpdate(m: GameMetadata, artChosen = false) {
   return {

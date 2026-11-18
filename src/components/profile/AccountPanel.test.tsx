@@ -23,7 +23,6 @@ const props = {
 
 beforeEach(() => jest.clearAllMocks());
 
-/** A setting's value, by its label. */
 const valueOf = (label: string) => screen.getByText(label).nextElementSibling;
 
 it('shows the email, and the password hidden', () => {
@@ -35,7 +34,6 @@ it('shows the email, and the password hidden', () => {
 
 it('changes the email and the password, each from its own button', () => {
   render(<AccountPanel {...props} />);
-  // Each says "Change", named for its setting.
   fireEvent.click(screen.getByRole('button', { name: 'Change email' }));
   expect(onChangeEmail).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
@@ -87,7 +85,6 @@ it('keeps Delete account behind More options until it is asked for', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
   expect(onDeleteAccount).toHaveBeenCalledTimes(1);
 
-  // And it folds away again.
   fireEvent.click(more);
   expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
 });
@@ -116,7 +113,6 @@ it('leaves Export data out when there is nothing to copy', () => {
   fireEvent.click(screen.getByRole('button', { name: 'More options' }));
   expect(screen.queryByRole('button', { name: 'Export data' })).not.toBeInTheDocument();
   expect(screen.queryByText('Download a copy of your data')).not.toBeInTheDocument();
-  // Delete account is still there.
   expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
 });
 

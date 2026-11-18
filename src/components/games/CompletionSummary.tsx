@@ -28,11 +28,7 @@ function ordinal(n: number): string {
   return `${n}${suffix}`;
 }
 
-/**
- * From starting it in the app to finishing it, roughly: "3 weeks". Not for a
- * same-day finish, which is more often catching up on an old game than one
- * sitting.
- */
+/** Null for a same-day finish, which is more often catching up on an old game than one sitting. */
 function playedOver(startedAt: string, finishedAt: string): string | null {
   const days = Math.floor((Date.parse(finishedAt) - Date.parse(startedAt.slice(0, 10))) / DAY_MS);
   if (Number.isNaN(days) || days < 1) return null;
@@ -43,10 +39,7 @@ function playedOver(startedAt: string, finishedAt: string): string | null {
   return years === 1 ? 'a year' : `${years} years`;
 }
 
-/**
- * This finish's place in the year ("2nd"). Only for a finish dated this year,
- * so a backdated one doesn't claim a place it doesn't have.
- */
+/** Only for a finish dated this year, so a backdated one doesn't claim a place it doesn't have. */
 function placeInYear(
   finishedAt: string | null | undefined,
   finishedThisYear: number | null | undefined,
@@ -56,7 +49,6 @@ function placeInYear(
   return ordinal(finishedThisYear);
 }
 
-/** How the time it took compares with the estimate, or nothing without one. */
 function againstEstimate(played: number, estimate: number | null): string | null {
   if (!estimate || estimate <= 0 || played <= 0) return null;
   const diff = Math.round((played - estimate) * 10) / 10;
@@ -65,10 +57,9 @@ function againstEstimate(played: number, estimate: number | null): string | null
 }
 
 const TRACK = 'flex h-2.5 gap-px overflow-hidden rounded-full bg-ink-800';
-/** Bars grow from the left once, a moment after the dialog has settled. */
 const GROW = 'origin-left animate-grow-x motion-reduce:animate-none';
 const GROW_DELAY: CSSProperties = { animationDelay: '200ms' };
-/** The game just finished lands on the shelf after the time bar has grown. */
+/** After the time bar has grown. */
 const LAND = 'origin-bottom animate-grow-y motion-reduce:animate-none';
 const LAND_DELAY: CSSProperties = { animationDelay: '650ms' };
 /** A library up to this size is drawn game by game; a bigger one as a bar. */
@@ -77,9 +68,8 @@ const SHELF_MAX = 500;
 const percent = (part: number, whole: number) => `${Math.min((part / whole) * 100, 100)}%`;
 
 /**
- * The hours played against the estimate, as one bar. Under the estimate, the
- * track is the estimate and the fill stops short of its end; over it, the
- * track is the hours played and the part past the estimate is lighter.
+ * Under the estimate, the track is the estimate and the fill stops short; over
+ * it, the track is the hours played and the part past the estimate is lighter.
  */
 function TimeBar({ played, estimate }: { played: number; estimate: number }) {
   const over = played > estimate;
@@ -96,12 +86,7 @@ function TimeBar({ played, estimate }: { played: number; estimate: number }) {
   );
 }
 
-/**
- * The library as a shelf: a spine for every game, the finished ones in
- * emerald and the one just finished lighter, landing last. A library too big
- * to draw game by game is one bar instead, this game the lighter sliver at
- * its end (never too thin to see).
- */
+/** Over SHELF_MAX it's one bar, this game a sliver at its end that's never too thin to see. */
 function LibraryShelf({ finished, total }: { finished: number; total: number }) {
   if (total > SHELF_MAX) {
     return (
@@ -143,10 +128,8 @@ function LibraryShelf({ finished, total }: { finished: number; total: number }) 
 }
 
 /**
- * A finished game, drawn: one sentence for the time it took, a bar of that
- * time against the estimate, the library as a shelf with this game added, and
- * what's next. Each part is left out when its figure is missing. The summary
- * dialog speaks to you; the shared page (`shared`) reads the same for anyone.
+ * Each part is left out when its figure is missing. The summary dialog speaks
+ * to you; the shared page (`shared`) reads the same for anyone.
  */
 export function CompletionSummary({
   playtimeMinutes,

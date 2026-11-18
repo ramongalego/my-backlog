@@ -1,6 +1,5 @@
 import type { AddStatus, GameStatus } from '@/lib/games/status';
-// Client helpers for games added by hand (/api/games/search, /api/games/manual).
-// They throw with the server's message, which the dialogs show as is.
+// These throw with the server's message, which the dialogs show as is.
 
 interface GameDetails {
   name: string;
@@ -16,11 +15,7 @@ export interface GameSearchResult {
   year: number | null;
   cover: string | null;
   platforms: string[];
-  /**
-   * Your entry for this game if it's already in your library: from Steam
-   * (moved to a console or not) or added by hand on a console. Adding it again
-   * moves that entry, so a game is only ever listed once.
-   */
+  /** Adding a game already in the library moves that entry, so a game is only ever listed once. */
   libraryGame: {
     id: number;
     fromSteam: boolean;

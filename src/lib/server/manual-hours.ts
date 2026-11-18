@@ -18,12 +18,9 @@ interface ManualGame {
 }
 
 /**
- * Looks up the time to beat again for a user's games added by hand: the ones
- * that still have none, and recent releases, whose time is still moving as
- * more people finish them (see timeToBeatCheckDue for how often). Oldest check
- * first, a few each time. Steam games get theirs through the shared metadata
- * cache's own retries. Runs with the daily review refresh; returns how many
- * games got a time, or a different one.
+ * Games without a time, and recent releases, whose time still moves (see
+ * timeToBeatCheckDue). Steam games get theirs through the metadata cache's own
+ * retries. Returns how many games got a time, or a different one.
  */
 export async function recheckManualHours(
   supabase: SupabaseClient,

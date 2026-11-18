@@ -16,21 +16,14 @@ export async function updateGameStatus(
     pausePlaying?: boolean;
     /** With status backlog: put the game at the top of the queue in the same save. */
     queueAtTop?: boolean;
-    /**
-     * This change is an Undo of the last one. Every Undo that changes a game
-     * says so: the history then takes the change back out instead of
-     * recording a second one, however long the toast waited to be pressed.
-     */
+    /** Every Undo says so: the history takes the change out instead of recording a second. */
     undo?: boolean;
-    /**
-     * With an Undo that starts the game again: when it had been started and
-     * last played, so it comes back as it was and not as started just now.
-     */
+    /** With an Undo that starts the game again, so it comes back as it was, not as new. */
     startedAt?: string | null;
     lastPlayedAt?: string | null;
     /**
-     * With an Undo: how long ago the change it undoes was made (`sinceNow`,
-     * lib/undo.ts), so the history takes it out of that change and no other.
+     * With an Undo: ms since the change it undoes (`sinceNow`, lib/undo.ts), so the
+     * history takes it out of that change and no other.
      */
     undoAgoMs?: number;
   },
@@ -64,7 +57,7 @@ export async function updateGameStatus(
       const body = await res.json();
       detail = body?.error ? `: ${body.error}` : '';
     } catch {
-      // response body wasn't JSON — ignore
+      // The body wasn't JSON.
     }
     throw new Error(`updateGameStatus failed (${res.status})${detail}`);
   }
@@ -98,18 +91,12 @@ async function postBulk(body: object): Promise<{ previous?: GameRestore[] }> {
   return answer;
 }
 
-/**
- * Moves several games to a status in one request (Games, Select), all or
- * none. Resolves with what each game had before, for Undo.
- */
+/** All or none (Games, Select). Resolves with what each game had before, for Undo. */
 export async function updateGameStatuses(changes: StatusChange[]): Promise<GameRestore[]> {
   return (await postBulk({ changes })).previous ?? [];
 }
 
-/**
- * Puts several games back exactly as they were: a bulk change's Undo.
- * `agoMs` is how long ago the change was made (`sinceNow`, lib/undo.ts).
- */
+/** A bulk change's Undo. `agoMs`: since the change was made (`sinceNow`, lib/undo.ts). */
 export async function restoreGameStatuses(games: GameRestore[], agoMs?: number): Promise<void> {
   await postBulk({ restore: games, ...(agoMs !== undefined ? { agoMs } : {}) });
 }

@@ -1,5 +1,4 @@
-// IGDB (Twitch's game database), for games added by hand. Server only: it
-// uses the app's Twitch credentials.
+// IGDB (Twitch's game database), for games added by hand.
 import 'server-only';
 import { getIgdbCredentials } from '@/lib/server/env';
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
@@ -9,19 +8,17 @@ const API_URL = 'https://api.igdb.com/v4';
 const IMAGE_URL = 'https://images.igdb.com/igdb/image/upload';
 const TIMEOUT_MS = 8000;
 
-// Main games, their re-releases and bundles: no DLC, mods, episodes or updates.
-// 0 main game, 3 bundle, 4 standalone expansion, 8 remake, 9 remaster,
-// 10 expanded game, 11 port.
+// No DLC, mods, episodes or updates: 0 main game, 3 bundle, 4 standalone
+// expansion, 8 remake, 9 remaster, 10 expanded game, 11 port.
 const GAME_TYPES = '(0,3,4,8,9,10,11)';
-// Bundles include collections sold as one game (Castlevania Dominus
-// Collection), but also "Game + Expansion Pass" store bundles, so they're
+// Bundles also include "Game + Expansion Pass" store bundles, so they're
 // listed after the games themselves.
 const BUNDLE = 3;
 const SEARCH_LIMIT = 12;
 
 let token: { value: string; expiresAt: number } | null = null;
 
-/** An app access token, cached until shortly before it expires (about 60 days). */
+/** Cached until an hour before it expires (tokens last about 60 days). */
 async function accessToken(): Promise<string> {
   if (token && Date.now() < token.expiresAt) return token.value;
   const { clientId, clientSecret } = getIgdbCredentials();
@@ -61,7 +58,6 @@ async function query<T>(endpoint: string, body: string): Promise<T[]> {
   return res.json();
 }
 
-/** Quotes text for an Apicalypse query. */
 const quoted = (text: string) => `"${text.replace(/["\\]/g, ' ')}"`;
 
 interface IgdbImage {
@@ -86,7 +82,7 @@ interface IgdbGame {
   keywords?: { name: string }[];
   involved_companies?: { developer?: boolean; company?: { country?: number } }[];
   summary?: string;
-  /** The average of critics' reviews, 0-100, and how many reviews it's from. */
+  /** Critics' average, 0-100; the count is how many reviews it's from. */
   aggregated_rating?: number;
   aggregated_rating_count?: number;
   external_games?: ExternalGame[];
@@ -105,9 +101,8 @@ interface ExternalGame {
   external_game_source?: number;
 }
 
-// IGDB's id for Steam among a game's store listings (external games).
+// IGDB's external_game_source for Steam.
 const STEAM_SOURCE = 1;
-// Store listings of the game, its ports and the game it's an edition of.
 const EXTERNAL_FIELDS = ['', 'ports.', 'version_parent.']
   .map((of) => `${of}external_games.uid, ${of}external_games.external_game_source`)
   .join(', ');
@@ -122,11 +117,9 @@ function steamIdsOf(listings: ExternalGame[] | undefined): number[] {
 }
 
 /**
- * The game's Steam app ids: to recognize a game you already own on Steam, and
- * to use Steam's art and tags. A game released on PC later often has its own
- * IGDB entry, a port, that holds the Steam listing (Persona 4 Golden on Vita,
- * then on PC), so without one of its own, its ports' and the game it's an
- * edition of are used: they're the same game.
+ * A game released on PC later often has a separate IGDB entry, a port, that
+ * holds the Steam listing (Persona 4 Golden), so without its own, its ports'
+ * and its parent's are used.
  */
 function steamAppIds(
   game: Pick<IgdbGame, 'external_games' | 'ports' | 'version_parent'>,
@@ -154,28 +147,24 @@ function coverUrl(imageId: string) {
   return `${IMAGE_URL}/t_cover_big/${imageId}.jpg`;
 }
 
-/** Wide art (artwork or screenshot) at full HD; next/image resizes it for each use. */
+/** Full HD; next/image resizes it for each use. */
 function artworkUrl(imageId: string) {
   return `${IMAGE_URL}/t_1080p/${imageId}.jpg`;
 }
 
-// IGDB's artwork types that work as a game's header, best first, with how wide
-// each has to be. Key art with its logo is the publisher's main promotional
-// image, the one a store page leads with, like the Steam header every Steam
-// game here uses; it has to be wide enough (16:10) that cropping to the header
-// shape keeps the logo. Key art without a logo is often an alternate or a
-// single character, so it comes second. Plain artwork on older games is often
-// a single character render, which crops to a torso unless it's at least 3:2.
-// Logos, covers, icons, concept art and infographics never work.
+// Artwork types that work as a header, best first, with the width/height each
+// needs: key art with its logo (3) at 16:10 so the crop keeps the logo, key art
+// without one (2, often a lone character), plain artwork (1, 15) at 3:2 so a
+// character render doesn't crop to a torso.
 const HEADER_ARTWORK: { type: number; minRatio: number }[] = [
   { type: 3, minRatio: 1.6 },
   { type: 2, minRatio: 1.3 },
   { type: 1, minRatio: 1.5 },
   { type: 15, minRatio: 1.5 },
 ];
-// Key art, with or without its logo: the publisher's own promotional images.
+// Key art, with or without its logo.
 const KEY_ART_TYPES = new Set([2, 3]);
-// The shape every game image is shown at (Steam's 460×215 header).
+// Steam's 460×215 header, the shape every game image is shown at.
 const HEADER_RATIO = 460 / 215;
 const MIN_HEADER_WIDTH = 800;
 // Handheld screenshots (3DS at 400x240, DS at 256x192) are too small to fill
@@ -183,15 +172,12 @@ const MIN_HEADER_WIDTH = 800;
 const MIN_SCREENSHOT_WIDTH = 1280;
 
 /**
- * The game's wide art, as an IGDB image id: its best key art or wide artwork,
- * else its first sharp screenshot, else none, and the box art is used instead
- * (on a blurred copy of itself). Of several of the best type, the one closest
- * to the header's shape, so the least of it is cropped away (IGDB lists them
- * in no particular order).
+ * An IGDB image id, or null to use the box art. Among several of the best
+ * type, the one closest to the header's shape: IGDB lists them in no order.
  */
 export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): string | null {
   const rank = (a: IgdbImage) => HEADER_ARTWORK.findIndex((h) => h.type === (a.artwork_type ?? 1));
-  // How far the art is from the header's shape, either way (2:1 and 9:4 are as far).
+  // Log ratio, so either way is as far (2:1 and 9:4 from 460:215).
   const misfit = (a: IgdbImage) => Math.abs(Math.log(a.width! / a.height! / HEADER_RATIO));
   const best = (game.artworks ?? [])
     .filter(
@@ -208,7 +194,6 @@ export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): s
   return shot && (shot.width ?? 0) >= MIN_SCREENSHOT_WIDTH ? shot.image_id : null;
 }
 
-/** A name as typed or listed, without case, marks or punctuation, to compare. */
 function searchName(name: string): string {
   return name
     .toLowerCase()
@@ -304,10 +289,8 @@ const KEYWORD_TAGS: Record<string, string> = {
   mecha: 'Mechs',
 };
 
-// The keyword tags that name a subgenre. They say more about how a game plays
-// than its broad genres (a Metroidvania is also a Platformer and an Adventure),
-// so they go first, where Steam's votes would put them and where similarity
-// weighs tags most.
+// Subgenres say more about how a game plays than its broad genres, so they go
+// first, where similarity weighs tags most.
 const SUBGENRE_TAGS = new Set([
   'Metroidvania',
   'Roguelike',
@@ -334,14 +317,12 @@ const SUBGENRE_TAGS = new Set([
 // these first (Castlevania: Aria of Sorrow, Elden Ring).
 const NOT_JRPG = new Set(['Platformer', 'Metroidvania', 'Souls-like']);
 
-// IGDB's code for Japan (ISO 3166-1 numeric).
+// ISO 3166-1 numeric, as IGDB gives countries.
 const JAPAN = 392;
 
 /**
- * The game's tags in Steam's words, for games Steam doesn't sell: its
- * subgenre (Metroidvania, Roguelike…) when a keyword names one, its genres,
- * then JRPG for an RPG made in Japan (IGDB has no such genre, and its "jrpg"
- * keyword is on few games), then its themes and other telling keywords.
+ * Tags in Steam's words, for games Steam doesn't sell. JRPG comes from an RPG
+ * made in Japan: IGDB has no such genre and its "jrpg" keyword is on few games.
  */
 export function igdbTags(
   game: Pick<IgdbGame, 'genres' | 'themes' | 'keywords' | 'involved_companies'>,
@@ -392,17 +373,13 @@ export interface ManualGameDetails {
   header_image: string | null;
   /** Not a games column: used to find the game in your Steam library. */
   steamAppIds: number[];
-  /**
-   * Not a games column: whether header_image is the publisher's key art. If
-   * not (plain artwork, a screenshot or the box art), better art is worth
-   * looking for elsewhere.
-   */
+  /** Not a games column: without key art, better art is worth looking for elsewhere. */
   hasKeyArt: boolean;
   critic_score: number | null;
   critic_count: number | null;
 }
 
-/** The game's details in the shape of the games table, or null if IGDB doesn't know it. */
+/** In the shape of the games table; null when IGDB doesn't know the game. */
 export async function getGameDetails(igdbId: number): Promise<ManualGameDetails | null> {
   const [game] = await query<IgdbGame>(
     'games',
@@ -439,9 +416,6 @@ export async function getGameDetails(igdbId: number): Promise<ManualGameDetails 
   };
 }
 
-// ─── Critic scores ───────────────────────────────────────────────────────────
-
-// The game's own score and, for an edition, the game it's an edition of.
 const CRITIC_FIELDS =
   'aggregated_rating, aggregated_rating_count, version_parent.aggregated_rating, version_parent.aggregated_rating_count';
 // IGDB returns at most 500 results a query.
@@ -453,9 +427,8 @@ export interface CriticScore {
 }
 
 /**
- * The game's critic score. Critics review a game, rarely its editions, so an
- * edition (a Game of the Year release, often what Steam sells) with fewer
- * reviews than the game it's an edition of takes that game's score.
+ * Critics review a game, rarely its editions (often what Steam sells), so an
+ * edition with fewer reviews than its parent takes the parent's score.
  */
 function criticScore(
   game: Pick<IgdbGame, 'aggregated_rating' | 'aggregated_rating_count' | 'version_parent'>,
@@ -471,10 +444,7 @@ function criticScore(
     : { critic_score: null, critic_count: null };
 }
 
-/**
- * Critic scores for Steam games, by Steam app id, a few hundred per request.
- * Games IGDB doesn't know, or that no critic reviewed, are left out.
- */
+/** Games IGDB doesn't know, or that no critic reviewed, are left out. */
 export async function getCriticScoresBySteamId(
   appIds: number[],
 ): Promise<Map<number, CriticScore>> {
@@ -502,7 +472,7 @@ export async function getCriticScoresBySteamId(
   return scores;
 }
 
-/** Critic scores for games added by hand, by IGDB id. */
+/** For games added by hand. */
 export async function getCriticScoresByIgdbId(
   igdbIds: number[],
 ): Promise<Map<number, CriticScore>> {

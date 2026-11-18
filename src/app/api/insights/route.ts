@@ -31,11 +31,9 @@ const respond = (insight: SavedInsight) =>
   });
 
 /**
- * The player profile on Stats, or its roast: what the signed-in player's
- * library says about them. Worked out from their library on the server (never
- * from facts the browser sends), written by the model, and saved: it's only
- * written again when the library changes in a way it talks about. A POST, so
- * the proxy's same-origin check covers it (it can spend OpenAI credit).
+ * Worked out from the library on the server, never from facts the browser
+ * sends, and only rewritten when the library changes in a way it mentions. A
+ * POST, so the proxy's same-origin check covers it: it spends OpenAI credit.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

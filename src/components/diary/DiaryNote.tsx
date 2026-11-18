@@ -31,7 +31,6 @@ export function DiaryNoteText({
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
 
-  // Only offer "Show more" when the clamp actually hides something.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || expanded) return;
@@ -90,8 +89,8 @@ export function DiaryNoteEditor({
   onCancel: () => void;
 }) {
   const [text, setText] = useState(initialText);
-  // Saving closes the editor, from the next redraw: a second click on Save
-  // before then would save the note again.
+  // Saving closes the editor only from the next redraw; a second click before
+  // then would save again.
   const saved = useRef(false);
   const save = () => {
     if (saved.current) return;

@@ -50,10 +50,8 @@ interface UseGamesPageReturn {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   /**
-   * The platform filter, or null when there's nothing to choose between: a
-   * library all on one platform (Steam only), or a status filter whose games
-   * are (every dropped game on PC). It stays while a platform is chosen,
-   * whatever is listed, since it's the way back to all of them.
+   * Null when there's nothing to choose between, under the status filter too.
+   * Stays while a platform is chosen: it's the way back to all of them.
    */
   platforms: GamesPlatforms | null;
   /** The detail dialog's props for the open game, or null when it's closed. */
@@ -65,28 +63,23 @@ interface UseGamesPageReturn {
   toggleSelecting: () => void;
 }
 
-/** The Games page's platform filter. */
 interface GamesPlatforms {
-  /** The platform listed, or '' for all of them. */
+  /** '' for all of them. */
   value: string;
   set: (platform: string) => void;
   /**
-   * The platforms with games to list under the status filter and search that
-   * are on, with how many. The chosen one stays even at none, so the menu
-   * always has what it's set to.
+   * Platforms with games under the status filter and search. The chosen one
+   * stays even at zero, so the menu always has what it's set to.
    */
   options: { value: string; count: number }[];
   /** How many games every platform together lists. */
   allCount: number;
 }
 
-/** Select mode on the Games page: ticking games to move several at once. */
 interface GamesSelection {
-  /** Games ticked. */
   count: number;
   /** Games the page lists that can be ticked, loaded on screen or not. */
   total: number;
-  /** A game's part in it, for its card or row. */
   of: (game: GameItem) => GameSelection;
   selectAll: () => void;
   clear: () => void;
@@ -131,10 +124,9 @@ export function useGamesPage(): UseGamesPageReturn {
   const [platform, setPlatform] = useUrlState<string>('platform', '', platformChoices);
   const [urlSearch, setUrlSearch] = useUrlState<string>('q', '');
   const [searchQuery, setSearchQueryState] = useState(urlSearch);
-  // The URL also changes from outside the box (Games in the header, View on a
-  // game just added), and the page stays mounted when only the query changes:
-  // the box follows it. Typing writes the trimmed text to the URL, so a URL
-  // that matches what's typed is the box's own change and is left alone.
+  // The URL also changes from outside the box (the header's Games link) with
+  // the page still mounted, so the box follows it. A URL matching the trimmed
+  // text is the box's own change.
   const [seenUrlSearch, setSeenUrlSearch] = useState(urlSearch);
   if (urlSearch !== seenUrlSearch) {
     setSeenUrlSearch(urlSearch);
@@ -142,11 +134,9 @@ export function useGamesPage(): UseGamesPageReturn {
   }
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
-  // Defer the search value to keep input responsive during filtering
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  // Select mode: games ticked to move together. The last one ticked is where
-  // a shift-click's range starts.
+  // The last game ticked is where a shift-click's range starts.
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
   const [lastTicked, setLastTicked] = useState<number | null>(null);
@@ -157,27 +147,22 @@ export function useGamesPage(): UseGamesPageReturn {
     setLastTicked(null);
   };
 
-  // A game's dialog, opened from its card or row.
   const { gameDialog, openGame: handleOpenDetail } = useLibraryGameDialog(userId);
 
-  // What the page shows, from the deferred search text so typing stays
-  // responsive. Counts follow the search and the platform, so each status
-  // filter says how many of the matches it holds; each platform's count
-  // follows the search and the status filter the same way.
+  // Each status filter's count follows the search and platform; each
+  // platform's count follows the search and status filter.
   const searched = searchLibrary(games, deferredSearchQuery);
   const listed = onPlatform(searched, platform);
   const filteredGames = filterLibrary(listed, filter, sort, deferredSearchQuery, reversed);
   const counts = countLibrary(listed);
   const perPlatform = countPlatforms(searched, filter);
-  // Whether there's a choice to offer: two platforms with games under this
-  // status filter. The search doesn't count, so the control beside the search
-  // field doesn't come and go as you type.
+  // Not from the search, so the control beside the search field doesn't come
+  // and go as you type.
   const platformsToChoose = countPlatforms(games, filter).size;
   const showPlatforms = platformChoices.length > 0 && (platform !== '' || platformsToChoose > 1);
 
   const visibleGames = filteredGames.slice(0, visibleCount);
 
-  // Everything the page lists that can be ticked, loaded on screen or not.
   const selectableIds = filteredGames
     .filter((game) => isSelectable(game, queuedGameIds))
     .map((game) => game.id);
@@ -205,9 +190,8 @@ export function useGamesPage(): UseGamesPageReturn {
         },
         moves: (status: BulkStatus) => ticked.filter((game) => game.status !== status).length,
         reviewsCleared: (status: BulkStatus) => reviewsCleared(ticked, status),
-        // The move is the point of selecting: the bar says "Moving…" while
-        // it's saved, then Select mode closes as the toast offers the Undo. If
-        // the save fails it stays open, the games still ticked, to try again.
+        // Select mode closes once saved, as the toast offers Undo; if the save
+        // fails it stays open with the games still ticked.
         move: (status: BulkStatus) => bulk.move(ticked, status, stopSelecting),
         pending: bulk.pending,
         stop: stopSelecting,

@@ -2,11 +2,8 @@ import type { GameItem } from '@/lib/data/loaders';
 import { toLocalIsoDate } from '@/lib/diary/date-utils';
 import { playsOf, type HistoryEvent } from './history';
 
-// What a player has been doing lately, for their Profile page: what happened
-// to their games, newest first. It reads the history (game_events) for
-// everything since that began, and the games themselves for what was started,
-// finished or dropped before it. Several things done to one game in a row are
-// one entry.
+// The Profile page's activity list. It reads game_events for everything since
+// the history began, and the games themselves for what came before it.
 
 export type ActivityKind =
   | 'playing'
@@ -26,7 +23,6 @@ export type ActivityKind =
   | 'note'
   | 'played';
 
-/** One thing that happened to a game. */
 export interface ActivityLine {
   /** `playing` is the start of the game being played now; `started`, of one that isn't any more. */
   kind: ActivityKind;
@@ -36,60 +32,48 @@ export interface ActivityLine {
   to?: string;
   /** The rating that came with it: a finish, a drop, or a rating given by itself. */
   rating?: number;
-  /**
-   * The day the player chose for a finish or a drop, "YYYY-MM-DD", when it
-   * isn't the day it was logged (finished last week, logged today).
-   */
+  /** "YYYY-MM-DD" the player chose for a finish or a drop, when it isn't the day it was logged. */
   on?: string;
 }
 
 /** What happened to one game in one go: one row of the list. */
 export interface ActivityEntry {
-  /** Its own in the list, and the same as more is done to the game. */
+  /** Unique in the list, and stays the same as more is done to the game. */
   key: string;
-  /** The game's id. */
   id: number;
   name: string;
   header_image: string | null;
   source: string;
   platform: string | null;
-  /** The things that happened, in the order they did. */
+  /** Oldest first. */
   lines: ActivityLine[];
-  /**
-   * The day the latest of them was logged, "YYYY-MM-DD", which the list is
-   * grouped by; null when it isn't known.
-   */
+  /** "YYYY-MM-DD" the latest line was logged, which the list groups by; null when unknown. */
   day: string | null;
   /** Your rating, where one of them is about it: a finish, a drop, a rating. */
   rating: number | null;
   /**
-   * A group: the games the same thing was done to, one after another on one
-   * day, each its own entry, newest first. The entry itself says what was
-   * done to all of them, with the first game's id, name and art.
+   * For a group, each game's own entry, newest first. The group entry says what
+   * was done to all of them, with the first game's id, name and art.
    */
   games?: ActivityEntry[];
 }
 
-/** One event of the history, as the Profile page loads it. */
 export interface ActivityEvent extends HistoryEvent {
   id: number;
   game_id: number;
 }
 
-/** The game being played, as the playing query gives it. */
 interface PlayingGame {
   id: number;
   started_at?: string | null;
 }
 
-/** What an event says happened: its line, and the day and rating it carries. */
 type Told = Omit<ActivityLine, 'rating'> & { day?: string; rating?: number | null };
 
-/** One line with what it takes to place it: when, and about which game. */
 interface Item {
-  /** When it happened, to sort by: a moment, a day, or '' when nothing says. */
+  /** A moment, a day, or '' when nothing says. */
   at: string;
-  /** The event it came from, to order two at the same moment. */
+  /** The event id, to order two lines at the same moment. */
   order: number;
   key: string;
   game: GameItem;
@@ -98,19 +82,15 @@ interface Item {
   rating: number | null;
 }
 
-/** How many entries the list holds at most: it is what was done lately, not all of it. */
+/** The most entries the list holds. */
 export const RECENT_ACTIVITY = 50;
 
-/**
- * More than this many games in a row with the same thing done to them, on
- * the same day, are one row. Fewer read as well one by one.
- */
+/** More than this many games in a row with the same thing done on one day are one row. */
 const GROUP_MORE_THAN = 3;
 
 /**
- * What can be grouped: what reads the same for every game. Time played, a
- * move to a console and a rating each say something of their own, and the
- * game being played is one game.
+ * Time played, a move and a rating each say something of their own, and only
+ * one game is being played, so those never group.
  */
 const GROUPABLE = new Set<ActivityKind>([
   'started',
@@ -134,9 +114,8 @@ const SAME_GO_MS = 12 * 60 * 60 * 1000;
 const savedDay = (value: unknown) => (typeof value === 'string' ? value.slice(0, 10) : null);
 
 /**
- * What one event says happened, or null when it says nothing worth a line (a
- * game hidden, a date corrected, a note cleared, hours corrected down). An
- * event can hold several changes made together: the line is the main one.
+ * Null when the event is worth no line (a game hidden, a date corrected, a note
+ * cleared, hours corrected down). An event with several changes gives its main one.
  */
 function told(event: ActivityEvent): Told | null {
   const { changes } = event;
@@ -173,7 +152,7 @@ function told(event: ActivityEvent): Told | null {
   return play ? { kind: 'played', minutes: play.minutes } : null;
 }
 
-/** The lines of one entry, in the order they happened, with time played in a row added up. */
+/** Oldest first, with time played in a row added up. */
 function linesOf(newestFirst: Item[]): ActivityLine[] {
   const lines: ActivityLine[] = [];
   for (const { line } of [...newestFirst].reverse()) {
@@ -188,14 +167,9 @@ function linesOf(newestFirst: Item[]): ActivityLine[] {
 }
 
 /**
- * Everything to show, newest first, by when each thing was logged (a game
- * finished or dropped before there was a history, by its day). The game
- * being played has its line where its start falls, like any other. Lines
- * about one game that follow each other within twelve hours are one entry,
- * and more than three games in a row with the same thing done to them on one
- * day are one entry too. A
- * hidden game is left out, as is a game that is no longer in the library,
- * and a finished or dropped game saved without a date has no place in time.
+ * Newest first, by when each thing was logged (a finish or drop from before the
+ * history, by its day). Hidden games, games no longer in the library, and a
+ * finish or drop saved without a date are left out.
  */
 export function recentActivity(
   games: GameItem[],
@@ -204,15 +178,12 @@ export function recentActivity(
 ): ActivityEntry[] {
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
 
-  // The history's events, each at the moment it was logged.
   const logged = events.flatMap((event): Item[] => {
     const game = shown.get(event.game_id);
     const what = game && told(event);
     if (!game || !what) return [];
     const { day: chosen, rating, ...rest }: Told = what;
     const line: ActivityLine = rest;
-    // Listed on the day it was logged; a finish or a drop says its own day
-    // when that is another.
     const loggedOn = toLocalIsoDate(new Date(event.created_at));
     if (chosen && chosen !== loggedOn) line.on = chosen;
     if (rating != null) line.rating = rating;
@@ -251,7 +222,7 @@ export function recentActivity(
     ];
     if (game.status === 'playing') {
       if (startOf.has(game.id)) return [];
-      // Started at a real moment: the day it was where the player is.
+      // The day in the player's own time zone.
       const started = playing?.id === game.id ? (playing.started_at ?? null) : null;
       const day = started ? toLocalIsoDate(new Date(started)) : null;
       return from({ kind: 'playing' }, started ?? '', day, null);
@@ -272,7 +243,6 @@ export function recentActivity(
     (a, b) => b.at.localeCompare(a.at) || b.order - a.order || b.game.id - a.game.id,
   );
 
-  // One entry for each run of lines about the same game, close together.
   const runs: Item[][] = [];
   for (const item of items) {
     const run = runs.at(-1);
@@ -303,9 +273,7 @@ export function recentActivity(
     return { entry, groupable };
   });
 
-  // A group is one entry: games that follow each other in the list, each
-  // with one line of the same kind, logged on the same day. Whether they
-  // were moved together (Games, Select) or one by one doesn't matter.
+  // Games moved one by one group the same as games moved together (Games, Select).
   const sameMove = (a: (typeof made)[number], b: (typeof made)[number]) =>
     a.groupable &&
     b.groupable &&
@@ -353,11 +321,7 @@ export function activityDay(day: string, now = new Date()): string {
   });
 }
 
-/**
- * A day as the list stamps it beside its rows: the day of the month, the
- * month under it, and the year (said beside the month) for a day in another
- * year.
- */
+/** The stamp beside the list's rows; `year` only for a day in another year. */
 export function activityStamp(
   day: string,
   now = new Date(),

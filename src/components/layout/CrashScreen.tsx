@@ -5,9 +5,8 @@ import { Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 /**
- * The whole page failed to draw: says so, in the app's look, with a way to
- * try again. Shared by the root error page and the last-resort one that
- * stands in when the root layout itself has failed.
+ * Shared by the root error page and the last-resort one that stands in when the
+ * root layout itself has failed.
  */
 export function CrashScreen({ error, retry }: { error: unknown; retry: () => void }) {
   useEffect(() => {

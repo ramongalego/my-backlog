@@ -8,35 +8,25 @@ import { Dropdown } from '@/components/ui/Dropdown';
 const ALL = '';
 
 interface GamesPlatformProps {
-  /**
-   * The filter's state, or null when there's nothing to choose between (see
-   * useGamesPage): then nothing is drawn.
-   */
+  /** Null when there's nothing to choose between (see useGamesPage): nothing is drawn. */
   platforms: {
-    /** The platform listed, or '' for all of them. */
+    /** '' for all platforms. */
     value: string;
     set: (platform: string) => void;
-    /** The platforms to offer, with how many games each would list. */
     options: { value: string; count: number }[];
-    /** How many games all of them together list. */
     allCount: number;
   } | null;
   /**
-   * The menu went away while it had the keyboard's focus (choosing "All
-   * platforms" under a status filter with one platform takes it off the
-   * page): the page moves focus to the control after it.
+   * The menu left the page while it had focus ("All platforms" under a status
+   * filter with one platform): the page moves focus to the control after it.
    */
   onGone: () => void;
 }
 
 /**
- * Which platform's games the Games page lists, beside the search it narrows
- * with: a menu on the toolbar's surface, like Sort. While it's narrowing the
- * page it's lit like a chosen chip and names the platform, so a filter left on
- * can't pass for a library with games missing. Below `md`, where the toolbar
- * is tight, it's the icon alone (as Select is on phones): its width never
- * changes with the choice, so the row beside it doesn't move, and the page's
- * heading says which platform is listed.
+ * While filtering it's lit and names the platform, so a filter left on can't
+ * pass for missing games. Below `md` it's the icon alone, so its width never
+ * changes with the choice; the page's heading names the platform.
  */
 export function GamesPlatform({ platforms, onGone }: GamesPlatformProps) {
   const shown = platforms !== null;

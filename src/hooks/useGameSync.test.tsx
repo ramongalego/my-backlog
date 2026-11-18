@@ -75,7 +75,6 @@ describe('useGameSync', () => {
     await act(() => result.current.startSync(games(20)));
 
     expect(peak).toBe(8);
-    // Everything else finished while game 1 was still running.
     expect(order.at(-1)).toBe(1);
     expect(order).toHaveLength(20);
   });
@@ -176,7 +175,6 @@ describe('background HowLongToBeat filling', () => {
           ?.map((g) => g.main_story_hours),
       ).toEqual([12.5, null, null]),
     );
-    // Patched in place: the whole library isn't marked for another download.
     expect(client.getQueryState(listKey)?.isInvalidated).toBe(false);
   });
 

@@ -1,29 +1,21 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { GameWithImage, QueueItem } from '@/types/games';
 
-// Every mutation on the queue or the playing game (useNowPlaying,
-// useSwitchGame) uses this scope. Sharing it
-// makes React Query run them one at a time, so e.g. two quick reorders
-// can't reach the server out of order or roll back over each other.
+// Every queue and playing-game mutation shares this scope, so React Query runs
+// them one at a time: two quick reorders can't reach the server out of order or
+// roll back over each other.
 export const QUEUE_SCOPE = { id: 'queue' };
 
 /**
- * The one toast every change to the queue or the playing game says itself in,
- * with its Undo. A new change takes the last one's place, so only the latest
- * can be undone: undoing an older one after a newer put games back a place
- * off (each Undo goes by where the game was when it moved).
+ * One toast for every queue or playing-game change, so only the latest can be
+ * undone: undoing an older one after a newer one puts games a place off.
  */
 export const QUEUE_UNDO_TOAST = 'queue-undo';
 
 /**
- * Whether other changes to the queue or the playing game are still waiting
- * their turn behind the one that's finishing. Each change shows on screen at
- * once and is saved in order, so reading the queue back from the server after
- * the first of several would undo the later ones on screen until they're
- * saved too: a game just removed flickering back. The last one to finish
- * reads it back; the ones before it ask here and leave it.
- *
- * Call it as a queue change settles: that change still counts as in flight.
+ * Only the last queue change to settle reads the queue back: reading it after
+ * an earlier one undoes the later ones on screen (a removed game flickers back).
+ * Call it as a change settles, while it still counts as in flight.
  */
 export function moreQueueChangesWaiting(queryClient: QueryClient): boolean {
   const inFlight = queryClient.isMutating({
@@ -32,7 +24,7 @@ export function moreQueueChangesWaiting(queryClient: QueryClient): boolean {
   return inFlight > 1;
 }
 
-/** Minimal game data needed to show a game in the queue before the server responds. */
+/** Enough to show a game in the queue before the server responds. */
 export type QueueableGame = Pick<
   GameWithImage,
   'id' | 'app_id' | 'name' | 'header_image' | 'main_story_hours' | 'playtime_forever'
@@ -101,7 +93,6 @@ export function toPlayingGame(item: QueueItem): GameWithImage {
   };
 }
 
-/** A queued game as a game: what the switch and the detail dialogs pass around. */
 export function fromQueueItem(item: QueueItem): QueueableGame {
   return { id: item.game_id, ...item.game };
 }

@@ -19,7 +19,7 @@ const DayPicker = dynamic(
   { ssr: false },
 );
 
-// Converts "YYYY-MM-DD" → Date (local time, no timezone shift)
+// Local time: `new Date(iso)` reads it as UTC, which can shift the day.
 function isoToDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);
@@ -33,7 +33,6 @@ function formatDateLabel(iso: string): string {
   });
 }
 
-/** When a game was finished or dropped, which can also be left unknown. */
 export function CompletionDateField({
   label,
   hasDate,
@@ -73,8 +72,8 @@ export function CompletionDateField({
   }, [calendarOpen]);
 
   return (
-    // The calendar hangs off this row below md: as wide as the dialog's
-    // fields, where hanging off the date button ran it off a phone's screen.
+    // Below md the calendar hangs off this row, not the date button, which
+    // would run it off a phone's screen.
     <div className="relative flex items-center gap-2.5">
       <input
         id="date-toggle"

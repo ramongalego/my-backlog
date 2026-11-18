@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { FIELD_LABEL, fieldClass } from '@/components/ui/Input';
 import { chipClass } from '@/components/ui/ToggleGroup';
 
-// After your own consoles: current hardware, then older mainstream consoles,
-// newest first. IGDB lists platforms in no useful order ("Satellaview", a
-// Japan-only add-on, before "SNES"); anything not named here sorts last.
+// Newest first. IGDB lists platforms in no useful order ("Satellaview" before
+// "SNES"); anything not named here sorts last.
 const KNOWN_CONSOLES = [
   'Switch 2',
   'PS5',
@@ -37,10 +36,7 @@ const KNOWN_CONSOLES = [
 ];
 const VISIBLE = 4;
 
-/**
- * The consoles to offer, best guess first: the ones you've added games on
- * (most recent first), then known consoles newest first, then the rest.
- */
+/** `used`: the consoles you've added games on, most recent first. */
 export function orderConsoles(options: string[], used: string[]): string[] {
   const rank = (name: string) => {
     const usedAt = used.indexOf(name);
@@ -54,19 +50,12 @@ export function orderConsoles(options: string[], used: string[]): string[] {
     .map((o) => o.name);
 }
 
-/**
- * Picked for you only when it's a safe guess: the game's only console, or
- * one you've used before. Otherwise nothing, so you choose.
- */
+/** Only a safe guess, else '' so the player chooses. */
 export function defaultConsole(ordered: string[], used: string[]): string {
   if (ordered.length === 1) return ordered[0];
   return ordered.find((name) => used.includes(name)) ?? '';
 }
 
-/**
- * Which console the game is on: a few likely chips, the rest behind "More",
- * and "Other" for anything IGDB doesn't list.
- */
 export function ConsolePicker({
   ordered,
   value,
@@ -77,7 +66,7 @@ export function ConsolePicker({
   ordered: string[];
   value: string;
   onChange: (value: string) => void;
-  /** Take focus when the dialog opens (the console is the first thing to decide). */
+  /** The console is then the first thing to decide. */
   autoFocus?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);

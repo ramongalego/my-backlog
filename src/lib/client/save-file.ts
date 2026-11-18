@@ -1,7 +1,3 @@
-/**
- * Hands the browser a file to save, under this name: it goes to the downloads
- * folder (or asks where), as a link to a file would.
- */
 export function saveFile(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

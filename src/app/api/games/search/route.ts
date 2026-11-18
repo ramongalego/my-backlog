@@ -38,9 +38,8 @@ export async function GET(request: NextRequest) {
       return jsonError(query.error.issues[0]?.message ?? 'Search for at least 2 characters', 400);
     }
     const results = await searchGames(query.data);
-    // Mark the games already in your library, from Steam or added by hand:
-    // adding one again moves that entry to the console you pick instead of
-    // listing the game twice.
+    // Games already in the library are marked: adding one again moves that
+    // entry to the picked console instead of listing the game twice.
     const LIBRARY_COLUMNS =
       'id, app_id, igdb_id, status, platform, finished_at, dropped_at, notes, rating';
     const appIds = [...new Set(results.flatMap((r) => r.steamAppIds))];

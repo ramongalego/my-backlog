@@ -3,9 +3,6 @@ import { playedALot } from '@/lib/games/played-a-lot';
 import { playedHours } from '@/lib/games/playtime';
 import { upcomingRelease } from '@/lib/games/release-date';
 
-// Everything Stats shows, worked out from the library. Pure: the Stats page
-// and the server (the player profile) both use it.
-
 interface TagStat {
   tag: string;
   count: number;
@@ -41,7 +38,6 @@ interface PlayedALotGame {
   last_played_at: string | null;
 }
 
-/** A game Stats shows with its art. */
 interface StatGame {
   id: number;
   name: string;
@@ -72,11 +68,10 @@ export interface Stats {
   playedALot: PlayedALotGame[];
   /** Games finished in the last 365 days, for the backlog pace estimate. */
   finishedLastYear: number;
-  /** Where the hours went: the most played games, most first. */
   mostPlayed: StatGame[];
   /** Finished games rated 9 or 10 (8 and up when there are few), best and newest first. */
   highestRated: StatGame[];
-  /** Your highest and lowest finish rates among tags with enough games, when they differ. */
+  /** Among tags with enough games; null unless the rates are far enough apart. */
   finishContrast: { high: TagCompletion; low: TagCompletion } | null;
 }
 
@@ -100,13 +95,12 @@ function parseYear(releaseDate: string | null): string | null {
   return m ? m[0] : null;
 }
 
-/** Stats leaves out games you've hidden or won't play. */
 export const countedInStats = (games: GameItem[]) =>
   games.filter((g) => g.status !== 'hidden' && g.status !== 'wont_play');
 
 /**
- * Everything Stats shows, worked out from the library (already without hidden
- * and won't-play games). Null for an empty library.
+ * `games` comes through countedInStats first. Null for an empty library. The
+ * server uses it too, for the player profile.
  */
 export function computeStats(
   games: GameItem[],
@@ -137,7 +131,6 @@ export function computeStats(
       .reduce((sum, g) => sum + (g.main_story_hours ?? 0), 0),
   );
 
-  // Tags — aggregate across all games
   const EXCLUDED_TAGS = new Set([
     'Singleplayer',
     'Multiplayer',
@@ -191,7 +184,6 @@ export function computeStats(
     .slice(0, MOST_PLAYED)
     .map(statGame);
 
-  // Average rating on finished + rated games
   const ratedGames = games.filter((g) => g.rating !== null && g.status === 'finished');
   const avgRating =
     ratedGames.length > 0
@@ -199,7 +191,6 @@ export function computeStats(
         10
       : null;
 
-  // Rating distribution — finished games only (consistent with avgRating)
   const ratingDistribution: RatingBar[] = Array.from({ length: 11 }, (_, i) => ({
     rating: i,
     count: ratedGames.filter((g) => g.rating === i).length,
@@ -213,7 +204,6 @@ export function computeStats(
     .slice(0, HIGHEST_RATED)
     .map(statGame);
 
-  // Finished by year
   const yearCounts = new Map<string, number>();
   for (const game of games) {
     if (game.finished_at && game.status === 'finished') {
@@ -225,7 +215,6 @@ export function computeStats(
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([year, count]) => ({ year, count }));
 
-  // Games by release year: only games that are out, not ones coming next year.
   const releaseYearCounts = new Map<string, number>();
   for (const game of games) {
     if (upcomingRelease(game.release_date)) continue;
@@ -252,7 +241,7 @@ export function computeStats(
     last_played_at: g.last_played_at ?? null,
   }));
 
-  // Largest-remainder method so percentages always sum to exactly 100
+  // Largest-remainder method, so the percentages always sum to exactly 100.
   const rawPcts = [
     { key: 'backlog' as const, value: (backlog / total) * 100 },
     { key: 'finished' as const, value: (finished / total) * 100 },
@@ -297,11 +286,7 @@ export function computeStats(
   };
 }
 
-/**
- * Nothing to report yet: no game finished, dropped or played, as on a new
- * account. Stats shows what you have and how to start instead of empty
- * sections.
- */
+/** A new account's Stats shows how to start instead of empty sections. */
 export function isStarting(stats: Stats): boolean {
   return stats.finished === 0 && stats.dropped === 0 && stats.totalPlaytimeHours === 0;
 }

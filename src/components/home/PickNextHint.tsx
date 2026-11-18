@@ -9,10 +9,7 @@ const SMALL_BACKLOG = 10;
 const INLINE_LINK =
   'cursor-pointer font-medium text-ink-200 underline decoration-ink-600 underline-offset-4 hover:text-ink-50 transition-colors';
 
-/**
- * "Connect Steam" as a link in the sentence. Once pressed, a small spinner
- * follows the words until Steam's sign-in page takes over.
- */
+/** Once pressed, a spinner follows the words until Steam's sign-in page takes over. */
 function ConnectSteamLink({ onClick, children }: { onClick: () => void; children: string }) {
   const { connecting } = useConnectSteam();
   return (
@@ -35,11 +32,6 @@ function ConnectSteamLink({ onClick, children }: { onClick: () => void; children
   );
 }
 
-/**
- * The line under Pick My Game: with a small backlog, that picks get better
- * with more games (and how to get there); otherwise, connecting Steam until
- * it's connected. Nothing once neither applies.
- */
 export function PickNextHint({
   backlogCount,
   isSteamConnected,

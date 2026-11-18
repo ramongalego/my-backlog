@@ -5,28 +5,21 @@ import { signedUpWithPassword } from '@/lib/account/sign-in';
 import { loadHasPassword } from '@/lib/data/loaders';
 
 /**
- * Whether the signed-in player's account has a password: one made by signing
- * in with Google or Discord has none, and can't be asked for it. The database
- * says (`account_has_password`); if it can't be asked, an account made with a
- * password counts as having one, so nothing a password guards is opened by a
- * failed lookup.
+ * An account made with Google or Discord has none. If the database can't be
+ * asked, one made with a password counts as having one, so a failed lookup
+ * opens nothing a password guards.
  */
 export async function accountHasPassword(supabase: SupabaseClient, user: User): Promise<boolean> {
   return (await loadHasPassword(supabase)) ?? signedUpWithPassword(user);
 }
 
-/** What checking a password found: it's right, it's wrong, or it couldn't be checked. */
 export type PasswordCheck = 'right' | 'wrong' | 'unavailable';
 
 /**
- * Whether this is the account's password, checked by signing in with it on a
- * client of its own that keeps nothing: the player's own session (in their
- * cookies) is left as it is. The session the check makes is ended at once, so
- * it doesn't linger as another signed-in device.
- *
- * Only Supabase refusing the credentials is "wrong". Supabase being down, or
- * limiting sign-ins, is "unavailable": the player typed nothing wrong and
- * shouldn't be told they did.
+ * Signs in on a client that keeps nothing, so the player's own session is left
+ * alone, and ends that session at once so it doesn't linger as another device.
+ * Supabase down or limiting sign-ins is "unavailable": the player typed
+ * nothing wrong.
  */
 export async function checkPassword(email: string, password: string): Promise<PasswordCheck> {
   const check = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -43,7 +36,6 @@ export async function checkPassword(email: string, password: string): Promise<Pa
   return 'right';
 }
 
-/** What a route answers when the password given isn't right, or couldn't be checked. */
 export function passwordCheckRefusal(
   check: Exclude<PasswordCheck, 'right'>,
   wrong: { error: string; field: AccountRefusal['field'] },
@@ -53,14 +45,12 @@ export function passwordCheckRefusal(
     : { status: 503, error: "Couldn't check your password right now. Please try again." };
 }
 
-/** A Supabase Auth refusal, by its code, as the player reads it and the field it's about. */
 export interface AccountRefusal {
   status: number;
   error: string;
   field?: 'currentPassword' | 'password' | 'email';
 }
 
-/** Why Supabase wouldn't take a new password. */
 export function passwordRefusal(code: string | undefined, message: string): AccountRefusal {
   switch (code) {
     case 'same_password':
@@ -71,8 +61,8 @@ export function passwordRefusal(code: string | undefined, message: string): Acco
       };
     case 'weak_password':
       return { status: 400, error: message, field: 'password' };
-    // Supabase's own check of the current password ("Require current password
-    // when updating"). It was checked just before, so this is a rare race.
+    // Supabase's "Require current password when updating". It was checked just
+    // before, so this is a rare race.
     case 'current_password_invalid':
     case 'current_password_required':
       return {
@@ -90,7 +80,6 @@ export function passwordRefusal(code: string | undefined, message: string): Acco
   }
 }
 
-/** Why Supabase wouldn't take a new email. */
 export function emailRefusal(code: string | undefined): AccountRefusal {
   switch (code) {
     case 'email_exists':

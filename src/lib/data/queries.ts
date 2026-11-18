@@ -1,9 +1,5 @@
-// One definition per query: its key, its loader and how long it stays fresh.
 // The hooks and the server prefetch both build their queries from here, so a
-// query can't drift between the two (or between two hooks sharing it).
-//
-// Hooks pass the user's id, null until it's known, which skips the query.
-// The server prefetch passes its own Supabase client; the browser uses its own.
+// query can't drift between them. A null user id (not known yet) skips the query.
 import { queryOptions, skipToken } from '@tanstack/react-query';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
@@ -25,7 +21,6 @@ import {
 
 const MINUTE = 60 * 1000;
 
-/** The loader for a user's query, or skipToken while there's no user. */
 function load<T>(
   userId: string | null,
   supabase: SupabaseClient | undefined,
@@ -41,7 +36,7 @@ async function fetchCarouselPools(): Promise<CarouselPools> {
 }
 
 export const queries = {
-  /** The whole library (Games page, Stats). Status edits patch it in place. */
+  /** Status edits patch it in place. */
   gamesList: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.games.list(userId ?? ''),
@@ -64,7 +59,6 @@ export const queries = {
       staleTime: 30 * 1000,
     }),
 
-  /** The games picked as favorites (ids, in order), for the Profile page. */
   favoriteGames: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.games.favorites(userId ?? ''),
@@ -72,10 +66,7 @@ export const queries = {
       staleTime: 5 * MINUTE,
     }),
 
-  /**
-   * The latest of the history, for the Profile page's Recent activity.
-   * Short-lived: anything done to a game anywhere adds to it.
-   */
+  /** Short-lived: anything done to a game anywhere adds to it. */
   history: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.games.history(userId ?? ''),
@@ -83,11 +74,7 @@ export const queries = {
       staleTime: 30 * 1000,
     }),
 
-  /**
-   * Whether the account has a password, for the Profile page's Account panel
-   * (null when the database couldn't say). It changes only by the reset link,
-   * which loads the app afresh.
-   */
+  /** It changes only by the reset link, which loads the app afresh. */
   hasPassword: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.auth.hasPassword(userId ?? ''),
@@ -95,14 +82,12 @@ export const queries = {
       staleTime: 5 * MINUTE,
     }),
 
-  /** The games added by hand, for the Add game dialog. */
   manualGames: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.games.manual(userId ?? ''),
       queryFn: load(userId, supabase, loadManualGames),
     }),
 
-  /** Categories of heavily played games, for Stats' "Played a lot". */
   openEndedCategories: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.games.openEndedCategories(userId ?? ''),
@@ -110,11 +95,7 @@ export const queries = {
       staleTime: 5 * MINUTE,
     }),
 
-  /**
-   * The queue, straight from the database like every other query, not
-   * through /api/queue, which added a hop. The single source for queue items
-   * and "queued" badges.
-   */
+  /** The single source for queue items and "queued" badges. */
   queue: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({
       queryKey: queryKeys.queue.list(userId ?? ''),
@@ -131,9 +112,8 @@ export const queries = {
     }),
 
   /**
-   * Home's carousels, always built on the server: the page prefetch builds
-   * them directly, the browser through /api/carousels. Refetching them in the
-   * browser used to download the whole backlog to keep a few dozen games.
+   * Always built on the server, so the browser never downloads the whole
+   * backlog: the prefetch builds them directly, the browser through /api/carousels.
    */
   carousels: (userId: string | null, supabase?: SupabaseClient) =>
     queryOptions({

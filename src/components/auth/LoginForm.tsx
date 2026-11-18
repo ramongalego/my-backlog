@@ -16,7 +16,7 @@ interface LoginFormProps {
 }
 
 function mapLoginError(error: AuthError): string {
-  // Avoid leaking whether an email is registered — collapse credential errors to one message.
+  // One message for every credential error, so it doesn't reveal whether an email is registered.
   if (error.code === 'invalid_credentials') {
     return 'Invalid email or password';
   }
@@ -38,8 +38,7 @@ export function LoginForm({
   const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // A submit on its way. The button is disabled from the next redraw; this
-  // stops a second press before then from sending the form again.
+  // `disabled` only applies from the next redraw; this stops a second submit before then.
   const submitting = useRef(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -80,18 +80,16 @@ export async function POST(request: NextRequest) {
   const usableRows = cachedRows.filter((row) => isCacheUsable(row, now) || needsOnlyHltb(row, now));
   const hltbPending = cachedRows.filter((row) => needsOnlyHltb(row, now)).map((row) => row.app_id);
 
-  // Only rows that would actually change are written (and reported as
-  // synced): never-synced rows, or ones the cache now has HLTB hours for.
-  // Games still waiting out their HLTB backoff are resolved without a write,
-  // so they don't trigger a client-side refetch on every page load.
+  // Only rows that would change are written and reported as synced, so games
+  // waiting out their HLTB backoff don't trigger a refetch on every page load.
   const own = new Map(ownRows.flatMap((r) => r.data ?? []).map((g) => [g.app_id as number, g]));
   const changedRows = usableRows.filter((row) => {
     const mine = own.get(row.app_id);
     return !mine || !mine.metadata_synced || mine.main_story_hours !== row.main_story_hours;
   });
 
-  // Copy cache hits onto the user's rows. Each row needs its own values, so
-  // these are individual UPDATEs, run in concurrent batches.
+  // Each row needs its own values, so these are single UPDATEs in concurrent
+  // batches.
   for (const batch of chunk(changedRows, DB_BATCH_SIZE)) {
     const results = await Promise.all(
       batch.map((row) =>
@@ -110,7 +108,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Return the app_ids that weren't resolved from cache
   const resolvedIds = new Set(usableRows.map((r) => r.app_id));
   const remaining = validAppIds.filter((id) => !resolvedIds.has(id));
 

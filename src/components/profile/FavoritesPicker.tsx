@@ -13,24 +13,19 @@ import { MAX_FAVORITES, favoriteChoices, shownRating } from '@/lib/account/favor
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
 /**
- * A mouse or trackpad: the search can take focus as the picker opens, since
- * typing straight away costs nothing. On a touchscreen that would bring the
- * keyboard up over the grid, which is what most people pick from.
+ * On a touchscreen, focusing the search on open would bring the keyboard up over
+ * the grid, which is what most people pick from.
  */
 const hasFinePointer = () =>
   typeof window !== 'undefined' &&
   !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
 /**
- * As many games as the grid draws at a time. It lists the whole library, but a
- * large one would be thousands of tiles built as the picker opens and again on
- * every letter of a search, so the next batch is drawn as the grid is scrolled
- * toward its end (as the Games page does). Whole rows at two, three and four
- * across.
+ * Games drawn at a time, more as the grid nears its end: a large library would be
+ * thousands of tiles on every keystroke. Whole rows at two, three and four across.
  */
 const BATCH = 48;
 
-/** How many places are left, as the line under the title says it. */
 function placesLeft(picked: number): string {
   const left = MAX_FAVORITES - picked;
   if (left === 0) return `All ${MAX_FAVORITES} picked. Take one off to pick another.`;
@@ -39,11 +34,8 @@ function placesLeft(picked: number): string {
 }
 
 /**
- * Picks the profile's favorite games from the library: a grid of art, all of
- * it, the highest rated first, searched by name or tag. A click picks a game
- * into the next place or takes it off, and each change is saved as it's made (the row
- * on the page behind shows it). It stays open until it's closed, with Done or
- * the X: filling the last place isn't the end of choosing.
+ * Each pick is saved as it's made (the row behind shows it). It stays open until
+ * Done or the X: filling the last place isn't the end of choosing.
  */
 export function FavoritesPicker({
   games,
@@ -92,7 +84,6 @@ export function FavoritesPicker({
     return () => observer.disconnect();
   }, [hasMore, drawn]);
 
-  /** A new search starts from its first games, at the top of the grid. */
   function search(text: string) {
     setQuery(text);
     setDrawn(BATCH);

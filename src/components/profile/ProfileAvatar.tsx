@@ -7,14 +7,9 @@ import { initialOf } from '@/lib/account/identity';
 import { AVATAR_SIZE } from './profile-layout';
 import type { ApiResult } from '@/lib/client/request';
 
-/** What a change answered: done, or why not. */
 type Result = ApiResult;
 
-/**
- * The picture itself: theirs, Steam's, or their initial. A picture that won't
- * load (a file that isn't one, storage or Steam not answering) gives way to
- * the initial rather than the browser's broken-image mark.
- */
+/** A picture that won't load gives way to the initial, not the browser's broken-image mark. */
 function Picture({ src, name }: { src: string | null; name: string }) {
   const [broken, setBroken] = useState(false);
   return src && !broken ? (
@@ -39,11 +34,8 @@ function Picture({ src, name }: { src: string | null; name: string }) {
 }
 
 /**
- * The player's picture, which is also how it's changed: hovering it shows a
- * camera, and a click picks a new picture to upload. A picture of their own
- * has an X in its corner that takes it off (back to Steam's, or their
- * initial). Under a finger, with no hover, the camera sits in a corner and
- * the X always shows.
+ * The picture is its own Change button. Under a finger, with no hover, the camera
+ * sits in a corner and the remove X always shows.
  */
 export function ProfileAvatar({
   src,
@@ -91,7 +83,6 @@ export function ProfileAvatar({
       >
         {/* Keyed by the picture: a new one gets its own chance to load. */}
         <Picture key={src} src={src} name={name} />
-        {/* The camera, over the picture while it's hovered or focused. */}
         <span
           aria-hidden="true"
           className={`absolute inset-0 flex items-center justify-center bg-ink-950/60 text-ink-50 transition-opacity motion-reduce:transition-none ${

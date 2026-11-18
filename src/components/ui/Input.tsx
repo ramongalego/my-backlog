@@ -3,9 +3,8 @@
 import { type InputHTMLAttributes, type Ref } from 'react';
 
 /**
- * Shared look for every text field (inputs, textareas, search boxes). Add
- * padding and height at the call site. Focus brightens the border rather
- * than using the accent, which is reserved for actions.
+ * For every text field, textareas included; add padding and height at the call site.
+ * Focus brightens the border instead of using the accent, which is reserved for actions.
  */
 export function fieldClass(error?: boolean) {
   return `w-full bg-ink-800/60 border rounded-lg text-ink-100 placeholder:text-ink-500 transition-colors focus:outline-none ${

@@ -50,9 +50,8 @@ export function ToggleGroup<T extends string>({
     ? `inline-flex gap-0.5 rounded-lg bg-ink-800 ${size === 'md' ? 'p-1' : 'p-0.5'}`
     : `flex gap-1.5 ${wrap ? 'flex-wrap' : 'overflow-x-auto scrollbar-none'}`;
 
-  // A row that scrolls sideways keeps the chosen chip in sight: on a phone,
-  // opening /games?filter=dropped would otherwise show it cut off at the edge.
-  // Only the row scrolls, never the page.
+  // A sideways-scrolling row keeps the chosen chip in sight (on a phone,
+  // /games?filter=dropped would open with it cut off). Only the row scrolls.
   const rowRef = useRef<HTMLDivElement>(null);
   const scrolls = !segmented && !wrap;
   useEffect(() => {

@@ -3,10 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { jsonError } from '@/lib/server/api-response';
 import { loadCarouselPools } from '@/lib/data/loaders';
 
-/**
- * The Home carousels for the signed-in user. Building them reads the whole
- * backlog, so it happens here and the browser receives only the finished rows.
- */
+/** Building them reads the whole backlog, so the browser gets only the finished rows. */
 export async function GET() {
   const supabase = await createClient();
   const {

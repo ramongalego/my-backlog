@@ -1,10 +1,6 @@
 import { queueAddRequestSchema, safeText, syncSingleRequestSchema } from '@/lib/validations/common';
 import { isMetadataFresh, calculateBayesianScore } from '@/lib/games/scoring';
 
-// The sync route validates its input with `syncSingleRequestSchema` (zod) and
-// decides metadata enrichment via the inline `type === 'game'` check in
-// metadata-fetch. These tests exercise that real validation contract — the
-// route's source of truth — rather than a parallel reimplementation.
 describe('syncSingleRequestSchema (sync route input validation)', () => {
   describe('appId validation', () => {
     it('should reject missing appId', () => {
@@ -103,7 +99,6 @@ describe('sync route behavior (integration)', () => {
       const now = new Date('2026-05-01T12:00:00Z');
       jest.setSystemTime(now);
 
-      // 60 days ago - should be fresh
       const sixtyDaysAgo = new Date('2026-03-02T12:00:00Z').toISOString();
       expect(isMetadataFresh(sixtyDaysAgo)).toBe(true);
     });
@@ -112,7 +107,6 @@ describe('sync route behavior (integration)', () => {
       const now = new Date('2026-06-15T12:00:00Z');
       jest.setSystemTime(now);
 
-      // 91 days ago - should be stale
       const ninetyOneDaysAgo = new Date('2026-03-16T12:00:00Z').toISOString();
       expect(isMetadataFresh(ninetyOneDaysAgo)).toBe(false);
     });

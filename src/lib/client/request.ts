@@ -1,7 +1,5 @@
-// How the Profile page's settings call the app's API from the browser: one
-// request that never throws (and one for a file to download), so every helper
-// built on them says what happened in the same way, with a message the page
-// can show as is.
+// These never throw, so every helper built on them says what happened the same
+// way, with a message the page can show as is.
 
 /** What went wrong, for the player, and the form field it's about when there is one. */
 interface ApiFailure<Field extends string = string> {
@@ -10,13 +8,11 @@ interface ApiFailure<Field extends string = string> {
   field?: Field;
 }
 
-/** The server's answer, or why there isn't one. */
 export type ApiResult<T = object, Field extends string = string> =
   ({ ok: true } & T) | ApiFailure<Field>;
 
 const OFFLINE = "Couldn't reach MyBacklog. Check your connection and try again.";
 
-/** A JSON body for `apiRequest`. */
 export function json(method: 'POST' | 'PUT', body: unknown): RequestInit {
   return {
     method,
@@ -26,8 +22,7 @@ export function json(method: 'POST' | 'PUT', body: unknown): RequestInit {
 }
 
 /**
- * Calls the app's API. A request that can't be sent (offline) and one stopped
- * by the app's own rate limit, which says only "Too many requests", get
+ * Offline and the app's own rate limit (which says only "Too many requests") get
  * words of their own; anything else is the server's message, or `failed`.
  */
 export async function apiRequest<T = object, Field extends string = string>(
@@ -46,11 +41,7 @@ export async function apiRequest<T = object, Field extends string = string>(
   return failure(res.status, data, messages);
 }
 
-/**
- * Asks the app's API for a file. The file comes back to be saved (see
- * `saveFile`), with the name the server gave it; a failure is worded as
- * `apiRequest` words one.
- */
+/** A failure is worded as `apiRequest` words one. */
 export async function apiDownload(
   url: string,
   messages: Messages,

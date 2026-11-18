@@ -14,17 +14,15 @@ import type { EmailChangeResult } from '@/lib/client/account';
 type Field = 'email' | 'password';
 
 /**
- * Changes the email from the profile, with the password to confirm it's them:
- * a new email is a way into the account. Supabase emails links to confirm it,
- * one to each address, and nothing changes until they're opened; the profile
- * shows the new address as waiting until then.
+ * Asks for the password because a new email is a way into the account. Supabase
+ * emails a link to each address, and nothing changes until they're opened.
  */
 export function ChangeEmailDialog({
   email,
   onSubmit,
   onClose,
 }: {
-  /** The email now. */
+  /** The current email. */
   email: string;
   onSubmit: (email: string, password: string) => Promise<EmailChangeResult>;
   onClose: () => void;

@@ -6,11 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { fieldClass } from '@/components/ui/Input';
 import { MAX_HOURS_PLAYED, playedHours } from '@/lib/games/playtime';
 
-/**
- * Hours played for a game on a console, edited where it's shown: the playing
- * card's "12h played" becomes a field. Steam keeps its own games' hours, so
- * those show plain `Playtime` instead.
- */
+/** Console games only: Steam keeps its own games' hours, so those show plain `Playtime`. */
 export function HoursPlayedEdit({
   minutes,
   platform,
@@ -75,7 +71,7 @@ export function HoursPlayedEdit({
   return (
     <form
       onSubmit={save}
-      // Our own check and red border, not the browser's bubble.
+      // The app's own check and red border, not the browser's bubble.
       noValidate
       onKeyDown={(e) => {
         if (e.key === 'Escape') {

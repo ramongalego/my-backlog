@@ -15,19 +15,15 @@ import { recordPickOutcome } from '@/lib/client/picks';
 type WizardStep = 'mood' | 'energy' | 'time' | 'loading' | 'result';
 
 interface UseSuggestionReturn {
-  // Wizard state
   step: WizardStep;
   answers: Partial<SuggestionPreferences>;
 
-  // Result state
   suggestion: SuggestionResult | null;
   error: string | null;
 
-  // Cooldown state
   cooldownRemaining: number;
   isOnCooldown: boolean;
 
-  // Actions
   selectMood: (mood: MoodType) => void;
   selectEnergy: (energy: EnergyLevel) => void;
   selectTime: (time: TimeCommitment) => void;
@@ -36,7 +32,6 @@ interface UseSuggestionReturn {
   retry: () => void;
   reset: () => void;
 
-  // Loading state
   isLoading: boolean;
 }
 
@@ -51,19 +46,16 @@ export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  // Track excluded games and previous reasonings (for rerolls within the same session)
   const excludedGameIdsRef = useRef<number[]>([]);
   const previousReasoningsRef = useRef<string[]>([]);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  // A pick on its way. Each one is a call to the AI and counts toward the
-  // day's picks, so an answer, Reroll or Try again pressed twice asks once.
+  // Each pick is an AI call that counts toward the day's picks, so an answer,
+  // Reroll or Try again pressed twice asks once.
   const asking = useRef(false);
 
-  // Whether the picker is still open. A pick that arrives after it closed
-  // was never shown.
+  // A pick that arrives after the picker closed was never shown.
   const open = useRef(true);
 
-  // Cleanup cooldown interval on unmount
   useEffect(() => {
     open.current = true;
     return () => {
@@ -110,8 +102,7 @@ export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
           ...preferences,
           mode,
           excludeGameIds: excludedGameIdsRef.current,
-          // The latest few: the server takes no more, and refused the
-          // request once a sitting had seen more picks than that.
+          // The server refuses more than the latest few.
           previousReasonings: previousReasoningsRef.current.slice(-MAX_PREVIOUS_REASONINGS),
         }),
       });
@@ -122,14 +113,11 @@ export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
         throw new Error(data.error || 'Failed to get suggestion');
       }
 
-      // The server kept the pick as it made it; the picker closed while it
-      // was on its way, so it's kept as never seen.
       if (!open.current) {
         recordPickOutcome(data.data?.pickId, 'unseen');
         return;
       }
 
-      // Track this reasoning for future rerolls
       if (data.data?.reasoning) {
         previousReasoningsRef.current = [...previousReasoningsRef.current, data.data.reasoning];
       }
@@ -160,7 +148,6 @@ export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
     const newAnswers = { ...answers, time };
     setAnswers(newAnswers);
 
-    // All answers collected, fetch suggestion
     if (newAnswers.mood && newAnswers.energy && newAnswers.time) {
       fetchSuggestion(newAnswers as SuggestionPreferences);
     }
@@ -186,11 +173,9 @@ export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
       return;
     }
 
-    // Add current suggestion to exclusion list
     excludedGameIdsRef.current = [...excludedGameIdsRef.current, suggestion.game.id];
 
-    // Increment reroll count in background (fire and forget). With the pick's
-    // id, when the server kept it, so the pick is kept as passed on.
+    // Not waited for. The pick's id, when the server kept it, records it as passed on.
     fetch('/api/suggest/reroll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -199,17 +184,14 @@ export function useSuggestion(mode: PickMode = 'play'): UseSuggestionReturn {
         ...(suggestion.pickId != null ? { pickId: suggestion.pickId } : {}),
       }),
     }).catch(() => {
-      // Ignore errors - this is non-critical
+      // Non-critical.
     });
 
-    // Start cooldown
     startCooldown();
 
-    // Fetch new suggestion
     await fetchSuggestion(answers as SuggestionPreferences);
   };
 
-  // Asks again with the same answers, e.g. after a failed request.
   const retry = () => {
     if (isLoading || !answers.mood || !answers.energy || !answers.time) return;
     fetchSuggestion(answers as SuggestionPreferences);

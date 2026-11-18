@@ -15,7 +15,6 @@ import { initialOf } from '@/lib/account/identity';
 
 interface UserMenuProps {
   user: User;
-  /** The name the profile shows. */
   name: string;
   /** The picture the profile shows, or null for the initial. */
   avatar: string | null;
@@ -51,7 +50,6 @@ export function UserMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Enabled items only: a disabled one (refresh on cooldown) can't take focus.
-  // Buttons, and the link to the profile.
   const menuItems = () =>
     Array.from(
       menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? [],
@@ -138,10 +136,8 @@ export function UserMenu({
           if (!open) onOpen?.();
           setOpen(!open);
         }}
-        // The chevron says there's a menu here: an avatar alone reads as a
-        // picture. The hover ring stays on the avatar. On the narrowest phones
-        // (320px) the header has no room for it, and a tap on an avatar is
-        // what people try there anyway.
+        // The chevron says there's a menu: an avatar alone reads as a picture.
+        // Below 360px there's no room for it, and people tap the avatar there anyway.
         className="group flex cursor-pointer items-center gap-1 rounded-lg"
         aria-label="Open user menu"
         aria-haspopup="menu"
@@ -188,8 +184,7 @@ export function UserMenu({
           <Link
             href="/profile"
             role="menuitem"
-            // Focus back to the menu's button: already on Profile, nothing else
-            // takes it.
+            // Focus back to the menu's button: already on Profile, nothing else takes it.
             onClick={() => closeMenu(true)}
             // A link only follows Enter; in a menu, Space activates too.
             onKeyDown={(e) => {

@@ -5,13 +5,9 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { recordPick, recordPickOutcome } from '@/lib/server/picks';
 import { pickOutcomeSchema, randomPickSchema } from '@/lib/validations/suggest';
 
-// The picks kept for later study (game_picks, see lib/server/picks.ts). A pick
-// from the questions is kept by /api/suggest, which makes it. These two keep
-// what only the browser knows: a random pick, which it makes itself, and what
-// the player then did with any pick. Neither is needed for the pick to work,
-// so a pick that couldn't be kept still answers 200.
+// What only the browser knows about picks (see lib/server/picks.ts). Neither
+// is needed for the pick to work, so one that couldn't be kept still answers 200.
 
-/** The signed-in player and the request's body, or the response that refuses it. */
 async function signedIn(
   request: NextRequest,
   limitKey: string,
@@ -34,7 +30,7 @@ async function signedIn(
   return { userId: user.id, body };
 }
 
-/** Keeps a random pick. Answers with its id (null when it couldn't be kept). */
+/** Answers with the pick's id, null when it couldn't be kept. */
 export async function POST(request: NextRequest) {
   const req = await signedIn(request, 'pick-random');
   if ('refused' in req) return req.refused;
@@ -46,7 +42,6 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, pickId });
 }
 
-/** Keeps what the player did with a pick: started it, queued it, rolled again, or never saw it. */
 export async function PATCH(request: NextRequest) {
   const req = await signedIn(request, 'pick-outcome');
   if ('refused' in req) return req.refused;

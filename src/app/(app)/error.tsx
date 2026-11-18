@@ -5,10 +5,7 @@ import { Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PAGE_CONTAINER } from '@/components/layout/Page';
 
-/**
- * A signed-in page that crashed. It sits inside the (app) layout, so the
- * header and menus stay and you can go somewhere else.
- */
+/** Inside the (app) layout, so the header and menus stay to go somewhere else. */
 export default function AppError({ error, retry }: { error: unknown; retry: () => void }) {
   useEffect(() => {
     console.error(error);

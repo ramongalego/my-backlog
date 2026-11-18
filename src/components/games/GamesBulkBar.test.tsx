@@ -49,7 +49,6 @@ it('says how many games are ticked, and offers every status but Playing to pick 
     "Won't Play",
     'Hidden',
   ]);
-  // Nothing is picked to start with.
   expect(
     statuses.getAllByRole('button').every((b) => b.getAttribute('aria-pressed') === 'false'),
   ).toBe(true);

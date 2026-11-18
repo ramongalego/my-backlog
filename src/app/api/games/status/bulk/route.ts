@@ -6,9 +6,8 @@ import { bulkRestoreSchema, bulkStatusSchema } from '@/lib/validations/games';
 import { applyStatusChanges, restoreGames } from '@/lib/server/apply-status';
 
 /**
- * Moves several games to a status at once (Games, Select): all of them are
- * saved, or none. `changes` moves them, and answers with what each game had
- * (`previous`); `restore` takes that back for Undo and writes it as it was.
+ * All of them are saved, or none. `changes` answers with what each game had
+ * (`previous`); `restore` writes that back for Undo.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

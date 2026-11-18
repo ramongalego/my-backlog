@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { SyncProgress } from '@/components/sync/SyncProgress';
 
-// Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage({

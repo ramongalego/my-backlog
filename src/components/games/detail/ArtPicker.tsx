@@ -13,7 +13,6 @@ const TILE = `group relative block w-full ${COVER_ASPECT} cursor-pointer overflo
 const PICKED = 'ring-2 ring-ink-50 ring-offset-2 ring-offset-ink-900';
 const UNPICKED = 'ring-1 ring-inset ring-white/8 hover:ring-white/30';
 
-/** The mark on the tile that's picked. */
 function Picked() {
   return (
     <span className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink-50 text-ink-950">
@@ -23,11 +22,8 @@ function Picked() {
 }
 
 /**
- * Choose art: the game's original art and SteamGridDB's other images for it,
- * as tiles to pick from. Picking one shows it in the dialog's header
- * (`onPreview`) before anything is saved; "Use this art" saves it and hands
- * back what the game now shows (`onDone`). For a game being added, nothing
- * is saved here: the pick is handed back to go with the game.
+ * `onPreview` fires before anything is saved; `onDone` gets what the game now
+ * shows. For a game being added nothing is saved: the pick goes with the game.
  */
 export function ArtPicker({
   game,
@@ -37,7 +33,6 @@ export function ArtPicker({
   onCancel,
 }: {
   game: ArtGame;
-  /** The art the game shows now. */
   shown: string | null;
   onPreview: (url: string | null) => void;
   onDone: (art: string | null) => void;
@@ -46,8 +41,7 @@ export function ArtPicker({
   const art = useGameArt(game, true);
   const [picked, setPicked] = useState(shown);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // The button that opened the picker is gone while it's open: focus moves to
-  // the picker's heading, so the keyboard and screen readers start from it.
+  // The button that opened the picker is gone while it's open, so focus moves to the heading.
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
 

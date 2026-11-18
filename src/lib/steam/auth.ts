@@ -14,10 +14,8 @@ export function extractSteamId(claimedIdentifier: string): string | null {
 }
 
 /**
- * The openid library verifies an assertion against whatever provider the
- * claimed_id points at, so on its own it would accept a signature from an
- * attacker-run provider whose claimed_id merely contains a Steam URL. Only
- * assertions issued by Steam's endpoint, for a Steam identity, are accepted.
+ * The openid library trusts whatever provider claimed_id points at, so on its
+ * own it accepts an attacker's provider whose claimed_id contains a Steam URL.
  */
 export function isSteamAssertion(params: URLSearchParams): boolean {
   const claimedId = params.get('openid.claimed_id') ?? '';

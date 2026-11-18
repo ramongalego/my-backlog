@@ -7,9 +7,8 @@ import { SteamIcon } from '@/components/ui/SteamIcon';
 import { useConnectSteam } from '@/hooks/useConnectSteam';
 
 /**
- * The button that connects Steam, wherever one is offered. Once pressed, its
- * Steam mark turns into a spinner until Steam's sign-in page takes over, which
- * takes a second or two; the label stays, so the button keeps its width.
+ * Once pressed, the Steam mark turns into a spinner until Steam's sign-in page
+ * takes over (a second or two); the label stays, so the width holds.
  */
 export function ConnectSteamButton({
   onClick,
@@ -32,8 +31,8 @@ export function ConnectSteamButton({
       variant="secondary"
       size={size}
       onClick={onClick}
-      // Not `disabled`: it has the focus while Steam's page is on its way
-      // (a second press starts nothing: see useConnectSteam).
+      // Not `disabled`, which would drop its focus while Steam's page loads;
+      // a second press starts nothing (see useConnectSteam).
       aria-disabled={connecting || undefined}
       aria-busy={connecting || undefined}
       className={`cursor-pointer aria-disabled:cursor-default ${className}`}

@@ -4,9 +4,6 @@ import { ratingOf } from './rating';
 import { matchesSearch, nameMatchesSearch } from './search';
 import { platformOf } from './consoles';
 
-// What the Games page shows of the library: which games a search and a filter
-// leave, in what order, and how many each filter would show.
-
 export const GAME_FILTERS = [
   'all',
   'backlog',
@@ -30,15 +27,13 @@ export const SORT_DIRECTIONS: Record<GameSort, [string, string]> = {
   length: ['Shortest first', 'Longest first'],
 };
 
-/** Whether the list runs from the smallest value up (only Time to beat does, usually). */
+/** Only Time to beat runs smallest first unless reversed. */
 export function sortsAscending(sort: GameSort, reversed: boolean): boolean {
   return (sort === 'length') !== reversed;
 }
 
-// Steam gives display dates like "Sep 28, 2010"; "To be announced" and missing
-// dates parse to NaN and sort last. Parsed once per row: a sort compares each
-// game many times, and parsing dominated sorting a big library. Refetched or
-// patched rows are new objects, so they're parsed afresh.
+// Parsed once per row: a sort compares each game many times, and parsing
+// dominated sorting a big library. Refetched or patched rows are new objects.
 const releaseTimes = new WeakMap<GameItem, number>();
 function releaseTime(game: GameItem): number {
   let time = releaseTimes.get(game);
@@ -56,15 +51,13 @@ function myRating(game: GameItem): number {
   return rated && game.rating != null ? game.rating : -1;
 }
 
-/** Sort comparator for the Games page. */
 function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
   switch (sort) {
     case 'score':
       // Critic score, else Steam's weighted score (ratingOf), as the cards show.
       return (ratingOf(b) ?? 0) - (ratingOf(a) ?? 0);
     case 'rating':
-      // Your own rating, highest first; ties show the most recently finished
-      // first. Unrated games follow, by their rating.
+      // Ties: most recently finished first, then by score.
       return (
         myRating(b) - myRating(a) ||
         (b.finished_at ?? '').localeCompare(a.finished_at ?? '') ||
@@ -89,11 +82,8 @@ function compareGames(a: GameItem, b: GameItem, sort: GameSort): number {
   }
 }
 
-/**
- * Whether a game has the value a sort orders by. Games without one (no
- * rating, no time to beat, no release date) go last either way: reversing
- * a sort shouldn't bring every unknown to the top.
- */
+// Games without the value go last either way: reversing a sort shouldn't bring
+// every unknown to the top.
 function hasSortValue(game: GameItem, sort: GameSort): boolean {
   switch (sort) {
     case 'score':
@@ -109,7 +99,6 @@ function hasSortValue(game: GameItem, sort: GameSort): boolean {
   }
 }
 
-/** Orders two games by a sort, either way, with games missing its value last. */
 function orderGames(a: GameItem, b: GameItem, sort: GameSort, reversed: boolean): number {
   const aHas = hasSortValue(a, sort);
   if (aHas !== hasSortValue(b, sort)) return aHas ? -1 : 1;
@@ -117,23 +106,18 @@ function orderGames(a: GameItem, b: GameItem, sort: GameSort, reversed: boolean)
   return reversed ? -order : order;
 }
 
-/** The games a search finds, by name or tag: every game when there's no search. */
 export function searchLibrary(games: GameItem[], query: string): GameItem[] {
   if (!query) return games;
   return games.filter((game) => matchesSearch(game, query));
 }
 
-/** Whether a status filter lists a game. */
 function inFilter(game: GameItem, filter: GameFilter): boolean {
   if (filter === 'all') return game.status !== 'hidden';
   if (filter === 'backlog') return game.status === 'backlog' || game.status === 'playing';
   return game.status === filter;
 }
 
-/**
- * The platforms the library's games are on, the one with the most games
- * first (then by name), so the list doesn't reorder as you search or filter.
- */
+/** Counted over the whole library, so the list doesn't reorder on search or filter. */
 export function libraryPlatforms(games: GameItem[]): string[] {
   const totals = new Map<string, number>();
   for (const game of games) {
@@ -143,16 +127,12 @@ export function libraryPlatforms(games: GameItem[]): string[] {
   return [...totals.keys()].sort((a, b) => totals.get(b)! - totals.get(a)! || a.localeCompare(b));
 }
 
-/** The games on a platform: every game when none is chosen. */
 export function onPlatform(games: GameItem[], platform: string): GameItem[] {
   if (!platform) return games;
   return games.filter((game) => platformOf(game) === platform);
 }
 
-/**
- * How many games each platform would list under a status filter, among those
- * a search found: what picking it would show.
- */
+/** What picking each platform would show under the current filter and search. */
 export function countPlatforms(searched: GameItem[], filter: GameFilter): Map<string, number> {
   const counts = new Map<string, number>();
   for (const game of searched) {
@@ -163,10 +143,9 @@ export function countPlatforms(searched: GameItem[], filter: GameFilter): Map<st
 }
 
 /**
- * The games a filter shows, in order. All is everything but hidden games
- * (won't-play games are still part of the library). Backlog includes the game
- * being played, like queued games. A search lists games named for it first,
- * then those only tagged with it, each in the chosen order.
+ * All leaves out only hidden games (won't-play games are still the library).
+ * Backlog includes the game being played. A search lists name matches before
+ * games only tagged with it.
  */
 export function filterLibrary(
   searched: GameItem[],
@@ -185,7 +164,6 @@ export function filterLibrary(
   );
 }
 
-/** How many games each filter shows, among those a search found. */
 export function countLibrary(searched: GameItem[]): FilterCounts {
   const counts = { all: 0, backlog: 0, finished: 0, dropped: 0, wont_play: 0, hidden: 0 };
   for (const game of searched) {

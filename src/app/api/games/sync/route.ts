@@ -62,7 +62,6 @@ export async function POST(request: NextRequest) {
   }
   if (!owned) return jsonError('Game not found', 404);
 
-  // Check for existing fresh metadata in shared table
   const { data: existing } = await supabase
     .from('game_metadata')
     .select(METADATA_COLUMNS)
@@ -87,8 +86,8 @@ export async function POST(request: NextRequest) {
         console.error(err);
         return jsonError('Failed to fetch game details', 500);
       }
-      // Steam is throttling us. Leave the game unsynced so the client retries
-      // it, instead of recording it as a game with no store page.
+      // Steam is throttling: left unsynced so the client retries it, rather
+      // than recorded as a game with no store page.
       console.error(err.message);
       return jsonError('Steam is busy, try again shortly', 503, {
         'Retry-After': STEAM_RETRY_AFTER_SECONDS.toString(),
@@ -97,23 +96,21 @@ export async function POST(request: NextRequest) {
     if (fresh) {
       metadata = mergeForCache(fresh, existing);
       hltbPending = fresh.hltbUnavailable && metadata.main_story_hours === null;
-      // The shared cache is only writable with the secret key, so users can't
-      // write arbitrary metadata into it. The data here comes from our own
-      // upstream fetch, never from the request.
+      // Only the secret key writes the shared cache, so players can't plant
+      // metadata in it; this data is from the app's own fetch, never the request.
       const service = tryCreateServiceClient();
       const { error: cacheError } = service
         ? await service.from('game_metadata').upsert(metadata, { onConflict: 'app_id' })
         : { error: new Error('SUPABASE_SECRET_KEY not configured; skipping metadata cache write') };
       if (cacheError) {
-        // Non-fatal: the shared cache write failed but we can still update the
-        // user's own row below. Surface it so we notice systemic cache failures.
+        // Non-fatal: the player's own row is still updated below. Logged to
+        // catch systemic cache failures.
         console.error(cacheError);
       }
     }
   }
 
   if (metadata) {
-    // Update user's game with metadata from shared table
     const { error: updateError } = await supabase
       .from('games')
       .update(toGameRowUpdate(metadata, owned.art_chosen))
@@ -144,7 +141,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } else {
-    // Mark as synced even if no data (game might be removed from store)
+    // Synced even with no data: the game may be gone from the store.
     const { error: markError } = await supabase
       .from('games')
       .update({ metadata_synced: true })

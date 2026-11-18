@@ -1,7 +1,6 @@
 import type { AuthMode } from '@/types/auth';
 import { GetStartedButton } from './GetStartedButton';
 
-/** The closing call to sign up. */
 export function FinalCta({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
   return (
     <section className="border-t border-ink-900">

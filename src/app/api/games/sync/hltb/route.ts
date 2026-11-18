@@ -8,10 +8,9 @@ import { syncHltbRequestSchema } from '@/lib/validations/common';
 import { releaseYear } from '@/lib/games/release-date';
 
 /**
- * Looks up HowLongToBeat times for games whose other details are already
- * synced. The app calls this in the background after setup, a few games at a
- * time, because HLTB only allows short bursts: when it starts refusing, the
- * rest come back as `pending` with how long to wait.
+ * Called in the background a few games at a time, since HLTB only allows
+ * short bursts: once it refuses, the rest come back `pending` with how long
+ * to wait.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -41,9 +40,8 @@ export async function POST(request: NextRequest) {
   }
   const { appIds } = parsed.data;
 
-  // Only the caller's own games. They're searched by Steam's name for the game
-  // (from the shared cache), not the name in the library, which its owner can
-  // change: the hours found go into the cache every user reads.
+  // Searched by Steam's name (from the shared cache), not the library's, which
+  // its owner can change: the hours found go into the cache every user reads.
   const [{ data: games, error: gamesError }, { data: cached, error: cacheError }] =
     await Promise.all([
       supabase
@@ -82,9 +80,8 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         if (!(err instanceof HLTBUnavailableError)) {
           console.error(err);
-          // Nothing done yet: a plain failure, and the app tries again next
-          // visit. Otherwise report the games already done and hand back this
-          // one and the rest as pending, so each retry gets further or stops.
+          // Nothing done yet: a plain failure, retried next visit. Otherwise
+          // the rest go back as pending, so each retry gets further or stops.
           if (results.length === 0) return jsonError('Failed to look up times', 500);
         }
         pending = (games ?? []).slice(i).map((g) => g.app_id);

@@ -58,7 +58,7 @@ export function SuggestionWizard({
 
   return (
     <div>
-      {/* The question over the backlog it picks from, bleeding to the dialog's edges. */}
+      {/* Bleeds the backlog art to the dialog's edges. */}
       <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 mb-5 overflow-hidden rounded-t-2xl">
         {covers.length > 0 && (
           <>
@@ -81,7 +81,6 @@ export function SuggestionWizard({
 
         <div className="relative px-4 sm:px-6 pt-24 sm:pt-32">
           <div className="flex items-center gap-3 text-sm text-ink-300">
-            {/* Done in ember, like Home's backlog progress; this one light. */}
             <div className="flex shrink-0 gap-1" aria-hidden="true">
               {[1, 2, 3].map((num) => (
                 <span
@@ -139,7 +138,6 @@ export function SuggestionWizard({
         />
       )}
 
-      {/* Instead of answering: under the first question, the way out. */}
       {step === 'mood' && onLeaveToChance && (
         <button
           type="button"

@@ -62,7 +62,6 @@ describe('sameFavorites', () => {
   it('is the same games in the same order', () => {
     expect(sameFavorites([1, 2], [1, 2])).toBe(true);
     expect(sameFavorites([], [])).toBe(true);
-    // The order is part of it: it's the order they show in.
     expect(sameFavorites([1, 2], [2, 1])).toBe(false);
     expect(sameFavorites([1, 2], [1])).toBe(false);
   });

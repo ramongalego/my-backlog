@@ -96,7 +96,7 @@ it('opens the entry from its art, like every other card', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Edit Celeste' }));
   expect(mockOpen).toHaveBeenCalledWith(1);
-  // The art is the only edit control now.
+  // The art is the only edit control.
   expect(screen.getAllByRole('button', { name: /^Edit/ })).toHaveLength(1);
 });
 

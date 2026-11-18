@@ -15,7 +15,6 @@ export type { CarouselPools };
 // Three pages at five per page on wide screens.
 const CAROUSEL_SIZE = 15;
 
-/** Drops a game from every carousel, e.g. optimistically when it starts playing. */
 export function removeGameFromPools(pools: CarouselPools, gameId: number): CarouselPools {
   const without = (list: CarouselGame[]) => list.filter((g) => g.id !== gameId);
   return {
@@ -29,13 +28,9 @@ export function removeGameFromPools(pools: CarouselPools, gameId: number): Carou
   };
 }
 
-// How many games' art flicks past while a game is picked.
 const SHUFFLE_COVERS = 16;
 
-/**
- * Art from the backlog games Home already has, in a random order: what flicks
- * past while Pick My Game or Random picks one (ArtShuffle).
- */
+/** What flicks past while Pick My Game or Random picks a game (ArtShuffle). */
 export function backlogCovers(
   pools: CarouselPools | undefined,
   /** Queued games, which neither picks from. */
@@ -66,11 +61,8 @@ export function backlogCovers(
 export function useCarouselPools(userId: string | null) {
   const { data = EMPTY_CAROUSEL_POOLS, isPending } = useQuery(queries.carousels(userId));
 
-  // Queued games stay in the rows, marked Queued, so a row still shows every
-  // game that fits it, but they don't count toward its size: a game you've
-  // already queued never takes a suggestion's place. Reading the queue here,
-  // from the cache the page already has, means queuing one updates the rows
-  // at once.
+  // Queued games stay in the rows, marked Queued, but don't count toward a
+  // row's size: a game already queued never takes a suggestion's place.
   const { queuedGameIds } = useQueue(userId);
   const upTo = (pool: CarouselGame[]) => {
     const games: CarouselGame[] = [];
@@ -83,9 +75,8 @@ export function useCarouselPools(userId: string | null) {
     return games;
   };
 
-  // No game appears in two of the picks carousels. They claim games in this
-  // order, which isn't their order on Home: a game you've started belongs in
-  // Pick Up Where You Left Off, before the general picks.
+  // No game appears in two picks carousels. They claim games in this order, not
+  // Home's: a started game belongs in Pick Up Where You Left Off first.
   const shown = new Set<number>();
   const take = (pool: CarouselGame[]) => {
     const games = upTo(pool.filter((g) => !shown.has(g.id)));
@@ -102,8 +93,7 @@ export function useCarouselPools(userId: string | null) {
   const highlyRatedGames = take(data.highlyRatedGamesPool);
   const hiddenGems = take(data.hiddenGemsPool);
 
-  // Recently Added is a factual list of new arrivals, so it's exempt from
-  // de-duplication: a new game shows there even if another carousel has it.
+  // A factual list of new arrivals, so not de-duplicated.
   const recentlyAdded = data.recentlyAddedPool.slice(0, CAROUSEL_SIZE);
 
   return {

@@ -116,7 +116,6 @@ describe('GameCardInfo', () => {
     it('should show playtime when at least 60 minutes', () => {
       render(<GameCardInfo appId={1} name="Game" playtimeMinutes={120} />);
 
-      // Icon and hours, like the other meta-row indicators.
       expect(screen.getByText('2h')).toBeVisible();
     });
 

@@ -1,4 +1,3 @@
-// The games the landing page's picker demo chooses between, and how it picks.
 export type Mood = 'Adrenaline' | 'Relaxed' | 'Engaged' | 'Emotional';
 export type Energy = 'High' | 'Medium' | 'Low';
 export type Time = 'One session' | 'A few nights' | 'Long haul';
@@ -6,7 +5,7 @@ export type Time = 'One session' | 'A few nights' | 'Long haul';
 export const MOODS: Mood[] = ['Adrenaline', 'Relaxed', 'Engaged', 'Emotional'];
 export const ENERGIES: Energy[] = ['High', 'Medium', 'Low'];
 export const TIMES: Time[] = ['One session', 'A few nights', 'Long haul'];
-// What each answer means, as the app's own question says it.
+// Worded as the app's own question words them.
 export const TIME_HINTS: Record<Time, string> = {
   'One session': 'Under 6 hours to beat, or built around short runs',
   'A few nights': '6 to 15 hours to beat',
@@ -193,8 +192,8 @@ export function pickGame(mood: Mood, energy: Energy, time: Time): PickerGame {
   let best = PICKER_GAMES[0];
   let bestScore = -Infinity;
   for (const game of PICKER_GAMES) {
-    // Mood and time are hard constraints (wrong vibe / no time) — mismatches penalize, not just miss out on points.
-    // Energy is softer, so it's a lighter tiebreaker.
+    // Mood and time are hard constraints, so a mismatch costs points rather than
+    // just missing out; energy is a lighter tiebreaker.
     const score =
       (game.moods.includes(mood) ? 2 : -2) +
       (game.times.includes(time) ? 2 : -2) +

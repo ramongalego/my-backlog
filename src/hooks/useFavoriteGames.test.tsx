@@ -75,7 +75,6 @@ it('shows a change at once and saves it', async () => {
   const { favorites, setOnServer } = setup();
 
   act(() => favorites().set([5, 3]));
-  // Shown before the server has answered, and readable this instant.
   expect(favorites().current()).toEqual([5, 3]);
   await waitFor(() => expect(favorites().pickedIds).toEqual([5, 3]));
   expect(saveFavoriteGames).toHaveBeenCalledWith([5, 3]);
@@ -111,7 +110,6 @@ it('keeps one save on its way: changes made meanwhile go out as one, the latest'
     favorites().set([1, 2]);
     favorites().set([1, 2, 3]);
   });
-  // Only the first has gone; the page already shows the last.
   expect(held.map((save) => save.ids)).toEqual([[1]]);
   expect(favorites().current()).toEqual([1, 2, 3]);
 
@@ -150,7 +148,6 @@ it('says why a save failed and puts back what the server has', async () => {
   await waitFor(() => expect(favorites().pickedIds).toEqual([3, 1]));
   expect(saveFavoriteGames).toHaveBeenCalledTimes(1);
 
-  // It can be tried again.
   act(() => favorites().set([5]));
   expect(saveFavoriteGames).toHaveBeenCalledTimes(2);
 });
@@ -265,11 +262,9 @@ it('builds the next change on the list it showed, even if a refetch put the old 
   expect(held[0].ids).toEqual([3, 4]);
   // A refetch that read the rows before the save committed lands now.
   act(() => {
-    // The same cache the hook reads.
     favoritesCache().setQueryData(key, [3, 1, 4]);
   });
 
-  // The next change still starts from [3, 4], not from the stale [3, 1, 4].
   expect(favorites().current()).toEqual([3, 4]);
   act(() => favorites().set([...favorites().current(), 9]));
   await act(async () => held[0].finish());
@@ -294,7 +289,6 @@ it('takes the Undo away when the removal it offered to undo did not happen', asy
   );
 
   await act(async () => held[0].fail("Couldn't save your favorites. Please try again."));
-  // The row is back as it was, so "Removed … Undo" is no longer true.
   expect(toast.dismiss).toHaveBeenCalledWith('favorites-undo');
   expect(favorites().current()).toEqual([3, 1, 4]);
 });

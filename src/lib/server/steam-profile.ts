@@ -1,18 +1,15 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-/** The Steam name and picture a profile has saved. */
 export interface SteamIdentity {
   username: string | null;
   avatar: string | null;
 }
 
 /**
- * Saves the player's Steam name and picture when they've changed on Steam
- * since they were saved (at connecting, or the last refresh), so "Connected
- * as" and the profile's fallback name and picture follow Steam. Returns the
- * new ones, or null when nothing changed, Steam said nothing, or they couldn't
- * be saved: then the saved ones stand, and the next refresh tries again.
+ * So "Connected as" and the profile's fallback name and picture follow Steam.
+ * Null when nothing changed, Steam said nothing or the save failed: the saved
+ * ones stand, and the next refresh tries again.
  */
 export async function syncSteamIdentity(
   service: SupabaseClient | null,

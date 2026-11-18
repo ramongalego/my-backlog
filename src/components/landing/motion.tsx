@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import { prefersReducedMotion } from '@/lib/motion';
 
-/**
- * A list row that settles in a moment after the one above it, once its panel
- * scrolls into view (paused, at nothing, until then).
- */
+/** Paused at its start until the panel scrolls into view; `index` staggers the rows. */
 export function riseIn(inView: boolean, index: number) {
   return {
     className: `animate-rise-in motion-reduce:animate-none ${inView ? '' : '[animation-play-state:paused]'}`,

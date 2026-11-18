@@ -19,7 +19,7 @@ import {
   SECTION_HEADING,
 } from '@/components/profile/profile-layout';
 
-/** Mirrors ProfileSection's heading row: a title, and room for its action. */
+/** Mirrors ProfileSection's heading row. */
 function SectionHeading({ width }: { width: string }) {
   return (
     <div className={SECTION_HEADING}>
@@ -28,7 +28,6 @@ function SectionHeading({ width }: { width: string }) {
   );
 }
 
-/** Mirrors the Profile page: the header and its figures, then the two columns. */
 export function ProfilePageSkeleton() {
   return (
     <PageSkeleton>
@@ -72,10 +71,8 @@ export function ProfilePageSkeleton() {
           <div>
             <SectionHeading width="w-36" />
             <div className={ACTIVITY_LIST}>
-              {/* One day, its date beside its rows, as the list has them. */}
               <div className={ACTIVITY_DAY}>
                 <div className={ACTIVITY_DATE}>
-                  {/* The stamp: a day over its month. */}
                   <div className={ACTIVITY_STAMP}>
                     <div className="flex h-6 items-center">
                       <Skeleton className="h-5 w-6" />
@@ -106,8 +103,8 @@ export function ProfilePageSkeleton() {
           </div>
         </div>
         <div className="space-y-6">
-          {/* Plays on: a few platforms, each a 32px row. How many isn't known
-              yet, and nothing sits under this column to be moved by it. */}
+          {/* Plays on: the count is a guess, and nothing under this column
+              moves if it's wrong. */}
           <PanelSkeleton className={panelPadding()}>
             <Skeleton className="mb-3 h-5 w-16" />
             {Array.from({ length: 4 }, (_, i) => (
@@ -117,7 +114,6 @@ export function ProfilePageSkeleton() {
               </div>
             ))}
           </PanelSkeleton>
-          {/* Account: email, password and Steam, a label over each value. */}
           <PanelSkeleton className={panelPadding()}>
             <Skeleton className="h-5 w-20" />
             <div className="mt-1 divide-y divide-ink-800">

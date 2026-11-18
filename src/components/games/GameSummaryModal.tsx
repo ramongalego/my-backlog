@@ -65,14 +65,13 @@ export function GameSummaryModal({
     if (shareState === 'shared') copyRef.current?.focus();
   }, [shareState]);
 
-  // A share page on its way. The button shows it from the next redraw; this
-  // stops a second click before then from making a second page.
+  // The loading state applies from the next redraw; this stops a second click
+  // before then from making a second page.
   const sharing = useRef(false);
 
   const handleShare = async () => {
     if (sharing.current) return;
 
-    // If already shared, just reuse the URL
     if (shareUrl) {
       setShareState('shared');
       return;
@@ -142,7 +141,6 @@ export function GameSummaryModal({
           finishedThisYear={finishedThisYear}
         />
 
-        {/* Share section */}
         <div className="pt-5 border-t border-ink-800">
           <p role="status" className="sr-only">
             {copied ? 'Link copied' : shareState === 'shared' ? 'Share link ready' : ''}

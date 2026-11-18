@@ -12,10 +12,8 @@ const ICON_BUTTON =
   'shrink-0 cursor-pointer rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-50 disabled:cursor-wait disabled:opacity-60';
 
 /**
- * The profile's name, with a pencil beside it that turns it into a field.
- * Enter or the tick saves, Escape or the X puts it back. Left empty, the name
- * goes back to the one the account has (`fallback`), which the field shows as
- * its placeholder. Focus comes back to the pencil afterwards.
+ * Left empty, the name goes back to the account's (`fallback`), which the field
+ * shows as its placeholder. Focus comes back to the pencil afterwards.
  */
 export function ProfileName({
   name,
@@ -24,7 +22,6 @@ export function ProfileName({
   under,
   onSave,
 }: {
-  /** The name shown. */
   name: string;
   /** The name the account has, used when none is chosen. */
   fallback: string;

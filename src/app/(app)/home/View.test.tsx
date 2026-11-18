@@ -2,13 +2,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import HomePage from '@/app/(app)/home/View';
 import type { GameWithImage } from '@/types/games';
 
-// Next.js navigation
 jest.mock('next/navigation', () => ({
   useSearchParams: () => ({ has: () => false }),
   useRouter: () => ({ replace: jest.fn() }),
 }));
 
-// Heavy child components that aren't under test
 // Manual-game edits are covered by their own tests.
 jest.mock('@/hooks/useManualGameActions', () => ({
   useManualGameActions: () => ({
@@ -136,7 +134,6 @@ describe('HomeContent — Pick My Game button', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Pick My Game' }));
 
-    // The modal is loaded with next/dynamic, so it appears asynchronously.
     expect(await screen.findByTestId('suggestion-modal')).toHaveAttribute('data-mode', 'play');
   });
 });

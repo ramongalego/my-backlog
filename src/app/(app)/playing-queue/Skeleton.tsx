@@ -7,10 +7,7 @@ import {
 } from '@/components/layout/Skeleton';
 import { Panel } from '@/components/ui/Panel';
 
-/**
- * Mirrors QueueItemRow: a card with the cover on top on phones, a row on
- * desktop, with Play, Move to top, the drag handle and Move to backlog.
- */
+/** Mirrors QueueItemRow: the cover on top on phones, a row on desktop. */
 function QueueListSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="divide-y divide-ink-800/70">
@@ -23,7 +20,6 @@ function QueueListSkeleton({ rows = 3 }: { rows?: number }) {
           <Skeleton className={`w-full sm:w-48 lg:w-56 ${COVER_ASPECT} rounded-lg shrink-0`} />
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex-1 min-w-0">
-              {/* A font-medium title line (24px) and a text-xs meta line. */}
               <Skeleton className="h-5 w-3/4 sm:w-64 mt-0.5 mb-2" />
               <Skeleton className="h-4 w-1/2 sm:w-40" />
             </div>
@@ -40,7 +36,7 @@ function QueueListSkeleton({ rows = 3 }: { rows?: number }) {
   );
 }
 
-/** Mirrors NowPlayingRow: the game being played, above the queue. */
+/** Mirrors NowPlayingRow. */
 function NowPlayingSkeleton() {
   return (
     <Panel
@@ -62,11 +58,7 @@ function NowPlayingSkeleton() {
   );
 }
 
-/**
- * The queue's content while it loads. `playing`: a game is being played (the
- * usual case, and the guess when it isn't known), so its panel comes first,
- * then "Up Next" and the rows.
- */
+/** `playing` is the usual case, so it's the guess when it isn't known. */
 export function QueueContentSkeleton({ playing = true }: { playing?: boolean }) {
   return playing ? (
     <div>

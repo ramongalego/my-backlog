@@ -39,15 +39,14 @@ interface CurrentlyPlayingProps {
   reveal?: boolean;
 }
 
-// The quiet actions under Finish and Drop. The padding, canceled by the
-// negative margin, makes each a 44px tap target on phones without moving it.
+// The padding, canceled by the negative margin, makes a 44px tap target on
+// phones without moving it.
 const TEXT_ACTION =
   'flex items-center gap-1.5 py-3 -my-3 text-sm text-ink-400 hover:text-ink-100 transition-colors disabled:opacity-50 cursor-pointer';
 
 /**
- * Hours played against the time to beat, from the moment the game is picked
- * (0h) to when it's finished. No rating or Deck rating: they help choose a
- * game, and this one's chosen (its details dialog still has them).
+ * Hours played against the time to beat. No rating or Deck rating: they help
+ * choose a game, and this one's chosen.
  */
 function Progress({
   game,
@@ -80,7 +79,6 @@ function Progress({
       </>
     );
 
-  // Without a time to beat there's nothing to measure against: just the hours.
   if (!mainStoryHours) return <div className="text-sm">{hours()}</div>;
 
   if (hoursPlayed >= mainStoryHours) {
@@ -98,7 +96,6 @@ function Progress({
       </div>
       <div className="h-1.5 bg-ink-800 rounded-full overflow-hidden">
         <div
-          // New hours (logged, or from Steam) ease the bar to its new length.
           className="h-full bg-accent-500 rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
           style={{ width: `${Math.min((hoursPlayed / mainStoryHours) * 100, 100)}%` }}
           role="progressbar"
@@ -123,7 +120,6 @@ export function CurrentlyPlaying({
   reveal = false,
 }: CurrentlyPlayingProps) {
   const storeUrl = steamStoreUrl(game);
-  // The platform tag on the art, named for screen readers beside "Playing now".
   const tag = platformTag(game, useLibraryPlatforms());
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">

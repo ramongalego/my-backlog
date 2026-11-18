@@ -31,7 +31,6 @@ import { TruncatedText } from '@/components/ui/TruncatedText';
 
 const ART_SIZES = '(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px';
 
-/** A favorite's art, which is also what opens and moves it. */
 function FavoriteArt({ game }: { game: FavoriteGame }) {
   return <CoverArt src={game.header_image} alt="" sizes={ART_SIZES} interactive />;
 }
@@ -40,7 +39,7 @@ function FavoriteArt({ game }: { game: FavoriteGame }) {
 const INSTRUCTIONS =
   'Press Enter to open the game. To move it, press Space to pick it up, the arrow keys to move it, and Space again to drop it. Escape puts it back.';
 
-/** The rating over the art's corner. Not part of what's dragged, so it's not in its name. */
+/** Not part of what's dragged, so it's not in its name. */
 function RatingChip({ rating }: { rating: number | null }) {
   if (rating == null) return null;
   return (
@@ -49,13 +48,8 @@ function RatingChip({ rating }: { rating: number | null }) {
 }
 
 /**
- * A favorite the player picked: a click on its art (or Enter) opens the
- * game, as game art does everywhere; dragging it moves it (or Space picks it
- * up and the arrow keys move it), and the X in its corner takes it off.
- * The X shows on hover, and while the keyboard is on the favorite; a
- * click on the art gives it focus too, but that isn't a reason to keep the X
- * there until the next click elsewhere. Under a finger there's no hover, so
- * there it always shows.
+ * The X shows on hover and while the keyboard is on the favorite, not after a click
+ * on the art gives it focus. Under a finger there's no hover, so it always shows.
  */
 function PickedFavorite({
   game,
@@ -133,7 +127,6 @@ function PickedFavorite({
   );
 }
 
-/** An empty place: opens the picker to fill it. */
 function EmptyPlace({
   onChoose,
   buttonRef,
@@ -156,19 +149,14 @@ function EmptyPlace({
   );
 }
 
-/** What the page can ask of the row. */
 export interface FavoriteGamesHandle {
   /** Puts focus on the row: its first empty place, or its last favorite when it's full. */
   focus: () => void;
 }
 
 /**
- * Four games the player loves, as art, picked by them: the row starts as four
- * empty places and is theirs to fill and arrange where it is. An empty place
- * opens the picker, a favorite opens its game, dragging reorders, and the X
- * takes one off. A row with fewer than four keeps its empty places. (With
- * four, one comes off before another goes on: there's no other way into the
- * picker, and none is needed.)
+ * A row with fewer than four keeps its empty places. With four, one comes off
+ * before another goes on: an empty place is the only way into the picker.
  */
 export function FavoriteGames({
   games: saved,
@@ -210,12 +198,9 @@ export function FavoriteGames({
     });
   };
 
-  // The order just dropped, shown from the instant of the drop. The page's
-  // own copy catches up a moment later, and in that moment the drag library
-  // would animate the favorites from where they no longer are: the game
-  // beside the one moved slid out of the row and back. Kept only until the
-  // page's order changes from what it was at the drop, whatever it changes to
-  // (the new order, or the old one again if the save failed).
+  // Shown from the drop until the page's order changes (to the new order, or back
+  // if the save failed). Without it dnd-kit animates from the old places while the
+  // page catches up, and the moved game's neighbor slides out of the row and back.
   const [dropped, setDropped] = useState<{ from: number[]; order: number[] } | null>(null);
   const savedIds = saved.map((game) => game.id);
   if (dropped && !sameFavorites(savedIds, dropped.from)) setDropped(null);
@@ -257,9 +242,8 @@ export function FavoriteGames({
     focus: () => (firstEmpty.current ?? lastFavorite.current)?.focus(),
   }));
 
-  // Taking a favorite off takes its X with it, and focus with the X. It goes
-  // to the empty place that opens in the row instead of back to the page,
-  // unless it has gone somewhere else in the meantime.
+  // Removing a favorite removes its X, and focus with it: focus goes to the new
+  // empty place instead of the page, unless it has moved on meanwhile.
   const removedAt = useRef<number | null>(null);
   useEffect(() => {
     if (removedAt.current === null || saved.length >= removedAt.current) return;

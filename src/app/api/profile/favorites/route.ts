@@ -5,10 +5,8 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { favoriteGamesSchema } from '@/lib/validations/profile';
 
 /**
- * Saves the games a player picked as their favorites, in order (an empty list
- * clears them). The whole set is replaced in one transaction by the
- * set_favorite_games database function, so saving the same picks twice
- * changes nothing.
+ * An empty list clears them. set_favorite_games replaces the whole set in one
+ * transaction, so saving the same picks twice changes nothing.
  */
 export async function PUT(request: NextRequest) {
   const supabase = await createClient();

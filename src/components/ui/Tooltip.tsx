@@ -14,19 +14,12 @@ import { createPortal } from 'react-dom';
 const EDGE_GAP = 8;
 
 /**
- * A small custom tooltip that shows instantly on hover or a tap. Use it for
- * compact indicators whose meaning needs a word of explanation; the trigger's
- * visible content should still make sense without it, and screen readers get
- * the full text through aria-describedby.
+ * Shows instantly on hover or a tap. The trigger should make sense without it;
+ * screen readers get the text through aria-describedby.
  *
- * Triggers are focusable by tap (tabIndex -1) but not tab stops: a grid of
- * game cards would otherwise add three stops per card for supplementary text.
- * On a touchscreen the tap is how you read it, so it stays with the tooltip
- * rather than also reaching what's around it, like a card that opens.
- *
- * The bubble renders at the page level with fixed positioning, so containers
- * that clip their contents (game cards use content-visibility, carousels
- * scroll) can't cut it off, and it's nudged to stay inside the viewport.
+ * Triggers take focus on tap (tabIndex -1) but aren't tab stops: a grid of game
+ * cards would gain three stops per card. On a touchscreen the tap stays with the
+ * tooltip instead of reaching what's around it, like a card that opens.
  */
 export function Tooltip({
   content,
@@ -38,9 +31,8 @@ export function Tooltip({
   children: ReactNode;
   className?: string;
   /**
-   * Off for a tooltip inside a button that already says the same in its name
-   * (a tag on a game's art): the hidden description would be text inside the
-   * button that its name doesn't have, and nothing reads it out there anyway.
+   * Off inside a button whose name already says the same (a tag on a game's art):
+   * the description would be button text its name lacks, and nothing reads it there.
    */
   described?: boolean;
 }) {
@@ -95,12 +87,10 @@ export function Tooltip({
 }
 
 /**
- * The bubble a tooltip draws: centered above what it's about (`anchor`, that
- * element's box on screen), or below it when there's no room above. Kept
- * inside the viewport, at the page level with fixed positioning so a
- * container that clips can't cut it off. Decorative
- * (aria-hidden): what it says is given to a screen reader some other way.
- * Scrolling or resizing dismisses it, since a fixed bubble would drift.
+ * Centered above `anchor` (an element's box on screen), or below when there's no
+ * room. Portaled with fixed positioning so a clipping container (content-visibility,
+ * a carousel) can't cut it off. aria-hidden: give screen readers the text some other
+ * way. Scrolling or resizing dismisses it, since a fixed bubble would drift.
  */
 export function TooltipBubble({
   anchor,
@@ -123,8 +113,7 @@ export function TooltipBubble({
     );
     bubble.style.left = `${left}px`;
     const above = anchor.top - bubble.offsetHeight - EDGE_GAP;
-    // A tall bubble (a long name) over something near the top of the screen
-    // would start off screen: it goes below instead.
+    // A tall bubble near the top of the screen would start off screen: it goes below.
     bubble.style.top = `${above >= EDGE_GAP ? above : anchor.bottom + EDGE_GAP}px`;
   }, [anchor]);
 
@@ -152,7 +141,6 @@ export function TooltipBubble({
   );
 }
 
-/** Two-line tooltip body: a short heading and an optional detail line. */
 export function TooltipText({
   title,
   detail,

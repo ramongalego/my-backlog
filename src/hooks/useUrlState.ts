@@ -3,10 +3,9 @@
 import { useSearchParams } from 'next/navigation';
 
 /**
- * A string value kept in the URL query (`?key=value`) so it survives
- * navigating away and back, and can be bookmarked or shared. Writes use
- * history.replaceState, which Next keeps in sync with useSearchParams without
- * a server round trip. The default value is left out of the URL.
+ * Survives navigating away and back, and can be bookmarked. history.replaceState
+ * keeps useSearchParams in sync without a server round trip. The default value
+ * is left out of the URL.
  */
 export function useUrlState<T extends string>(
   key: string,

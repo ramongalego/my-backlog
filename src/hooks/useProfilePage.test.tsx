@@ -154,7 +154,7 @@ it('draws everything from the library', () => {
     'Ocarina of Time',
     'A Fine Game',
   ]);
-  // PC has five games, but one is hidden: listed by what the Games page would show.
+  // PC has five games, but one is hidden.
   expect(profile.platforms).toEqual([
     { name: 'PC', count: 4 },
     { name: 'Switch 2', count: 2 },
@@ -205,7 +205,7 @@ describe('favorites', () => {
       after = profile().favoritePicker.onToggle(1);
     });
     expect(after).toEqual([4, 2, 1]);
-    // (The page hears of a change a moment after it's made.)
+    // The page hears of a change a moment after it's made.
     await waitFor(() => expect(profile().favorites.map((g) => g.id)).toEqual([4, 2, 1]));
     // One save on its way at a time: the first click, then the rest as one.
     expect(jest.mocked(saveFavoriteGames).mock.calls.map(([ids]) => ids)).toEqual([[4], [4, 2, 1]]);

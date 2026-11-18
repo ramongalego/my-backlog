@@ -11,10 +11,8 @@ import {
 
 export const runtime = 'nodejs';
 
-// A share page never changes once made, so its image is cached for a long
-// time: by browsers for a day, by the CDN for a month. Rendering one costs a
-// database read, a fetch of the art and a 1200×630 PNG, and without this every
-// view of a link preview would pay for it again.
+// A share page never changes once made, and each render costs a database read,
+// an art fetch and a PNG, so browsers keep it a day and the CDN a month.
 const CACHE_CONTROL = 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400';
 
 // The app's palette (globals.css), as the hex values an image needs.
@@ -52,9 +50,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new Response('Not found', { status: 404 });
   }
 
-  // Checked again here, although the share route checks before saving: next/og
-  // fetches this URL on the server, so a bad row must never become a way to
-  // make the server request an arbitrary address.
+  // Checked again although the share route checks before saving: next/og
+  // fetches it on the server, so a bad row must never pick the address.
   const safeHeaderImage = safeShareImage(data.header_image);
   const played = Math.round((data.playtime_minutes / 60) * 10) / 10;
   const estimate =
@@ -88,7 +85,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         overflow: 'hidden',
       }}
     >
-      {/* The game's art at full strength: next/image cannot be used inside ImageResponse. */}
+      {/* next/image can't be used inside ImageResponse. */}
       {safeHeaderImage && (
         // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
         <img
@@ -129,7 +126,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           position: 'relative',
         }}
       >
-        {/* Finished, and the rating */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
@@ -156,7 +152,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           )}
         </div>
 
-        {/* Game name */}
         <div
           style={{
             display: 'block',
@@ -197,7 +192,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           </div>
         )}
 
-        {/* The figures in one line, and whose page this is */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', fontSize: '32px', color: INK_300 }}>
             {facts.map((fact, i) => (

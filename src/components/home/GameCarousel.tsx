@@ -53,15 +53,14 @@ interface GameCarouselProps {
 /** A row of picks needs a few games to choose between; fewer reads as a gap. */
 export const MIN_CAROUSEL_GAMES = 3;
 
-// The endless, arrow-driven loop is for a mouse on a wide screen. Touch
-// screens and phones swipe a native scroller instead, as Netflix does.
+// The arrow-driven loop is for a mouse on a wide screen; touch screens swipe a
+// native scroller instead.
 const LOOP_MEDIA = '(min-width: 640px) and (pointer: fine)';
-// Long enough to follow the cards as they go, and eased at both ends: the
-// row sets off gently instead of jumping, and settles.
+// Long enough to follow the cards, eased at both ends so the row doesn't jump.
 const SLIDE_MS = 700;
 const SLIDE_EASING = 'cubic-bezier(0.45, 0, 0.2, 1)';
 
-// The same width from the row's container width, to size the arrows to the art.
+// CARD_WIDTH in container units, to size the arrows to the art.
 const CARD_WIDTH_CQ = '((100cqw - (var(--per-page) - 1) * 1rem) / var(--per-page))';
 const COVER_HEIGHT = `calc(${CARD_WIDTH_CQ} * 215 / 460)`;
 // What's left of the row after a page of whole cards: the peeking card.
@@ -129,11 +128,10 @@ export function GameCarousel({
   const library = useLibraryPlatforms();
   const loopMode = useLoopMode();
 
-  // The first visible game. While sliding it can step past either end of the
-  // list; once the slide finishes it's wrapped back into 0..count-1.
+  // The first visible game. Mid-slide it can step past either end of the list;
+  // finishSlide wraps it back into 0..count-1.
   const [offset, setOffset] = useState(0);
   const [sliding, setSliding] = useState(false);
-  // Like Netflix, the left arrow only appears once you've moved.
   const [hasMoved, setHasMoved] = useState(false);
 
   const count = games.length;
@@ -223,8 +221,8 @@ export function GameCarousel({
           <div aria-hidden="true" className={CAROUSEL_FADE_CLASS} style={CAROUSEL_FADE_STYLE} />
         )}
 
-        {/* The clipping box. The browser scrolls it to show a focused element, which
-            would shift the whole row on top of the transform, so it's pinned at 0. */}
+        {/* The browser scrolls this box to show a focused element, which would shift
+            the row on top of the transform, so it's pinned at 0. */}
         <div
           className={loop ? 'overflow-hidden' : undefined}
           onScroll={loop ? (e) => (e.currentTarget.scrollLeft = 0) : undefined}
@@ -249,9 +247,8 @@ export function GameCarousel({
           >
             {positions.map((position) => {
               const game = games[position % count];
-              // Off-screen cards (including every copy) can't be tabbed to or
-              // read out: focusing one would scroll the row out of place. Nothing
-              // is reachable mid-slide, when the incoming page is still off screen.
+              // Off-screen cards and copies are inert: focusing one would scroll the
+              // row out of place. Mid-slide, none is reachable.
               const hidden = loop && (sliding || !isOnScreen(position, start, pageSize));
               const indexInList = position - before * count;
               const tag = platformTag(game, library);
@@ -266,8 +263,7 @@ export function GameCarousel({
                   <button
                     onClick={() => onOpenDetail?.(game)}
                     className="group block w-full rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
-                    // Includes the badge and the art's tags, so the name
-                    // matches what's on screen.
+                    // Has the badge and the art's tags, so the name matches what's shown.
                     aria-label={withArtTags(
                       `Open details for ${game.name}${queuedIds?.has(game.id) ? ', Queued' : ''}`,
                       {

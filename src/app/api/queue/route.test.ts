@@ -11,11 +11,9 @@ let maxPosition: { data: { position: number } | null; error: { message: string }
 const inserted: Record<string, unknown>[] = [];
 // The game is in the queue already: the insert breaks the unique constraint.
 let alreadyQueued = false;
-// Every database function called, with what it was given.
 const rpcCalls: [string, unknown][] = [];
 // What add_to_queue (an Undo's way back on the queue) answers.
 let addToQueueError: { code: string; message: string } | null = null;
-// How many times the queue's table was read or written.
 let tableUses = 0;
 
 jest.mock('@/lib/supabase/server', () => ({

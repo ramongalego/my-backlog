@@ -6,7 +6,7 @@ import {
   Skeleton,
 } from '@/components/layout/Skeleton';
 
-/** Mirrors DiaryRow: a full-width cover on phones; day, cover, title, hours played and rating on desktop. */
+/** Mirrors DiaryRow. */
 function DiaryRowSkeleton() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70">
@@ -29,7 +29,6 @@ function DiaryRowSkeleton() {
   );
 }
 
-/** A year heading, a month label and a few rows, laid out like the real list. */
 export function DiaryListSkeleton() {
   return (
     <div>

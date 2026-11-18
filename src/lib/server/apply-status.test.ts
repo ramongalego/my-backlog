@@ -10,11 +10,8 @@ import {
 type Row = Record<string, unknown>;
 
 /**
- * A small in-memory stand-in for the two tables, enough for the queries these
- * functions make (select with eq/neq, order, limit, maybeSingle), and for
- * apply_status_change, which saves a change the way the database function
- * does: every write, or none of them. (The function itself is checked against
- * a real Postgres; see supabase/migrations/20261112_apply_status_change.sql.)
+ * apply_status_change here saves every write or none, as the real one does
+ * (supabase/migrations/20261112_apply_status_change.sql).
  */
 function fakeSupabase(
   tables: { games: Row[]; playing_queue: Row[] },
@@ -155,7 +152,6 @@ describe('applyStatusChange', () => {
 
     const result = await applyStatusChange(client, 'u', { gameId: 1, status: 'playing' });
 
-    // It says when the game was started, as any change does.
     expect(result).toEqual({ ok: true, paused: [], startedAt: '2026-10-30T19:24:07Z' });
     expect(tables.games[0].started_at).toBe('2026-10-30T19:24:07Z');
     expect(log).not.toContain('rpc apply_status_change');
@@ -241,8 +237,8 @@ describe('applyStatusChange', () => {
     await applyStatusChange(client, 'u', { gameId: 2, status: 'finished' });
     expect(tables.games[1].last_played_at).toBeUndefined();
 
-    // A Steam game moved to a console is yours to track, like one added by hand;
-    // finishing it dates it to the day you finished, even from the backlog.
+    // A Steam game moved to a console is tracked like one added by hand, so
+    // finishing dates it, even from the backlog.
     await applyStatusChange(client, 'u', {
       gameId: 3,
       status: 'finished',
@@ -770,8 +766,7 @@ describe('applyStatusChanges (several games at once)', () => {
       last_played_at: null,
     });
     expect(log).toEqual(['rpc apply_status_change']);
-    // Sent as an Undo: the history takes the move back out, where it would
-    // otherwise read as the game being finished a second time.
+    // Otherwise the history would read it as a second finish.
     const [, sent] = rpc.mock.calls[0] as unknown as [string, { p_updates: { undo?: true }[] }];
     expect(sent.p_updates.map((item) => item.undo)).toEqual([true]);
   });
@@ -975,8 +970,7 @@ describe('promoteNextFromQueue', () => {
   });
 
   it('starts nothing when a game is already playing, and returns that game', async () => {
-    // A finish sent twice: the first started game 2, and the second must not
-    // start game 3 (which would send game 2 to the backlog, off the queue).
+    // A finish sent twice: the first started game 2.
     const { client, tables } = fakeSupabase({
       games: [game(1, 'finished'), game(2, 'backlog'), game(3, 'backlog')],
       playing_queue: [

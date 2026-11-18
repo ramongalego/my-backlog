@@ -64,7 +64,6 @@ it('has a chevron beside the avatar that turns over while the menu is open', () 
   render(<UserMenu user={user} name="Player" avatar={null} />);
   const trigger = screen.getByRole('button', { name: 'Open user menu' });
   const chevron = trigger.querySelector('svg')!;
-  // Decoration: the button already says what it opens.
   expect(chevron).toHaveAttribute('aria-hidden', 'true');
   expect(chevron).not.toHaveClass('rotate-180');
 

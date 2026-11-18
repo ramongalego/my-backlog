@@ -22,18 +22,13 @@ const SORT_OPTIONS = [
   { value: 'length' as GameSort, label: 'Game Length' },
 ];
 
-/**
- * What the Games page is sorted by, and which way: the arrow shows the order
- * and reverses it, in the grid and the list alike. Picking another sort
- * starts it in its usual order (highest rated, newest, shortest first).
- */
+/** Picking another sort starts it in its usual order (highest rated, newest, shortest first). */
 export function GamesSort({ value, onChange, reversed, onReverse }: GamesSortProps) {
   const [now, other] = reversed ? [...SORT_DIRECTIONS[value]].reverse() : SORT_DIRECTIONS[value];
   const Arrow = sortsAscending(value, reversed) ? ArrowUpNarrowWide : ArrowDownWideNarrow;
   return (
-    // The same surface and height as the view switch and Select beside it;
-    // a hairline parts the arrow from the menu, since each does its own thing
-    // (gone on hover, when the half under the pointer fills instead).
+    // The hairline between arrow and menu goes on hover, when the half under
+    // the pointer fills instead.
     <div className="group/sort flex h-10 items-center rounded-lg bg-ink-800">
       <Tooltip content={<TooltipText title={now} detail={`Click for ${other.toLowerCase()}`} />}>
         <button

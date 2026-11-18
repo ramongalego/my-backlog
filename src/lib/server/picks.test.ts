@@ -5,7 +5,6 @@ import { recordPick, recordPickOutcome } from '@/lib/server/picks';
 
 // What the server's client was asked to do, in order.
 let calls: unknown[][] = [];
-// What the database answers with.
 let answer: { data: unknown; error: { message: string } | null } = {
   data: { id: 41 },
   error: null,

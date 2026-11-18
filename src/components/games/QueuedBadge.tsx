@@ -1,10 +1,6 @@
 import { ListOrdered } from 'lucide-react';
 
-/**
- * On a game's art: it's in your playing queue. On the Games page and in the
- * Home rows, which still show queued games so a row lists every game that
- * fits it.
- */
+/** For the Games page and Home rows, which still show queued games so a row lists every fit. */
 export function QueuedBadge({ className = '' }: { className?: string }) {
   return (
     <span

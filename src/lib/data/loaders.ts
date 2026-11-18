@@ -1,6 +1,5 @@
-// Data loaders shared by server-side prefetching (server Supabase client) and
-// client-side React Query hooks (browser Supabase client). Keeping one copy
-// guarantees the prefetched data has exactly the shape the hooks expect.
+// Shared by the server prefetch and the client hooks, so prefetched data has
+// exactly the shape the hooks expect.
 import { libraryPlatforms, STEAM_PLATFORM, type LibraryPlatforms } from '@/lib/games/consoles';
 import type { ActivityEvent } from '@/lib/account/activity';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -15,8 +14,6 @@ import {
 } from '@/lib/games/carousels';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameStatus } from '@/lib/games/status';
-
-// ─── Games page ─────────────────────────────────────────────────────────────
 
 export interface GameItem {
   id: number;
@@ -50,9 +47,8 @@ export interface GameItem {
 }
 
 /**
- * Every game in the library. The Games page and Stats share this one cache
- * entry (Stats filters it with a select), so moving between them doesn't
- * download the library twice.
+ * The Games page and Stats share this cache entry (Stats filters it with a
+ * select), so moving between them doesn't download the library twice.
  */
 export function loadGamesList(supabase: SupabaseClient, userId: string): Promise<GameItem[]> {
   return fetchAllRows<GameItem>((from, to) =>
@@ -70,10 +66,8 @@ export function loadGamesList(supabase: SupabaseClient, userId: string): Promise
 }
 
 /**
- * Steam categories for the backlog games with enough hours that "Played a
- * lot" on Stats needs to know if they're multiplayer-first. Kept out of the
- * games list, where categories were nearly a fifth of every row and nothing
- * else reads them.
+ * For "Played a lot" on Stats (is it multiplayer-first?). Kept out of the games
+ * list: categories are nearly a fifth of a row, and nothing else reads them.
  */
 export async function loadOpenEndedCategories(
   supabase: SupabaseClient,
@@ -100,11 +94,7 @@ interface ManualGame {
   created_at: string;
 }
 
-/**
- * The games added by hand, newest first: which IGDB games are already in the
- * library (and on which console), and the consoles you use, for the Add game
- * dialog.
- */
+/** For the Add game dialog: which IGDB games are already in the library, and on which console. */
 export async function loadManualGames(
   supabase: SupabaseClient,
   userId: string,
@@ -120,8 +110,6 @@ export async function loadManualGames(
       .range(from, to),
   );
 }
-
-// ─── Diary ──────────────────────────────────────────────────────────────────
 
 export interface DiaryEntry {
   id: number;
@@ -161,8 +149,6 @@ export async function loadDiaryEntries(
   return (data ?? []) as DiaryEntry[];
 }
 
-// ─── Now playing + queue ────────────────────────────────────────────────────
-
 export const PLAYING_GAME_SELECT =
   'id, source, platform, app_id, name, header_image, main_story_hours, playtime_forever, started_at, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at, release_date';
 
@@ -185,7 +171,6 @@ const QUEUE_GAME_COLUMNS =
   'source, platform, app_id, name, header_image, playtime_forever, main_story_hours, steam_review_score, steam_review_count, critic_score, critic_count, deck_compat, last_played_at, release_date, started_at';
 
 export async function loadQueue(supabase: SupabaseClient, userId: string): Promise<QueueItem[]> {
-  // The queue references its games, so one query returns each row with its game.
   const { data, error } = await supabase
     .from('playing_queue')
     .select(`id, game_id, position, game:games(${QUEUE_GAME_COLUMNS})`)
@@ -195,9 +180,7 @@ export async function loadQueue(supabase: SupabaseClient, userId: string): Promi
   return (data ?? []) as unknown as QueueItem[];
 }
 
-// ─── Profile ────────────────────────────────────────────────────────────────
-
-/** The ids of the games picked as favorites, in the order they were picked. */
+/** In the order they were picked. */
 export async function loadFavoriteGames(
   supabase: SupabaseClient,
   userId: string,
@@ -214,10 +197,7 @@ export async function loadFavoriteGames(
 /** How many of the latest events the Profile page's activity is drawn from. */
 const RECENT_HISTORY = 50;
 
-/**
- * The latest of the player's history (game_events), newest first: what the
- * Profile page's Recent activity reads (lib/account/activity.ts).
- */
+/** Newest first, for the Profile page's Recent activity (lib/account/activity.ts). */
 export async function loadRecentHistory(
   supabase: SupabaseClient,
   userId: string,
@@ -233,16 +213,13 @@ export async function loadRecentHistory(
 }
 
 /**
- * Whether the signed-in player's account has a password (one made with Google
- * or Discord has none until they set one). Null when the database couldn't
- * say: the caller goes by how the account was made (`signedUpWithPassword`).
+ * One made with Google or Discord has none until it sets one. Null when the
+ * database couldn't say: the caller then goes by `signedUpWithPassword`.
  */
 export async function loadHasPassword(supabase: SupabaseClient): Promise<boolean | null> {
   const { data, error } = await supabase.rpc('account_has_password');
   return !error && typeof data === 'boolean' ? data : null;
 }
-
-// ─── Home ───────────────────────────────────────────────────────────────────
 
 export interface LibraryMeta {
   gameCount: number;
@@ -347,10 +324,8 @@ const CAROUSEL_SELECT =
 const BACKLOG_FILTER = 'status.is.null,status.eq.backlog';
 
 /**
- * The Home carousels, built where the backlog is read: on the server for the
- * page prefetch and, through /api/carousels, for every refetch, so the browser
- * only ever receives the finished rows. Queued games are left out in the
- * browser (useCarouselPools), from the queue it already has.
+ * Built on the server (the prefetch and /api/carousels), so the browser only
+ * receives finished rows. Queued games are left out in the browser (useCarouselPools).
  */
 export async function loadCarouselPools(
   supabase: SupabaseClient,

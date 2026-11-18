@@ -16,9 +16,8 @@ export interface SteamGameDetails {
 }
 
 /**
- * Steam couldn't answer right now (rate limit, outage, timeout). Unlike a null
- * from getGameDetails, it says nothing about whether the app exists, so the
- * game should be retried later rather than marked as synced.
+ * Unlike a null from getGameDetails, says nothing about whether the app exists:
+ * retry the game later rather than marking it synced.
  */
 export class SteamUnavailableError extends Error {
   constructor(appId: number, reason: string) {
@@ -28,9 +27,8 @@ export class SteamUnavailableError extends Error {
 }
 
 /**
- * Store details for one app, or null when Steam says it has none (delisted or
- * unknown). Throws SteamUnavailableError when Steam is rate limiting or down;
- * it allows roughly 200 of these calls per 5 minutes.
+ * Null when Steam has none (delisted or unknown). Throws SteamUnavailableError
+ * when Steam is down or rate limiting (it allows about 200 calls per 5 minutes).
  */
 export async function getGameDetails(appId: number): Promise<SteamGameDetails | null> {
   let data: Record<string, SteamGameDetails> | null;
@@ -70,13 +68,11 @@ export function extractGameMetadata(details: SteamGameDetails) {
   };
 }
 
-// ─── Steam Tag Resolution ─────────────────────────────────────────────────────
-// Uses Steam's official IStoreService/GetTagList + IStoreBrowseService/GetItems
-// instead of SteamSpy, which is rate-limited and unreliable.
+// Steam's own tag APIs, not SteamSpy, which is rate-limited and unreliable.
 
 let cachedTagMap: Map<number, string> | null = null;
 let tagMapTimestamp = 0;
-const TAG_MAP_CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours — tag names rarely change
+const TAG_MAP_CACHE_DURATION = 1000 * 60 * 60 * 24; // Tag names rarely change.
 
 async function getTagNameMap(): Promise<Map<number, string> | null> {
   if (cachedTagMap && Date.now() - tagMapTimestamp < TAG_MAP_CACHE_DURATION) {
@@ -92,7 +88,7 @@ async function getTagNameMap(): Promise<Map<number, string> | null> {
 
     if (!response.ok) {
       console.error(`[Steam Tags] Failed to fetch tag list: HTTP ${response.status}`);
-      return cachedTagMap; // Return stale cache if available
+      return cachedTagMap;
     }
 
     const data = await response.json();
@@ -144,13 +140,9 @@ interface StoreItemAssets {
 interface StoreItemInfo {
   /** Tag names, most voted first. */
   tags: string[] | null;
-  /**
-   * The 920×430 version of the store header, when the game has one. Steam's
-   * appdetails only returns the 460×215 header, which looks soft anywhere
-   * it's shown larger than that.
-   */
+  /** 920×430. appdetails only has the 460×215 one, which looks soft shown larger. */
   headerImage2x: string | null;
-  /** The 460×215 store header, for when there's no larger one. */
+  /** 460×215, for when there's no larger one. */
   headerImage: string | null;
   reviews: SteamReviewData | null;
 }
@@ -171,9 +163,8 @@ function headerImage2x(assets: StoreItemAssets | undefined): string | null {
 const HASHED_ASSET = /^[0-9a-f]{40}\//;
 
 /**
- * The 920×430 header, when Steam has one that loads. For some older games
- * Steam lists a `header_2x.jpg` at the old fixed path that was never uploaded
- * (Trine 2), so a 2x at that path is checked first. Hashed art always exists.
+ * Some older games list a `header_2x.jpg` at the old fixed path that was never
+ * uploaded (Trine 2), so one there is checked. Hashed art always exists.
  */
 async function verifiedHeaderImage2x(
   assets: StoreItemAssets | undefined,
@@ -191,7 +182,6 @@ async function verifiedHeaderImage2x(
   }
 }
 
-/** The store header to show: the 920×430 version when there is one, else the 460×215. */
 async function bestHeaderImage(
   assets: StoreItemAssets | undefined,
   known?: string | null,
@@ -199,7 +189,6 @@ async function bestHeaderImage(
   return (await verifiedHeaderImage2x(assets, known)) ?? headerImage(assets);
 }
 
-/** Tags, high-resolution header art and review summary for one app, from a single GetItems call. */
 export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | null> {
   try {
     const tagMap = await getTagNameMap();
@@ -227,7 +216,7 @@ export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | n
       data?.response?.store_items?.[0];
     if (!item) return null;
 
-    // Tag IDs are already sorted by weight (most voted first)
+    // Steam sorts tag ids by votes, most first.
     const tagNames =
       tagMap && item.tagids?.length
         ? item.tagids.map((id) => tagMap.get(id)).filter((name): name is string => !!name)
@@ -255,11 +244,7 @@ interface StoreItem {
   reviews?: StoreItemReviews;
 }
 
-/**
- * Runs GetItems over many apps, 50 per call and a few calls at a time, and
- * keeps what `pick` returns for each item. A failed batch is skipped rather
- * than failing the rest.
- */
+/** A failed batch is skipped rather than failing the rest. */
 async function getItemsInBatches<T>(
   appIds: number[],
   dataRequest: Record<string, unknown>,
@@ -306,16 +291,13 @@ async function getItemsInBatches<T>(
   return result;
 }
 
-/** What the store shows for an app now: its review summary and header art. */
 export interface StoreSummary {
   reviews: SteamReviewData | null;
   headerImage: string | null;
 }
 
 /**
- * Current review summaries and header art for many apps, both from the same
- * calls. Apps Steam doesn't return (delisted) are left out. `knownArt` is the
- * art each app already has: an old-path 2x header that matches it isn't
+ * Delisted apps are left out. An old-path 2x header matching `knownArt` isn't
  * checked again, so a refresh that changes nothing makes no extra requests.
  */
 export function getStoreSummaries(
@@ -332,10 +314,7 @@ export function getStoreSummaries(
   );
 }
 
-/**
- * Store header art for many apps, the 920×430 version when there is one.
- * Apps that aren't on the store any more are left out.
- */
+/** Apps no longer on the store are left out. */
 export function getStoreHeaderImages(appIds: number[]): Promise<Map<number, string>> {
   return getItemsInBatches(appIds, { include_assets: true }, (item) =>
     bestHeaderImage(item.assets),
@@ -345,9 +324,8 @@ export function getStoreHeaderImages(appIds: number[]): Promise<Map<number, stri
 const LEGACY_CHECK_CONCURRENCY = 10;
 
 /**
- * Header art at Steam's old fixed path, which still exists for many delisted
- * games that GetItems no longer knows about. Each URL is checked first so a
- * missing image is never stored.
+ * The old fixed path still has art for many delisted games GetItems doesn't
+ * know. Each URL is checked so a missing image is never stored.
  */
 export async function findLegacyHeaderImages(appIds: number[]): Promise<Map<number, string>> {
   const result = new Map<number, string>();

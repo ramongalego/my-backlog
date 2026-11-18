@@ -35,10 +35,9 @@ export async function POST(request: NextRequest) {
   }
   const { gameId, undoAgoMs } = parsed.data;
 
-  // Back on the queue by Undo: saved through add_to_queue, which tells the
-  // history it is one, so taking the game off and putting it back leaves
-  // nothing however long the toast waited. Until that function is there (its
-  // migration not applied yet), it is added the ordinary way below.
+  // An Undo goes through add_to_queue, which tells the history it's one, so
+  // off and back leaves nothing however long the toast waited. Without that
+  // function (migration not applied), it's added the ordinary way below.
   if (undoAgoMs !== undefined) {
     const { error: undoError } = await supabase.rpc('add_to_queue', {
       p_game_id: gameId,
@@ -52,8 +51,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Get max position for the user's queue. Two adds at once can read the same
-  // max and share a position (it isn't unique); the next reorder renumbers it.
+  // Two adds at once can read the same max and share a position (it isn't
+  // unique); the next reorder renumbers it.
   const { data: maxRow, error: maxError } = await supabase
     .from('playing_queue')
     .select('position')
@@ -120,8 +119,8 @@ export async function PATCH(request: NextRequest) {
   const { error } = await supabase.rpc('reorder_queue', { p_game_ids: order });
 
   if (error) {
-    // Postgres raise_exception (P0001) for our validation errors → 400.
-    // Everything else is a real server problem → log + 500.
+    // P0001 and 22023 are the function's own validation errors; anything else
+    // is a server problem.
     if (error.code === 'P0001' || error.code === '22023') {
       return jsonError(error.message, 400);
     }

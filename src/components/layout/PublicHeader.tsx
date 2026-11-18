@@ -26,9 +26,8 @@ export function PublicHeader() {
             <span className="text-lg font-semibold tracking-tight text-ink-50">MyBacklog</span>
           </Link>
           <div className="flex items-center gap-3">
-            {/* On the narrowest phones (320px) both don't fit beside the logo
-                on one line: Sign In leaves, as the page has its own sign-in
-                link under the first Get Started. */}
+            {/* Below 360px both don't fit beside the logo. Sign In goes: the page
+                has its own sign-in link under the first Get Started. */}
             <Button
               variant="ghost"
               size="sm"

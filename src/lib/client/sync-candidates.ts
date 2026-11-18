@@ -3,7 +3,6 @@ import { fetchAllRows } from '@/lib/supabase/paginate';
 import { needsSyncCheck } from '@/lib/games/metadata-cache';
 import type { Game } from '@/types/games';
 
-/** One of the player's Steam games, with what decides whether it needs syncing. */
 export type SyncCandidate = Game & {
   metadata_synced: boolean | null;
   main_story_hours: number | null;
@@ -11,12 +10,9 @@ export type SyncCandidate = Game & {
 };
 
 /**
- * The player's Steam games that need a look from the sync endpoints on this
- * visit (needsSyncCheck decides which). The query only narrows it down to the
- * ones that could: on an established library that's a handful of rows, where
- * the whole library used to come down on every page load. Release dates are
- * display text, so "recent" is asked for as the two years a date from the last
- * twelve months can contain.
+ * The query only narrows to the games that could need a sync; needsSyncCheck
+ * decides. Release dates are display text, so "recent" is asked for as the two
+ * years a date from the last twelve months can fall in.
  */
 export async function fetchGamesNeedingSync(userId: string): Promise<SyncCandidate[]> {
   const supabase = createClient();

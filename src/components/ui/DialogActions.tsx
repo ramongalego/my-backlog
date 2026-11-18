@@ -1,11 +1,8 @@
 import type { ReactNode } from 'react';
 
 /**
- * The row of buttons a dialog ends on: Cancel (the secondary button) and the
- * action, at the usual button height, sharing the dialog's width. Every
- * dialog ends the same way, the game dialog included. On the narrowest
- * phones Cancel takes only its own width, so the action's label stays on one
- * line.
+ * Every dialog ends on this row: Cancel and the action, sharing the dialog's width.
+ * Below 360px Cancel takes only its own width, so the action's label stays on one line.
  */
 export function DialogActions({ children }: { children: ReactNode }) {
   return (

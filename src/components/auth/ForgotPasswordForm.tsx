@@ -18,8 +18,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
   const [errors, setErrors] = useState<Partial<Record<keyof ForgotPasswordFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // A submit on its way. The button is disabled from the next redraw; this
-  // stops a second press before then from sending the form again.
+  // `disabled` only applies from the next redraw; this stops a second submit before then.
   const submitting = useRef(false);
   const [isSent, setIsSent] = useState(false);
 

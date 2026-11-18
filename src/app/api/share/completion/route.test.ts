@@ -89,7 +89,7 @@ it.each([
 it('builds the page from the finished game, not from anything the browser sends', async () => {
   const res = await share({
     gameId: 7,
-    // What the route used to trust. None of it is read any more.
+    // Ignored: the page's contents are read from the library.
     gameName: 'Anything I like',
     nextGame: 'Any text',
     headerImage: 'https://example.com/a.jpg',

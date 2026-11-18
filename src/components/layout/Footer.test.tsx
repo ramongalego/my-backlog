@@ -26,7 +26,6 @@ it('credits where the game data comes from, and says it is not a Valve site', ()
   );
   for (const name of ['Steam', 'IGDB', 'HowLongToBeat', 'SteamGridDB']) {
     const link = within(credits).getByRole('link', { name });
-    // Another site, opened beside this one, told nothing about where from.
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   }

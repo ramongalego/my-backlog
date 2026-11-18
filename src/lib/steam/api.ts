@@ -2,10 +2,8 @@ import 'server-only';
 import { z } from 'zod';
 import { fetchWithTimeout, TIMEOUTS } from '@/lib/fetch-with-timeout';
 
-// Lenient runtime schemas for the Steam Web API responses we consume. Steam's
-// shapes are stable, but validating turns an unexpected payload into a clean
-// empty/null result instead of letting `undefined` propagate into the DB.
-// Parsing is per-entry so a single malformed game never drops the whole library.
+// Validated so an unexpected payload gives an empty or null result instead of
+// `undefined` reaching the database; per game, so one bad entry drops only itself.
 const steamGameSchema = z.object({
   appid: z.number(),
   name: z.string(),
@@ -29,14 +27,12 @@ export type SteamGame = z.infer<typeof steamGameSchema>;
 
 type SteamPlayerSummary = z.infer<typeof steamPlayerSummarySchema>;
 
-/** A player's library, as Steam shares it. */
 export interface OwnedGames {
   games: SteamGame[];
   /**
-   * Steam answered with no library at all, rather than an empty one: the
-   * profile's "Game details" aren't public. (A public library comes with a
-   * count, even of 0.) Now and then Steam answers like this by mistake; the
-   * next refresh puts that right.
+   * No library at all, not an empty one: "Game details" aren't public (a public
+   * library comes with a count, even of 0). Steam sometimes answers this way by
+   * mistake; the next refresh puts it right.
    */
   isPrivate: boolean;
 }
@@ -57,8 +53,6 @@ export async function getOwnedGames(steamId: string, apiKey: string): Promise<Ow
   const data = await response.json();
   const rawGames = Array.isArray(data?.response?.games) ? data.response.games : [];
 
-  // Validate per-entry: keep the well-formed games, drop anything malformed
-  // rather than failing the whole import.
   const games: SteamGame[] = [];
   for (const raw of rawGames) {
     const parsed = steamGameSchema.safeParse(raw);

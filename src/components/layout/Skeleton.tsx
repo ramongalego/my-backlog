@@ -2,11 +2,10 @@ import type { ReactNode } from 'react';
 import { PANEL_SURFACE } from '@/components/ui/Panel';
 import { PAGE_CONTAINER } from './Page';
 
-// Building blocks for loading skeletons. Each page's skeleton is assembled
-// from the same container and header dimensions as the real page, so nothing
-// shifts when the content arrives.
+// Skeletons use the real page's container and header sizes, so nothing shifts
+// when the content arrives.
 
-/** A single shimmering placeholder block. Size it with width/height classes. */
+/** Size it with width/height classes. */
 export function Skeleton({
   className = '',
   style,

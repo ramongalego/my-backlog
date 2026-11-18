@@ -8,7 +8,7 @@ import {
 } from '@/lib/account/activity';
 import type { LibraryPlatforms } from '@/lib/games/consoles';
 
-// What the library is played on: not known yet (as before) unless a test sets it.
+// What the library is played on: unknown unless a test sets it.
 let mockLibrary: LibraryPlatforms | null = null;
 jest.mock('@/hooks/useLibraryMeta', () => ({
   ...jest.requireActual('@/hooks/useLibraryMeta'),
@@ -25,9 +25,8 @@ jest.mock('next/image', () => ({
 }));
 
 /**
- * An entry about one thing (`kind`), or several (`lines`). A rating is on the
- * one line and on the entry, as the rules give it; with `lines`, each line
- * says its own.
+ * An entry about one thing (`kind`), or several (`lines`). A rating goes on both the
+ * line and the entry, as the rules give it; with `lines`, each line says its own.
  */
 const entry = (
   overrides: Partial<ActivityEntry> & { kind?: ActivityKind } & Omit<ActivityLine, 'kind'> = {},
@@ -53,7 +52,6 @@ beforeEach(() => onOpen.mockClear());
 
 const section = () => within(screen.getByRole('region', { name: 'Recent activity' }));
 const rows = () => section().getAllByRole('listitem');
-/** The days the list says, top to bottom. */
 const days = () =>
   section()
     .queryAllByRole('heading', { level: 3 })
@@ -87,8 +85,6 @@ it('says what happened to each game, when, and where it was played', () => {
     />,
   );
   const [playing, finished, dropped] = rows();
-  // A line like any other: what happened, with no "since", then that it is
-  // the one being played. Its day is beside it.
   expect(playing).toHaveTextContent(/^Ocarina of Time Started playing on Switch 2$/);
   expect(finished).toHaveTextContent(/^Fire Emblem: Fortune's Weave Finished on Switch 2 9\/10$/);
   // A Steam game played on Steam names no platform, as on its card.
@@ -139,7 +135,6 @@ it('says the game being played started, in the past tense like every line', () =
   expect(playing).toHaveTextContent(/^Hades Started playing$/);
   expect(started).toHaveTextContent(/^Celeste Started playing$/);
   expect(screen.queryByText('Playing now')).not.toBeInTheDocument();
-  // In the row's name too.
   expect(screen.getByRole('button', { name: 'Hades Started playing' })).toBeInTheDocument();
 });
 
@@ -188,7 +183,6 @@ it('opens the game from its row, to fix a date or a rating where it is seen', ()
       entries={[entry({ id: 7, name: 'Hades', rating: 9 }), entry({ id: 8, name: 'Celeste' })]}
     />,
   );
-  // Named by what it shows, in order.
   const hades = screen.getByRole('button', { name: /^Hades Finished 9\/10$/ });
   fireEvent.click(hades);
   expect(onOpen).toHaveBeenCalledWith(7);
@@ -244,7 +238,6 @@ describe('what the history adds', () => {
   it('says a rating given by itself as its own text, with no second rating after it', () => {
     render(<RecentActivity onOpen={onOpen} entries={[entry({ kind: 'rated', rating: 8 })]} />);
     const [row] = rows();
-    // The line's label is the rating: neutral, and the only "8/10" in the row.
     expect(within(row).getByText('Rated 8/10')).toHaveClass('text-ink-300');
     expect(within(row).getAllByText(/8\/10/)).toHaveLength(1);
     expect(lineOf(row, 'Rated 8/10')).toHaveTextContent(/^Rated 8\/10$/);
@@ -263,7 +256,6 @@ describe('what the history adds', () => {
     const [paused, queued] = rows();
     expect(paused).toHaveTextContent(/^Hades Paused, moved to queue$/);
     expect(queued).toHaveTextContent(/^Celeste Added to queue$/);
-    // Neither is a status: both neutral.
     expect(within(paused).getByText('Paused, moved to queue')).toHaveClass('text-ink-300');
     expect(within(queued).getByText('Added to queue')).toHaveClass('text-ink-300');
   });
@@ -321,15 +313,12 @@ describe('several things about one game', () => {
     render(<RecentActivity onOpen={onOpen} entries={[portal]} />);
     const [row] = rows();
     const rating = within(row).getByText('10/10');
-    // On the Finished line, after its label and the console.
     const finished = lineOf(row, 'Finished');
     expect(finished).toContainElement(rating);
     expect(finished).toHaveTextContent(/^Finished on Switch 10\/10$/);
-    // Not on the first line, nor on the one between.
     expect(lineOf(row, 'Added to queue')).toHaveTextContent(/^Added to queue$/);
     expect(lineOf(row, 'Played 1h 30m')).toHaveTextContent(/^Played 1h 30m$/);
     expect(within(row).getAllByText('10/10')).toHaveLength(1);
-    // A star beside it, as a rating reads everywhere.
     expect(rating.parentElement!.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
@@ -350,7 +339,6 @@ describe('several things about one game', () => {
       />,
     );
     const [row] = rows();
-    // After the label and its own day; the console is on the last line.
     expect(lineOf(row, 'Finished')).toHaveTextContent(
       new RegExp(`^Finished ${activityDay('2026-11-10')} 9/10$`),
     );
@@ -408,7 +396,6 @@ describe('several things about one game', () => {
 
   it('has dots between its lines that say nothing aloud', () => {
     render(<RecentActivity onOpen={onOpen} entries={[portal]} />);
-    // One set of dots between each two lines, hidden from screen readers.
     const dots = rows()[0].querySelectorAll('.border-dotted');
     expect(dots).toHaveLength(2);
     dots.forEach((dot) => expect(dot).toHaveAttribute('aria-hidden', 'true'));
@@ -446,7 +433,6 @@ describe('the days', () => {
     );
     expect(days()).toEqual([activityDay('2026-11-17'), activityDay('2026-11-16')]);
     expect(rows()).toHaveLength(3);
-    // Each day's rows are a list of their own, under it.
     const lists = section().getAllByRole('list');
     expect(lists.map((list) => within(list).getAllByRole('listitem').length)).toEqual([2, 1]);
   });
@@ -460,7 +446,6 @@ describe('the days', () => {
 
   it('says the year beside the month, on the same line, for a day in another year', () => {
     render(<RecentActivity onOpen={onOpen} entries={[on('event-1', '2025-08-20')]} />);
-    // Still read as one date.
     const heading = section().getByRole('heading', { level: 3, name: 'Aug 20, 2025' });
     expect(days()).toEqual(['Aug 20, 2025']);
     const stamp = heading.querySelector('[aria-hidden="true"]')!;
@@ -564,10 +549,8 @@ describe('a long list', () => {
       expect(button.tagName).toBe('BUTTON');
       expect(button).toHaveAttribute('type', 'button');
       expect(button.className).not.toMatch(/underline/);
-      // The chevron is drawn only: the name is the words.
       expect(button.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1);
     }
-    // The Diary link is the section's only link.
     expect(section().getAllByRole('link')).toHaveLength(1);
   });
 
@@ -577,7 +560,6 @@ describe('a long list', () => {
 
     fireEvent.click(showMore()!);
     expect(showFewer()).toBeInTheDocument();
-    // Beside it: Show more first, then the way back.
     expect(showMore()!.nextElementSibling).toBe(showFewer());
   });
 
@@ -599,7 +581,6 @@ describe('a long list', () => {
     expect(rows()).toHaveLength(6);
     expect(screen.getByRole('button', { name: /^Game 6 / })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Game 7 / })).not.toBeInTheDocument();
-    // As it began: Show more is back, and there is nothing to go back from.
     expect(showMore()).toBeInTheDocument();
     expect(showFewer()).not.toBeInTheDocument();
   });
@@ -611,7 +592,6 @@ describe('a long list', () => {
     expect(screen.getByRole('button', { name: /^Game 7 / })).toHaveFocus();
 
     fireEvent.click(showFewer()!);
-    // The heading that names the section holds its id, and can take focus.
     expect(document.getElementById('profile-activity')).toBe(heading());
     expect(heading()).toHaveAttribute('tabindex', '-1');
     expect(heading()).toHaveFocus();
@@ -654,7 +634,6 @@ describe('a bulk move', () => {
     render(<RecentActivity onOpen={onOpen} entries={[bulk]} />);
     expect(toggle()).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: /^The Vagrant/ })).not.toBeInTheDocument();
-    // The count on the art is drawn, not read: the row's name says it.
     expect(toggle().querySelector('[data-chip="3"]')).toHaveAttribute('aria-hidden', 'true');
   });
 
@@ -664,7 +643,6 @@ describe('a bulk move', () => {
     expect(toggle()).toHaveAttribute('aria-expanded', 'true');
     const list = document.getElementById(toggle().getAttribute('aria-controls')!)!;
     expect(within(list).getAllByRole('listitem')).toHaveLength(3);
-    // Opening it opens no dialog.
     expect(onOpen).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: "Hacknet Marked Won't Play" }));

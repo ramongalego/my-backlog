@@ -8,7 +8,6 @@ import { MOCK_LIBRARY } from './content';
 import { riseIn } from './motion';
 import { SectionCopy } from './SectionCopy';
 
-/** A sample library, its rows settling in as it scrolls into view. */
 export function LibraryPreview() {
   const { ref: libraryRowsRef, inView: libraryRowsInView } = useInView<HTMLDivElement>();
 

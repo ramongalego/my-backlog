@@ -9,31 +9,26 @@ import { chunk } from '@/lib/supabase/paginate';
 import { MAX_BULK_APP_IDS, MAX_HLTB_APP_IDS } from '@/lib/games/sync-limits';
 import type { Game, SyncProgress } from '@/types/games';
 
-// Games synced at once. Each one spends most of its time waiting on
-// HowLongToBeat, so several run side by side; much higher and Steam or HLTB
-// start refusing.
+// Each game mostly waits on HowLongToBeat, so several run side by side; much
+// higher and Steam or HLTB start refusing.
 const CONCURRENCY = 8;
 const MAX_ATTEMPTS = 5;
 const MAX_RETRY_WAIT_SECONDS = 15;
 
-// Background HowLongToBeat lookups for games whose time is still missing.
-// HLTB allows short bursts, then refuses for up to a minute, so the filler
-// waits out each block and stops for this visit after a run of them (the next
-// visit picks up where it left off).
+// HLTB allows short bursts, then refuses for up to a minute, so background
+// lookups wait out each block and stop for this visit after a run of them.
 const HLTB_MIN_WAIT_MS = 5_000;
 const HLTB_MAX_WAIT_MS = 60_000;
 const HLTB_MAX_BLOCKS_IN_A_ROW = 6;
-// A found time goes into the cached games list at once. What's worked out
-// from the times on the server (the short and weekend rows, the queue's
-// figures) is refreshed in batches, not after every game.
+// Found times patch the cached list at once; what the server works out from
+// them (the short and weekend rows, the queue's figures) refreshes in batches.
 const HLTB_REFRESH_EVERY_MS = 60_000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const clampWait = (ms: number) => Math.min(HLTB_MAX_WAIT_MS, Math.max(HLTB_MIN_WAIT_MS, ms));
 
-// Resolves cache hits in bulk and returns the app_ids that still need an
-// individual upstream fetch, plus the ones only missing an HLTB time. A failed
-// chunk counts all of its ids as remaining.
+// `remaining`: app_ids that still need their own upstream fetch. A failed chunk
+// counts all of its ids as remaining.
 async function resolveFromCache(games: Game[]): Promise<{
   resolved: number;
   synced: number;
@@ -74,7 +69,6 @@ type SyncableGame = Game & {
   release_date?: string | null;
 };
 
-/** Whether a single-game sync changed anything the library shows. */
 function detailsChanged(
   game: SyncableGame,
   metadata: {
@@ -110,8 +104,7 @@ export function useGameSync() {
     hltbQueueRef.current.push(...appIds.filter((id) => !queued.has(id)));
   };
 
-  // Puts found times into the cached games list (Games, Stats), so they show
-  // without downloading the library again: the time is all that changed.
+  // The time is all that changed, so the cached list is patched, not downloaded again.
   const showHours = (results: { appId: number; hours: number | null }[]) => {
     const found = new Map(results.flatMap((r) => (r.hours === null ? [] : [[r.appId, r.hours]])));
     if (found.size === 0) return;
@@ -123,7 +116,6 @@ export function useGameSync() {
     );
   };
 
-  // Works through the HLTB queue in the background, a few games per request.
   const fillHltbTimes = async () => {
     if (fillingRef.current || hltbQueueRef.current.length === 0) return;
     fillingRef.current = true;
@@ -188,20 +180,18 @@ export function useGameSync() {
     syncingRef.current = true;
 
     try {
-      // Step 1: cache hits, silently. The progress UI (which replaces the
-      // dashboard) only appears when there's real upstream fetching to do.
+      // Cache hits go silently: the progress UI replaces the dashboard, so it
+      // only appears when there's real upstream fetching to do.
       const { resolved, synced, remaining, hltbPending } = await resolveFromCache(games);
       queueHltb(hltbPending);
       const remainingGames = games.filter((g) => remaining.has(g.app_id));
       if (remainingGames.length === 0) {
-        // Only refetch when the cache actually changed something.
         if (synced > 0) invalidateGameData();
         return;
       }
 
-      // The setup screen is for games that have never been synced. Re-checks
-      // of games that already have their details (HLTB retries, monthly
-      // refreshes of recent releases) happen quietly in the background.
+      // The setup screen is for never-synced games; re-checks (HLTB retries,
+      // recent releases) run quietly in the background.
       const showProgress = remainingGames.some((g) => !g.metadata_synced);
 
       let completed = resolved;
@@ -211,7 +201,6 @@ export function useGameSync() {
         setSyncProgress({ current: completed, total: games.length });
       }
 
-      // Step 2: individually sync only cache misses
       let changed = false;
       const syncOne = async (game: SyncableGame): Promise<void> => {
         let attempts = 0;
@@ -256,9 +245,8 @@ export function useGameSync() {
       };
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
 
-      // Carousels, counts and lists were loaded before the metadata existed.
-      // Quiet re-checks (HLTB retries, recent releases) usually change
-      // nothing, and refetching then would download the library on every visit.
+      // Quiet re-checks usually change nothing, and refetching then would
+      // download the library on every visit.
       if (changed) invalidateGameData();
     } finally {
       setIsSyncing(false);

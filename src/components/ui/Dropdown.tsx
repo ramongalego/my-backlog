@@ -27,10 +27,7 @@ interface DropdownProps<T extends string> {
   inline?: boolean;
   /** Added to the trigger: its padding and hover fill when it's part of a toolbar control. */
   triggerClassName?: string;
-  /**
-   * The trigger's text colors, in place of the usual quiet ones: for a
-   * control that's lit while its choice narrows the page.
-   */
+  /** Replaces the trigger's quiet text colors, e.g. lit while its choice narrows the page. */
   triggerTone?: string;
   /** Added to the value shown in the trigger, e.g. to cut a long one short. */
   labelClassName?: string;
@@ -87,9 +84,8 @@ export function Dropdown<T extends string>({
     if (open) listRef.current?.focus();
   }, [open]);
 
-  // A long list scrolls: the highlighted option stays in sight as the arrow
-  // keys move through it, and the chosen one is in sight when it opens. Only
-  // the list is scrolled (scrollIntoView would move the page under it too).
+  // Keeps the highlighted option in sight by scrolling the list only:
+  // scrollIntoView would move the page under it too.
   useEffect(() => {
     const list = listRef.current;
     const option = list?.children[activeIndex] as HTMLElement | undefined;
@@ -153,8 +149,7 @@ export function Dropdown<T extends string>({
         aria-label={ariaLabel ? `${ariaLabel}: ${selected?.label}` : undefined}
       >
         {icon && <span aria-hidden="true">{icon}</span>}
-        {/* The underline sits on the label: it doesn't carry into an
-            inline-block from the button. */}
+        {/* The underline sits here: it doesn't carry into an inline-block from the button. */}
         <span
           className={
             inline
@@ -177,8 +172,6 @@ export function Dropdown<T extends string>({
           onBlur={(e) => {
             if (!ref.current?.contains(e.relatedTarget as Node)) setOpen(false);
           }}
-          // As wide as its longest option, up to a width that fits a phone;
-          // as tall as the screen has room for, then it scrolls.
           className={`absolute top-full mt-1 bg-ink-900 border border-ink-700 rounded-lg shadow-lg z-10 w-max min-w-40 max-w-64 max-h-[min(30rem,70vh)] overflow-y-auto overscroll-contain py-1 focus:outline-none animate-menu-in motion-reduce:animate-overlay-in ${ALIGN_CLASS[align]}`}
         >
           {options.map((option, i) => {

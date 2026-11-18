@@ -39,10 +39,9 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     console.error('Failed to record reroll:', error);
-    // Non-critical error, don't fail the request
+    // Not worth failing the request over.
   }
 
-  // The pick passed on is kept as rerolled (game_picks), when it was kept.
   // Only a pick of this game: the reroll counted above is this game's.
   if (pickId !== undefined) await recordPickOutcome(user.id, pickId, 'rerolled', gameId);
 

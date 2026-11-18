@@ -21,9 +21,8 @@ describe('openGameLabel', () => {
     );
   });
 
-  // The art draws the status or Queued badge, then the console, then the
-  // release date. A name only matches what's on screen (WCAG 2.5.3) if its
-  // words run in that order.
+  // A name only matches what's on screen (WCAG 2.5.3) if its words run in the
+  // order the art draws them.
   it('adds the tags on the art after the badges, in the order they are drawn', () => {
     expect(openGameLabel(game({ status: 'finished', rating: 9 }), { console: 'PS5' })).toBe(
       'Open details for Hades, Finished 9/10, PS5',

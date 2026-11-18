@@ -8,15 +8,9 @@ const MAX_REASONING_LENGTH = 500;
 // Far more rolls than anyone makes in one sitting.
 const MAX_PICK_ATTEMPT = 10_000;
 
-/**
- * What a pick is for: to play now (nothing is being played), or for the queue
- * (a game is being played, so the pick waits its turn).
- */
+/** `queue` while a game is being played: the pick waits its turn. */
 const pickModeSchema = z.enum(['play', 'queue']);
-/**
- * What the player did with a pick: started it, queued it or rolled again. Or
- * never saw it: the picker was closed before the pick arrived.
- */
+/** `unseen`: the picker was closed before the pick arrived. */
 const pickOutcomeValueSchema = z.enum(['played', 'queued', 'rerolled', 'unseen']);
 
 export const suggestRequestSchema = z.object({

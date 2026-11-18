@@ -15,7 +15,7 @@ import { AnswerLine } from './AnswerLine';
 interface SuggestionResultProps {
   suggestion: SuggestionResultType;
   onPick: () => void;
-  /** With a game playing: play this one now instead (the other is paused at the top of the queue). */
+  /** With a game playing: play this one now; the other waits at the top of the queue. */
   onPlayNow?: () => void;
   onReroll: () => void;
   cooldownRemaining: number;
@@ -44,8 +44,6 @@ export function SuggestionResult({
 
   return (
     <>
-      {/* The art comes into focus where the backlog was flicking past. Under
-          the name, what kind of game it is; the tags below describe it. */}
       <ArtHeader
         src={game.header_image}
         title={game.name}
@@ -54,7 +52,6 @@ export function SuggestionResult({
       />
 
       <div className="space-y-4 mt-5 animate-result-in [animation-delay:150ms] motion-reduce:animate-none">
-        {/* Why this game: your answers, or that it was left to chance. */}
         {random ? (
           <div className="flex items-center gap-2 text-sm">
             <Dices className="w-4 h-4 text-accent-400 shrink-0" aria-hidden="true" />
@@ -69,10 +66,8 @@ export function SuggestionResult({
           </div>
         )}
 
-        {/* Why it was picked for you, straight under what you asked for. */}
         {reasoning && <p className="text-ink-200 leading-relaxed">{reasoning}</p>}
 
-        {/* Meta row */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
           {game.main_story_hours ? (
             <TimeToBeat hours={game.main_story_hours} iconClassName="w-3.5 h-3.5" />
@@ -104,7 +99,6 @@ export function SuggestionResult({
           )}
         </div>
 
-        {/* Tags */}
         {game.tags && game.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {game.tags.slice(0, 6).map((tag) => (
@@ -115,9 +109,7 @@ export function SuggestionResult({
           </div>
         )}
 
-        {/* Action buttons. With a game playing, the pick goes to the queue, or
-            can be played now instead; Add to Queue fills the row on phones,
-            the other two share the next. */}
+        {/* Add to Queue fills the row on phones; the other two share the next. */}
         <div className="flex flex-wrap gap-3 pt-1">
           <Button
             onClick={onPick}

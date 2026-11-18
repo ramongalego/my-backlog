@@ -1,14 +1,12 @@
-// SteamGridDB: community-made game art, for games added by hand that IGDB has
-// no official key art for (older games, many Nintendo ones). Server only: it
-// uses the app's API key.
+// SteamGridDB: community art, for games added by hand that IGDB has no key art
+// for (older games, many Nintendo ones).
 import 'server-only';
 import { getSteamGridDbKey } from '@/lib/server/env';
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 const API_URL = 'https://www.steamgriddb.com/api/v2';
 const TIMEOUT_MS = 8000;
-// Grids in Steam's header shape, the one every game image here uses, at 2x
-// first; no animations, and none marked NSFW, joke or flashing.
+// Steam's header shape, which every game image here uses, 2x first.
 const GRID_QUERY = 'dimensions=920x430,460x215&types=static&nsfw=false&humor=false&epilepsy=false';
 // Styles that are art; "blurred" and "material" (flat icon designs) aren't.
 const ART_STYLES = new Set(['alternate', 'white_logo', 'no_logo']);
@@ -21,7 +19,6 @@ interface SearchResult {
 
 interface Grid {
   url: string;
-  /** A small copy of it, for lists. */
   thumb?: string;
   width: number;
   style: string;
@@ -50,11 +47,9 @@ function normalize(name: string): string {
 }
 
 /**
- * The game a name means, of SteamGridDB's search results: the one with that
- * exact name. When several share it (a remake and its original, like Ocarina
- * of Time in 1998 and 2026), the one released closest to `year`, within a
- * year. A lone match is taken whatever its year, since IGDB often dates a game
- * by a later re-release.
+ * Exact name only. Of several (a remake and its original), the one released
+ * within a year of `year`. A lone match is taken whatever its year: IGDB often
+ * dates a game by a later re-release.
  */
 function pickGame(results: SearchResult[], name: string, year: number | null) {
   const named = results.filter((r) => normalize(r.name) === normalize(name));
@@ -69,18 +64,12 @@ function pickGame(results: SearchResult[], name: string, year: number | null) {
 const search = (name: string, key: string) =>
   get<SearchResult[]>(`/search/autocomplete/${encodeURIComponent(name)}`, key);
 
-/** A game's grids that are art, in SteamGridDB's own order, full size first. */
 function artOf(grids: Grid[] | null): Grid[] {
   const art = (grids ?? []).filter((g) => ART_STYLES.has(g.style));
   return [...art.filter((g) => g.width >= 920), ...art.filter((g) => g.width < 920)];
 }
 
-/**
- * The game's best wide art on SteamGridDB, or null. Found by its exact name
- * (see pickGame). Of its grids, the first in SteamGridDB's own order that's
- * art, preferring full size. Never throws: art is a nicety, and IGDB's is
- * still there.
- */
+/** Never throws: art is a nicety, and IGDB's is still there. */
 export async function findWideArt(name: string, year: number | null): Promise<string | null> {
   const key = getSteamGridDbKey();
   if (!key) return null;
@@ -94,21 +83,18 @@ export async function findWideArt(name: string, year: number | null): Promise<st
   }
 }
 
-/** An image a player can choose for a game: the art, and a small copy to pick it by. */
 export interface ArtChoice {
   url: string;
   thumb: string;
 }
 
-/** As many as the picker shows: with the original, six rows of three. */
+/** With the original, the picker's six rows of three. */
 const MAX_CHOICES = 17;
 
 /**
- * Every wide image SteamGridDB has for a game, for the player to choose from
- * (Choose art), best first. A game Steam sells is found by its Steam id, which
- * can't be the wrong game; any other by its exact name, as findWideArt does.
- * Empty when SteamGridDB has none; null when it couldn't be asked (no key, or
- * it didn't answer), so the picker can say so rather than "no art".
+ * For Choose art. A game Steam sells is found by its Steam id, which can't be
+ * the wrong game. Empty when SteamGridDB has none; null when it couldn't be
+ * asked, so the picker can say so rather than "no art".
  */
 export async function listWideArt({
   name,

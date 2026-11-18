@@ -33,10 +33,10 @@ describe('checkRateLimit', () => {
   it('should reject requests over the limit', () => {
     const key = `test-over-${Date.now()}`;
 
-    checkRateLimit(key, config); // 1
-    checkRateLimit(key, config); // 2
-    checkRateLimit(key, config); // 3
-    const r4 = checkRateLimit(key, config); // 4 — over limit
+    checkRateLimit(key, config);
+    checkRateLimit(key, config);
+    checkRateLimit(key, config);
+    const r4 = checkRateLimit(key, config);
 
     expect(r4.success).toBe(false);
     expect(r4.remaining).toBe(0);
@@ -52,7 +52,6 @@ describe('checkRateLimit', () => {
     const r2 = checkRateLimit(key, shortConfig);
     expect(r2.success).toBe(false);
 
-    // Wait for window to expire
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     const r3 = checkRateLimit(key, shortConfig);

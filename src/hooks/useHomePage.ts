@@ -51,7 +51,6 @@ export function useHomePage() {
       recentlyAdded: carousels.recentlyAdded,
       loading: carousels.carouselsLoading,
     },
-    // The playing game, the queue and every action on them (useHomeActions).
     currentGame,
   };
 }

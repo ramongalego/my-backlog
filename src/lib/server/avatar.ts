@@ -4,13 +4,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 /** The storage bucket profile pictures go in (see the 20261116 migration). */
 export const AVATAR_BUCKET = 'avatars';
 
-/** The largest picture taken, as the bucket allows: the browser sends far less. */
+/** As the bucket allows; the browser sends far less. */
 export const MAX_AVATAR_BYTES = 512 * 1024;
 
 const EXTENSION = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' } as const;
 type AvatarType = keyof typeof EXTENSION;
 
-/** The widest or tallest picture taken: the browser sends 256px, so this is generous. */
+/** In px, either side: the browser sends 256px, so this is generous. */
 export const MAX_AVATAR_SIDE = 1024;
 
 const ascii = (bytes: Uint8Array, from: number, to: number) =>
@@ -19,7 +19,6 @@ const be16 = (bytes: Uint8Array, at: number) => (bytes[at] << 8) | bytes[at + 1]
 const le16 = (bytes: Uint8Array, at: number) => bytes[at] | (bytes[at + 1] << 8);
 const le24 = (bytes: Uint8Array, at: number) => le16(bytes, at) | (bytes[at + 2] << 16);
 
-/** A PNG's size, from its first chunk (IHDR). */
 function pngSize(bytes: Uint8Array) {
   if (bytes.length < 24 || ascii(bytes, 12, 16) !== 'IHDR') return null;
   return {
@@ -28,7 +27,6 @@ function pngSize(bytes: Uint8Array) {
   };
 }
 
-/** A JPEG's size, from the frame header found by walking its segments. */
 function jpegSize(bytes: Uint8Array) {
   let at = 2;
   while (at + 9 < bytes.length) {
@@ -47,7 +45,6 @@ function jpegSize(bytes: Uint8Array) {
   return null;
 }
 
-/** A WebP's size, from whichever of its three headers it has. */
 function webpSize(bytes: Uint8Array) {
   if (bytes.length < 30) return null;
   const kind = ascii(bytes, 12, 16);
@@ -63,11 +60,9 @@ function webpSize(bytes: Uint8Array) {
 }
 
 /**
- * What picture these bytes are, read from the file itself rather than from
- * what the upload says it is: its kind (WebP, PNG or JPEG) and its size, from
- * its header. Null for anything else, and for a file that starts like a
- * picture but has no header to read: it would be stored and then draw as a
- * broken image. (The header is as far as this looks: it doesn't decode it.)
+ * Read from the bytes, not from what the upload claims. Null for a file that
+ * starts like a picture but has no header to read: it would draw as a broken
+ * image. Only the header is read; the image isn't decoded.
  */
 export function readImage(
   bytes: Uint8Array,
@@ -88,17 +83,14 @@ export function readImage(
   return { type, ...size };
 }
 
-/** Where a new picture of this player's is stored: their own folder, a name of its own. */
 export function newAvatarPath(userId: string, type: AvatarType): string {
   return `${userId}/${crypto.randomUUID()}.${EXTENSION[type]}`;
 }
 
 /**
- * Deletes every picture in a player's folder but the one to keep (none, when
- * the picture is taken off or the account deleted). By the folder, not by the
- * URL the profile had: a picture left behind by two uploads at once, or by a
- * failed delete, goes with the next change. A failure is logged and left: a
- * file nothing points at is only clutter.
+ * By folder, not by the profile's URL, so a picture left by two uploads at
+ * once or a failed delete goes with the next change. A failure is only logged:
+ * a file nothing points at is only clutter.
  */
 export async function deleteAvatars(
   service: SupabaseClient,

@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
-/**
- * Shown when a list or page has nothing to show. The description should
- * teach: say what will appear here and how it gets there.
- */
+/** The description should teach: what will appear here and how it gets there. */
 export function EmptyState({
   icon: Icon,
   title,

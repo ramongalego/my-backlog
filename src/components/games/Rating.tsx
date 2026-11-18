@@ -1,10 +1,6 @@
 import { Star } from 'lucide-react';
 
-/**
- * Your rating of a game, "★ 9/10": the one way a rating reads, on cards, the
- * Diary, Stats and the finish screens. `onArt` puts it on a dark chip, to sit
- * over a game's art.
- */
+/** The player's own rating, out of 10. `onArt` puts it on a dark chip to sit over art. */
 export function Rating({
   rating,
   size = 'sm',

@@ -11,7 +11,6 @@ interface StartProps {
   onConnectSteam: () => void;
 }
 
-/** The two ways to give Stats something to show: add games, or bring in Steam. */
 export function StatsStartButtons({ isSteamConnected, onAddGame, onConnectSteam }: StartProps) {
   // Stacked at one width on phones, where the two don't fit side by side.
   return (
@@ -30,12 +29,7 @@ export function StatsStartButtons({ isSteamConnected, onAddGame, onConnectSteam 
 const plural = (n: number, word: string) =>
   `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
 
-/**
- * Stats before there's anything to report: nothing finished, dropped or
- * played yet, as on a new account. Says what you have so far, what the page
- * will show once you play, and how to get there, instead of a page of empty
- * sections.
- */
+/** With nothing finished, dropped or played yet, instead of a page of empty sections. */
 export function StatsStart({
   backlog,
   storyHours,

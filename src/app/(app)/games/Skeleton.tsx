@@ -10,7 +10,7 @@ import {
 
 const FILTER_PILL_WIDTHS = ['w-14', 'w-24', 'w-24', 'w-24', 'w-28', 'w-20'];
 
-/** Mirrors GameCard: cover art, then the title and meta row. */
+/** Mirrors GameCard. */
 function GameGridSkeleton({ count = 12 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
@@ -27,7 +27,7 @@ function GameGridSkeleton({ count = 12 }: { count?: number }) {
   );
 }
 
-/** Mirrors GameList: the column header, then rows of small art, name and details. */
+/** Mirrors GameList. */
 function GameListSkeleton({ count = 12 }: { count?: number }) {
   return (
     <div>
@@ -54,10 +54,7 @@ function GameListSkeleton({ count = 12 }: { count?: number }) {
   );
 }
 
-/**
- * `empty`: the library is known to be empty, so no grid of cards to hold.
- * `view`: the grid or the list, as the page will be drawn.
- */
+/** `empty`: the library is known to be empty, so no grid of cards to hold. */
 export function GamesPageSkeleton({
   empty = false,
   view = 'grid',
@@ -80,7 +77,6 @@ export function GamesPageSkeleton({
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Skeleton className="h-10 w-full sm:w-80 rounded-lg" />
-          {/* Select, the view switch and Sort: three controls of one height. */}
           <div className="flex items-center gap-2">
             <Skeleton className="h-10 w-10 sm:w-[92px] rounded-lg" />
             <Skeleton className="h-10 w-[78px] rounded-lg" />

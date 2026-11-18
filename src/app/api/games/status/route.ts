@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
     return jsonError('Unauthorized', 401);
   }
 
-  // Rate limiting per user (not IP) — this is an authenticated endpoint, so a
-  // per-user quota avoids throttling unrelated users behind a shared NAT/IP.
+  // Per user, not IP, so players behind a shared NAT don't throttle each other.
   const rateLimitResult = checkRateLimit(`game-status:${user.id}`, RATE_LIMITS.gameStatus);
   if (!rateLimitResult.success) {
     return rateLimited(rateLimitResult);

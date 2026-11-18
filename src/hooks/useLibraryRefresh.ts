@@ -12,18 +12,14 @@ const LIBRARY_REFRESH_STALE_MS = 15 * 60 * 1000;
 // Review scores cost a call per 50 games and barely move, so once a day.
 const REVIEWS_REFRESH_STALE_MS = 24 * 60 * 60 * 1000;
 
-/**
- * When each kind of refresh last ran, kept per account: switching accounts in
- * the same browser must not inherit the other account's timestamps.
- */
+/** Per account: switching accounts in one browser must not inherit the other's timestamps. */
 export const refreshKeys = (userId: string | null | undefined) => {
   const suffix = userId ?? 'signed-out';
   return {
     playtime: `playtime_refresh_at:${suffix}`,
     /**
-     * The last refresh the player asked for, which the menu's cooldown counts
-     * from. Not `playtime`: that's set by the background refresh too, and a
-     * page loaded just after one would show Refresh as already used.
+     * The menu's cooldown counts from this, not `playtime`: the background
+     * refresh sets that too, which would show Refresh as already used.
      */
     manual: `manual_refresh_at:${suffix}`,
     attempt: `playtime_refresh_attempt_at:${suffix}`,
@@ -34,10 +30,8 @@ export const refreshKeys = (userId: string | null | undefined) => {
 };
 
 /**
- * How long ago a saved time was, or null when there's nothing to go by:
- * none saved, not a time, or a time still to come (the device's clock was
- * wrong when it was saved, or has been moved back since). Counting from one
- * of those would hold a refresh back for as long as the clock was out.
+ * Null for nothing saved or a time still to come (the clock was wrong): counting
+ * from that would hold a refresh back for as long as the clock was out.
  */
 function ageOf(key: string): number | null {
   const saved = localStorage.getItem(key);
@@ -72,9 +66,8 @@ interface RefreshResult {
 
 const failedResult: RefreshResult = { success: false, newGames: 0, updatedPlaytime: 0 };
 
-// Module-level so several mounted callers (home, queue page) can't fire
-// overlapping background refreshes — a duplicate that finds new games would
-// reload the page mid-sync.
+// Module-level so several mounted callers can't overlap background refreshes:
+// a duplicate that finds new games would reload the page mid-sync.
 let staleRefreshInFlight: Promise<RefreshResult> | null = null;
 
 export function useLibraryRefresh() {
@@ -103,24 +96,18 @@ export function useLibraryRefresh() {
         }
 
         const data = await res.json();
-        // The Steam name or picture changed on Steam: the profile and the
-        // header's menu show the new ones (unless the player chose their own).
+        // Shown unless the player chose their own name or picture.
         if (data.steamProfile) {
           updateProfile({
             steam_username: data.steamProfile.username,
             steam_avatar: data.steamProfile.avatar,
           });
         }
-        // Steam shared no library (game details private). Not "up to date":
-        // a refresh you asked for says why. So does the first one in the
-        // background to find it, once: a profile made private after joining
-        // otherwise just stops updating, with nothing to say why. It isn't
-        // recorded as done either, so trying again once the setting is
-        // changed isn't held back.
+        // Game details private. A manual refresh says why, and so does the
+        // first background one, once, or the library just stops updating. Not
+        // recorded as done, so a retry after the setting changes isn't held back.
         if (data.steamPrivate) {
-          // The scores and art were still refreshed (they don't need the
-          // library), so those wait their day as usual: a profile that went
-          // private later would otherwise have them checked on every visit.
+          // Scores and art don't need the library and were still refreshed.
           if (reviews) localStorage.setItem(keys.reviews, Date.now().toString());
           if (manual || !localStorage.getItem(keys.toldPrivate)) steamPrivateToast();
           localStorage.setItem(keys.toldPrivate, Date.now().toString());
@@ -136,17 +123,15 @@ export function useLibraryRefresh() {
         if (reviews) localStorage.setItem(keys.reviews, Date.now().toString());
 
         if (newGames > 0) {
-          // New games need their details synced. That check otherwise runs once
-          // per page load; asking for it again does the job without a reload,
-          // which would throw away a half-written note or an open dialog.
+          // Asking for the sync check again avoids a reload, which would throw
+          // away a half-written note or an open dialog.
           invalidateGamesAndQueue();
           requestSyncCheck();
           if (manual) toast.success(`Added ${newGames} new ${newGames === 1 ? 'game' : 'games'}`);
           return { success: true, newGames, updatedPlaytime };
         }
 
-        // Most refreshes change nothing (you haven't played since the last one),
-        // and refetching every page's data then would be pure waste.
+        // Most refreshes change nothing, and refetching every page's data then is waste.
         const changed =
           (data.updatedGames ?? updatedPlaytime) > 0 ||
           (data.updatedStoreData ?? 0) > 0 ||

@@ -11,10 +11,8 @@ function makeQueryClient() {
       queries: {
         staleTime: 60 * 1000,
         gcTime: 10 * 60 * 1000,
-        // This app's server data only changes via the user's own mutations,
-        // which already invalidate the relevant queries. Refetching the whole
-        // dashboard (carousels, counts, queue) on every tab-focus was pure
-        // overhead, so it's disabled.
+        // Server data only changes through the player's own mutations, which
+        // invalidate their queries, so refetching on tab focus is wasted.
         refetchOnWindowFocus: false,
         retry: 1,
       },

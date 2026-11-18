@@ -29,11 +29,9 @@ interface QueueItemRowProps {
 }
 
 /**
- * A queue row you can drag. The drag wiring stays here, out of QueueItemRow:
- * the overlay that follows the pointer draws a QueueItemRow too, and if it
- * registered under the same id it would replace this row as a drop target and
- * take that registration with it when the drag ended, so the row couldn't be
- * dropped on again until the page reloaded.
+ * The drag wiring stays out of QueueItemRow: the drag overlay draws one too,
+ * and registering it under the same id would leave this row undroppable after
+ * the drag until the page reloads.
  */
 export function SortableQueueItem(props: QueueItemRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -73,7 +71,6 @@ export function QueueItemRow({
   handleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }) {
   const zone = useReleaseZone();
-  // The platform tag on the art, which the button's name says too.
   const tag = platformTag(item.game, useLibraryPlatforms());
   return (
     <div
@@ -87,7 +84,6 @@ export function QueueItemRow({
         {index + 1}
       </span>
 
-      {/* The art opens the game, as on every other card. */}
       <button
         type="button"
         onClick={() => onOpen(item.game_id)}
@@ -106,9 +102,8 @@ export function QueueItemRow({
           platform={tag}
           releaseDate={item.game.release_date}
         >
-          {/* On phones the position rides on the art. */}
-          {/* Drawn by CSS: it repeats the number beside the row, and as text
-              inside the button it would have to be in the button's name. */}
+          {/* Drawn by CSS: as text inside the button it would have to be in the
+              button's name, and it repeats the row's number. */}
           <span
             aria-hidden="true"
             data-chip={index + 1}
@@ -119,8 +114,8 @@ export function QueueItemRow({
 
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="flex-1 min-w-0">
-          {/* Wraps below lg: beside the art and the buttons, one line cut most
-              names short ("Final Fantasy Reso…") on a phone held sideways. */}
+          {/* Wraps below lg: one line cuts most names short beside the art and
+              buttons on a phone held sideways. */}
           <p className="font-medium text-ink-100 mb-1">
             <span className="sr-only">{index + 1}. </span>
             <TruncatedText className="block lg:truncate">{item.game.name}</TruncatedText>
@@ -140,10 +135,8 @@ export function QueueItemRow({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Every game that's out can be played from here. With nothing
-              playing it's the page's main action; with a game playing it
-              switches to this one (the other waits at the top of the queue),
-              so it's a quieter button and says what it does. */}
+          {/* With a game playing, Play switches to this one, so it's a quieter
+              button that says what it does. */}
           {isReleased(item.game.release_date, undefined, zone) && (
             <Tooltip
               content={
@@ -174,8 +167,7 @@ export function QueueItemRow({
               </Button>
             </Tooltip>
           )}
-          {/* The first game is already at the top: same-size space instead, so
-              the icons line up down the list. */}
+          {/* A same-size space keeps the icons lined up down the list. */}
           {index > 0 ? (
             <Tooltip content={<TooltipText title="Move to top" />}>
               <button
@@ -199,8 +191,7 @@ export function QueueItemRow({
           >
             <GripVertical className="w-4 h-4" aria-hidden="true" />
           </button>
-          {/* Taking a game off the queue puts it back in the backlog: the same
-              icon as "Move to Backlog" on the playing game, not Drop's X. */}
+          {/* The same icon as Move to Backlog on the playing game, not Drop's X. */}
           <Tooltip content={<TooltipText title="Move to Backlog" />}>
             <button
               onClick={() => onRemove(item.game_id)}
