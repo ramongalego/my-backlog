@@ -1,6 +1,6 @@
 import 'server-only';
 import { secondsToHours } from './time-utils';
-import { fetchWithTimeout, TIMEOUTS } from '@/lib/fetch-with-timeout';
+import { fetchWithTimeout, FetchTimeoutError, TIMEOUTS } from '@/lib/fetch-with-timeout';
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -110,7 +110,9 @@ async function fetchHLTBConfig(): Promise<HLTBConfig | null> {
       hpVal: initData.hpVal,
     };
   } catch (err) {
-    console.error('[HLTB] Config fetch threw:', err);
+    // A slow moment is a warning; anything else may mean the site changed.
+    if (err instanceof FetchTimeoutError) console.warn('[HLTB] Config fetch timed out:', err);
+    else console.error('[HLTB] Config fetch threw:', err);
     return null;
   }
 }
@@ -276,7 +278,8 @@ async function searchHLTB(
     throw new HLTBUnavailableError();
   }
   if (!res.ok) {
-    console.error(`[HLTB] Search failed for "${gameName}": HTTP ${res.status}`);
+    // One game's time missing: a warning, not an error report (Sentry).
+    console.warn(`[HLTB] Search failed for "${gameName}": HTTP ${res.status}`);
     return null;
   }
 
@@ -391,7 +394,7 @@ export async function findMainStoryTimes(gameName: string): Promise<MainStoryTim
     found = await searchAll(gameName);
   } catch (error) {
     if (error instanceof HLTBUnavailableError) throw error;
-    console.error(`[HLTB] Exception for "${gameName}":`, error);
+    console.warn(`[HLTB] Exception for "${gameName}":`, error);
     found = [];
   }
 

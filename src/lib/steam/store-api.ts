@@ -206,7 +206,8 @@ export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | n
     );
 
     if (!response.ok) {
-      console.error(`[Steam Store] GetItems failed for appId=${appId}: HTTP ${response.status}`);
+      // One game's details missing: a warning, not an error report (Sentry).
+      console.warn(`[Steam Store] GetItems failed for appId=${appId}: HTTP ${response.status}`);
       return null;
     }
 
@@ -230,7 +231,7 @@ export async function getStoreItemInfo(appId: number): Promise<StoreItemInfo | n
       reviews: reviewData(item.reviews),
     };
   } catch (error) {
-    console.error(`[Steam Store] Exception for appId=${appId}:`, error);
+    console.warn(`[Steam Store] Exception for appId=${appId}:`, error);
     return null;
   }
 }
@@ -269,7 +270,7 @@ async function getItemsInBatches<T>(
         TIMEOUTS.STEAM_STORE,
       );
       if (!response.ok) {
-        console.error(`[Steam Store] GetItems batch failed: HTTP ${response.status}`);
+        console.warn(`[Steam Store] GetItems batch failed: HTTP ${response.status}`);
         return;
       }
       const data = await response.json();
@@ -281,7 +282,7 @@ async function getItemsInBatches<T>(
         }),
       );
     } catch (error) {
-      console.error('[Steam Store] GetItems batch failed:', error);
+      console.warn('[Steam Store] GetItems batch failed:', error);
     }
   };
 
