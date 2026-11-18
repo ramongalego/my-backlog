@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MessageSquarePlus } from 'lucide-react';
 import { Rating } from '@/components/games/Rating';
 import { CoverArt } from '@/components/games/CoverArt';
@@ -48,6 +48,7 @@ function AddNoteButton({ name, onClick }: { name: string; onClick: () => void })
   return (
     <button
       type="button"
+      data-note-control
       onClick={onClick}
       aria-label={`Add a note for ${name}`}
       className={`cursor-pointer p-1.5 rounded text-ink-500 hover:text-ink-100 ${ROW_REVEAL}`}
@@ -62,6 +63,21 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const day = entry.finished_at ? formatDay(entry.finished_at) : null;
   const canAddNote = !entry.notes && !editingNote;
   const startNote = () => setEditingNote(true);
+  // The editor has the focus when it closes, and goes with it: the focus goes
+  // to the control that comes back in its place (Edit note, or Add a note when
+  // the note was emptied), the one of its two copies that is showing.
+  const row = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
+  const closeNote = () => {
+    refocus.current = true;
+    setEditingNote(false);
+  };
+  useEffect(() => {
+    if (editingNote || !refocus.current) return;
+    refocus.current = false;
+    const controls = row.current?.querySelectorAll<HTMLElement>('[data-note-control]') ?? [];
+    ([...controls].find((control) => control.offsetParent !== null) ?? controls[0])?.focus();
+  }, [editingNote]);
   const edit = () => onEdit(entry.id);
   const storeUrl = steamStoreUrl(entry);
   const tag = platformTag(entry, useLibraryPlatforms());
@@ -69,7 +85,10 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   return (
     // content-visibility skips off-screen rows so a long diary scrolls smoothly;
     // the intrinsic size (a row's usual height) keeps the scrollbar steady.
-    <div className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70 [content-visibility:auto] [contain-intrinsic-size:auto_19rem] sm:[contain-intrinsic-size:auto_8rem]">
+    <div
+      ref={row}
+      className="group/row flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-4 sm:py-3 border-b border-ink-800/70 [content-visibility:auto] [contain-intrinsic-size:auto_19rem] sm:[contain-intrinsic-size:auto_8rem]"
+    >
       <div
         className={`${ALIGN_WITH_COVER} hidden sm:flex justify-end w-6 shrink-0 text-sm text-ink-400 tabular-nums`}
       >
@@ -135,9 +154,9 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
           <DiaryNoteEditor
             initialText={entry.notes ?? ''}
             gameName={entry.name}
-            onCancel={() => setEditingNote(false)}
+            onCancel={closeNote}
             onSave={(notes) => {
-              setEditingNote(false);
+              closeNote();
               if (notes !== (entry.notes ?? '')) onSaveNotes(entry.id, notes);
             }}
           />

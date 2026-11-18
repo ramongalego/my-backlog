@@ -65,6 +65,7 @@ export function DiaryNoteText({
         )}
         <button
           type="button"
+          data-note-control
           onClick={onEdit}
           aria-label={`Edit note for ${gameName}`}
           className={`${LINK_BUTTON} ${ROW_REVEAL}`}
