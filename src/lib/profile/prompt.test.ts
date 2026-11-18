@@ -25,6 +25,7 @@ const facts = playerFacts([
     status: 'finished',
     rating: 10,
     critic_score: 70,
+    critic_count: 8,
     tags: ['Metroidvania'],
     playtime_forever: 40 * 60,
   }),

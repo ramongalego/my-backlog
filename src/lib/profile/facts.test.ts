@@ -174,16 +174,26 @@ describe('what they love', () => {
 });
 
 describe('disagreeing with critics', () => {
+  const reviewed = { critic_count: 12 };
+
   it('names the games rated 2 or more points away from the critics, biggest gap first', () => {
     const facts = playerFacts([
-      game({ name: 'Underrated', rating: 9, critic_score: 62 }),
-      game({ name: 'Slightly', rating: 9, critic_score: 75 }),
-      game({ name: 'Overrated', rating: 5, critic_score: 91 }),
-      game({ name: 'Agreed', rating: 8, critic_score: 80 }),
+      game({ name: 'Underrated', rating: 9, critic_score: 62, ...reviewed }),
+      game({ name: 'Slightly', rating: 9, critic_score: 75, ...reviewed }),
+      game({ name: 'Overrated', rating: 5, critic_score: 91, ...reviewed }),
+      game({ name: 'Agreed', rating: 8, critic_score: 80, ...reviewed }),
       game({ name: 'No score', rating: 2 }),
     ])!;
     expect(facts.critics.ratedAbove).toEqual([{ name: 'Underrated', yours: 9, critics: 62 }]);
     expect(facts.critics.ratedBelow).toEqual([{ name: 'Overrated', yours: 5, critics: 91 }]);
+  });
+
+  it("doesn't count a score too few critics gave, which the app never shows", () => {
+    const facts = playerFacts([
+      game({ name: 'Circle of the Moon', rating: 6, critic_score: 90, critic_count: 1 }),
+      game({ name: 'Two Reviews', rating: 9, critic_score: 60, critic_count: 2 }),
+    ])!;
+    expect(facts.critics).toEqual({ ratedAbove: [], ratedBelow: [] });
   });
 });
 

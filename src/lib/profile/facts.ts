@@ -2,6 +2,7 @@
 // everything it says is true of the library.
 import type { GameItem } from '@/lib/data/loaders';
 import { consoleOf } from '@/lib/games/consoles';
+import { criticScoreOf } from '@/lib/games/rating';
 import { computeStats, countedInStats } from '@/lib/stats/compute';
 
 interface NamedHours {
@@ -242,13 +243,16 @@ function lovedFacts(counted: GameItem[]): PlayerFacts['loved'] {
 }
 
 function criticGaps(counted: GameItem[]): PlayerFacts['critics'] {
+  // Only scores enough critics agree on, as everywhere else in the app: one
+  // review's 90 read as "critics loved it".
   const gaps = counted
-    .filter((g) => g.rating != null && g.critic_score != null)
-    .map((g) => ({
-      name: g.name,
-      yours: g.rating!,
-      critics: Math.round(g.critic_score!),
-      gap: g.rating! * 10 - g.critic_score!,
+    .map((g) => ({ game: g, critics: criticScoreOf(g) }))
+    .filter(({ game, critics }) => game.rating != null && critics != null)
+    .map(({ game, critics }) => ({
+      name: game.name,
+      yours: game.rating!,
+      critics: Math.round(critics!),
+      gap: game.rating! * 10 - critics!,
     }))
     .filter((g) => Math.abs(g.gap) >= CRITIC_GAP);
   const pick = (list: typeof gaps) =>

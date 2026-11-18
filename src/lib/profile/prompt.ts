@@ -33,6 +33,8 @@ const RULES: Record<InsightTone, string> = {
     `The headline names the kind of player they are, e.g. "A JRPG loyalist who finishes what they love".`,
     `Each paragraph makes one point and shows it with one or two of their games, by name, and no game comes up in more than one paragraph. Keep sentences under 25 words.`,
     `If you can't name a game that shows a point, leave the point out: no abstractions like "structure beneath the drama".`,
+    `End each paragraph on what it says about them, in plain words. Two facts side by side are not a point.`,
+    `No sentence that only sounds clever: each one says something about them a friend could agree or disagree with. No "makes X look Y".`,
     `No "it's not X, it's Y", "speaks to", "the common thread", "quietly" or "a testament to".`,
     ...SHARED_RULES,
   ].join('\n'),
