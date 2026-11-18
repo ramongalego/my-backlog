@@ -46,6 +46,7 @@ describe('sentryOptions', () => {
     'ChunkLoadError: Loading chunk 412 failed.',
     'ResizeObserver loop completed with undelivered notifications.',
     '(node:8) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized',
+    '(node:8) ExperimentalWarning: vm.USE_MAIN_CONTEXT_DEFAULT_LOADER is an experimental feature and might change at any time',
   ])('ignores "%s"', async (message) => {
     expect(await ignored(message)).toBe(true);
   });
@@ -54,6 +55,8 @@ describe('sentryOptions', () => {
     "TypeError: Cannot read properties of undefined (reading 'id')",
     'Failed to record a pick: relation "game_picks" does not exist',
     'Load failed for the queue',
+    // A warning of the app's own, not one of Node's.
+    'Steam warning: the profile is private',
   ])('keeps "%s"', async (message) => {
     expect(await ignored(message)).toBe(false);
   });

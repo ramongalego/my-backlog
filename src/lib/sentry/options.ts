@@ -9,9 +9,9 @@ const environment = process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? '';
 /**
  * Errors that say nothing about the app: the player's connection, a request
  * canceled on purpose, a tab still running the code from before a deploy,
- * browser quirks, and Node's deprecation warnings, which it prints with
- * console.error (so the server would report them) and which are about
- * dependencies' code, not ours.
+ * browser quirks, and Node's warnings (deprecated or experimental features),
+ * which it prints with console.error (so the server would report them) and
+ * which are about dependencies' code, not ours.
  */
 const IGNORED_ERRORS: (string | RegExp)[] = [
   /^(TypeError: )?Failed to fetch/,
@@ -29,7 +29,7 @@ const IGNORED_ERRORS: (string | RegExp)[] = [
   'error loading dynamically imported module',
   'ResizeObserver loop',
   'Non-Error promise rejection captured',
-  /\[DEP\d+\] DeprecationWarning/,
+  /^\(node:\d+\) (\[\w+\] )?(Deprecation|Experimental)Warning:/,
 ];
 
 /** Code a browser extension put on the page. */
