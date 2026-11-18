@@ -29,9 +29,9 @@ export function Hero({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
           </h1>
           <p className="mt-6 text-lg md:text-xl text-ink-300 max-w-lg leading-relaxed">
             MyBacklog imports your Steam library, or the games you add from any console, and picks
-            one for tonight based on your mood and how much time you have
+            one for tonight based on your mood and how much time you have.
           </p>
-          <p className="mt-3 text-sm text-ink-400 h-5 leading-5" aria-live="off">
+          <p className="mt-5 text-sm text-ink-400 h-5 leading-5" aria-live="off">
             <span
               key={teaseIndex}
               className="inline-block animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
@@ -40,7 +40,7 @@ export function Hero({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
             </span>
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
             <GetStartedButton onClick={() => onOpen('signup')} />
             <button
               aria-haspopup="dialog"

@@ -55,8 +55,8 @@ export function LibraryPreview() {
           </p>
           <p>
             Connect Steam to bring them all in, or add games from any console. Each one comes with
-            how long it takes to beat and how well it&apos;s reviewed, ready to mark, rate and sort
-            however you like.
+            how long it takes to beat and how well it&apos;s reviewed, so you can sort by what fits
+            tonight.
           </p>
         </SectionCopy>
       </div>

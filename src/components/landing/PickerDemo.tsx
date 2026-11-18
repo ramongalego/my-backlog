@@ -97,7 +97,7 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
             </p>
             <div
               key={pickedGame.title}
-              className="flex items-center gap-4 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
+              className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-ink-800 pt-5 animate-[resultPop_0.3s_ease-out] motion-reduce:animate-none"
             >
               <Image
                 src={pickedGame.image}
@@ -106,7 +106,8 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
                 height={56}
                 className="w-14 h-14 rounded-lg object-cover shrink-0"
               />
-              <div className="flex-1 min-w-0">
+              {/* Too narrow for the button beside the details (below 360px), it goes under them. */}
+              <div className="flex-1 min-w-30">
                 <p className="font-medium text-ink-50">{pickedGame.title}</p>
                 {/* No separator to strand at a line's end when a phone wraps them. */}
                 <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-ink-400">
@@ -121,7 +122,7 @@ export function PickerDemo({ onSignUp }: { onSignUp: () => void }) {
               </div>
               <Button
                 size="sm"
-                className="shrink-0 cursor-pointer"
+                className="shrink-0 cursor-pointer max-[359px]:ml-18"
                 aria-haspopup="dialog"
                 onClick={onSignUp}
               >

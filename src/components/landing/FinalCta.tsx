@@ -11,7 +11,7 @@ export function FinalCta({ onOpen }: { onOpen: (mode: AuthMode) => void }) {
           </h2>
           <p className="mt-3 text-ink-400">
             It&apos;s free. Connect Steam to import your whole library, or add games from any
-            console
+            console.
           </p>
         </div>
         <div className="shrink-0">

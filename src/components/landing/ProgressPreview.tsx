@@ -21,7 +21,7 @@ export function ProgressPreview() {
           <p>
             Every game you finish goes in your diary with the date, your rating and a note. Stats
             shows how much of your library you&apos;ve finished and how long the rest would take at
-            your pace.
+            your pace, sums up what kind of player you are, and roasts you for it if you ask.
           </p>
         </SectionCopy>
 
