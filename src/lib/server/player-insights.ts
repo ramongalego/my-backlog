@@ -1,12 +1,7 @@
 import 'server-only';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
 import type { Insight, InsightTone } from '@/lib/profile/prompt';
-
-/** `signature` stands for the facts it was written from. */
-export interface SavedInsight extends Insight {
-  signature: string;
-  generatedAt: string;
-}
+import type { SavedInsight } from '@/lib/profile/saved';
 
 // Only the server writes player_insights, so users can't put words in the
 // app's mouth. Best effort: without the table or the key, nothing is kept.

@@ -1,11 +1,11 @@
-import type { Insight, InsightTone } from '@/lib/profile/prompt';
+import type { InsightTone } from '@/lib/profile/prompt';
+import type { SavedInsight } from '@/lib/profile/saved';
 
-interface InsightResponse extends Insight {
-  generatedAt: string;
-}
-
-/** The player profile (or its roast) for the signed-in player, written or saved. */
-export async function fetchInsight(tone: InsightTone): Promise<InsightResponse> {
+/**
+ * The player profile (or its roast) for the signed-in player: written afresh
+ * when the library has changed since the saved one, otherwise the saved one.
+ */
+export async function fetchInsight(tone: InsightTone): Promise<SavedInsight> {
   const res = await fetch('/api/insights', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -13,5 +13,5 @@ export async function fetchInsight(tone: InsightTone): Promise<InsightResponse> 
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error ?? 'Couldn’t load this right now');
-  return body as InsightResponse;
+  return body as SavedInsight;
 }

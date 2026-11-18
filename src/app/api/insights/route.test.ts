@@ -5,7 +5,8 @@ import type { NextRequest } from 'next/server';
 import type { GameItem } from '@/lib/data/loaders';
 import { POST } from '@/app/api/insights/route';
 import { playerFacts } from '@/lib/profile/facts';
-import { buildInsightMessages, insightSignature } from '@/lib/profile/prompt';
+import { buildInsightMessages } from '@/lib/profile/prompt';
+import { insightSignature } from '@/lib/profile/saved';
 
 let user: { id: string } | null = { id: 'user-1' };
 let games: GameItem[] = [];
@@ -115,6 +116,7 @@ it("returns the saved one when the library hasn't changed, without calling the m
   expect(await res.json()).toEqual({
     headline: 'Saved',
     paragraphs: ['Earlier.'],
+    signature: insightSignature(playerFacts(games)!),
     generatedAt: '2026-11-01T00:00:00.000Z',
   });
   expect(create).not.toHaveBeenCalled();

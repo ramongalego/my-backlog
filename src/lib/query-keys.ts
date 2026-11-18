@@ -16,11 +16,10 @@ export const queryKeys = {
     history: (userId: string) => [...queryKeys.games.all, 'history', userId] as const,
     openEndedCategories: (userId: string) =>
       [...queryKeys.games.all, 'open-ended-categories', userId] as const,
-    // Under games, so any library change asks again (the server only rewrites
-    // it when something it talks about changed).
-    insight: (userId: string, tone: string) =>
-      [...queryKeys.games.all, 'insight', userId, tone] as const,
   },
+  // Not under games: a library change doesn't change what's saved, only
+  // whether it's out of date, which Stats works out from the games list.
+  insights: (userId: string) => ['insights', userId] as const,
   queue: {
     all: ['queue'] as const,
     list: (userId: string) => [...queryKeys.queue.all, 'list', userId] as const,

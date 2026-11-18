@@ -6,16 +6,16 @@ import { hasEnoughForProfile, playerFacts } from '@/lib/profile/facts';
 import {
   INSIGHT_RESPONSE_FORMAT,
   buildInsightMessages,
-  insightSignature,
   parseInsight,
   type Insight,
 } from '@/lib/profile/prompt';
+import { insightSignature, type SavedInsight } from '@/lib/profile/saved';
 import { insightRequestSchema } from '@/lib/validations/insights';
 import { AI_MODEL, OPENAI_OPTIONS, isOutOfBudget } from '@/lib/server/ai-model';
 import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
 import { jsonError } from '@/lib/server/api-response';
 import { getOpenAIApiKey } from '@/lib/server/env';
-import { getSavedInsight, saveInsight, type SavedInsight } from '@/lib/server/player-insights';
+import { getSavedInsight, saveInsight } from '@/lib/server/player-insights';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 
 // Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
@@ -27,6 +27,7 @@ const respond = (insight: SavedInsight) =>
   NextResponse.json({
     headline: insight.headline,
     paragraphs: insight.paragraphs,
+    signature: insight.signature,
     generatedAt: insight.generatedAt,
   });
 

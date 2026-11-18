@@ -25,7 +25,8 @@ import { PlayedALot } from '@/components/stats/PlayedALot';
 import { PlayerProfile } from '@/components/stats/PlayerProfile';
 
 export default function StatsView() {
-  const { stats, loading, loadError, retry, profileReady, gameDialog, openGame } = useStatsPage();
+  const { stats, loading, loadError, retry, profileReady, profileSignature, gameDialog, openGame } =
+    useStatsPage();
   const libraryMeta = useCachedLibraryMeta();
   const { user, profile } = useAuth();
   const { connect: connectSteam } = useConnectSteam();
@@ -94,7 +95,9 @@ export default function StatsView() {
               <PlayedALot stats={stats} onEdit={openPlayedALot} />
             </div>
           )}
-          {profileReady && user && <PlayerProfile userId={user.id} />}
+          {profileReady && user && profileSignature && (
+            <PlayerProfile userId={user.id} signature={profileSignature} />
+          )}
         </div>
       )}
     </Page>

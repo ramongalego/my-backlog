@@ -14,6 +14,7 @@ import {
 } from '@/lib/games/carousels';
 import type { GameWithImage, QueueItem } from '@/types/games';
 import type { GameStatus } from '@/lib/games/status';
+import type { SavedInsights } from '@/lib/profile/saved';
 
 export interface GameItem {
   id: number;
@@ -216,6 +217,29 @@ export async function loadRecentHistory(
  * One made with Google or Discord has none until it sets one. Null when the
  * database couldn't say: the caller then goes by `signedUpWithPassword`.
  */
+/** The player's saved profile and roast, read as they are: nothing is written here. */
+export async function loadSavedInsights(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<SavedInsights> {
+  const { data, error } = await supabase
+    .from('player_insights')
+    .select('tone, headline, paragraphs, signature, generated_at')
+    .eq('user_id', userId);
+  if (error) throw error;
+  const saved: SavedInsights = { profile: null, roast: null };
+  for (const row of data ?? []) {
+    if (row.tone !== 'profile' && row.tone !== 'roast') continue;
+    saved[row.tone as keyof SavedInsights] = {
+      headline: row.headline,
+      paragraphs: row.paragraphs,
+      signature: row.signature,
+      generatedAt: row.generated_at,
+    };
+  }
+  return saved;
+}
+
 export async function loadHasPassword(supabase: SupabaseClient): Promise<boolean | null> {
   const { data, error } = await supabase.rpc('account_has_password');
   return !error && typeof data === 'boolean' ? data : null;

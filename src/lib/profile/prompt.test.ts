@@ -1,5 +1,5 @@
-import { buildInsightMessages, insightSignature, parseInsight } from '@/lib/profile/prompt';
-import { factsSignature, playerFacts } from '@/lib/profile/facts';
+import { buildInsightMessages, parseInsight } from '@/lib/profile/prompt';
+import { playerFacts } from '@/lib/profile/facts';
 import type { GameItem } from '@/lib/data/loaders';
 
 const game = (overrides: Partial<GameItem>): GameItem =>
@@ -76,11 +76,6 @@ describe('buildInsightMessages', () => {
     expect(profile.content).not.toBe(roast.content);
     expect(roast.content).toMatch(/never their race/i);
   });
-});
-
-it('signs a profile with the prompt version as well as the facts', () => {
-  expect(insightSignature(facts)).toMatch(/^v\d+:/);
-  expect(insightSignature(facts)).toContain(factsSignature(facts));
 });
 
 describe('parseInsight', () => {

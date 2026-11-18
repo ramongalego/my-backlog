@@ -2,7 +2,7 @@
 // message, so nothing in a game's name can change the rules.
 import { stripLinks } from '@/lib/ai-text';
 import { boundedJson } from '@/lib/prompt-limits';
-import { factsSignature, type PlayerFacts } from './facts';
+import type { PlayerFacts } from './facts';
 
 export type InsightTone = 'profile' | 'roast';
 
@@ -90,15 +90,6 @@ function factsFor(facts: PlayerFacts, tone: InsightTone) {
     markedWontPlay: facts.wontPlay,
     playingNow: facts.playingNow,
   };
-}
-
-// Raised when the prompts change, so profiles written with the old ones are
-// written again.
-const PROMPT_VERSION = 4;
-
-/** What a saved profile was written from: the facts and the prompt. */
-export function insightSignature(facts: PlayerFacts): string {
-  return `v${PROMPT_VERSION}:${factsSignature(facts)}`;
 }
 
 export function buildInsightMessages(

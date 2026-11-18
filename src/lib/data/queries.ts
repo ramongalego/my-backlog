@@ -16,6 +16,7 @@ import {
   loadOpenEndedCategories,
   loadQueue,
   loadRecentHistory,
+  loadSavedInsights,
   type CarouselPools,
 } from './loaders';
 
@@ -92,6 +93,14 @@ export const queries = {
     queryOptions({
       queryKey: queryKeys.games.openEndedCategories(userId ?? ''),
       queryFn: load(userId, supabase, loadOpenEndedCategories),
+      staleTime: 5 * MINUTE,
+    }),
+
+  /** Stats' profile and roast. Changes only when one is written, which sets it. */
+  savedInsights: (userId: string | null, supabase?: SupabaseClient) =>
+    queryOptions({
+      queryKey: queryKeys.insights(userId ?? ''),
+      queryFn: load(userId, supabase, loadSavedInsights),
       staleTime: 5 * MINUTE,
     }),
 

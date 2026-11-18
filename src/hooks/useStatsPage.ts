@@ -6,7 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQueue } from '@/hooks/useQueue';
 import { useLibraryGameDialog } from '@/hooks/useLibraryGameDialog';
 import { computeStats, countedInStats } from '@/lib/stats/compute';
-import { hasEnoughForProfile } from '@/lib/profile/facts';
+import { hasEnoughForProfile, playerFacts } from '@/lib/profile/facts';
+import { insightSignature } from '@/lib/profile/saved';
 
 export function useStatsPage() {
   const { user } = useAuth();
@@ -28,6 +29,12 @@ export function useStatsPage() {
   const stats = computeStats(games, categories, queuedGameIds);
 
   const profileReady = hasEnoughForProfile(games);
+  // What a profile written now would be written from, so a saved one with
+  // another signature is out of date. From the whole list, as the server reads
+  // it: the facts count won't-play games, which Stats leaves out.
+  const { data: library = [] } = useQuery(queries.gamesList(userId));
+  const facts = profileReady ? playerFacts(library) : null;
+  const profileSignature = facts ? insightSignature(facts) : null;
 
   // Stats reads the shared games list, so a change in the dialog shows at once.
   const { gameDialog, openGame } = useLibraryGameDialog(userId);
@@ -39,6 +46,7 @@ export function useStatsPage() {
     loadError: isLoadingError,
     retry: () => void refetch(),
     profileReady,
+    profileSignature,
     gameDialog,
     openGame,
   };
