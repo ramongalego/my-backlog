@@ -45,6 +45,7 @@ describe('sentryOptions', () => {
     'AbortError: The operation was aborted.',
     'ChunkLoadError: Loading chunk 412 failed.',
     'ResizeObserver loop completed with undelivered notifications.',
+    '(node:8) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized',
   ])('ignores "%s"', async (message) => {
     expect(await ignored(message)).toBe(true);
   });
