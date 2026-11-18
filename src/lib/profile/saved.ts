@@ -5,7 +5,7 @@ import type { Insight, InsightTone } from './prompt';
 
 // Raised when the prompts change, so profiles written with the old ones read as
 // out of date.
-const PROMPT_VERSION = 6;
+const PROMPT_VERSION = 7;
 
 /** What a saved profile was written from: the facts and the prompt. */
 export function insightSignature(facts: PlayerFacts): string {
