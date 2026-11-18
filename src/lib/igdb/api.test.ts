@@ -258,6 +258,25 @@ describe('searchGames', () => {
     ]);
   });
 
+  it('reads accents and apostrophes as if they were not typed, or not there', async () => {
+    games = [];
+    byNameParts = [
+      mkGame({ id: 1, name: 'Pokémon Scarlet', total_rating_count: 400 }),
+      mkGame({ id: 2, name: "Luigi's Mansion 3", total_rating_count: 300 }),
+    ];
+    const pokemon = await searchGames('pokemon scarlet');
+    expect(pokemon[0].name).toBe('Pokémon Scarlet');
+    const luigi = await searchGames('luigis mans');
+    expect(luigi[0].name).toBe("Luigi's Mansion 3");
+    expect(requests.at(-1)?.body).toContain('(slug ~ *"luigis"* | name ~ *"luigis"*)');
+  });
+
+  it('leaves Japanese as typed: its marks are part of the word', async () => {
+    games = [];
+    await searchGames('ゼルダ');
+    expect(requests.at(-1)?.body).toContain('name ~ *"ゼルダ"*');
+  });
+
   it('puts the best known of several games with the same name first', async () => {
     games = [
       mkGame({ id: 1, name: 'Hades', total_rating_count: 3 }),
@@ -282,7 +301,7 @@ describe('searchGames', () => {
     const results = await searchGames('super mario odyss');
     expect(results.map((r) => r.name)).toEqual(['Super Mario Odyssey']);
     expect(requests.find((r) => !isSearch(r.body) && r.url.includes('/games'))?.body).toContain(
-      'name ~ *"super"* & name ~ *"mario"* & name ~ *"odyss"*; sort total_rating_count desc;',
+      '(slug ~ *"odyss"* | name ~ *"odyss"*); sort total_rating_count desc;',
     );
   });
 

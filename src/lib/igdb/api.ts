@@ -196,12 +196,22 @@ export function pickWideArt(game: Pick<IgdbGame, 'artworks' | 'screenshots'>): s
   return shot && (shot.width ?? 0) >= MIN_SCREENSHOT_WIDTH ? shot.image_id : null;
 }
 
-function searchName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[™®©]/g, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
+/**
+ * Lowercase, without accents, apostrophes or symbols, so "Luigi's Mansion",
+ * "luigis mansion" and "Pokémon" typed as "pokemon" read alike.
+ */
+function nameWords(name: string): string[] {
+  return (
+    name
+      .normalize('NFD')
+      // Latin accents only: the marks Japanese kana take (ゼ, ポ) change the word.
+      .replace(/[\u{300}-\u{36f}]/gu, '')
+      .normalize('NFC')
+      .toLowerCase()
+      .replace(/['\u{2019}]/gu, '')
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean)
+  );
 }
 
 /** More words than this narrow the "contains" search without helping it. */
@@ -210,17 +220,19 @@ const MAX_SEARCH_WORDS = 6;
 export async function searchGames(text: string): Promise<GameSearchResult[]> {
   const fields = `fields name, game_type, first_release_date, platforms.name, cover.image_id, total_rating_count, ${EXTERNAL_FIELDS}`;
   const where = `where game_type = ${GAME_TYPES} & version_parent = null`;
-  const wanted = searchName(text);
-  const words = wanted.split(' ').filter(Boolean).slice(0, MAX_SEARCH_WORDS);
+  const typedWords = nameWords(text);
+  const wanted = typedWords.join(' ');
+  const words = typedWords.slice(0, MAX_SEARCH_WORDS);
   // IGDB's search only matches whole words, so a name still being typed
   // ("super mario odyss") finds nothing: the second query matches each word
-  // anywhere in the name, best known first.
+  // anywhere in the name, best known first. The slug ("pokemon-scarlet",
+  // "luigis-mansion") has no accents or apostrophes, as the typed words don't.
   const [searched, typed] = await Promise.all([
     query<IgdbGame>('games', `search ${quoted(text)}; ${fields}; ${where}; limit 20;`),
     words.length
       ? query<IgdbGame>(
           'games',
-          `${fields}; ${where} & ${words.map((w) => `name ~ *${quoted(w)}*`).join(' & ')}; sort total_rating_count desc; limit 20;`,
+          `${fields}; ${where} & ${words.map((w) => `(slug ~ *${quoted(w)}* | name ~ *${quoted(w)}*)`).join(' & ')}; sort total_rating_count desc; limit 20;`,
         ).catch((err) => {
           console.warn('IGDB name search failed:', err);
           return [];
@@ -235,11 +247,17 @@ export async function searchGames(text: string): Promise<GameSearchResult[]> {
   // (Hades of 2020 before Hades of 1995), then the rest as IGDB ordered them;
   // bundles last.
   const startsEveryWord = (g: IgdbGame) => {
-    const nameWords = searchName(g.name).split(' ');
-    return words.every((w) => nameWords.some((n) => n.startsWith(w)));
+    const ofName = nameWords(g.name);
+    return words.every((w) => ofName.some((n) => n.startsWith(w)));
   };
   const rank = (g: IgdbGame) =>
-    g.game_type === BUNDLE ? 3 : searchName(g.name) === wanted ? 0 : startsEveryWord(g) ? 1 : 2;
+    g.game_type === BUNDLE
+      ? 3
+      : nameWords(g.name).join(' ') === wanted
+        ? 0
+        : startsEveryWord(g)
+          ? 1
+          : 2;
   const known = (g: IgdbGame) => g.total_rating_count ?? 0;
   const ordered = games
     .map((game, i) => ({ game, i }))
