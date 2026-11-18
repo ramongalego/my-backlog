@@ -510,93 +510,180 @@ describe('recentActivity, several things about one game', () => {
   });
 });
 
-describe('recentActivity, a bulk move', () => {
-  const library = Array.from({ length: 6 }, (_, i) => game({ id: i + 1, name: `Game ${i + 1}` }));
-  /** Games marked Won't Play, each at the given moment. */
-  const wontPlay = (ids: number[], when: string) =>
-    ids.map((id) => event(id, 'status', { status: ['backlog', 'wont_play'] }, when));
+describe('recentActivity, a group of games', () => {
+  const library = Array.from({ length: 8 }, (_, i) => game({ id: i + 1, name: `Game ${i + 1}` }));
+  const wontPlay = (id: number, when: string) =>
+    event(id, 'status', { status: ['backlog', 'wont_play'] }, when);
+  const added = (id: number, when: string) =>
+    event(id, 'added', { status: [null, 'backlog'] }, when);
   const moment = '2026-11-17T23:43:38.586384+00:00';
+  /** What the list shows: a group's games, or a single row's kind. */
+  const shown = (entries: ActivityEntry[]) =>
+    entries.map((e) => (e.games ? e.games.map((one) => one.id) : `${e.id} ${kinds(e).join()}`));
 
-  it('is one entry: what was done to all of them, the games inside it, newest first', () => {
-    const entries = recentActivity(library, null, wontPlay([1, 2, 3, 4], moment));
+  it('is one entry for more than three games in a row with the same thing done, newest first', () => {
+    const entries = recentActivity(
+      library,
+      null,
+      [1, 2, 3, 4].map((id) => wontPlay(id, moment)),
+    );
     expect(entries).toHaveLength(1);
-    const [bulk] = entries;
-    expect(bulk).toMatchObject({
+    const [group] = entries;
+    expect(group).toMatchObject({
       name: '4 games',
       lines: [{ kind: 'wont_play' }],
       day: toLocalIsoDate(new Date(moment)),
       rating: null,
     });
-    // The newest first, as the list is: the last event logged leads.
-    expect(bulk.games!.map((one) => one.id)).toEqual([4, 3, 2, 1]);
-    expect(bulk.games!.every((one) => kinds(one).join() === 'wont_play')).toBe(true);
+    expect(group.games!.map((one) => one.id)).toEqual([4, 3, 2, 1]);
     // The first game's art.
-    expect(bulk.id).toBe(4);
+    expect(group.id).toBe(4);
   });
 
-  it('needs three games: two moved together stay two', () => {
-    const entries = recentActivity(library, null, wontPlay([1, 2], moment));
-    expect(entries.map((e) => [e.id, e.games])).toEqual([
-      [2, undefined],
-      [1, undefined],
-    ]);
-  });
-
-  it("doesn't join games moved a moment apart: each move stands alone", () => {
+  it('takes in a game moved the same way on its own, minutes apart', () => {
+    // Games 1 to 3 at once, then game 4 a minute and a half before them.
     const entries = recentActivity(library, null, [
-      ...wontPlay([1, 2, 3], moment),
-      ...wontPlay([4], '2026-11-17T23:42:04.536395+00:00'),
+      wontPlay(4, '2026-11-17T23:42:04+00:00'),
+      ...[1, 2, 3].map((id) => wontPlay(id, moment)),
     ]);
-    expect(entries.map((e) => e.games?.length ?? e.name)).toEqual([3, 'Game 4']);
+    expect(shown(entries)).toEqual([[3, 2, 1, 4]]);
   });
 
-  it("doesn't join games moved the same moment in different ways", () => {
+  it('is three rows for three games: it takes more than three', () => {
+    const entries = recentActivity(
+      library,
+      null,
+      [1, 2, 3].map((id) => wontPlay(id, moment)),
+    );
+    expect(shown(entries)).toEqual(['3 wont_play', '2 wont_play', '1 wont_play']);
+  });
+
+  it('leaves the games after it alone when they had something else done to them', () => {
+    // Two games added, then four marked Won't Play.
     const entries = recentActivity(library, null, [
-      ...wontPlay([1, 2, 3], moment),
-      event(4, 'status', { status: ['backlog', 'hidden'] }, moment),
-      event(5, 'status', { status: ['wont_play', 'backlog'] }, moment),
+      added(5, at(10)),
+      added(6, at(11)),
+      ...[1, 2, 3, 4].map((id) => wontPlay(id, at(12))),
     ]);
-    expect(entries.map((e) => e.games?.length ?? kinds(e).join())).toEqual(['backlog', 3]);
+    expect(shown(entries)).toEqual([[4, 3, 2, 1], '6 added', '5 added']);
   });
 
-  it("leaves a game with more than one line out of it: that isn't one thing done", () => {
+  it('groups the added ones too, once there are four of them', () => {
+    const entries = recentActivity(library, null, [
+      ...[5, 6, 7, 8].map((id, i) => added(id, at(8 + i))),
+      ...[1, 2, 3, 4].map((id) => wontPlay(id, at(12))),
+    ]);
+    expect(shown(entries)).toEqual([
+      [4, 3, 2, 1],
+      [8, 7, 6, 5],
+    ]);
+  });
+
+  it("isn't broken off by nothing: another game in between ends it", () => {
+    const entries = recentActivity(library, null, [
+      ...[1, 2].map((id) => wontPlay(id, at(9))),
+      added(5, at(10)),
+      ...[3, 4].map((id) => wontPlay(id, at(11))),
+    ]);
+    expect(shown(entries)).toEqual([
+      '4 wont_play',
+      '3 wont_play',
+      '5 added',
+      '2 wont_play',
+      '1 wont_play',
+    ]);
+  });
+
+  it("doesn't reach across days", () => {
+    const entries = recentActivity(library, null, [
+      ...[1, 2].map((id) => wontPlay(id, at(12, 16))),
+      ...[3, 4].map((id) => wontPlay(id, at(12, 17))),
+    ]);
+    expect(entries.every((e) => !e.games)).toBe(true);
+    expect(entries).toHaveLength(4);
+  });
+
+  it('leaves a game with more than one line out of it: that is more than one thing done', () => {
     const entries = recentActivity(library, null, [
       event(1, 'queue', { queued: [false, true] }, '2026-11-17T23:40:00+00:00'),
-      ...wontPlay([1, 2, 3, 4], moment),
+      ...[1, 2, 3, 4, 5].map((id) => wontPlay(id, moment)),
     ]);
     // Game 1 was queued minutes before, so its row holds both.
-    expect(entries.map((e) => e.games?.map((one) => one.id) ?? kinds(e))).toEqual([
-      [4, 3, 2],
-      ['queued', 'wont_play'],
+    expect(shown(entries)).toEqual([[5, 4, 3, 2], '1 queued,wont_play']);
+  });
+
+  it('never groups lines that each say something of their own: time played, a move, a rating', () => {
+    const entries = recentActivity(library, null, [
+      ...[1, 2, 3, 4].map((id) =>
+        event(id, 'playtime', { playtime_forever: [0, 60 * id] }, at(10)),
+      ),
+      ...[5, 6, 7, 8].map((id) => event(id, 'edit', { rating: [null, 8] }, at(11))),
+    ]);
+    expect(entries.every((e) => !e.games)).toBe(true);
+    expect(entries).toHaveLength(8);
+  });
+
+  it('says the day a finish was given when every game shares it, and none otherwise', () => {
+    const finish = (id: number, day: string) =>
+      event(
+        id,
+        'status',
+        { status: ['playing', 'finished'], finished_at: [null, `${day}T00:00:00+00:00`] },
+        at(12),
+      );
+    const same = recentActivity(
+      library,
+      null,
+      [1, 2, 3, 4].map((id) => finish(id, '2026-11-10')),
+    );
+    expect(same[0].lines).toEqual([{ kind: 'finished', on: '2026-11-10' }]);
+
+    const mixed = recentActivity(library, null, [
+      ...[1, 2, 3].map((id) => finish(id, '2026-11-10')),
+      finish(4, '2026-11-11'),
+    ]);
+    expect(mixed[0].lines).toEqual([{ kind: 'finished' }]);
+    // Each game still says its own day inside the group.
+    expect(mixed[0].games!.map((one) => one.lines[0].on)).toEqual([
+      '2026-11-11',
+      '2026-11-10',
+      '2026-11-10',
+      '2026-11-10',
     ]);
   });
 
   it('counts as one of the fifty', () => {
     const many = Array.from({ length: 60 }, (_, i) => game({ id: i + 1 }));
     const entries = recentActivity(many, null, [
-      ...many
-        .slice(0, 10)
-        .map((one) => event(one.id, 'status', { status: ['backlog', 'wont_play'] }, moment)),
+      ...many.slice(0, 10).map((one) => wontPlay(one.id, moment)),
+      // Fifty more, each its own row: every other one a different thing.
       ...many
         .slice(10)
         .map((one, i) =>
-          event(
-            one.id,
-            'queue',
-            { queued: [false, true] },
-            `2026-11-1${i % 7}T0${i % 9}:00:00+00:00`,
-          ),
+          i % 2
+            ? event(
+                one.id,
+                'queue',
+                { queued: [false, true] },
+                `2026-11-16T10:${String(i).padStart(2, '0')}:00+00:00`,
+              )
+            : event(
+                one.id,
+                'favorite',
+                { favorite: [false, true] },
+                `2026-11-16T10:${String(i).padStart(2, '0')}:00+00:00`,
+              ),
         ),
     ]);
     expect(entries).toHaveLength(RECENT_ACTIVITY);
-    expect(entries.filter((e) => e.games)).toHaveLength(1);
+    expect(entries[0].games).toHaveLength(10);
   });
 
   it('is never made of what the games say about a time before the history', () => {
-    const before = [1, 2, 3].map((id) => finished(id, '2026-03-01'));
+    const before = [1, 2, 3, 4].map((id) => finished(id, '2026-03-01'));
     const entries = recentActivity(before, null);
     expect(entries.every((e) => !e.games)).toBe(true);
-    expect(entries).toHaveLength(3);
+    expect(entries).toHaveLength(4);
   });
 });
 

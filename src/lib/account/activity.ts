@@ -63,8 +63,8 @@ export interface ActivityEntry {
   /** Your rating, where one of them is about it: a finish, a drop, a rating. */
   rating: number | null;
   /**
-   * A bulk move (Games, Select): the games moved the same way at the same
-   * moment, each its own entry, newest first. The entry itself says what was
+   * A group: the games the same thing was done to, one after another on one
+   * day, each its own entry, newest first. The entry itself says what was
    * done to all of them, with the first game's id, name and art.
    */
   games?: ActivityEntry[];
@@ -102,10 +102,30 @@ interface Item {
 export const RECENT_ACTIVITY = 50;
 
 /**
- * This many games or more moved the same way at the same moment are one
- * bulk move. Fewer read as well one by one.
+ * More than this many games in a row with the same thing done to them, on
+ * the same day, are one row. Fewer read as well one by one.
  */
-const BULK_AT_LEAST = 3;
+const GROUP_MORE_THAN = 3;
+
+/**
+ * What can be grouped: what reads the same for every game. Time played, a
+ * move to a console and a rating each say something of their own, and the
+ * game being played is one game.
+ */
+const GROUPABLE = new Set<ActivityKind>([
+  'started',
+  'finished',
+  'dropped',
+  'added',
+  'queued',
+  'paused',
+  'unqueued',
+  'backlog',
+  'wont_play',
+  'favorite',
+  'unfavorite',
+  'note',
+]);
 
 /** Things done to one game this close together, with nothing else between, are one entry. */
 const SAME_GO_MS = 12 * 60 * 60 * 1000;
@@ -172,7 +192,8 @@ function linesOf(newestFirst: Item[]): ActivityLine[] {
  * finished or dropped before there was a history, by its day). The game
  * being played has its line where its start falls, like any other. Lines
  * about one game that follow each other within twelve hours are one entry,
- * and so is a bulk move: three or more games moved the same way at once. A
+ * and more than three games in a row with the same thing done to them on one
+ * day are one entry too. A
  * hidden game is left out, as is a game that is no longer in the library,
  * and a finished or dropped game saved without a date has no place in time.
  */
@@ -276,33 +297,37 @@ export function recentActivity(
       day: newest.day,
       rating: run.find((item) => item.rating !== null)?.rating ?? null,
     };
-    // One thing done to one game, logged at a moment: what a bulk move is made of.
-    return { entry, at: run.length === 1 && newest.at.includes('T') ? newest.at : null };
+    // One thing done to one game, logged on a day: what a group is made of.
+    const groupable =
+      run.length === 1 && newest.at.includes('T') && GROUPABLE.has(newest.line.kind);
+    return { entry, groupable };
   });
 
-  // A bulk move is one entry: games that follow each other, each with one
-  // line of the same kind (and day), logged at the same moment. A bulk move
-  // is saved in one go, so its games share the moment to the microsecond.
+  // A group is one entry: games that follow each other in the list, each
+  // with one line of the same kind, logged on the same day. Whether they
+  // were moved together (Games, Select) or one by one doesn't matter.
   const sameMove = (a: (typeof made)[number], b: (typeof made)[number]) =>
-    a.at !== null &&
-    a.at === b.at &&
-    a.entry.lines[0].kind === b.entry.lines[0].kind &&
-    a.entry.lines[0].on === b.entry.lines[0].on;
+    a.groupable &&
+    b.groupable &&
+    a.entry.day === b.entry.day &&
+    a.entry.lines[0].kind === b.entry.lines[0].kind;
   const entries: ActivityEntry[] = [];
   for (let i = 0; i < made.length;) {
     let end = i + 1;
     while (end < made.length && sameMove(made[i], made[end])) end++;
     const group = made.slice(i, end).map((one) => one.entry);
-    if (group.length >= BULK_AT_LEAST) {
+    if (group.length > GROUP_MORE_THAN) {
       const [first] = group;
+      // A finish or a drop says its own day when every game shares it.
+      const on = group.every((one) => one.lines[0].on === first.lines[0].on)
+        ? first.lines[0].on
+        : undefined;
       entries.push({
         ...first,
         key: `bulk-${group.at(-1)!.key}`,
         name: `${group.length} games`,
         // What was done to all of them; each game keeps its own rating.
-        lines: [
-          { kind: first.lines[0].kind, ...(first.lines[0].on ? { on: first.lines[0].on } : {}) },
-        ],
+        lines: [{ kind: first.lines[0].kind, ...(on ? { on } : {}) }],
         rating: null,
         games: group,
       });
