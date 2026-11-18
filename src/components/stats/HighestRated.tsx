@@ -52,9 +52,12 @@ export function HighestRated({
                       className="w-full"
                     >
                       {game.rating != null && (
+                        // The button's name says the rating after the game's
+                        // name, as words; drawn, it isn't text read before it.
                         <Rating
                           rating={game.rating}
                           onArt
+                          drawn
                           className="absolute bottom-1.5 right-1.5"
                         />
                       )}
