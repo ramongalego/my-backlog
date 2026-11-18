@@ -1,0 +1,65 @@
+name: Release
+
+# Vercel tells GitHub when a production deployment goes live; each one becomes
+# a GitHub Release named for the day (v2026.11.18, then v2026.11.18.2), with
+# the commits since the last release as its notes.
+on: deployment_status
+
+permissions:
+  contents: write
+  checks: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Tag and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.deployment.sha }}
+        run: |
+          set -euo pipefail
+
+          # A redeploy of a commit that's already released isn't a new release.
+          if git tag --points-at "$SHA" | grep -q '^v20'; then
+            echo "Already released: $(git tag --points-at "$SHA" | grep '^v20')"
+            exit 0
+          fi
+
+          # Vercel only puts a commit live after CI's verify check has passed,
+          # so a commit without a passing check here isn't a release.
+          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?check_name=verify" \
+            --jq '.check_runs[0].conclusion // "none"')
+          if [ "$conclusion" != "success" ]; then
+            echo "verify is '$conclusion' on $SHA, so no release"
+            exit 0
+          fi
+
+          day=$(date -u +%Y.%m.%d)
+          count=$(git tag --list "v$day" "v$day.*" | wc -l)
+          version="v$day"
+          if [ "$count" -gt 0 ]; then version="v$day.$((count + 1))"; fi
+
+          previous=$(git tag --list 'v20*' --sort=-v:refname | head -n 1)
+          if [ -n "$previous" ]; then
+            commits=$(git log --no-merges --format='- %s' "$previous..$SHA")
+            notes="${commits:-No new commits: a redeploy.}
+
+          **All changes:** https://github.com/$GITHUB_REPOSITORY/compare/$previous...$version"
+          else
+            notes="The first tagged release."
+          fi
+
+          gh release create "$version" --target "$SHA" --title "$version" --notes "$notes"
+          echo "Released $version at $SHA"
