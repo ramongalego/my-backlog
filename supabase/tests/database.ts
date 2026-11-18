@@ -16,7 +16,8 @@ export const sqlFile = (...path: string[]) => readFileSync(join(SUPABASE, ...pat
 /**
  * What Supabase provides around the app's schema, as little of it as the
  * schema needs: its three roles (with the rights it gives them on new
- * tables), the users table, `auth.uid()` and the storage buckets table.
+ * tables), the users, identities and sessions tables, `auth.uid()` and the
+ * storage buckets table.
  */
 const SUPABASE_PLATFORM = `
   create role anon;
@@ -35,7 +36,19 @@ const SUPABASE_PLATFORM = `
   create table auth.users (
     id uuid primary key default gen_random_uuid(),
     email text,
-    encrypted_password text
+    encrypted_password text,
+    email_confirmed_at timestamptz
+  );
+  create table auth.identities (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users (id) on delete cascade,
+    provider text not null
+  );
+  create table auth.sessions (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users (id) on delete cascade,
+    created_at timestamptz default now(),
+    updated_at timestamptz default now()
   );
   -- The signed-in user's id, as each test sets it (see asUser).
   create function auth.uid() returns uuid language sql stable as $$

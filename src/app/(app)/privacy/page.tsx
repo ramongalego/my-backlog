@@ -73,6 +73,10 @@ const sections: LegalSection[] = [
           to reply when you contact us.
         </p>
         <p>
+          We count how many people use the Service and its features, as totals that do not identify
+          anyone, to see how it is used and decide what to work on.
+        </p>
+        <p>
           We do not sell or rent personal data or share it for advertising. The Service has no ads,
           and we do not send marketing email.
         </p>
@@ -84,7 +88,7 @@ const sections: LegalSection[] = [
         <p>
           For users in the European Economic Area and the United Kingdom, the legal bases for this
           processing are the performance of our contract with you and our legitimate interest in
-          keeping the Service secure and reliable.
+          keeping the Service secure and reliable and in understanding how it is used.
         </p>
       </>
     ),
