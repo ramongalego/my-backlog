@@ -6,7 +6,9 @@ import { connectSteam } from '@/lib/client/steam-connect';
 
 jest.mock('@/lib/client/steam-connect', () => ({ connectSteam: jest.fn() }));
 
-jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+const signOut = jest.fn(async () => ({ error: null }));
+jest.mock('@/lib/supabase/client', () => ({ createClient: () => ({ auth: { signOut } }) }));
+jest.mock('@/lib/reload', () => ({ reloadAtTop: jest.fn() }));
 
 const user = { id: 'u', email: 'player@example.com' } as User;
 
@@ -142,4 +144,13 @@ it('marks Connect Steam busy once it has been pressed, and leaves for Steam once
   act(() => {
     window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
   });
+});
+
+it('signs out of this browser only, not every device the account is on', async () => {
+  render(<UserMenu user={user} name="Player" avatar={null} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+  });
+  expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
 });

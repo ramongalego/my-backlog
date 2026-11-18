@@ -93,7 +93,8 @@ export function UserMenu({
 
   const handleSignOut = async () => {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    // This browser only: Supabase's default signs the account out everywhere.
+    await supabase.auth.signOut({ scope: 'local' });
     reloadAtTop();
   };
 
