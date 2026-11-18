@@ -1,3 +1,4 @@
+import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -26,6 +27,9 @@ const csp = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Read by lib/sentry/options.ts, in the browser too: Sentry only sends from
+  // Vercel's production and preview deploys.
+  env: { NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.VERCEL_ENV ?? '' },
   compiler: {
     removeConsole: {
       exclude: ['error', 'warn'],
@@ -93,4 +97,22 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+const onVercel = !!process.env.VERCEL;
+
+export default withSentryConfig(nextConfig, {
+  org: 'mybacklog-75',
+  project: 'my-backlog',
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  telemetry: false,
+  // Source maps for readable stack traces, uploaded from Vercel's builds only:
+  // a local build sends nothing.
+  sourcemaps: { disable: !onVercel },
+  widenClientFileUpload: true,
+  release: { create: onVercel, setCommits: false },
+  // Must stay out of proxy.ts's matcher, which would check sign-in on every report.
+  tunnelRoute: '/monitoring',
+  bundleSizeOptimizations: { excludeDebugStatements: true },
+  // A Sentry upload that fails warns instead of failing the deploy.
+  errorHandler: (err) => console.warn('Sentry upload failed:', err),
+});

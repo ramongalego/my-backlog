@@ -23,7 +23,7 @@ A full-stack web app that helps players stop scrolling their library and actuall
 | Outside services | Steam Web API and OpenID 2.0, IGDB, HowLongToBeat, SteamGridDB, OpenAI                                  |
 | UI pieces        | dnd-kit (accessible drag and drop), lucide-react, Sonner, react-day-picker, canvas-confetti             |
 | Testing and CI   | Jest and React Testing Library (970+ tests); GitHub Actions runs types, lint, tests, knip and the build |
-| Hosting          | Vercel, with Vercel Analytics                                                                           |
+| Hosting          | Vercel, with Vercel Analytics; Sentry for errors from production and preview deploys                    |
 
 ## Getting started
 

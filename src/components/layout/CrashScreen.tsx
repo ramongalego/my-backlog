@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 export function CrashScreen({ error, retry }: { error: unknown; retry: () => void }) {
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

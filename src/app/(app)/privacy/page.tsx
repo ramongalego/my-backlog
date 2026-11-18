@@ -49,7 +49,7 @@ const sections: LegalSection[] = [
             ],
             [
               'Technical',
-              'Request logs kept by our hosting provider, containing IP address, browser type, the page requested and the time. We also keep rate-limit counters linked to your account or, for signed-out visitors, to an IP address.',
+              'Request logs kept by our hosting provider, containing IP address, browser type, the page requested and the time. We also keep rate-limit counters linked to your account or, for signed-out visitors, to an IP address. When something in the Service fails, an error report records what failed, the page or request involved and your browser type. We do not attach your account, IP address or cookies to error reports.',
             ],
           ]}
         />
@@ -122,6 +122,13 @@ const sections: LegalSection[] = [
               </a>,
               'Generating Pick My Game suggestions and the player profile and roast',
               'The games in your library, including their names, tags, length, hours played, status and ratings, and your answers to the Pick My Game questions. OpenAI does not receive your email address, password or notes.',
+            ],
+            [
+              <a key="sentry" href="https://sentry.io/privacy/" {...EXTERNAL}>
+                Sentry
+              </a>,
+              'Reporting errors in the Service',
+              'Error reports, as described under Technical above',
             ],
             [
               <a key="valve" href="https://store.steampowered.com/privacy_agreement/" {...EXTERNAL}>
@@ -209,7 +216,8 @@ const sections: LegalSection[] = [
         </p>
         <p>
           If you disconnect Steam, your Steam games and everything recorded on them are removed. Our
-          hosting provider retains request logs for a limited period.
+          hosting provider retains request logs, and our error-reporting provider retains error
+          reports, for a limited period.
         </p>
       </>
     ),
@@ -283,7 +291,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      effective="November 17, 2026"
+      effective="November 18, 2026"
       intro={
         <>
           <p>
