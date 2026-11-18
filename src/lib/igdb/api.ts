@@ -85,6 +85,8 @@ interface IgdbGame {
   /** Critics' average, 0-100; the count is how many reviews it's from. */
   aggregated_rating?: number;
   aggregated_rating_count?: number;
+  /** Ratings from players and critics together: how well known it is. */
+  total_rating_count?: number;
   external_games?: ExternalGame[];
   /** Releases of the same game on other platforms that IGDB keeps as their own entries. */
   ports?: { external_games?: ExternalGame[] }[];
@@ -202,19 +204,51 @@ function searchName(name: string): string {
     .trim();
 }
 
+/** More words than this narrow the "contains" search without helping it. */
+const MAX_SEARCH_WORDS = 6;
+
 export async function searchGames(text: string): Promise<GameSearchResult[]> {
-  const games = await query<IgdbGame>(
-    'games',
-    `search ${quoted(text)}; fields name, game_type, first_release_date, platforms.name, cover.image_id, ${EXTERNAL_FIELDS}; where game_type = ${GAME_TYPES} & version_parent = null; limit 20;`,
-  );
-  // IGDB's relevance puts "Portal Maze 2" above "Portal 2" for "portal 2", so
-  // a game named exactly what was typed comes first; bundles go last.
+  const fields = `fields name, game_type, first_release_date, platforms.name, cover.image_id, total_rating_count, ${EXTERNAL_FIELDS}`;
+  const where = `where game_type = ${GAME_TYPES} & version_parent = null`;
   const wanted = searchName(text);
+  const words = wanted.split(' ').filter(Boolean).slice(0, MAX_SEARCH_WORDS);
+  // IGDB's search only matches whole words, so a name still being typed
+  // ("super mario odyss") finds nothing: the second query matches each word
+  // anywhere in the name, best known first.
+  const [searched, typed] = await Promise.all([
+    query<IgdbGame>('games', `search ${quoted(text)}; ${fields}; ${where}; limit 20;`),
+    words.length
+      ? query<IgdbGame>(
+          'games',
+          `${fields}; ${where} & ${words.map((w) => `name ~ *${quoted(w)}*`).join(' & ')}; sort total_rating_count desc; limit 20;`,
+        ).catch((err) => {
+          console.warn('IGDB name search failed:', err);
+          return [];
+        })
+      : [],
+  ]);
+  const games = [...searched, ...typed.filter((t) => !searched.some((s) => s.id === t.id))];
+
+  // Games named exactly what was typed first (IGDB's relevance puts "Portal
+  // Maze 2" above "Portal 2"), then those whose words start with every word
+  // typed ("wind wak": Wind Waker, not "Windwalker"), each best known first
+  // (Hades of 2020 before Hades of 1995), then the rest as IGDB ordered them;
+  // bundles last.
+  const startsEveryWord = (g: IgdbGame) => {
+    const nameWords = searchName(g.name).split(' ');
+    return words.every((w) => nameWords.some((n) => n.startsWith(w)));
+  };
   const rank = (g: IgdbGame) =>
-    g.game_type === BUNDLE ? 2 : searchName(g.name) === wanted ? 0 : 1;
+    g.game_type === BUNDLE ? 3 : searchName(g.name) === wanted ? 0 : startsEveryWord(g) ? 1 : 2;
+  const known = (g: IgdbGame) => g.total_rating_count ?? 0;
   const ordered = games
     .map((game, i) => ({ game, i }))
-    .sort((a, b) => rank(a.game) - rank(b.game) || a.i - b.i)
+    .sort(
+      (a, b) =>
+        rank(a.game) - rank(b.game) ||
+        (rank(a.game) <= 1 ? known(b.game) - known(a.game) : 0) ||
+        a.i - b.i,
+    )
     .map(({ game }) => game)
     .slice(0, SEARCH_LIMIT);
   return ordered.map((g) => ({

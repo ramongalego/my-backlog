@@ -17,14 +17,19 @@ const respond = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status }));
 
 let games: unknown[] = [];
+/** What the search by name parts answers, when it should differ from IGDB's search. */
+let byNameParts: unknown[] | null = null;
 const requests: { url: string; body?: string }[] = [];
+const isSearch = (body?: string) => !!body?.startsWith('search ');
 
 beforeEach(() => {
   requests.length = 0;
+  byNameParts = null;
   global.fetch = jest.fn((url: string | URL, init?: RequestInit) => {
     requests.push({ url: String(url), body: init?.body as string | undefined });
     if (String(url).startsWith('https://id.twitch.tv'))
       return respond({ access_token: 'token', expires_in: 5_000_000 });
+    if (byNameParts && !isSearch(init?.body as string)) return respond(byNameParts);
     return respond(games);
   }) as unknown as typeof fetch;
 });
@@ -216,7 +221,7 @@ describe('searchGames', () => {
   it('keeps quotes out of the query and returns compact results', async () => {
     games = [mkGame()];
     const results = await searchGames('Xeno"blade');
-    expect(requests.at(-1)?.body).toContain('search "Xeno blade";');
+    expect(requests.find((r) => isSearch(r.body))?.body).toContain('search "Xeno blade";');
     expect(results).toEqual([
       {
         igdbId: 7,
@@ -235,7 +240,7 @@ describe('searchGames', () => {
       mkGame({ id: 2, name: 'Castlevania', game_type: 0 }),
     ];
     const results = await searchGames('castlevania');
-    expect(requests.at(-1)?.body).toContain('game_type = (0,3,');
+    expect(requests.find((r) => isSearch(r.body))?.body).toContain('game_type = (0,3,');
     expect(results.map((r) => r.name)).toEqual(['Castlevania', 'Castlevania Dominus Collection']);
   });
 
@@ -253,6 +258,15 @@ describe('searchGames', () => {
     ]);
   });
 
+  it('puts the best known of several games with the same name first', async () => {
+    games = [
+      mkGame({ id: 1, name: 'Hades', total_rating_count: 3 }),
+      mkGame({ id: 2, name: 'Hades', total_rating_count: 1500 }),
+    ];
+    const results = await searchGames('hades');
+    expect(results.map((r) => r.igdbId)).toEqual([2, 1]);
+  });
+
   it('matches names without case, marks or punctuation', async () => {
     games = [
       mkGame({ id: 1, name: 'Tales of Arise DLC' }),
@@ -260,6 +274,40 @@ describe('searchGames', () => {
     ];
     const results = await searchGames('tales of arise');
     expect(results[0].name).toBe('Tales of Arise™');
+  });
+
+  it("finds a name still being typed, which IGDB's search misses", async () => {
+    games = [];
+    byNameParts = [mkGame({ id: 1, name: 'Super Mario Odyssey', total_rating_count: 1913 })];
+    const results = await searchGames('super mario odyss');
+    expect(results.map((r) => r.name)).toEqual(['Super Mario Odyssey']);
+    expect(requests.find((r) => !isSearch(r.body) && r.url.includes('/games'))?.body).toContain(
+      'name ~ *"super"* & name ~ *"mario"* & name ~ *"odyss"*; sort total_rating_count desc;',
+    );
+  });
+
+  it('puts names whose words start with what was typed first, best known first', async () => {
+    games = [
+      mkGame({ id: 1, name: 'Zelda Tribute', total_rating_count: 5 }),
+      mkGame({ id: 2, name: 'The Legend of Zelda: The Wind Waker HD', total_rating_count: 404 }),
+    ];
+    byNameParts = [
+      mkGame({ id: 3, name: 'Die Schattenhelden: Wind Wakers', total_rating_count: 0 }),
+      mkGame({ id: 4, name: 'The Legend of Zelda: The Wind Waker', total_rating_count: 1068 }),
+      mkGame({ id: 2, name: 'The Legend of Zelda: The Wind Waker HD', total_rating_count: 404 }),
+    ];
+    const results = await searchGames('wind wak');
+    expect(results.map((r) => r.igdbId)).toEqual([4, 2, 3, 1]);
+  });
+
+  it("still answers with IGDB's search when the search by name parts fails", async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    games = [mkGame()];
+    global.fetch = jest.fn((url: string | URL, init?: RequestInit) =>
+      isSearch(init?.body as string) ? respond(games) : respond({ message: 'nope' }, 400),
+    ) as unknown as typeof fetch;
+    const results = await searchGames('xenoblade');
+    expect(results.map((r) => r.name)).toEqual(['Xenoblade Chronicles X']);
   });
 
   it('reuses the access token between requests', async () => {
