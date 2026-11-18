@@ -20,12 +20,15 @@ export const FIELD_LABEL = 'block text-sm font-medium text-ink-300 mb-1.5';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  /** What the field needs, under it until an error takes its place. */
+  hint?: string;
   ref?: Ref<HTMLInputElement>;
 }
 
-export function Input({ className = '', label, error, id, ref, ...props }: InputProps) {
+export function Input({ className = '', label, error, hint, id, ref, ...props }: InputProps) {
   const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
   const errorId = error ? `${inputId}-error` : undefined;
+  const hintId = hint && !error ? `${inputId}-hint` : undefined;
 
   return (
     <div className="w-full">
@@ -38,10 +41,15 @@ export function Input({ className = '', label, error, id, ref, ...props }: Input
         ref={ref}
         id={inputId}
         aria-invalid={error ? true : undefined}
-        aria-describedby={errorId}
+        aria-describedby={errorId ?? hintId}
         className={`${fieldClass(!!error)} h-10 px-3 text-sm ${className}`}
         {...props}
       />
+      {hintId && (
+        <p id={hintId} className="mt-1.5 text-xs text-ink-500">
+          {hint}
+        </p>
+      )}
       {error && (
         <p id={errorId} className="mt-1.5 text-sm text-rose-400" role="alert">
           {error}

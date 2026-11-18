@@ -35,6 +35,23 @@ describe('SignUpForm', () => {
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
   });
 
+  it('says what a password needs before anyone tries one, until an error takes its place', async () => {
+    const user = userEvent.setup();
+    render(<SignUpForm />);
+    const password = screen.getByLabelText(/^password$/i);
+    expect(password).toHaveAccessibleDescription(
+      'At least 8 characters, with an upper and a lower case letter and a number',
+    );
+
+    await user.type(password, 'short');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(password).toHaveAccessibleDescription('Password must be at least 8 characters');
+    });
+    expect(screen.queryByText(/^At least 8 characters/)).not.toBeInTheDocument();
+  });
+
   it('should show validation errors for empty fields', async () => {
     const user = userEvent.setup();
     render(<SignUpForm />);

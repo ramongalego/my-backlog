@@ -157,6 +157,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
         onChange={handleChange}
         placeholder="Create a password"
         error={errors.password}
+        hint="At least 8 characters, with an upper and a lower case letter and a number"
         required
         autoComplete="new-password"
       />
