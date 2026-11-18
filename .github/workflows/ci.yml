@@ -20,6 +20,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Critical only: a high advisory in a build-time dependency (picomatch,
+      # through Sentry's build plugin) has no fix that doesn't downgrade Sentry.
+      - name: Security audit of the shipped dependencies
+        run: npm audit --omit=dev --audit-level=critical
+
       - name: Lint
         run: npm run lint
 

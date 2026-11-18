@@ -11,7 +11,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "check:hltb": "jest --testMatch \"**/live-checks/*.live.ts\"",
-    "check:unused": "knip"
+    "check:unused": "knip",
+    "deploy": "git push origin main main:prod"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

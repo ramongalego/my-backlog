@@ -13,6 +13,14 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
 - `npm run check:unused`: knip, for unused files, exports and dependencies (CI runs it too). `knip.json` lists its known false positives.
 - `npm run check:hltb`: looks a few games up on HowLongToBeat for real, to see the lookup still works (HLTB changes its site now and then). A GitHub Action runs it daily and emails on failure.
 
+## Deploying
+
+- `main` is staging. Every push to it builds a Vercel preview at `my-backlog-git-main-ramongcs-projects.vercel.app`, behind Vercel's login. Its errors reach Sentry as `preview`, which never alerts.
+- The live site serves the `prod` branch. Deploying is `npm run deploy` (`git push origin main main:prod`): it pushes `main` and moves `prod` to the same commit, fast-forward only. Vercel builds it, and puts it live only once CI's `verify` check has passed on that commit (Deployment Checks in Vercel's settings), so a commit CI never ran on can't go live.
+- "Commit and push" puts a change on staging, not on the live site; say which of the two happened.
+- Staging and the live site share one Supabase database, with the real accounts. A migration has to work with the code that's live: it is applied first, then deployed.
+- To undo a deploy, use Vercel's Instant Rollback, then fix forward on `main`.
+
 ## Where things live
 
 - `src/app/(app)/`: signed-in pages. Each has a server `page.tsx` that prefetches data, a client `View.tsx`, a `loading.tsx` and a `Skeleton.tsx` that mirrors the page layout.
