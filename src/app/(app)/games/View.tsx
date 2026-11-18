@@ -70,6 +70,8 @@ export default function GamesView() {
   // In All and Backlog the badge tells statuses apart (e.g. Playing); in a
   // single-status filter it would repeat the filter on every game.
   const showStatus = filter === 'all' || filter === 'backlog';
+  // Filtered to one platform, every game is on it: no tag or text says it again.
+  const showPlatform = !platforms?.value;
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   // Select, the view switch and Sort: where focus goes if the platform menu
@@ -218,6 +220,7 @@ export default function GamesView() {
               games={visibleGames}
               queuedGameIds={queuedGameIds}
               showStatus={showStatus}
+              showPlatform={showPlatform}
               sort={sort}
               reversed={reversed}
               onSortChange={sortBy}
@@ -233,6 +236,7 @@ export default function GamesView() {
                   onOpenDetail={handleOpenDetail}
                   queued={queuedGameIds.has(game.id)}
                   showStatus={showStatus}
+                  showPlatform={showPlatform}
                   selection={selection?.of(game)}
                 />
               ))}

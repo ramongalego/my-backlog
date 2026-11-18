@@ -2,6 +2,17 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { GameList } from '@/components/games/GameList';
 import type { GameItem } from '@/lib/data/loaders';
 import { ratingOf } from '@/lib/games/rating';
+import type { LibraryPlatforms } from '@/lib/games/consoles';
+
+// What the library is played on: not known yet (as before) unless a test sets it.
+let mockLibrary: LibraryPlatforms | null = null;
+jest.mock('@/hooks/useLibraryMeta', () => ({
+  ...jest.requireActual('@/hooks/useLibraryMeta'),
+  useLibraryPlatforms: () => mockLibrary,
+}));
+beforeEach(() => {
+  mockLibrary = null;
+});
 
 const shown = (game: GameItem) => String(Math.round(ratingOf(game)!));
 

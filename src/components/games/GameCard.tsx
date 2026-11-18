@@ -8,9 +8,10 @@ import { CoverArt } from './CoverArt';
 import { GameCardInfo } from './GameCardInfo';
 import { QueuedBadge } from './QueuedBadge';
 import { StatusBadge } from './StatusBadge';
-import { consoleOf } from '@/lib/games/consoles';
+import { consoleOf, platformTag } from '@/lib/games/consoles';
 import { upcomingRelease } from '@/lib/games/release-date';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 
 interface GameCardProps {
   game: GameItem;
@@ -18,6 +19,8 @@ interface GameCardProps {
   queued?: boolean;
   /** Off when the page is already filtered to one status, so every card would say the same thing. */
   showStatus?: boolean;
+  /** Off when the page is filtered to one platform, so every card would carry the same tag. */
+  showPlatform?: boolean;
   /** Select mode: a click ticks the game instead of opening it. */
   selection?: GameSelection;
 }
@@ -36,12 +39,16 @@ export function GameCard({
   onOpenDetail,
   queued,
   showStatus = true,
+  showPlatform = true,
   selection,
 }: GameCardProps) {
   const status = game.status;
   const showRating = (status === 'finished' || status === 'dropped') && game.rating != null;
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
-  const art = { showStatus, console: consoleOf(game), release };
+  // The platform tag on the art, which the button's name says too.
+  const library = useLibraryPlatforms();
+  const tag = showPlatform ? platformTag(game, library) : null;
+  const art = { showStatus, console: tag, release };
   const label = openGameLabel(game, { queued, ...art });
 
   return (
@@ -67,7 +74,7 @@ export function GameCard({
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 296px"
           // Brightens under the pointer, unless it can't be ticked.
           interactive={!selection || selection.selectable}
-          platform={consoleOf(game)}
+          platform={tag}
           releaseDate={game.release_date}
         >
           {selection?.selectable && (
@@ -107,7 +114,8 @@ export function GameCard({
           playtimeMinutes={game.playtime_forever}
           lastPlayedAt={game.last_played_at}
           deckCompat={game.deck_compat}
-          platform={consoleOf(game)}
+          console={consoleOf(game)}
+          artTag={tag}
         />
       </div>
     </div>

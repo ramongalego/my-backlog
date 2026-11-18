@@ -52,7 +52,7 @@ export function CoverArt({
   rounded?: keyof typeof RADIUS;
   interactive?: boolean;
   className?: string;
-  /** The console a game added by hand is on (consoleOf). */
+  /** The platform tag drawn on the art (platformTag). */
   platform?: string | null;
   /** The game's release date: an unreleased game gets "Out Nov 5" beside the console. */
   releaseDate?: string | null;

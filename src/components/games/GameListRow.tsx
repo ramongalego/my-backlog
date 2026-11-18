@@ -1,12 +1,13 @@
 'use client';
 
 import type { GameItem } from '@/lib/data/loaders';
-import { consoleOf, steamLastPlayed } from '@/lib/games/consoles';
+import { consoleOf, platformToSay, steamLastPlayed } from '@/lib/games/consoles';
 import { openGameLabel, selectGameLabel } from '@/lib/games/game-label';
 import type { GameSelection } from './GameCard';
 import { SelectTick } from './SelectTick';
 import { upcomingRelease } from '@/lib/games/release-date';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 import { CoverThumb } from './CoverArt';
 import { GameMetaRow, GameRating, Playtime, TimeToBeat } from './GameCardInfo';
 import { QueuedBadge } from './QueuedBadge';
@@ -21,6 +22,8 @@ interface GameListRowProps {
   queued?: boolean;
   /** Off when the page is filtered to one status: the column would repeat the filter. */
   showStatus?: boolean;
+  /** Off when the page is filtered to one platform: the details would repeat the filter. */
+  showPlatform?: boolean;
   /** Select mode: a click ticks the game instead of opening it. */
   selection?: GameSelection;
 }
@@ -36,10 +39,13 @@ export function GameListRow({
   onOpenDetail,
   queued,
   showStatus = true,
+  showPlatform = true,
   selection,
 }: GameListRowProps) {
   const release = upcomingRelease(game.release_date, undefined, useReleaseZone())?.label;
-  const platform = consoleOf(game);
+  // Where it's played, said in the details line (the thumbnail has no tag).
+  const library = useLibraryPlatforms();
+  const platform = showPlatform ? platformToSay(game, library) : null;
   const rated = (game.status === 'finished' || game.status === 'dropped') && game.rating != null;
   const badge = queued ? (
     <QueuedBadge />
@@ -125,7 +131,7 @@ export function GameListRow({
               playtimeMinutes={game.playtime_forever}
               lastPlayedAt={game.last_played_at}
               deckCompat={game.deck_compat}
-              platform={platform}
+              console={consoleOf(game)}
             />
           </div>
         </div>

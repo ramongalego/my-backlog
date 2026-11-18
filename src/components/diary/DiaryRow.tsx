@@ -8,11 +8,12 @@ import { Playtime } from '@/components/games/GameCardInfo';
 import { DiaryNoteEditor, DiaryNoteText, ROW_REVEAL } from '@/components/diary/DiaryNote';
 import type { DiaryEntry } from '@/hooks/useDiaryPage';
 import { steamStoreUrl } from '@/lib/games/store-link';
-import { consoleOf } from '@/lib/games/consoles';
+import { platformTag } from '@/lib/games/consoles';
 import { withArtTags } from '@/lib/games/game-label';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { formatDay, shortDate } from '@/lib/diary/date-utils';
 import { TruncatedText } from '@/components/ui/TruncatedText';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 
 interface DiaryRowProps {
   entry: DiaryEntry;
@@ -71,6 +72,8 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
   const startNote = () => setEditingNote(true);
   const edit = () => onEdit(entry.id);
   const storeUrl = steamStoreUrl(entry);
+  // The platform tag on the art, which the button's name says too.
+  const tag = platformTag(entry, useLibraryPlatforms());
 
   return (
     // content-visibility lets the browser skip laying out and drawing rows
@@ -89,16 +92,10 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
       <button
         type="button"
         onClick={edit}
-        aria-label={withArtTags(`Edit ${entry.name}`, { console: consoleOf(entry) })}
+        aria-label={withArtTags(`Edit ${entry.name}`, { console: tag })}
         className={`group ${COVER_WIDTH} shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2`}
       >
-        <CoverArt
-          src={entry.header_image}
-          alt=""
-          sizes={COVER_SIZES}
-          interactive
-          platform={consoleOf(entry)}
-        >
+        <CoverArt src={entry.header_image} alt="" sizes={COVER_SIZES} interactive platform={tag}>
           {/* On phones the date rides on the art. */}
           {entry.finished_at && (
             // Drawn by CSS: the date is in the row's headings, and as text
@@ -147,8 +144,8 @@ export function DiaryRow({ entry, onEdit, onSaveNotes }: DiaryRowProps) {
             {canAddNote && <AddNoteButton name={entry.name} onClick={startNote} />}
           </div>
         </div>
-        {/* The console shows on the art; this is its name for screen readers. */}
-        {consoleOf(entry) && <p className="sr-only">On {consoleOf(entry)}</p>}
+        {/* The platform shows on the art; this is its name for screen readers. */}
+        {tag && <p className="sr-only">On {tag}</p>}
         {editingNote ? (
           <DiaryNoteEditor
             initialText={entry.notes ?? ''}

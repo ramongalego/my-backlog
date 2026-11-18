@@ -4,6 +4,17 @@ import { ratingOf } from '@/lib/games/rating';
 
 const shown = (game: GameItem) => String(Math.round(ratingOf(game)!));
 import type { GameItem } from '@/lib/data/loaders';
+import type { LibraryPlatforms } from '@/lib/games/consoles';
+
+// What the library is played on: not known yet (as before) unless a test sets it.
+let mockLibrary: LibraryPlatforms | null = null;
+jest.mock('@/hooks/useLibraryMeta', () => ({
+  ...jest.requireActual('@/hooks/useLibraryMeta'),
+  useLibraryPlatforms: () => mockLibrary,
+}));
+beforeEach(() => {
+  mockLibrary = null;
+});
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -251,5 +262,97 @@ describe('GameCard', () => {
       />,
     );
     expect(screen.queryByText(/^Out /)).not.toBeInTheDocument();
+  });
+
+  describe('the platform tag, by what the library is on', () => {
+    const steamGame = () =>
+      createGame({ name: 'Hades', source: 'steam', platform: 'PC', deck_compat: 3 });
+    const ps5Game = () =>
+      createGame({ name: 'Astro Bot', source: 'manual', platform: 'PS5', app_id: null });
+    const card = (game: GameItem) =>
+      render(<GameCard game={game} onOpenDetail={mockOnOpenDetail} />);
+
+    it('tags consoles and leaves PC untagged in a library mostly on PC', () => {
+      mockLibrary = { main: 'PC', count: 2 };
+      card(steamGame());
+      expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Open details for Hades' })).toBeInTheDocument();
+    });
+
+    it('tags a console game in a library mostly on PC, in its name too', () => {
+      mockLibrary = { main: 'PC', count: 2 };
+      card(ps5Game());
+      expect(screen.getByText('PS5').closest('[aria-hidden="true"]')).not.toBeNull();
+      expect(screen.getByText('On PS5')).toHaveClass('sr-only');
+      expect(
+        screen.getByRole('button', { name: 'Open details for Astro Bot, PS5' }),
+      ).toBeInTheDocument();
+    });
+
+    it('tags a Steam game "PC" in a library mostly on PS5, keeping its Steam link and Deck rating', () => {
+      mockLibrary = { main: 'PS5', count: 2 };
+      card(steamGame());
+      expect(screen.getByText('PC').closest('[aria-hidden="true"]')).not.toBeNull();
+      expect(screen.getByText('On PC')).toHaveClass('sr-only');
+      expect(
+        screen.getByRole('button', { name: 'Open details for Hades, PC' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Hades/ })).toBeInTheDocument();
+      expect(screen.getByText('Deck')).toBeInTheDocument();
+    });
+
+    it("leaves a PS5 game untagged in a library mostly on PS5, and doesn't name it", () => {
+      mockLibrary = { main: 'PS5', count: 2 };
+      card(ps5Game());
+      expect(screen.queryByText(/PS5/)).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Open details for Astro Bot' }),
+      ).toBeInTheDocument();
+    });
+
+    it('tags nothing in a library all on one platform', () => {
+      mockLibrary = { main: 'PS5', count: 1 };
+      card(ps5Game());
+      expect(screen.queryByText(/PS5/)).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Open details for Astro Bot' }),
+      ).toBeInTheDocument();
+    });
+
+    it('tags nothing, and names no platform, with the page filtered to one platform', () => {
+      mockLibrary = { main: 'PS5', count: 2 };
+      render(<GameCard game={steamGame()} onOpenDetail={mockOnOpenDetail} showPlatform={false} />);
+      expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Open details for Hades' })).toBeInTheDocument();
+      // Still a Steam game: its link and Deck rating stay.
+      expect(screen.getByRole('link', { name: /Hades/ })).toBeInTheDocument();
+      expect(screen.getByText('Deck')).toBeInTheDocument();
+    });
+
+    it('names no platform when selecting, with the page filtered to one platform', () => {
+      mockLibrary = { main: 'PC', count: 2 };
+      render(
+        <GameCard
+          game={ps5Game()}
+          onOpenDetail={mockOnOpenDetail}
+          showPlatform={false}
+          selection={{ selected: false, selectable: true, onToggle: jest.fn() }}
+        />,
+      );
+      expect(screen.queryByText(/PS5/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Select Astro Bot' })).toBeInTheDocument();
+    });
+
+    it('tags only consoles until the library is known, as before', () => {
+      const { unmount } = card(steamGame());
+      expect(screen.queryByText(/PC/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Open details for Hades' })).toBeInTheDocument();
+      unmount();
+      card(ps5Game());
+      expect(screen.getByText('On PS5')).toHaveClass('sr-only');
+      expect(
+        screen.getByRole('button', { name: 'Open details for Astro Bot, PS5' }),
+      ).toBeInTheDocument();
+    });
   });
 });

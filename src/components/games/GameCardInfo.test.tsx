@@ -65,7 +65,7 @@ describe('GameCardInfo', () => {
     });
 
     it('shows on a console game, which has no Steam reviews', () => {
-      render(<GameCardInfo name="Game" platform="Switch" criticScore={93} criticCount={9} />);
+      render(<GameCardInfo name="Game" console="Switch" criticScore={93} criticCount={9} />);
 
       expect(screen.getByText(shown({ critic_score: 93, critic_count: 9 }))).toBeInTheDocument();
       expect(screen.getByRole('tooltip')).toHaveTextContent('Critic score: 93');
@@ -148,6 +148,28 @@ describe('GameCardInfo', () => {
       render(<GameCardInfo appId={1} name="Game" playtimeMinutes={0} />);
 
       expect(screen.queryByText(/played/)).not.toBeInTheDocument();
+    });
+  });
+
+  // The console drives what's shown; the art's tag is only named.
+  describe('console and art tag', () => {
+    it("a console game drops the store link and the Deck rating, and isn't named without a tag", () => {
+      render(<GameCardInfo appId={1} name="Game" deckCompat={3} console="PS5" />);
+
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deck')).not.toBeInTheDocument();
+      expect(screen.queryByText(/^On /)).not.toBeInTheDocument();
+    });
+
+    it("names the art's tag for screen readers, keeping a Steam game's link and Deck rating", () => {
+      render(<GameCardInfo appId={1} name="Game" deckCompat={3} artTag="PC" />);
+
+      expect(screen.getByText('On PC')).toHaveClass('sr-only');
+      expect(screen.getByRole('link')).toHaveAttribute(
+        'href',
+        'https://store.steampowered.com/app/1/',
+      );
+      expect(screen.getByText('Deck')).toBeInTheDocument();
     });
   });
 });

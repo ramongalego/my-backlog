@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queries } from '@/lib/data/queries';
 import { queryKeys } from '@/lib/query-keys';
 import type { LibraryMeta } from '@/lib/data/loaders';
+import type { LibraryPlatforms } from '@/lib/games/consoles';
+import { useAuth } from './useAuth';
 
 export function useLibraryMeta(userId: string | null) {
   const { data, isPending, isLoadingError, refetch } = useQuery(queries.libraryMeta(userId));
@@ -28,4 +30,15 @@ export function useCachedLibraryMeta(): LibraryMeta | undefined {
     .getQueriesData<LibraryMeta>({ queryKey: queryKeys.library.all })
     .map(([, data]) => data)
     .find((data) => data !== undefined);
+}
+
+/**
+ * What the library is played on (`LibraryPlatforms`), for saying where a game
+ * is played with `platformToSay` and `platformTag`: null until it's known,
+ * which those take as "say only consoles", as the app did before.
+ */
+export function useLibraryPlatforms(): LibraryPlatforms | null {
+  const userId = useAuth().user?.id ?? null;
+  const { data } = useQuery(queries.libraryMeta(userId));
+  return data?.platforms ?? null;
 }

@@ -11,6 +11,8 @@ interface GameListProps {
   games: GameItem[];
   queuedGameIds: Set<number>;
   showStatus: boolean;
+  /** Off when the page is filtered to one platform: every row would say the same one. */
+  showPlatform?: boolean;
   sort: GameSort;
   /** The sort runs the other way from its usual (e.g. lowest rating first). */
   reversed: boolean;
@@ -30,6 +32,7 @@ export function GameList({
   games,
   queuedGameIds,
   showStatus,
+  showPlatform = true,
   sort,
   reversed,
   onSortChange,
@@ -69,6 +72,7 @@ export function GameList({
             onOpenDetail={onOpenDetail}
             queued={queuedGameIds.has(game.id)}
             showStatus={showStatus}
+            showPlatform={showPlatform}
             selection={selectionFor?.(game)}
           />
         ))}

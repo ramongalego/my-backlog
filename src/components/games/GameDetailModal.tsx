@@ -436,7 +436,8 @@ export function GameDetailModal({
             // Only Steam's date is shown: with a console, the row leaves it out.
             lastPlayedAt={game.last_played_at}
             deckCompat={game.deck_compat}
-            platform={manual?.platform}
+            console={manual?.platform}
+            artTag={manual?.platform}
           />
         </div>
       )}

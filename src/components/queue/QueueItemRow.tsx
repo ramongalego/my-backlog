@@ -7,11 +7,12 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { CoverArt } from '@/components/games/CoverArt';
 import { GameMetaRow } from '@/components/games/GameCardInfo';
-import { consoleOf } from '@/lib/games/consoles';
+import { consoleOf, platformTag } from '@/lib/games/consoles';
 import type { QueueItem } from '@/types/games';
 import { isReleased, upcomingRelease } from '@/lib/games/release-date';
 import { withArtTags } from '@/lib/games/game-label';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
 interface QueueItemRowProps {
@@ -72,6 +73,8 @@ export function QueueItemRow({
   handleProps?: React.HTMLAttributes<HTMLButtonElement>;
 }) {
   const zone = useReleaseZone();
+  // The platform tag on the art, which the button's name says too.
+  const tag = platformTag(item.game, useLibraryPlatforms());
   return (
     <div
       ref={rowRef}
@@ -89,7 +92,7 @@ export function QueueItemRow({
         type="button"
         onClick={() => onOpen(item.game_id)}
         aria-label={withArtTags(`Open details for ${item.game.name}`, {
-          console: consoleOf(item.game),
+          console: tag,
           release: upcomingRelease(item.game.release_date, undefined, zone)?.label,
         })}
         className="group w-full sm:w-48 lg:w-56 shrink-0 block rounded-lg cursor-pointer select-none focus-visible:-outline-offset-2"
@@ -100,7 +103,7 @@ export function QueueItemRow({
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 192px, 224px"
           className="w-full"
           interactive
-          platform={consoleOf(item.game)}
+          platform={tag}
           releaseDate={item.game.release_date}
         >
           {/* On phones the position rides on the art. */}
@@ -131,7 +134,8 @@ export function QueueItemRow({
             playtimeMinutes={item.game.playtime_forever}
             lastPlayedAt={item.game.last_played_at}
             deckCompat={item.game.deck_compat}
-            platform={consoleOf(item.game)}
+            console={consoleOf(item.game)}
+            artTag={tag}
           />
         </div>
 

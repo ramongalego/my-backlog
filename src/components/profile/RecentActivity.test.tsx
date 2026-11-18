@@ -6,6 +6,17 @@ import {
   type ActivityKind,
   type ActivityLine,
 } from '@/lib/account/activity';
+import type { LibraryPlatforms } from '@/lib/games/consoles';
+
+// What the library is played on: not known yet (as before) unless a test sets it.
+let mockLibrary: LibraryPlatforms | null = null;
+jest.mock('@/hooks/useLibraryMeta', () => ({
+  ...jest.requireActual('@/hooks/useLibraryMeta'),
+  useLibraryPlatforms: () => mockLibrary,
+}));
+beforeEach(() => {
+  mockLibrary = null;
+});
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -681,5 +692,57 @@ describe('a bulk move', () => {
     render(<RecentActivity onOpen={onOpen} entries={[...before, bulk]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
     expect(toggle()).toHaveFocus();
+  });
+});
+
+describe('where each game is played, by what the library is on', () => {
+  const games = () => [
+    entry({ id: 1, kind: 'dropped', name: 'Super Meat Boy' }),
+    entry({ id: 2, kind: 'dropped', name: 'Astro Bot', source: 'manual', platform: 'PS5' }),
+  ];
+
+  it('says it for every game, PC too, in a library on more than one platform', () => {
+    mockLibrary = { main: 'PC', count: 2 };
+    render(<RecentActivity onOpen={onOpen} entries={games()} />);
+    const [pc, ps5] = rows();
+    expect(pc).toHaveTextContent(/^Super Meat Boy Dropped on PC$/);
+    expect(ps5).toHaveTextContent(/^Astro Bot Dropped on PS5$/);
+  });
+
+  it('says it the same whichever platform most of the library is on', () => {
+    mockLibrary = { main: 'PS5', count: 2 };
+    render(<RecentActivity onOpen={onOpen} entries={games()} />);
+    const [pc, ps5] = rows();
+    expect(pc).toHaveTextContent(/^Super Meat Boy Dropped on PC$/);
+    expect(ps5).toHaveTextContent(/^Astro Bot Dropped on PS5$/);
+  });
+
+  it('says nothing in a library all on one platform', () => {
+    mockLibrary = { main: 'PS5', count: 1 };
+    render(
+      <RecentActivity
+        onOpen={onOpen}
+        entries={[entry({ kind: 'dropped', name: 'Astro Bot', source: 'manual', platform: 'PS5' })]}
+      />,
+    );
+    expect(rows()[0]).toHaveTextContent(/^Astro Bot Dropped$/);
+  });
+
+  it('says only a console until the library is known, as before', () => {
+    render(<RecentActivity onOpen={onOpen} entries={games()} />);
+    const [pc, ps5] = rows();
+    expect(pc).toHaveTextContent(/^Super Meat Boy Dropped$/);
+    expect(ps5).toHaveTextContent(/^Astro Bot Dropped on PS5$/);
+  });
+
+  it("still doesn't say it twice for a game moved there", () => {
+    mockLibrary = { main: 'PC', count: 2 };
+    render(
+      <RecentActivity
+        onOpen={onOpen}
+        entries={[entry({ kind: 'moved', to: 'Switch 2', source: 'manual', platform: 'Switch 2' })]}
+      />,
+    );
+    expect(rows()[0]).not.toHaveTextContent(' on Switch 2');
   });
 });

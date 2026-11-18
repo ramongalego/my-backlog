@@ -6,10 +6,11 @@ import { CoverArt } from '@/components/games/CoverArt';
 import { GameCardInfo } from '@/components/games/GameCardInfo';
 import { QueuedBadge } from '@/components/games/QueuedBadge';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
-import { consoleOf } from '@/lib/games/consoles';
+import { consoleOf, platformTag } from '@/lib/games/consoles';
 import { withArtTags } from '@/lib/games/game-label';
 import { upcomingRelease } from '@/lib/games/release-date';
 import { useReleaseZone } from '@/hooks/useReleaseZone';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 import {
   CAROUSEL_CARD_WIDTH as CARD_WIDTH,
   CAROUSEL_FADE_CLASS,
@@ -125,6 +126,7 @@ export function GameCarousel({
   const rowRef = useRef<HTMLDivElement>(null);
   const perPage = usePerPage(rowRef);
   const zone = useReleaseZone();
+  const library = useLibraryPlatforms();
   const loopMode = useLoopMode();
 
   // The first visible game. While sliding it can step past either end of the
@@ -252,6 +254,7 @@ export function GameCarousel({
               // is reachable mid-slide, when the incoming page is still off screen.
               const hidden = loop && (sliding || !isOnScreen(position, start, pageSize));
               const indexInList = position - before * count;
+              const tag = platformTag(game, library);
               return (
                 <div
                   key={`${Math.floor(position / count)}-${game.id}`}
@@ -268,7 +271,7 @@ export function GameCarousel({
                     aria-label={withArtTags(
                       `Open details for ${game.name}${queuedIds?.has(game.id) ? ', Queued' : ''}`,
                       {
-                        console: consoleOf(game),
+                        console: tag,
                         release: upcomingRelease(game.release_date, undefined, zone)?.label,
                       },
                     )}
@@ -279,7 +282,7 @@ export function GameCarousel({
                       sizes={COVER_SIZES}
                       preload={preload && indexInList >= 0 && indexInList < 4 ? true : undefined}
                       interactive
-                      platform={consoleOf(game)}
+                      platform={tag}
                       releaseDate={game.release_date}
                     >
                       {queuedIds?.has(game.id) && (
@@ -300,7 +303,8 @@ export function GameCarousel({
                       playtimeMinutes={game.playtime_forever}
                       lastPlayedAt={game.last_played_at}
                       deckCompat={game.deck_compat}
-                      platform={consoleOf(game)}
+                      console={consoleOf(game)}
+                      artTag={tag}
                     />
                   </div>
                 </div>

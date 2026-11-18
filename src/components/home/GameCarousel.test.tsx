@@ -1,6 +1,17 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { GameCarousel } from '@/components/home/GameCarousel';
 import { createSwipeTracker, isOnScreen, loopCopies, wrap } from '@/lib/carousel-loop';
+import type { LibraryPlatforms } from '@/lib/games/consoles';
+
+// What the library is played on: not known yet (as before) unless a test sets it.
+let mockLibrary: LibraryPlatforms | null = null;
+jest.mock('@/hooks/useLibraryMeta', () => ({
+  ...jest.requireActual('@/hooks/useLibraryMeta'),
+  useLibraryPlatforms: () => mockLibrary,
+}));
+beforeEach(() => {
+  mockLibrary = null;
+});
 
 jest.mock('next/image', () => ({
   __esModule: true,

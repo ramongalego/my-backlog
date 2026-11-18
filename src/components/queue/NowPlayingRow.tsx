@@ -8,7 +8,8 @@ import { CoverArt } from '@/components/games/CoverArt';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { LastPlayed } from '@/components/games/LastPlayed';
 import { Playtime } from '@/components/games/GameCardInfo';
-import { consoleOf } from '@/lib/games/consoles';
+import { consoleOf, platformTag } from '@/lib/games/consoles';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import type { GameWithImage } from '@/types/games';
 import { playedHours } from '@/lib/games/playtime';
@@ -34,6 +35,7 @@ export function NowPlayingRow({
   isLoading,
 }: NowPlayingRowProps) {
   const platform = consoleOf(game);
+  const tag = platformTag(game, useLibraryPlatforms());
   const mainStoryHours = game.main_story_hours ?? 0;
   const hoursPlayed = playedHours(game.playtime_forever);
   // Hours played against the time to beat from 0h on, like the card on Home;
@@ -71,7 +73,7 @@ export function NowPlayingRow({
         alt=""
         sizes="(max-width: 640px) 100vw, 288px"
         className="w-full"
-        platform={consoleOf(game)}
+        platform={tag}
         releaseDate={game.release_date}
       />
 

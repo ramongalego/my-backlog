@@ -180,9 +180,14 @@ interface GameMetaRowProps {
   hidePlaytimeOnMobile?: boolean;
   /**
    * The console the game is played on (consoleOf); none for Steam games played
-   * on Steam. With one, the Deck rating isn't shown.
+   * on Steam. With one, the Deck rating and Steam's last-played date aren't shown.
    */
-  platform?: string | null;
+  console?: string | null;
+  /**
+   * The platform tag drawn on the game's art beside this row (platformTag),
+   * named here for screen readers; none where the art has no tag.
+   */
+  artTag?: string | null;
 }
 
 export function GameMetaRow({
@@ -196,9 +201,10 @@ export function GameMetaRow({
   lastPlayedAt,
   deckCompat,
   hidePlaytimeOnMobile,
-  platform,
+  console,
+  artTag,
 }: GameMetaRowProps) {
-  if (platform) deckCompat = null;
+  if (console) deckCompat = null;
   const rating = (
     <GameRating
       criticScore={criticScore}
@@ -209,12 +215,11 @@ export function GameMetaRow({
     />
   );
   const hasRating = (criticCount ?? 0) >= MIN_CRITIC_REVIEWS || !!steamReviewScore;
-  if (!platform && !mainStoryHours && !hasRating && playtimeMinutes < 60 && !deckCompat)
-    return null;
+  if (!artTag && !mainStoryHours && !hasRating && playtimeMinutes < 60 && !deckCompat) return null;
   return (
     <div className="@container flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-500 whitespace-nowrap">
-      {/* The console shows on the art (ConsoleBadge); this is its name for screen readers. */}
-      {platform && <span className="sr-only">On {platform}</span>}
+      {/* The platform shows on the art (ConsoleBadge); this is its name for screen readers. */}
+      {artTag && <span className="sr-only">On {artTag}</span>}
       {mainStoryHours ? <TimeToBeat hours={mainStoryHours} /> : null}
       {rating}
       {playtimeMinutes >= 60 ? (
@@ -222,7 +227,7 @@ export function GameMetaRow({
           compact
           minutes={playtimeMinutes}
           // Only Steam's date is shown (see steamLastPlayed).
-          lastPlayedAt={platform ? null : lastPlayedAt}
+          lastPlayedAt={console ? null : lastPlayedAt}
           className={hidePlaytimeOnMobile ? 'max-sm:hidden' : ''}
         />
       ) : null}
@@ -244,8 +249,10 @@ interface GameCardInfoProps {
   playtimeMinutes?: number;
   lastPlayedAt?: string | null;
   deckCompat?: number | null;
-  /** The console a game added by hand is on (consoleOf). */
-  platform?: string | null;
+  /** The console the game is played on (consoleOf): no store link, as in GameMetaRow. */
+  console?: string | null;
+  /** The platform tag drawn on the game's art (platformTag), named for screen readers. */
+  artTag?: string | null;
 }
 
 export function GameCardInfo({
@@ -260,9 +267,10 @@ export function GameCardInfo({
   playtimeMinutes = 0,
   lastPlayedAt,
   deckCompat,
-  platform,
+  console,
+  artTag,
 }: GameCardInfoProps) {
-  const storeUrl = steamStoreUrl({ app_id: appId, platform });
+  const storeUrl = steamStoreUrl({ app_id: appId, platform: console });
   return (
     <>
       {storeUrl ? (
@@ -294,7 +302,8 @@ export function GameCardInfo({
           playtimeMinutes={playtimeMinutes}
           lastPlayedAt={lastPlayedAt}
           deckCompat={deckCompat}
-          platform={platform}
+          console={console}
+          artTag={artTag}
         />
       </div>
     </>

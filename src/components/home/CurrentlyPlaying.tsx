@@ -7,7 +7,8 @@ import { CoverArt } from '@/components/games/CoverArt';
 import { Playtime } from '@/components/games/GameCardInfo';
 import { HoursPlayedEdit } from '@/components/games/HoursPlayedEdit';
 import { steamStoreUrl } from '@/lib/games/store-link';
-import { consoleOf } from '@/lib/games/consoles';
+import { consoleOf, platformTag } from '@/lib/games/consoles';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 import { steamLastPlayed } from '@/lib/games/consoles';
 import { playedHours } from '@/lib/games/playtime';
 import { LastPlayed } from '@/components/games/LastPlayed';
@@ -122,6 +123,8 @@ export function CurrentlyPlaying({
   reveal = false,
 }: CurrentlyPlayingProps) {
   const storeUrl = steamStoreUrl(game);
+  // The platform tag on the art, named for screen readers beside "Playing now".
+  const tag = platformTag(game, useLibraryPlatforms());
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,30rem)_1fr] lg:grid-cols-[minmax(0,32rem)_1fr] md:gap-10 lg:gap-12 md:items-center">
       {/* Clipped, so the art coming into focus stays inside its frame. */}
@@ -132,7 +135,7 @@ export function CurrentlyPlaying({
           rounded="xl"
           preload
           sizes="(max-width: 768px) 100vw, 512px"
-          platform={consoleOf(game)}
+          platform={tag}
           releaseDate={game.release_date}
           className={reveal ? 'animate-reveal motion-reduce:animate-overlay-in' : ''}
         />
@@ -162,9 +165,9 @@ export function CurrentlyPlaying({
         <p className="mt-2 flex items-center gap-2 text-sm font-medium text-accent-400">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400" aria-hidden="true" />
           Playing now
-          {consoleOf(game) && (
-            // The console shows on the art; this is its name for screen readers.
-            <span className="sr-only">on {consoleOf(game)}</span>
+          {tag && (
+            // The platform shows on the art; this is its name for screen readers.
+            <span className="sr-only">on {tag}</span>
           )}
         </p>
 

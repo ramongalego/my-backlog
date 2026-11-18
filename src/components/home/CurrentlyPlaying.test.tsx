@@ -1,5 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { CurrentlyPlaying } from '@/components/home/CurrentlyPlaying';
+import type { LibraryPlatforms } from '@/lib/games/consoles';
+
+// What the library is played on: not known yet (as before) unless a test sets it.
+let mockLibrary: LibraryPlatforms | null = null;
+jest.mock('@/hooks/useLibraryMeta', () => ({
+  ...jest.requireActual('@/hooks/useLibraryMeta'),
+  useLibraryPlatforms: () => mockLibrary,
+}));
+beforeEach(() => {
+  mockLibrary = null;
+});
 
 jest.mock('next/image', () => ({
   __esModule: true,

@@ -91,3 +91,63 @@ export function knownConsole(typed: string, others: readonly string[] = []): str
   }
   return others.find((name) => comparable(name) === key) ?? null;
 }
+
+/**
+ * What the library is played on, for saying where a game is played: the
+ * platform most of it is on, and how many there are. Hidden games and those
+ * on no platform don't count.
+ */
+export interface LibraryPlatforms {
+  /** The platform most of the library is on; null for an empty library. */
+  main: string | null;
+  /** How many platforms the library is on. */
+  count: number;
+}
+
+/**
+ * Works out `LibraryPlatforms` from how many games are on each platform. A
+ * tie for the most goes to PC, then to the name first in the alphabet, so it
+ * doesn't change from one load to the next.
+ */
+export function libraryPlatforms(counts: ReadonlyMap<string, number>): LibraryPlatforms {
+  let main: string | null = null;
+  let most = 0;
+  for (const [name, count] of [...counts].sort(([a], [b]) => a.localeCompare(b))) {
+    if (count <= 0) continue;
+    if (count > most || (count === most && name === STEAM_PLATFORM)) {
+      main = name;
+      most = count;
+    }
+  }
+  return { main, count: [...counts.values()].filter((count) => count > 0).length };
+}
+
+/**
+ * Where a game is played, to say in text (Recent activity, a list row's
+ * details): always, PC included, once the library is on more than one
+ * platform, so every row answers the same question; never in a library all
+ * on one, where it would tell nothing apart. Until the library's platforms
+ * are known, a console only, as before.
+ */
+export function platformToSay(
+  game: { source?: string; platform?: string | null },
+  library: LibraryPlatforms | null | undefined,
+): string | null {
+  if (!library) return consoleOf(game);
+  return library.count > 1 ? platformOf(game) : null;
+}
+
+/**
+ * Where a game is played, as a tag on its art: only when it isn't where most
+ * of the library is, so the tag marks the exception. For a library mostly on
+ * Steam, a console's games are tagged; for one mostly on PS5, a Steam game
+ * gets "PC". Until the library's platforms are known, a console only, as before.
+ */
+export function platformTag(
+  game: { source?: string; platform?: string | null },
+  library: LibraryPlatforms | null | undefined,
+): string | null {
+  if (!library) return consoleOf(game);
+  const platform = platformOf(game);
+  return platform && platform !== library.main ? platform : null;
+}

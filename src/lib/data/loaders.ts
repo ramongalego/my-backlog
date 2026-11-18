@@ -1,6 +1,7 @@
 // Data loaders shared by server-side prefetching (server Supabase client) and
 // client-side React Query hooks (browser Supabase client). Keeping one copy
 // guarantees the prefetched data has exactly the shape the hooks expect.
+import { libraryPlatforms, STEAM_PLATFORM, type LibraryPlatforms } from '@/lib/games/consoles';
 import type { ActivityEvent } from '@/lib/account/activity';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/paginate';
@@ -250,6 +251,8 @@ export interface LibraryMeta {
   backlogCount: number;
   /** Finished games: the "12/150 finished" the finish summary shows straight away. */
   finishedCount: number;
+  /** What the library is played on: for saying where each game is played. */
+  platforms: LibraryPlatforms;
 }
 
 /** The fewest backlog games worth picking between; until then Home asks for more. */
@@ -259,7 +262,7 @@ export async function loadLibraryMeta(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<LibraryMeta> {
-  const [totalResult, historyResult, backlogResult, finishedResult] = await Promise.all([
+  const [totalResult, historyResult, backlogResult, finishedResult, platforms] = await Promise.all([
     supabase
       .from('games')
       .select('id', { count: 'exact', head: true })
@@ -284,6 +287,7 @@ export async function loadLibraryMeta(
       .eq('user_id', userId)
       .eq('type', 'game')
       .eq('status', 'finished'),
+    loadLibraryPlatforms(supabase, userId),
   ]);
   if (totalResult.error) throw totalResult.error;
   if (historyResult.error) throw historyResult.error;
@@ -295,7 +299,45 @@ export async function loadLibraryMeta(
     historyCount: historyResult.count ?? 0,
     backlogCount: backlogResult.count ?? 0,
     finishedCount: finishedResult.count ?? 0,
+    platforms,
   };
+}
+
+/**
+ * How many of the library's games are on each platform. Steam games played
+ * on Steam (most of a Steam library) are counted, not listed; the rest, games
+ * added by hand and Steam games moved to a console, are few, and listed.
+ */
+async function loadLibraryPlatforms(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<LibraryPlatforms> {
+  const shown = () => supabase.from('games').select('platform', { count: 'exact', head: false });
+  const [onSteam, others] = await Promise.all([
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('type', 'game')
+      .neq('status', 'hidden')
+      .eq('source', 'steam')
+      .or(`platform.is.null,platform.eq.${STEAM_PLATFORM}`),
+    fetchAllRows<{ platform: string | null }>((from, to) =>
+      shown()
+        .eq('user_id', userId)
+        .eq('type', 'game')
+        .neq('status', 'hidden')
+        .or(`source.eq.manual,platform.neq.${STEAM_PLATFORM}`)
+        .order('id')
+        .range(from, to),
+    ),
+  ]);
+  if (onSteam.error) throw onSteam.error;
+  const counts = new Map<string, number>([[STEAM_PLATFORM, onSteam.count ?? 0]]);
+  for (const { platform } of others) {
+    if (platform) counts.set(platform, (counts.get(platform) ?? 0) + 1);
+  }
+  return libraryPlatforms(counts);
 }
 
 export type { CarouselPools };

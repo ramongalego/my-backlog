@@ -21,7 +21,7 @@ describe('steamLastPlayed', () => {
 
 describe('GameMetaRow', () => {
   it('doesn\'t put a console game\'s date (or "on Steam") in the hours tooltip', () => {
-    render(<GameMetaRow playtimeMinutes={300} lastPlayedAt={today} platform="Switch" />);
+    render(<GameMetaRow playtimeMinutes={300} lastPlayedAt={today} console="Switch" />);
     expect(screen.queryByText(/Last played/)).not.toBeInTheDocument();
     expect(screen.queryByText(/on Steam/)).not.toBeInTheDocument();
   });

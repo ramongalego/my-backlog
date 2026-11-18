@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import { CoverThumb } from '@/components/games/CoverArt';
 import { Rating } from '@/components/games/Rating';
-import { consoleOf } from '@/lib/games/consoles';
+import { platformToSay } from '@/lib/games/consoles';
+import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import {
   activityDay,
@@ -96,8 +97,11 @@ function Row({
   onOpen: (gameId: number) => void;
   buttonRef?: (button: HTMLElement | null) => void;
 }) {
-  // A move says where to: the console isn't said twice.
-  const platform = entry.lines.some((line) => line.kind === 'moved') ? null : consoleOf(entry);
+  // A move says where to: the platform isn't said twice.
+  const library = useLibraryPlatforms();
+  const platform = entry.lines.some((line) => line.kind === 'moved')
+    ? null
+    : platformToSay(entry, library);
   return (
     <li>
       <button
