@@ -177,7 +177,6 @@ export function CompletionSummary({
                 over <Figure>{whole(span)}</Figure>
               </>
             )}
-            .
           </Lead>
           {estimate && mainStoryHours && (
             <div className="mt-4">

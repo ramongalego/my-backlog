@@ -1125,6 +1125,19 @@ describe('GameDetailModal hours played', () => {
     expect(onSaveHours).not.toHaveBeenCalled();
     expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
+
+  it('says hours below zero are too few, not that they are not a number', async () => {
+    const onSaveHours = jest.fn();
+    render(<GameDetailModal {...defaultProps} manual={{ platform: 'Switch', onSaveHours }} />);
+
+    fireEvent.change(screen.getByLabelText(/hours played/i), { target: { value: '-2' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+
+    expect(screen.getByText("Hours played can't be less than 0")).toBeInTheDocument();
+    expect(onSaveHours).not.toHaveBeenCalled();
+  });
 });
 
 it('tells the page when what opened it is gone, so focus can go somewhere', () => {

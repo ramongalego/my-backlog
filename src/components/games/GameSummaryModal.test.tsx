@@ -53,7 +53,7 @@ describe('GameSummaryModal', () => {
   describe('time played', () => {
     it('says how long it took, rounded to a decimal', () => {
       render(<GameSummaryModal {...defaultProps} playtimeMinutes={90} mainStoryHours={null} />);
-      expect(screen.getByTestId('time-played')).toHaveTextContent('You finished it in 1.5 hours.');
+      expect(screen.getByTestId('time-played')).toHaveTextContent('You finished it in 1.5 hours');
     });
 
     it('adds how long it took from starting it', () => {
@@ -66,7 +66,7 @@ describe('GameSummaryModal', () => {
         />,
       );
       expect(screen.getByTestId('time-played')).toHaveTextContent(
-        'You finished it in 24 hours over 3 weeks.',
+        'You finished it in 24 hours over 3 weeks',
       );
     });
 
@@ -79,7 +79,7 @@ describe('GameSummaryModal', () => {
           finishedAt={`${year}-03-02`}
         />,
       );
-      expect(screen.getByTestId('time-played')).toHaveTextContent('You finished it in 24 hours.');
+      expect(screen.getByTestId('time-played')).toHaveTextContent('You finished it in 24 hours');
     });
 
     it('leaves the sentence out with no hours played (a console game without hours)', () => {

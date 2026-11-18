@@ -249,11 +249,13 @@ export function GameDetailModal({
     const parsedHours = hours.trim() === '' ? 0 : Number(hours);
     const hoursError = !showHours
       ? null
-      : !(parsedHours >= 0)
+      : Number.isNaN(parsedHours)
         ? 'Hours played must be a number, like 12 or 3.5'
-        : parsedHours > MAX_HOURS_PLAYED
-          ? `Hours played can be ${MAX_HOURS_PLAYED.toLocaleString('en-US')} at most`
-          : null;
+        : parsedHours < 0
+          ? "Hours played can't be less than 0"
+          : parsedHours > MAX_HOURS_PLAYED
+            ? `Hours played can be ${MAX_HOURS_PLAYED.toLocaleString('en-US')} at most`
+            : null;
     if (ratingError || hoursError) {
       return {
         rating: ratingError ? { error: ratingError, value: rating } : undefined,
