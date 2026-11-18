@@ -5,11 +5,11 @@ import Link from 'next/link';
 import {
   ChevronDown,
   Clock,
-  Gamepad2,
   Heart,
   HeartOff,
   ListMinus,
   ListPlus,
+  MonitorSmartphone,
   Pause,
   PenLine,
   Plus,
@@ -71,7 +71,8 @@ const LINE: Record<
   unqueued: { icon: ListMinus, text: NEUTRAL, what: () => 'Taken off the queue' },
   // The rating is the line: no second star at its end.
   rated: { icon: Star, text: NEUTRAL, what: (line) => `Rated ${line.rating}/10` },
-  moved: { icon: Gamepad2, text: NEUTRAL, what: (line) => `Moved to ${line.to}` },
+  // The platform icon, as on the Games page's platform filter (not the logo's gamepad).
+  moved: { icon: MonitorSmartphone, text: NEUTRAL, what: (line) => `Moved to ${line.to}` },
   favorite: { icon: Heart, text: NEUTRAL, what: () => 'Added to favorites' },
   unfavorite: { icon: HeartOff, text: NEUTRAL, what: () => 'Removed from favorites' },
   note: { icon: PenLine, text: NEUTRAL, what: () => 'Wrote a note' },

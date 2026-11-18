@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Gamepad2 } from 'lucide-react';
+import { MonitorSmartphone } from 'lucide-react';
 import { Dropdown } from '@/components/ui/Dropdown';
 
 /** The menu's value for every platform (the URL has no `platform` for it). */
@@ -61,7 +61,7 @@ export function GamesPlatform({ platforms, onGone }: GamesPlatformProps) {
       // At the end of the search's row on phones; after the search from `sm`.
       align="responsive-left"
       aria-label="Platform"
-      icon={<Gamepad2 className="h-4 w-4" />}
+      icon={<MonitorSmartphone className="h-4 w-4" />}
       triggerClassName={`shrink-0 rounded-lg px-3 ${
         filtering ? 'bg-ink-100' : 'bg-ink-800 hover:bg-ink-700'
       }`}
