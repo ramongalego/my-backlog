@@ -26,7 +26,7 @@ const SHARED_RULES = [
 const RULES: Record<InsightTone, string> = {
   profile: [
     `You read someone's game library and tell them about their taste in games: what they love, what they don't, and what that says about them as a player.`,
-    `Say things they haven't noticed about themselves. Look for the interesting patterns: the gap between the tags they own and the ones in the games they love, what their favorites have in common beyond genre, where they disagree with critics and what that reveals, the eras they keep coming back to, what they stick with and what loses them. Skip the obvious ("you like RPGs").`,
+    `Say things they haven't noticed about themselves. Look for the interesting patterns: the gap between the tags they own and the ones in the games they love, what the games they rate highest have in common beyond genre, where they disagree with critics and what that reveals, the eras they keep coming back to, what they stick with and what loses them. Skip the obvious ("you like RPGs").`,
     `Read between the numbers: say what the facts mean rather than repeating them. Use a number only where it makes the point.`,
     `This is about taste, not habits: no backlog, no to-do list, nothing about what they're playing at the moment.`,
     `5 paragraphs, 2 to 3 sentences each. Warm, perceptive and specific, like a friend who knows games and has looked through their shelf.`,
@@ -34,6 +34,7 @@ const RULES: Record<InsightTone, string> = {
     `Each paragraph makes one point and shows it with one or two of their games, by name, and no game comes up in more than one paragraph. Keep sentences under 25 words.`,
     `If you can't name a game that shows a point, leave the point out: no abstractions like "structure beneath the drama".`,
     `End each paragraph on what it says about them, in plain words. Two facts side by side are not a point.`,
+    `highestRated are the games they rated highest, picked by rating: say "you rated", never call them favorites. pickedFavorites are the games they chose as favorites for their profile page, the clearest sign of what they love.`,
     `No sentence that only sounds clever: each one says something about them a friend could agree or disagree with. No "makes X look Y".`,
     `No "it's not X, it's Y", "speaks to", "the common thread", "quietly" or "a testament to".`,
     ...SHARED_RULES,
@@ -61,7 +62,7 @@ const RULES: Record<InsightTone, string> = {
  * than the same thing in two voices. The roast's lists are cut short: handed
  * everything, it recites everything.
  */
-function factsFor(facts: PlayerFacts, tone: InsightTone) {
+function factsFor(facts: PlayerFacts, tone: InsightTone, extra: InsightExtras) {
   if (tone === 'profile') {
     return {
       libraryGames: facts.libraryGames,
@@ -70,7 +71,8 @@ function factsFor(facts: PlayerFacts, tone: InsightTone) {
       tagsInLibrary: facts.topTags,
       tagsOfGamesTheyLove: facts.loved.tags,
       decadesOfGamesTheyLove: facts.loved.decades,
-      favorites: facts.ratings.favorites,
+      highestRated: facts.ratings.highestRated,
+      pickedFavorites: extra.pickedFavorites ?? [],
       lowestRated: facts.ratings.lowest,
       averageRating: facts.ratings.average,
       ratedAboveCritics: facts.critics.ratedAbove,
@@ -108,13 +110,23 @@ function factsFor(facts: PlayerFacts, tone: InsightTone) {
   };
 }
 
+/**
+ * What the profile is told beyond the library's facts. Not in the signature,
+ * so choosing other favorites doesn't mark a saved profile out of date.
+ */
+interface InsightExtras {
+  /** The names of the favorites they chose on their Profile page, in order. */
+  pickedFavorites?: string[];
+}
+
 export function buildInsightMessages(
   facts: PlayerFacts,
   tone: InsightTone,
+  extra: InsightExtras = {},
 ): { role: 'system' | 'user'; content: string }[] {
   return [
     { role: 'system', content: RULES[tone] },
-    { role: 'user', content: boundedJson(factsFor(facts, tone)) },
+    { role: 'user', content: boundedJson(factsFor(facts, tone, extra)) },
   ];
 }
 

@@ -41,7 +41,8 @@ export interface PlayerFacts {
   ratings: {
     count: number;
     average: number | null;
-    favorites: string[];
+    /** Rated highest by them: picked by rating, not the favorites they chose. */
+    highestRated: { name: string; rating: number }[];
     lowest: { name: string; rating: number }[];
   };
   /** Median time to beat of what they finish, against what waits in the backlog. */
@@ -194,7 +195,9 @@ export function playerFacts(games: GameItem[], now = new Date()): PlayerFacts | 
     ratings: {
       count: rated.length,
       average: stats.avgRating,
-      favorites: stats.highestRated.slice(0, 6).map((g) => g.name),
+      highestRated: stats.highestRated
+        .slice(0, 6)
+        .map((g) => ({ name: g.name, rating: g.rating! })),
       lowest: [...rated]
         .sort((a, b) => a.rating! - b.rating!)
         .filter((g) => g.rating! <= 6)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
-import { loadGamesList } from '@/lib/data/loaders';
+import { loadFavoriteGames, loadGamesList } from '@/lib/data/loaders';
 import { hasEnoughForProfile, playerFacts } from '@/lib/profile/facts';
 import {
   INSIGHT_RESPONSE_FORMAT,
@@ -59,8 +59,12 @@ export async function POST(request: NextRequest) {
   const { tone } = parsed.data;
 
   let games;
+  let favoriteIds: number[];
   try {
-    games = await loadGamesList(supabase, user.id);
+    [games, favoriteIds] = await Promise.all([
+      loadGamesList(supabase, user.id),
+      loadFavoriteGames(supabase, user.id),
+    ]);
   } catch (err) {
     console.error('Failed to load the library for a player profile:', err);
     return jsonError('Failed to load your library', 500);
@@ -93,7 +97,11 @@ export async function POST(request: NextRequest) {
     return jsonError('Player profiles are not configured', 503);
   }
   const openai = new OpenAI({ apiKey, ...OPENAI_OPTIONS });
-  const messages = buildInsightMessages(facts, tone);
+  const pickedFavorites = favoriteIds.flatMap((id) => {
+    const game = games.find((g) => g.id === id);
+    return game ? [game.name] : [];
+  });
+  const messages = buildInsightMessages(facts, tone, { pickedFavorites });
   // The facts are already kept short (lib/prompt-limits); this is the backstop.
   if (messages.some((m) => m.content.length > MAX_PROMPT_CHARS)) {
     console.error('Player profile prompt too long');

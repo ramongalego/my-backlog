@@ -10,6 +10,7 @@ import { insightSignature } from '@/lib/profile/saved';
 
 let user: { id: string } | null = { id: 'user-1' };
 let games: GameItem[] = [];
+let favoriteIds: number[] = [];
 let saved: Record<string, unknown> | null = null;
 let limited = false;
 const create = jest.fn();
@@ -18,7 +19,10 @@ const saveInsight = jest.fn();
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }),
 }));
-jest.mock('@/lib/data/loaders', () => ({ loadGamesList: async () => games }));
+jest.mock('@/lib/data/loaders', () => ({
+  loadGamesList: async () => games,
+  loadFavoriteGames: async () => favoriteIds,
+}));
 jest.mock('@/lib/server/player-insights', () => ({
   getSavedInsight: async () => saved,
   saveInsight: (...args: unknown[]) => saveInsight(...args),
@@ -64,6 +68,7 @@ const answer = (content: string) => ({ choices: [{ message: { content } }] });
 beforeEach(() => {
   user = { id: 'user-1' };
   games = enoughGames();
+  favoriteIds = [];
   saved = null;
   limited = false;
   create.mockReset().mockResolvedValue(answer(JSON.stringify(written)));
@@ -103,6 +108,14 @@ it('writes one from the library facts and saves it with their signature', async 
     written,
     insightSignature(playerFacts(games)!),
   );
+});
+
+it('tells the profile the favorites the player picked, by name and in their order', async () => {
+  games = enoughGames().map((g, i) => ({ ...g, id: i + 1 }));
+  favoriteIds = [3, 99, 1];
+  await ask({ tone: 'profile' });
+  const { messages } = create.mock.calls[0][0];
+  expect(JSON.parse(messages[1].content).pickedFavorites).toEqual(['Played 2', 'Played 0']);
 });
 
 it("returns the saved one when the library hasn't changed, without calling the model", async () => {

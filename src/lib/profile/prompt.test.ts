@@ -50,9 +50,19 @@ describe('buildInsightMessages', () => {
     },
   );
 
+  it('tells the profile which favorites they picked, apart from what they rated highest', () => {
+    const [, user] = buildInsightMessages(facts, 'profile', { pickedFavorites: ['Opened Once'] });
+    expect(JSON.parse(user.content)).toMatchObject({
+      pickedFavorites: ['Opened Once'],
+      highestRated: [{ name: 'Loved It', rating: 10 }],
+    });
+    expect(buildInsightMessages(facts, 'profile')[0].content).toMatch(/never call them favorites/);
+  });
+
   it('gives the profile their taste, not their failures or what they play now', () => {
     expect(data('profile')).toMatchObject({
-      favorites: ['Loved It'],
+      highestRated: [{ name: 'Loved It', rating: 10 }],
+      pickedFavorites: [],
       tagsOfGamesTheyLove: [{ tag: 'Metroidvania', games: 1 }],
       ratedAboveCritics: [{ name: 'Loved It', yours: 10, critics: 70 }],
     });
