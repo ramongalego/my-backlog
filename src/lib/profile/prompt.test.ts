@@ -62,12 +62,22 @@ describe('buildInsightMessages', () => {
   });
 
   it('gives the roast their failures', () => {
-    expect(data('roast').droppedAfterRealTime).toEqual([{ name: 'Gave Up', hours: 20 }]);
+    expect(data('roast').droppedAfterRealTime).toEqual([
+      { name: 'Gave Up', hours: 20, lastPlayedYearsAgo: null },
+    ]);
     expect(data('roast').steam).toMatchObject({
       neverLaunched: 1,
       openedOnce: [{ name: 'Opened Once', minutes: 5 }],
     });
     expect(data('roast')).not.toHaveProperty('ratings');
+  });
+
+  it('tells both tones that a game not played in years is in the past', () => {
+    for (const tone of ['profile', 'roast'] as const) {
+      const [rules] = buildInsightMessages(facts, tone);
+      expect(rules.content).toMatch(/lastPlayedYearsAgo/);
+      expect(rules.content).toMatch(/2 or more years ago is part of their past/);
+    }
   });
 
   it('writes the two tones by different rules', () => {

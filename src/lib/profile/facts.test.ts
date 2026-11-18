@@ -77,14 +77,46 @@ describe('playerFacts', () => {
     expect(facts.finished).toBe(3);
     expect(facts.dropped).toBe(2);
     expect(facts.finishRatePct).toBe(60);
-    expect(facts.droppedLate).toEqual([{ name: 'Starfield', hours: 30 }]);
+    expect(facts.droppedLate).toEqual([{ name: 'Starfield', hours: 30, lastPlayedYearsAgo: null }]);
     expect(facts.droppedEarly).toBe(1);
-    expect(facts.startedNotFinished).toEqual([{ name: 'Persona 5', hours: 12 }]);
+    expect(facts.startedNotFinished).toEqual([
+      { name: 'Persona 5', hours: 12, lastPlayedYearsAgo: null },
+    ]);
     expect(facts.backlog.neverStarted).toBe(1);
     expect(facts.ratings.count).toBe(3);
     expect(facts.ratings.lowest).toEqual([{ name: 'Elden Ring', rating: 5 }]);
     expect(facts.wontPlay).toBe(1);
-    expect(facts.mostPlayed[0]).toEqual({ name: 'Elden Ring', hours: 120 });
+    expect(facts.mostPlayed[0]).toEqual({
+      name: 'Elden Ring',
+      hours: 120,
+      lastPlayedYearsAgo: null,
+    });
+  });
+});
+
+describe('when games were last played', () => {
+  const now = new Date('2026-11-18T12:00:00Z');
+  const played = (name: string, lastPlayed: string | null) =>
+    game({ name, status: 'backlog', playtime_forever: 400 * 60, last_played_at: lastPlayed });
+
+  it('says how many whole years ago each most played game was last played', () => {
+    const facts = playerFacts(
+      [
+        played('PUBG', '2021-03-02T20:00:00Z'),
+        played('Hades', '2026-11-10T20:00:00Z'),
+        played('Old Unknown', null),
+      ],
+      now,
+    )!;
+    const yearsAgo = Object.fromEntries(
+      facts.mostPlayed.map((g) => [g.name, g.lastPlayedYearsAgo]),
+    );
+    expect(yearsAgo).toEqual({ PUBG: 5, Hades: 0, 'Old Unknown': null });
+  });
+
+  it('says it for the games started and never finished too', () => {
+    const facts = playerFacts([played('PUBG', '2023-11-17T12:00:00Z')], now)!;
+    expect(facts.startedNotFinished).toEqual([{ name: 'PUBG', hours: 400, lastPlayedYearsAgo: 3 }]);
   });
 });
 

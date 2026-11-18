@@ -7,6 +7,11 @@ import { computeStats, countedInStats } from '@/lib/stats/compute';
 interface NamedHours {
   name: string;
   hours: number;
+  /**
+   * Whole years since it was last played (0 is within the last year). Null
+   * when unknown: Steam doesn't say, or a game added by hand.
+   */
+  lastPlayedYearsAgo: number | null;
 }
 
 export interface PlayerFacts {
@@ -113,7 +118,9 @@ const hoursKnown = (g: GameItem) => g.source === 'steam' || g.playtime_forever >
 
 const isBacklog = (g: GameItem) => g.status === 'backlog' || g.status === 'playing' || !g.status;
 
-export function playerFacts(games: GameItem[]): PlayerFacts | null {
+const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+
+export function playerFacts(games: GameItem[], now = new Date()): PlayerFacts | null {
   const counted = countedInStats(games);
   const stats = computeStats(counted, {}, new Set());
   if (!stats) return null;
@@ -131,7 +138,14 @@ export function playerFacts(games: GameItem[]): PlayerFacts | null {
 
   const rated = counted.filter((g) => g.rating != null && g.status === 'finished');
   const byHours = (a: GameItem, b: GameItem) => b.playtime_forever - a.playtime_forever;
-  const named = (g: GameItem): NamedHours => ({ name: g.name, hours: hours(g.playtime_forever) });
+  const named = (g: GameItem): NamedHours => ({
+    name: g.name,
+    hours: hours(g.playtime_forever),
+    lastPlayedYearsAgo: g.last_played_at
+      ? Math.max(0, Math.floor((now.getTime() - Date.parse(g.last_played_at)) / YEAR_MS))
+      : null,
+  });
+  const byId = new Map(counted.map((g) => [g.id, g]));
   const byPlaytime = [...counted].sort(byHours);
   const totalMinutes = counted.reduce((sum, g) => sum + g.playtime_forever, 0);
   const storyHours = (list: GameItem[]) =>
@@ -166,7 +180,7 @@ export function playerFacts(games: GameItem[]): PlayerFacts | null {
       .slice(0, 5)
       .map(named),
     droppedEarly: droppedGames.filter((g) => hoursKnown(g) && g.playtime_forever < 2 * 60).length,
-    mostPlayed: stats.mostPlayed.map((g) => ({ name: g.name, hours: g.hours })),
+    mostPlayed: stats.mostPlayed.map((g) => named(byId.get(g.id)!)),
     topTags: stats.topTags.slice(0, 8).map((t) => ({ tag: t.tag, games: t.count })),
     finishesMost: [...stats.tagCompletion]
       .sort((a, b) => b.pct - a.pct)
