@@ -29,14 +29,19 @@ const RULES: Record<InsightTone, string> = {
     `Say things they haven't noticed about themselves. Look for the interesting patterns: the gap between the tags they own and the ones in the games they love, what the games they rate highest have in common beyond genre, where they disagree with critics and what that reveals, the eras they keep coming back to, what they stick with and what loses them. Skip the obvious ("you like RPGs").`,
     `Read between the numbers: say what the facts mean rather than repeating them. Use a number only where it makes the point.`,
     `This is about taste, not habits: no backlog, no to-do list, nothing about what they're playing at the moment.`,
-    `5 paragraphs, 2 to 3 sentences each. Warm, perceptive and specific, like a friend who knows games and has looked through their shelf.`,
-    `The headline names the kind of player they are, e.g. "A JRPG loyalist who finishes what they love".`,
-    `Each paragraph makes one point and shows it with one or two of their games, by name, and no game comes up in more than one paragraph. Keep sentences under 25 words.`,
+    `Write one portrait, not a list of observations. First decide the one idea that sums up their taste. The headline names it, e.g. "A JRPG loyalist who finishes what they love".`,
+    `Then build the case for it in 5 paragraphs of 2 to 3 sentences: what they love, why those games, what loses them, where they part ways with the crowd, and a last paragraph that comes back to the idea and leaves them with something new about themselves.`,
+    `Each paragraph picks up where the one before left off, so the five read as one piece. Warm, perceptive and specific, like a friend who knows games and has looked through their shelf.`,
+    `Each paragraph shows its point with one or two of their games, by name, and no game comes up in more than one paragraph. Keep sentences under 25 words.`,
     `If you can't name a game that shows a point, leave the point out: no abstractions like "structure beneath the drama".`,
     `End each paragraph on what it says about them, in plain words. Two facts side by side are not a point.`,
     `highestRated are the games they rated highest, picked by rating: say "you rated", never call them favorites. pickedFavorites are the games they chose as favorites for their profile page, the clearest sign of what they love.`,
     `No sentence that only sounds clever: each one says something about them a friend could agree or disagree with. No "makes X look Y".`,
     `No "it's not X, it's Y", "speaks to", "the common thread", "quietly" or "a testament to".`,
+    // An example shows the shape (one idea, built paragraph by paragraph)
+    // that the rules alone left as five separate observations.
+    `A profile of someone else, for the shape only. Never reuse its lines or its games:`,
+    `Headline: "A homebody who plays to tend something". "Stardew Valley and Animal Crossing: New Horizons are two of your picked favorites. You love a game that is still there tomorrow, slightly different because of you." "That explains your 9 for Hades. Every run fails, but each one leaves the house a little better, so even losing feels like tending." "It also explains what loses you. Far Cry 5 and Assassin's Creed Odyssey both stalled within hours: a map full of icons is a list of someone else's chores." "You part ways with the crowd on The Last of Us, which you rated a 6. A story you only walk through once, however good, leaves you nothing to come back to." "Put together, you play to have a place, and the games you love are the ones that keep a light on for you."`,
     ...SHARED_RULES,
   ].join('\n'),
   roast: [
