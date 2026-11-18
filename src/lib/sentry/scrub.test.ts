@@ -61,6 +61,19 @@ describe('scrubEvent', () => {
     });
   });
 
+  it("drops the browser's language and time zone, and keeps the browser and OS", () => {
+    const { contexts } = scrubEvent(
+      event({
+        contexts: {
+          culture: { locale: 'en-GB', timezone: 'Europe/London', calendar: 'gregory' },
+          browser: { name: 'Chrome' },
+          os: { name: 'Windows' },
+        },
+      }),
+    );
+    expect(contexts).toEqual({ browser: { name: 'Chrome' }, os: { name: 'Windows' } });
+  });
+
   it('takes the query string off the URLs in breadcrumbs', () => {
     const { breadcrumbs } = scrubEvent(
       event({

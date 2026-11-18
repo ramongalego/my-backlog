@@ -53,8 +53,8 @@ function withoutQuery(url: string): string {
 
 /**
  * Takes out what Sentry's `sendDefaultPii: false` still lets through: auth and
- * IP headers, request bodies, query strings, and sensitive fields anywhere in
- * what was logged with the error.
+ * IP headers, request bodies, query strings, the browser's language and time
+ * zone, and sensitive fields anywhere in what was logged with the error.
  */
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
   if (event.request) {
@@ -66,6 +66,10 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
       data: event.request.data === undefined ? undefined : FILTERED,
       query_string: event.request.query_string ? FILTERED : event.request.query_string,
     };
+  }
+  if (event.contexts?.culture) {
+    event.contexts = { ...event.contexts };
+    delete event.contexts.culture;
   }
   if (event.extra) event.extra = scrubValue(event.extra) as typeof event.extra;
   if (event.breadcrumbs) {

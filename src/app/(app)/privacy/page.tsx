@@ -49,7 +49,7 @@ const sections: LegalSection[] = [
             ],
             [
               'Technical',
-              'Request logs kept by our hosting provider, containing IP address, browser type, the page requested and the time. We also keep rate-limit counters linked to your account or, for signed-out visitors, to an IP address. When something in the Service fails, an error report records what failed, the page or request involved and your browser type. We do not attach your account, IP address or cookies to error reports.',
+              'Request logs kept by our hosting provider, containing IP address, browser type, the page requested and the time. We also keep rate-limit counters linked to your account or, for signed-out visitors, to an IP address. When something in the Service fails, an error report records what failed, the page or request involved, and your browser and operating system. We do not attach your account, IP address or cookies to error reports.',
             ],
           ]}
         />
