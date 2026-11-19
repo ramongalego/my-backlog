@@ -200,9 +200,15 @@ export function GameCarousel({
 
   if (count < minGames) return null;
 
-  const positions = loop
-    ? Array.from({ length: (before + 1 + after) * count }, (_, i) => i)
-    : games.map((_, i) => i);
+  // Looping, only the cards near the screen are built: a page either side of
+  // what shows covers a slide either way (the slide's target is `start`). The
+  // cards before them are one spacer, so every card keeps its place.
+  const margin = pageSize + 1;
+  const firstBuilt = loop ? Math.max(0, start - margin) : 0;
+  const endBuilt = loop
+    ? Math.min((before + 1 + after) * count, start + visibleSpan + margin)
+    : count;
+  const positions = Array.from({ length: endBuilt - firstBuilt }, (_, i) => firstBuilt + i);
 
   return (
     <div>
@@ -245,6 +251,14 @@ export function GameCarousel({
                 : { scrollbarWidth: 'none' }
             }
           >
+            {firstBuilt > 0 && (
+              // As wide as the cards it stands for; the track's gap follows it.
+              <div
+                aria-hidden="true"
+                data-testid="carousel-spacer"
+                style={{ flex: `0 0 calc(${firstBuilt} * (${CARD_WIDTH} + 1rem) - 1rem)` }}
+              />
+            )}
             {positions.map((position) => {
               const game = games[position % count];
               // Off-screen cards and copies are inert: focusing one would scroll the

@@ -197,9 +197,48 @@ describe('GameCarousel', () => {
       render(<GameCarousel title="Loop" games={makeGames(6)} />);
       const region = screen.getByRole('region', { name: 'Loop' });
       const inertCards = region.querySelectorAll('[inert]');
-      // 4 copies of 6 games rendered, 4 on screen.
-      expect(inertCards).toHaveLength(6 * 4 - 4);
+      // The 4 on screen, a page and a card either side (one of them a spacer).
+      expect(inertCards).toHaveLength(14 - 4);
       expect(within(region).getAllByRole('button', { name: /open details/i })).toHaveLength(4);
+    });
+
+    it('builds only the cards near the screen, however long the row', () => {
+      render(<GameCarousel title="Long" games={makeGames(20)} />);
+      const cards = track('Long').querySelectorAll(':scope > [style*="flex"]:not([data-testid])');
+      // Was every game three times over (60): now the 4 on screen and 5 either side.
+      expect(cards.length).toBeLessThanOrEqual(14);
+      // The cards before them are one spacer as wide as they are, so nothing moves.
+      expect(screen.getByTestId('carousel-spacer').style.flex).toMatch(/^0 0 calc\(15 \* /);
+      expect(visibleNames()).toEqual(['Game 1', 'Game 2', 'Game 3', 'Game 4']);
+    });
+
+    it('pages all the way round a long row, showing the right games each time', () => {
+      render(<GameCarousel title="Long" games={makeGames(20)} />);
+      const next = screen.getByRole('button', { name: 'Show more games' });
+      const seen: string[][] = [];
+      for (let page = 0; page < 6; page++) {
+        fireEvent.click(next);
+        fireEvent.transitionEnd(track('Long'));
+        seen.push(visibleNames());
+      }
+      expect(seen).toEqual([
+        ['Game 5', 'Game 6', 'Game 7', 'Game 8'],
+        ['Game 9', 'Game 10', 'Game 11', 'Game 12'],
+        ['Game 13', 'Game 14', 'Game 15', 'Game 16'],
+        ['Game 17', 'Game 18', 'Game 19', 'Game 20'],
+        ['Game 1', 'Game 2', 'Game 3', 'Game 4'],
+        ['Game 5', 'Game 6', 'Game 7', 'Game 8'],
+      ]);
+    });
+
+    it('has the cards a slide moves to already built while it moves', () => {
+      render(<GameCarousel title="Long" games={makeGames(20)} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show more games' }));
+      // Mid-slide: the page it leaves and the page it lands on are both there.
+      const names = [...track('Long').querySelectorAll('button')].map((b) =>
+        b.getAttribute('aria-label')?.replace('Open details for ', ''),
+      );
+      for (const name of ['Game 1', 'Game 4', 'Game 5', 'Game 8']) expect(names).toContain(name);
     });
 
     it('makes nothing reachable while a slide is moving', () => {
