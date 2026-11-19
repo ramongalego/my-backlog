@@ -19,7 +19,7 @@ const SOURCES = [
  */
 export function Footer() {
   return (
-    <footer className="border-t border-ink-800 bg-ink-950">
+    <footer className="mt-auto border-t border-ink-800 bg-ink-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-center gap-2 text-sm text-ink-500">

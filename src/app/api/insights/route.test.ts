@@ -32,6 +32,11 @@ jest.mock('@/lib/server/rate-limit', () => ({
   checkSharedRateLimit: async () => ({ success: !limited }),
 }));
 jest.mock('@/lib/server/env', () => ({ getOpenAIApiKey: () => 'test-key' }));
+let aiOn = true;
+jest.mock('@/lib/server/ai-features', () => ({
+  AI_OFF_MESSAGE: 'AI features are turned off in Settings',
+  aiFeaturesOn: async () => aiOn,
+}));
 jest.mock('openai', () =>
   jest.fn().mockImplementation(() => ({ chat: { completions: { create } } })),
 );
@@ -67,6 +72,7 @@ const answer = (content: string) => ({ choices: [{ message: { content } }] });
 
 beforeEach(() => {
   user = { id: 'user-1' };
+  aiOn = true;
   games = enoughGames();
   favoriteIds = [];
   saved = null;
@@ -79,6 +85,21 @@ beforeEach(() => {
 it('refuses a signed-out request', async () => {
   user = null;
   expect((await ask({ tone: 'profile' })).status).toBe(401);
+});
+
+it('refuses a player who turned the AI features off: nothing is written, and nothing saved is shown', async () => {
+  aiOn = false;
+  saved = {
+    headline: 'Old',
+    paragraphs: ['One.'],
+    signature: 'x',
+    generatedAt: '2026-01-01',
+  } as never;
+  const res = await ask({ tone: 'profile' });
+  expect(res.status).toBe(403);
+  expect(await res.json()).toEqual({ error: 'AI features are turned off in Settings' });
+  expect(create).not.toHaveBeenCalled();
+  expect(saveInsight).not.toHaveBeenCalled();
 });
 
 it.each([

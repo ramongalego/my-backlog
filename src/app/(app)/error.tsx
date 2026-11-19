@@ -16,7 +16,7 @@ export default function AppError({ error, retry }: { error: unknown; retry: () =
   return (
     <main
       id="main-content"
-      className={`${PAGE_CONTAINER} min-h-screen pt-14 sm:pt-16 flex flex-col items-center justify-center text-center`}
+      className={`${PAGE_CONTAINER} flex-1 pt-14 sm:pt-16 flex flex-col items-center justify-center text-center`}
     >
       <Gamepad2 className="w-8 h-8 text-ink-600 mb-6" aria-hidden="true" />
       <h1 className="text-2xl font-semibold tracking-tight text-ink-50 mb-2">

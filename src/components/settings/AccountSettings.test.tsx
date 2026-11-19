@@ -21,8 +21,11 @@ const profile = {
   isPrivate: false as boolean | null,
   onSetPrivate,
 };
+const onSetAi = jest.fn();
+const ai = { enabled: true as boolean | null, onSetEnabled: onSetAi };
 const props = {
   profile,
+  ai,
   username: 'mistkai',
   onChangeUsername,
   email: 'player@example.com',
@@ -77,10 +80,11 @@ describe('the profile', () => {
     expect(screen.queryByRole('button', { name: 'Remove avatar' })).not.toBeInTheDocument();
   });
 
-  it('is public, and says where it is', () => {
+  it('is public: everyone can see it', () => {
     render(<AccountSettings {...props} />);
-    expect(valueOf('Who can see your profile')).toHaveTextContent('Anyone with the link');
-    expect(screen.getByText('mybacklog.co/u/mistkai')).toBeInTheDocument();
+    expect(valueOf('Who can see your profile')).toHaveTextContent(/^Everyone$/);
+    // No address under it.
+    expect(screen.queryByText(/mybacklog\.co/)).not.toBeInTheDocument();
     const pick = screen.getByRole('group', { name: 'Who can see your profile' });
     expect(within(pick).getByRole('button', { name: 'Public' })).toHaveAttribute(
       'aria-pressed',
@@ -102,10 +106,9 @@ describe('the profile', () => {
     expect(row('Username')).not.toHaveClass('max-[359px]:flex-col');
   });
 
-  it('is private: only the player sees it, and no address is given', () => {
+  it('is private: only the player sees it', () => {
     render(<AccountSettings {...props} profile={{ ...profile, isPrivate: true }} />);
     expect(valueOf('Who can see your profile')).toHaveTextContent('Only you');
-    expect(screen.queryByText(/mybacklog\.co\/u\//)).not.toBeInTheDocument();
     const pick = screen.getByRole('group', { name: 'Who can see your profile' });
     expect(within(pick).getByRole('button', { name: 'Private' })).toHaveAttribute(
       'aria-pressed',
@@ -119,7 +122,9 @@ describe('the profile', () => {
   it('leaves the switch out until the profile has been read, rather than guess', () => {
     render(<AccountSettings {...props} profile={{ ...profile, isPrivate: null }} />);
     expect(screen.queryByText('Who can see your profile')).not.toBeInTheDocument();
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: 'Who can see your profile' }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -183,10 +188,11 @@ it('disconnects Steam from its row when it is connected', () => {
   expect(onDisconnectSteam).toHaveBeenCalledTimes(1);
 });
 
-it('is four sections: the profile, the account, its connections, and its data', () => {
+it('is five sections: the profile, preferences, the account, its connections, and its data', () => {
   render(<AccountSettings {...props} />);
   expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
     'Profile',
+    'Preferences',
     'Account',
     'Connections',
     'Your data',
@@ -200,7 +206,10 @@ it('is four sections: the profile, the account, its connections, and its data', 
         .getAllByRole('heading', { level: 2 })
         .map((h) => h.textContent),
     ),
-  ).toEqual([['Profile'], ['Account', 'Connections', 'Your data']]);
+  ).toEqual([
+    ['Profile', 'Preferences'],
+    ['Account', 'Connections', 'Your data'],
+  ]);
   // Nothing folded away: the page is where these are looked for.
   expect(screen.queryByRole('button', { name: 'More options' })).not.toBeInTheDocument();
 });
@@ -304,5 +313,51 @@ describe('an account with no password (made with Google or Discord)', () => {
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Set password' })));
     expect(onSetPassword).toHaveBeenCalledTimes(2);
     expect(screen.getByRole('status')).toHaveTextContent('We emailed a link');
+  });
+});
+
+describe('AI features', () => {
+  const pick = () => screen.getByRole('group', { name: 'AI features' });
+
+  it('are on, and say what they are, with a switch to turn them off', () => {
+    render(<AccountSettings {...props} />);
+    // Its name is the row's strong line, with what they are under it and
+    // nothing between: the switch says whether they are on.
+    const name = screen.getByText('AI features');
+    expect(name).toHaveClass('text-sm', 'text-ink-100');
+    expect(name.closest('li')).toHaveTextContent(
+      /^AI featuresPick My Game, and the profile and roast on StatsOnOff$/,
+    );
+    // On a line that wraps rather than being cut on a phone.
+    expect(screen.getByText('Pick My Game, and the profile and roast on Stats')).toHaveClass(
+      '[overflow-wrap:anywhere]',
+    );
+    expect(within(pick()).getByRole('button', { name: 'On' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    fireEvent.click(within(pick()).getByRole('button', { name: 'Off' }));
+    expect(onSetAi).toHaveBeenCalledWith(false);
+  });
+
+  it('are off: the row says the same, and they can be turned on again', () => {
+    render(<AccountSettings {...props} ai={{ ...ai, enabled: false }} />);
+    expect(within(pick()).getByRole('button', { name: 'Off' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText('AI features').closest('li')).toHaveTextContent(
+      /^AI featuresPick My Game, and the profile and roast on StatsOnOff$/,
+    );
+
+    fireEvent.click(within(pick()).getByRole('button', { name: 'On' }));
+    expect(onSetAi).toHaveBeenCalledWith(true);
+  });
+
+  it('leave the switch out until the profile has been read, rather than guess', () => {
+    render(<AccountSettings {...props} ai={{ ...ai, enabled: null }} />);
+    expect(screen.queryByText('AI features')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Preferences' })).not.toBeInTheDocument();
   });
 });

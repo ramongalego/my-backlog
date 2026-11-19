@@ -12,6 +12,7 @@ import {
   FIGURE_STRIP,
   PROFILE_COLUMNS,
   PROFILE_HEADER,
+  SIDE_PANEL_HEADING,
   SECTION_HEADING,
 } from '@/components/profile/profile-layout';
 
@@ -60,6 +61,8 @@ export function ProfilePageSkeleton({ visitor = false }: { visitor?: boolean } =
             {/* The username. */}
             <Skeleton className="mt-2 h-4 w-20" />
           </div>
+          {/* Edit profile, on the player's own: the pencil alone on phones. */}
+          {!visitor && <Skeleton className="h-8 w-8 shrink-0 rounded-lg sm:w-28" />}
         </div>
         <div className={FIGURE_STRIP[4]}>
           {Array.from({ length: 4 }, (_, i) => (
@@ -104,7 +107,7 @@ export function ProfilePageSkeleton({ visitor = false }: { visitor?: boolean } =
           {/* Platforms: the count is a guess, and nothing under this column
               moves if it's wrong. */}
           <PanelSkeleton className={panelPadding()}>
-            <div className="mb-1.5 border-b border-ink-800 pb-1.5">
+            <div className={`${SIDE_PANEL_HEADING} mb-1.5`}>
               <Skeleton className="h-5 w-20" />
             </div>
             {Array.from({ length: 4 }, (_, i) => (
@@ -116,7 +119,7 @@ export function ProfilePageSkeleton({ visitor = false }: { visitor?: boolean } =
           </PanelSkeleton>
           {/* Ratings: the bars, then the two ends of the scale. */}
           <PanelSkeleton className={panelPadding()}>
-            <div className="mb-4 border-b border-ink-800 pb-1.5">
+            <div className={`${SIDE_PANEL_HEADING} mb-4`}>
               <Skeleton className="h-5 w-16" />
             </div>
             <Skeleton className="h-14 w-full" />

@@ -7,6 +7,7 @@ import {
   recentActivity,
   type ActivityEntry,
   type ActivityEvent,
+  type PlayedPick,
 } from '@/lib/account/activity';
 import { toLocalIsoDate } from '@/lib/diary/date-utils';
 import { libraryGame as game } from './test-games';
@@ -837,5 +838,93 @@ describe('activityAgo', () => {
   it('says nothing when nothing says when', () => {
     expect(activityAgo('', now)).toBe('');
     expect(activityAgo('not a date at all', now)).toBe('');
+  });
+});
+
+describe('recentActivity, a start that came from a pick', () => {
+  const start = (gameId: number, when: string) =>
+    event(gameId, 'status', { status: ['backlog', 'playing'] }, when);
+  const pick = (gameId: number, kind: PlayedPick['kind'], when: string): PlayedPick => ({
+    game_id: gameId,
+    kind,
+    answered_at: when,
+  });
+
+  it('says Random or Pick My Game picked it, from Play pressed as it was logged', () => {
+    // Newest first.
+    const [asked, rolled] = recentActivity(
+      [hades, celeste],
+      null,
+      [start(7, at(20)), start(8, at(21))],
+      {
+        picks: [
+          pick(7, 'random', '2026-11-17T20:00:02+00:00'),
+          // Either can be saved first.
+          pick(8, 'questions', '2026-11-17T20:59:58+00:00'),
+        ],
+      },
+    );
+    expect(asked.lines).toEqual([{ kind: 'started', pickedBy: 'questions' }]);
+    expect(rolled.lines).toEqual([{ kind: 'started', pickedBy: 'random' }]);
+  });
+
+  it('says nothing of a pick for another game, or one pressed long before the start', () => {
+    const [entry] = recentActivity([hades, celeste], null, [start(7, at(20))], {
+      picks: [pick(8, 'random', at(20)), pick(7, 'random', at(19))],
+    });
+    expect(entry.lines).toEqual([{ kind: 'started' }]);
+  });
+
+  it('keeps saying so for the game being played now', () => {
+    const playing = game({ id: 7, name: 'Hades', status: 'playing' });
+    const [entry] = recentActivity([playing], { id: 7, started_at: at(20) }, [start(7, at(20))], {
+      picks: [pick(7, 'questions', at(20))],
+    });
+    expect(entry.lines).toEqual([{ kind: 'playing', pickedBy: 'questions' }]);
+  });
+
+  it('only says it of a start: a pick queued and played later was the queue', () => {
+    const [entry] = recentActivity(
+      [hades],
+      null,
+      [event(7, 'queue', { queued: [false, true] }, at(20))],
+      { picks: [pick(7, 'random', at(20))] },
+    );
+    expect(entry.lines).toEqual([{ kind: 'queued' }]);
+  });
+});
+
+describe('recentActivity, an event that took more than one change', () => {
+  it('sits at its last change: a game taken off the queue and started within the minute is the newest', () => {
+    const unqueued = (gameId: number, when: string) =>
+      event(gameId, 'queue', { queued: [true, false] }, when);
+    const entries = recentActivity([hades, celeste], null, [
+      // Off the queue at 20:00:00, then started 50 seconds later: one event.
+      {
+        ...event(
+          7,
+          'status',
+          { queued: [true, false], status: ['backlog', 'playing'] },
+          '2026-11-17T20:00:00+00:00',
+        ),
+        updated_at: '2026-11-17T20:00:50+00:00',
+      },
+      unqueued(8, '2026-11-17T20:00:05+00:00'),
+    ]);
+    expect(entries.map((entry) => [entry.name, kinds(entry), entry.at])).toEqual([
+      ['Hades', ['started'], '2026-11-17T20:00:50+00:00'],
+      ['Celeste', ['unqueued'], '2026-11-17T20:00:05+00:00'],
+    ]);
+  });
+});
+
+describe('recentActivity, a rating', () => {
+  it('is a rating given, or a change of one the game already had', () => {
+    const [changed, given] = recentActivity([hades, celeste], null, [
+      event(7, 'edit', { rating: [null, 9] }, at(20)),
+      event(8, 'edit', { rating: [6, 8] }, at(21)),
+    ]);
+    expect(changed.lines).toEqual([{ kind: 'rated', rating: 8, changed: true }]);
+    expect(given.lines).toEqual([{ kind: 'rated', rating: 9 }]);
   });
 });

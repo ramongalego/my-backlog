@@ -43,7 +43,7 @@ const sections: LegalSection[] = [
             ],
             [
               'Profile',
-              'A username, which every account is given and you can change. A display name and a profile picture, if you choose to set them. Whether you have made your profile private.',
+              'A username, which every account is given and you can change. A display name and a profile picture, if you choose to set them. Whether you have made your profile private, and whether you have turned AI features off.',
             ],
             ['Messages', 'Anything you send us through Report an issue or by email.'],
             [
@@ -87,6 +87,10 @@ const sections: LegalSection[] = [
           Pick My Game suggestions and the player profile and roast are generated automatically from
           your library when you request them. We do not make automated decisions about you that have
           legal or similarly significant effects.
+        </p>
+        <p>
+          You can turn these features off in <Link href="/settings">Settings</Link>. While they are
+          off, the Service does not offer them and sends nothing from your library to OpenAI.
         </p>
         <p>
           For users in the European Economic Area and the United Kingdom, the legal bases for this
@@ -226,7 +230,8 @@ const sections: LegalSection[] = [
           of those were this year, your hours played and, once enough games are rated, your average
           rating and how many games you gave each rating. It shows your favorite games with your
           ratings of them, the platforms you play on, and recent highlights of your activity: games
-          you started, played, finished, dropped, rated or made a favorite.
+          you started, played, finished, dropped, rated or made a favorite, and whether a game you
+          started was picked by Pick My Game or Random.
         </p>
         <p>
           It does not show your email address, your notes, your backlog, your queue or the rest of

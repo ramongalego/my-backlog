@@ -6,6 +6,7 @@ import {
   loadCurrentlyPlaying,
   loadFavoriteGames,
   loadGamesList,
+  loadPlayedPicks,
   loadRecentHistory,
 } from '@/lib/data/loaders';
 import { libraryGame as game } from '@/lib/account/test-games';
@@ -68,6 +69,7 @@ jest.mock('@/lib/data/loaders', () => ({
   loadFavoriteGames: jest.fn(),
   loadCurrentlyPlaying: jest.fn(),
   loadRecentHistory: jest.fn(),
+  loadPlayedPicks: jest.fn(),
 }));
 // The reuse of a read is Next's; here it only records that it was asked for.
 const mockReused: string[] = [];
@@ -116,6 +118,7 @@ beforeEach(() => {
   jest.mocked(loadFavoriteGames).mockReset().mockResolvedValue([2, 3, 1]);
   jest.mocked(loadCurrentlyPlaying).mockReset().mockResolvedValue(null);
   jest.mocked(loadRecentHistory).mockReset().mockResolvedValue([]);
+  jest.mocked(loadPlayedPicks).mockReset().mockResolvedValue([]);
   jest.spyOn(console, 'error').mockImplementation(() => {});
   jest.useFakeTimers({
     now: new Date('2026-11-19T12:00:00Z'),
@@ -251,6 +254,23 @@ describe('what the player did', () => {
     expect(Object.keys(activity[0]).sort()).toEqual(
       ['at', 'header_image', 'key', 'lines', 'name', 'platform', 'source'].sort(),
     );
+  });
+
+  it("says when a game was started from a pick, from the player's own picks", async () => {
+    jest
+      .mocked(loadRecentHistory)
+      .mockResolvedValue([event(1, 5, 'status', { status: ['backlog', 'playing'] }, 9)]);
+    jest
+      .mocked(loadPlayedPicks)
+      .mockResolvedValue([
+        { game_id: 5, kind: 'random', answered_at: '2026-11-19T09:00:01+00:00' },
+      ]);
+    const { activity } = (await getPublicProfile('mistkai'))!;
+    expect(activity[0]).toMatchObject({
+      name: 'Elden Ring',
+      lines: [{ kind: 'started', pickedBy: 'random' }],
+    });
+    expect(loadPlayedPicks).toHaveBeenCalledWith(expect.anything(), USER_ID);
   });
 
   it('says the game being played now, from when it was started', async () => {

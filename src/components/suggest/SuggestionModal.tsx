@@ -37,6 +37,11 @@ interface SuggestionModalProps {
   onPlayNow?: (game: Suggestion['game']) => void;
   mode?: 'play' | 'queue';
   showHistoryWarning?: boolean;
+  /**
+   * No questions: it opens straight on a random pick, which is all it offers.
+   * For a player who turned the AI features off.
+   */
+  randomOnly?: boolean;
 }
 
 export function SuggestionModal({
@@ -46,6 +51,7 @@ export function SuggestionModal({
   onPlayNow,
   mode = 'play',
   showHistoryWarning = false,
+  randomOnly = false,
 }: SuggestionModalProps) {
   const {
     step,
@@ -168,7 +174,17 @@ export function SuggestionModal({
     );
   };
 
-  const isWizardStep = step === 'mood' || step === 'energy' || step === 'time';
+  // With no questions to open on, the first roll starts as it opens.
+  const rollOnOpen = useRef(randomOnly);
+  useEffect(() => {
+    if (!rollOnOpen.current) return;
+    rollOnOpen.current = false;
+    void leaveToChance();
+    // Once, as it opens: the roll itself is guarded against a second start.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isWizardStep = !randomOnly && (step === 'mood' || step === 'energy' || step === 'time');
 
   // The pick, for screen readers: the answer tiles are gone by the time it
   // lands, so nothing has focus to read it from.
@@ -203,7 +219,7 @@ export function SuggestionModal({
         <SuggestionError
           error={chance.message}
           onRetry={leaveToChance}
-          onStartOver={() => setChance(null)}
+          onStartOver={randomOnly ? undefined : () => setChance(null)}
         />
       )}
 

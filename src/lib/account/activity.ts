@@ -32,6 +32,10 @@ export interface ActivityLine {
   to?: string;
   /** The rating that came with it: a finish, a drop, or a rating given by itself. */
   rating?: number;
+  /** A start that came from a pick: Random, or Pick My Game's questions. */
+  pickedBy?: PickKind;
+  /** For `rated`: the game had a rating already, which this one replaced. */
+  changed?: true;
 }
 
 /** One thing done to a game, or a group of them: one row of the list. */
@@ -63,6 +67,24 @@ export interface ActivityEntry {
 export interface ActivityEvent extends HistoryEvent {
   id: number;
   game_id: number;
+  /**
+   * When the last change folded into it was made. Changes within a minute
+   * are one event: it says what they came to, so that is when it happened.
+   */
+  updated_at?: string;
+}
+
+/** When an event happened: its last change, where the history says. */
+const happened = (event: ActivityEvent) => event.updated_at ?? event.created_at;
+
+type PickKind = 'random' | 'questions';
+
+/** A pick the player pressed Play on (game_picks with the outcome `played`). */
+export interface PlayedPick {
+  game_id: number;
+  kind: PickKind;
+  /** When Play was pressed. */
+  answered_at: string;
 }
 
 interface PlayingGame {
@@ -128,6 +150,12 @@ const GROUPABLE = new Set<ActivityKind>([
   'note',
 ]);
 
+/**
+ * How far apart Play on a pick and the start it made can be logged. They are
+ * saved by two requests, a moment apart, and either can land first.
+ */
+const PICKED_WITHIN_MS = 10 * 60 * 1000;
+
 /** Things done to one game this close together on one day, with nothing else between, are a run. */
 const SAME_GO_MS = 12 * 60 * 60 * 1000;
 
@@ -164,7 +192,11 @@ function told(event: ActivityEvent): Told | null {
         return null;
     }
   }
-  if (rating !== null) return { kind: 'rated', rating };
+  if (rating !== null) {
+    return typeof changes.rating[0] === 'number'
+      ? { kind: 'rated', rating, changed: true }
+      : { kind: 'rated', rating };
+  }
   if (typeof now('platform') === 'string') return { kind: 'moved', to: now('platform') as string };
   if ('queued' in changes) return { kind: now('queued') === true ? 'queued' : 'unqueued' };
   if ('favorite' in changes) return { kind: now('favorite') === true ? 'favorite' : 'unfavorite' };
@@ -200,12 +232,23 @@ export function recentActivity(
   events: ActivityEvent[] = [],
   {
     only,
+    picks = [],
   }: {
     /** Leaves out every line of another kind, as if it never happened. */
     only?: ReadonlySet<ActivityKind>;
+    /** Picks the player pressed Play on, so a start can say it came from one. */
+    picks?: PlayedPick[];
   } = {},
 ): ActivityEntry[] {
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
+
+  // The pick a start came from: Play pressed on that game as it was logged.
+  const pickedBy = (event: ActivityEvent): PickKind | undefined =>
+    picks.find(
+      (pick) =>
+        pick.game_id === event.game_id &&
+        Math.abs(Date.parse(pick.answered_at) - Date.parse(happened(event))) <= PICKED_WITHIN_MS,
+    )?.kind;
 
   const logged = events.flatMap((event): Item[] => {
     const game = shown.get(event.game_id);
@@ -213,15 +256,19 @@ export function recentActivity(
     if (!game || !what) return [];
     const { day: chosen, rating, ...rest }: Told = what;
     const line: ActivityLine = rest;
-    const loggedOn = toLocalIsoDate(new Date(event.created_at));
+    const loggedOn = toLocalIsoDate(new Date(happened(event)));
     // A finish or a drop happened on the day the player says, which can be
     // years before it was logged: that is where it sits in the list, so what
     // is in the past stays there and isn't shown as recent.
     const dated = chosen && chosen !== loggedOn ? chosen : null;
     if (rating != null) line.rating = rating;
+    if (line.kind === 'started') {
+      const kind = pickedBy(event);
+      if (kind) line.pickedBy = kind;
+    }
     return [
       {
-        at: dated ?? event.created_at,
+        at: dated ?? happened(event),
         order: event.id,
         key: `event-${event.id}`,
         game,
@@ -240,7 +287,7 @@ export function recentActivity(
     }
   }
   for (const item of logged) {
-    if (startOf.get(item.game.id) === item.order) item.line = { kind: 'playing' };
+    if (startOf.get(item.game.id) === item.order) item.line = { ...item.line, kind: 'playing' };
   }
 
   // What the games themselves say, where the history doesn't: a game being

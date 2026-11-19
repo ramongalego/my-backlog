@@ -58,6 +58,8 @@ export function SettingsPageSkeleton() {
         <div className={SETTINGS_STACK}>
           {/* Profile: avatar, display name, username, who can see it. */}
           <Section label="w-16" rows={3} avatar />
+          {/* Preferences: AI features. */}
+          <Section label="w-24" rows={1} />
         </div>
         <div className={SETTINGS_STACK}>
           {/* Account: email, password, member since. */}

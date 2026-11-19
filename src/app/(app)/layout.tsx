@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       supabase
         .from('profiles')
         .select(
-          'steam_id, steam_username, steam_avatar, display_name, avatar_url, username, is_private',
+          'steam_id, steam_username, steam_avatar, display_name, avatar_url, username, is_private, ai_disabled',
         )
         .eq('id', userId)
         .maybeSingle(),

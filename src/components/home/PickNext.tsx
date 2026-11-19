@@ -27,7 +27,8 @@ export function wallCovers(rows: { header_image: string | null }[][]): string[] 
 interface PickNextProps {
   covers: string[];
   backlogCount: number;
-  onPick: () => void;
+  /** Opens the questions. Left out with the AI features off: the band offers a random pick alone. */
+  onPick?: () => void;
   onRandom: () => void;
   /** Every backlog game is queued, and both picks leave queued games out. */
   allQueued?: { onOpenQueue: () => void; onAddGame: () => void };
@@ -49,7 +50,7 @@ export function PickNext({
       {/* The button beside it is the one to reach by keyboard and screen reader. */}
       <button
         type="button"
-        onClick={allQueued ? allQueued.onOpenQueue : onPick}
+        onClick={allQueued ? allQueued.onOpenQueue : (onPick ?? onRandom)}
         tabIndex={-1}
         aria-hidden="true"
         className={`group relative ${COVER_ASPECT} overflow-hidden rounded-xl bg-ink-800 cursor-pointer`}
@@ -93,6 +94,18 @@ export function PickNext({
               >
                 <Plus className="w-5 h-5" aria-hidden="true" />
                 <span>Add a game</span>
+              </Button>
+            </div>
+          </>
+        ) : !onPick ? (
+          <>
+            <p className="mt-3 text-ink-300 leading-relaxed">
+              Leave it to chance: MyBacklog picks one from your backlog at random
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <Button onClick={onRandom} size="lg" className="cursor-pointer">
+                <Dices className="w-5 h-5" aria-hidden="true" />
+                <span>Pick a random game</span>
               </Button>
             </div>
           </>

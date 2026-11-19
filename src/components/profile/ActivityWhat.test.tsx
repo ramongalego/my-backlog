@@ -24,9 +24,19 @@ describe('everything else that can be done to a game', () => {
     ['Dropped', { kind: 'dropped' }, null],
     ['Started playing on Switch', { kind: 'playing' }, 'Switch'],
     ['Started playing', { kind: 'started' }, null],
+    // A start that came from a pick ends by saying which.
+    ['Started playing on PS5, picked at random', { kind: 'started', pickedBy: 'random' }, 'PS5'],
+    ['Started playing, picked at random', { kind: 'started', pickedBy: 'random' }, null],
+    [
+      'Started playing on Switch, picked by Pick My Game',
+      { kind: 'playing', pickedBy: 'questions' },
+      'Switch',
+    ],
     // A rating given by itself is the whole line: it isn't said again after it.
     ['Rated 7/10 on Switch 2', { kind: 'rated', rating: 7 }, 'Switch 2'],
     ['Rated 7/10', { kind: 'rated', rating: 7 }, null],
+    // A rating that replaced another.
+    ['Changed rating to 8/10 on Switch', { kind: 'rated', rating: 8, changed: true }, 'Switch'],
     ['Played 2h 30m on Switch', { kind: 'played', minutes: 150 }, 'Switch'],
     ['Added to favorites', { kind: 'favorite' }, null],
     ['Added to backlog on PSP', { kind: 'added' }, 'PSP'],

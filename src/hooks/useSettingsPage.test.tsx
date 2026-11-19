@@ -9,6 +9,7 @@ import { changeEmail, disconnectSteam } from '@/lib/client/account';
 import { toast } from 'sonner';
 import {
   removeAvatar,
+  saveAiFeatures,
   saveProfileName,
   saveProfilePrivacy,
   saveUsername,
@@ -28,6 +29,7 @@ let session: {
     avatar_url?: string | null;
     username: string;
     is_private?: boolean | null;
+    ai_disabled?: boolean | null;
   } | null;
 };
 const mockUpdateProfile = jest.fn();
@@ -40,6 +42,7 @@ jest.mock('@/lib/client/profile-identity', () => ({
   saveUsername: jest.fn(),
   saveProfileName: jest.fn(),
   saveProfilePrivacy: jest.fn(),
+  saveAiFeatures: jest.fn(),
   uploadAvatar: jest.fn(),
   removeAvatar: jest.fn(),
   squareAvatar: jest.fn(),
@@ -321,5 +324,56 @@ describe('who can see the profile', () => {
     await act(() => setPrivate(false));
     expect(saveProfilePrivacy).toHaveBeenCalledTimes(2);
     expect(saveProfilePrivacy).toHaveBeenLastCalledWith(false);
+  });
+});
+
+describe('AI features', () => {
+  it('are on unless the profile says they were turned off', () => {
+    expect(open().ai.enabled).toBe(true);
+    session = { ...steamPlayer, profile: { ...steamPlayer.profile, ai_disabled: false } };
+    expect(open().ai.enabled).toBe(true);
+    session = { ...steamPlayer, profile: { ...steamPlayer.profile, ai_disabled: true } };
+    expect(open().ai.enabled).toBe(false);
+    // Not known until the profile is read.
+    session = { ...steamPlayer, profile: null };
+    expect(open().ai.enabled).toBeNull();
+  });
+
+  it('are turned off at once and saved', async () => {
+    jest.mocked(saveAiFeatures).mockResolvedValue({ ok: true, enabled: false });
+    const { setEnabled } = open().ai;
+    await act(() => setEnabled(false));
+    expect(saveAiFeatures).toHaveBeenCalledWith(false);
+    expect(mockUpdateProfile.mock.calls).toEqual([[{ ai_disabled: true }]]);
+  });
+
+  it('go back to how they were, with a toast, when it could not be saved', async () => {
+    jest
+      .mocked(saveAiFeatures)
+      .mockResolvedValue({ ok: false, error: "Couldn't save that. Please try again." });
+    const { setEnabled } = open().ai;
+    await act(() => setEnabled(false));
+    expect(mockUpdateProfile.mock.calls).toEqual([
+      [{ ai_disabled: true }],
+      [{ ai_disabled: false }],
+    ]);
+    expect(toast.error).toHaveBeenCalledWith("Couldn't save that. Please try again.");
+  });
+
+  it('send one change at a time', async () => {
+    let done!: (result: { ok: true; enabled: boolean }) => void;
+    jest.mocked(saveAiFeatures).mockReturnValueOnce(new Promise((resolve) => (done = resolve)));
+    const { setEnabled } = open().ai;
+    let first!: Promise<void>;
+    await act(async () => {
+      first = setEnabled(false);
+      void setEnabled(true);
+      void setEnabled(false);
+    });
+    expect(saveAiFeatures).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      done({ ok: true, enabled: false });
+      await first;
+    });
   });
 });

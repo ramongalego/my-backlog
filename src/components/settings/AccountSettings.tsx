@@ -11,19 +11,47 @@ import { NoPasswordRow } from '@/components/settings/NoPasswordRow';
 import { PictureRow } from '@/components/settings/PictureRow';
 import { SETTINGS_COLUMNS, SETTINGS_STACK } from '@/components/settings/settings-layout';
 import type { ExportFormat } from '@/lib/account/export';
-import { publicProfilePath } from '@/lib/account/public-profile';
 import type { SignInProvider } from '@/lib/account/sign-in';
 import type { ApiResult } from '@/lib/client/request';
 
 const ROWS = 'mt-1 divide-y divide-ink-800';
 
-/** The site's address as people share it, for saying where a profile is. */
-const SITE = 'mybacklog.co';
-
 const VISIBILITY = [
   { value: 'public', label: 'Public' },
   { value: 'private', label: 'Private' },
 ] as const;
+
+/** What the AI features are, by the names the app gives them. */
+const AI_FEATURES = 'Pick My Game, and the profile and roast on Stats';
+
+const ON_OFF = [
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' },
+] as const;
+
+/** A setting with two answers, shown and changed in one. */
+function Switch<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <ToggleGroup
+      variant="segmented"
+      label={label}
+      options={options}
+      value={value}
+      onChange={onChange}
+      className="shrink-0"
+    />
+  );
+}
 
 const Change = ({ what, onClick }: { what: string; onClick: () => void }) => (
   <Button
@@ -56,6 +84,7 @@ function ActionRow({ children, action }: { children: string; action: React.React
  */
 export function AccountSettings({
   profile,
+  ai,
   username,
   onChangeUsername,
   email,
@@ -83,6 +112,11 @@ export function AccountSettings({
     /** Null until the profile is read: the row waits for it. */
     isPrivate: boolean | null;
     onSetPrivate: (isPrivate: boolean) => void;
+  };
+  ai: {
+    /** Null until the profile is read: the row waits for it. */
+    enabled: boolean | null;
+    onSetEnabled: (enabled: boolean) => void;
   };
   onDisconnectSteam: () => void;
   onDeleteAccount: () => void;
@@ -133,24 +167,43 @@ export function AccountSettings({
             {profile.isPrivate != null && (
               <AccountRow
                 label="Who can see your profile"
-                value={profile.isPrivate ? 'Only you' : 'Anyone with the link'}
-                // Where it is, while there's somewhere for a link to lead.
-                note={!profile.isPrivate && username && `${SITE}${publicProfilePath(username)}`}
+                value={profile.isPrivate ? 'Only you' : 'Everyone'}
                 wideAction
                 action={
-                  <ToggleGroup
-                    variant="segmented"
+                  <Switch
                     label="Who can see your profile"
                     options={VISIBILITY}
                     value={profile.isPrivate ? 'private' : 'public'}
                     onChange={(value) => profile.onSetPrivate(value === 'private')}
-                    className="shrink-0"
                   />
                 }
               />
             )}
           </ul>
         </Panel>
+
+        {ai.enabled != null && (
+          <Panel>
+            <SectionLabel>Preferences</SectionLabel>
+            <ul className={ROWS}>
+              <AccountRow
+                // Its name is the row: the switch beside it says whether they are on.
+                value="AI features"
+                // What they are, on or off.
+                note={AI_FEATURES}
+                wideAction
+                action={
+                  <Switch
+                    label="AI features"
+                    options={ON_OFF}
+                    value={ai.enabled ? 'on' : 'off'}
+                    onChange={(value) => ai.onSetEnabled(value === 'on')}
+                  />
+                }
+              />
+            </ul>
+          </Panel>
+        )}
       </div>
 
       <div className={SETTINGS_STACK}>

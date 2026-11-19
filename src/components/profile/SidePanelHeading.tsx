@@ -1,4 +1,5 @@
 import { SectionLabel } from '@/components/layout/Page';
+import { SIDE_PANEL_HEADING } from './profile-layout';
 
 /**
  * The heading of a panel beside the profile (Platforms, Ratings): its name,
@@ -17,9 +18,7 @@ export function SidePanelHeading({
   className?: string;
 }) {
   return (
-    <div
-      className={`flex items-baseline justify-between gap-3 border-b border-ink-800 pb-1.5 ${className}`}
-    >
+    <div className={`${SIDE_PANEL_HEADING} ${className}`}>
       <SectionLabel>{children}</SectionLabel>
       <span className="text-xs tabular-nums text-ink-500" aria-hidden="true">
         {count}

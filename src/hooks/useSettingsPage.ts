@@ -17,6 +17,7 @@ import {
 } from '@/lib/client/account';
 import {
   removeAvatar,
+  saveAiFeatures,
   saveProfileName,
   saveProfilePrivacy,
   saveUsername,
@@ -26,6 +27,8 @@ import {
 import { displayName, memberSince, profileAvatar, profileName } from '@/lib/account/identity';
 import { playsOnConsole } from '@/lib/games/consoles';
 import { reloadAtTop } from '@/lib/reload';
+import type { ApiResult } from '@/lib/client/request';
+import type { Profile } from '@/types/games';
 import { useInFlight } from './useInFlight';
 import { useLibraryMeta } from './useLibraryMeta';
 
@@ -48,6 +51,26 @@ export function useSettingsPage() {
   // menu and the Profile page show the new name or picture at once too.
   const updateProfile = useUpdateSessionProfile();
   const inFlight = useInFlight();
+  /**
+   * A yes-or-no setting on the profile: shown at once, and put back with a
+   * toast if it couldn't be saved. One change at a time: a second press while
+   * one is on its way would race it.
+   */
+  const toggle =
+    (
+      key: string,
+      shown: (value: boolean) => Partial<Profile>,
+      save: (value: boolean) => Promise<ApiResult<unknown>>,
+    ) =>
+    (value: boolean) =>
+      inFlight.once(key, async () => {
+        updateProfile(shown(value));
+        const result = await save(value);
+        if (!result.ok) {
+          updateProfile(shown(!value));
+          toast.error(result.error);
+        }
+      });
 
   return {
     /** What the profile shows of the player, and who can see it. */
@@ -85,19 +108,17 @@ export function useSettingsPage() {
       },
       /** Null until the profile is read. */
       isPrivate: profile?.is_private ?? null,
-      /**
-       * Shown at once, and put back if it couldn't be saved. One at a time: a
-       * second press while one is on its way would race it.
-       */
-      setPrivate: (isPrivate: boolean) =>
-        inFlight.once('profile-privacy', async () => {
-          updateProfile({ is_private: isPrivate });
-          const result = await saveProfilePrivacy(isPrivate);
-          if (!result.ok) {
-            updateProfile({ is_private: !isPrivate });
-            toast.error(result.error);
-          }
-        }),
+      setPrivate: toggle(
+        'profile-privacy',
+        (isPrivate) => ({ is_private: isPrivate }),
+        saveProfilePrivacy,
+      ),
+    },
+    /** Pick My Game's questions, and the profile and roast on Stats. */
+    ai: {
+      /** Null until the profile is read. */
+      enabled: profile ? !profile.ai_disabled : null,
+      setEnabled: toggle('ai-features', (enabled) => ({ ai_disabled: !enabled }), saveAiFeatures),
     },
     username: profile?.username ?? null,
     changeUsername: async (username: string) => {

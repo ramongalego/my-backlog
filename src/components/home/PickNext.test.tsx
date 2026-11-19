@@ -40,3 +40,22 @@ describe('PickNext', () => {
     expect(onRandom).toHaveBeenCalled();
   });
 });
+
+describe('PickNext with the AI features turned off', () => {
+  it('offers a random pick as the one thing to do, from the button and from the wall', () => {
+    const onRandom = jest.fn();
+    const { container } = render(<PickNext covers={['a']} backlogCount={12} onRandom={onRandom} />);
+
+    expect(screen.queryByRole('button', { name: 'Pick My Game' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/how you want to feel/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Leave it to chance: MyBacklog picks one from your backlog at random'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pick a random game' }));
+    expect(onRandom).toHaveBeenCalledTimes(1);
+    // The wall of art does what the button beside it does.
+    fireEvent.click(container.querySelector('button[aria-hidden="true"]')!);
+    expect(onRandom).toHaveBeenCalledTimes(2);
+  });
+});

@@ -15,6 +15,7 @@ import {
   loadManualGames,
   loadOpenEndedCategories,
   loadQueue,
+  loadPlayedPicks,
   loadRecentHistory,
   loadSavedInsights,
   type CarouselPools,
@@ -72,6 +73,14 @@ export const queries = {
     queryOptions({
       queryKey: queryKeys.games.history(userId ?? ''),
       queryFn: load(userId, supabase, loadRecentHistory),
+      staleTime: 30 * 1000,
+    }),
+
+  /** Read with the history: a start says whether a pick made it. */
+  playedPicks: (userId: string | null, supabase?: SupabaseClient) =>
+    queryOptions({
+      queryKey: queryKeys.games.playedPicks(userId ?? ''),
+      queryFn: load(userId, supabase, loadPlayedPicks),
       staleTime: 30 * 1000,
     }),
 

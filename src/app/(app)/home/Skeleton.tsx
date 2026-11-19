@@ -36,7 +36,7 @@ export const PLAYING_SHAPE: HomeShape = {
 
 function LoadingState({ shape = PLAYING_SHAPE }: { shape?: HomeShape }) {
   return (
-    <div className="min-h-screen bg-ink-950 flex flex-col" role="status" aria-busy="true">
+    <div className="flex-1 bg-ink-950 flex flex-col" role="status" aria-busy="true">
       <span className="sr-only">Loading…</span>
       <div className="pt-14 sm:pt-16 pb-16 flex-1">
         <section className="bg-ink-900">

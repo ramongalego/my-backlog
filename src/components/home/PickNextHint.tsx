@@ -37,13 +37,36 @@ export function PickNextHint({
   isSteamConnected,
   onAddGame,
   onConnectSteam,
+  randomOnly = false,
 }: {
   backlogCount: number;
   isSteamConnected: boolean;
   onAddGame: () => void;
   onConnectSteam: () => void;
+  /**
+   * The band only picks at random (AI features off): more games make no pick
+   * better, so it asks for them as more to pick from.
+   */
+  randomOnly?: boolean;
 }) {
   // Three games is enough to pick between, not enough to pick well.
+  if (backlogCount < SMALL_BACKLOG && randomOnly) {
+    // One sentence, so no closing period.
+    return (
+      <p className="mt-4 text-sm text-ink-400">
+        <button onClick={onAddGame} className={INLINE_LINK}>
+          Add a few more
+        </button>{' '}
+        games to pick from
+        {!isSteamConnected && (
+          <>
+            , or <ConnectSteamLink onClick={onConnectSteam}>connect Steam</ConnectSteamLink> to
+            bring in your whole library
+          </>
+        )}
+      </p>
+    );
+  }
   if (backlogCount < SMALL_BACKLOG) {
     return (
       <p className="mt-4 text-sm text-ink-400">

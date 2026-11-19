@@ -41,3 +41,30 @@ it.each([
   expect(link).toHaveTextContent(name);
   expect(link).toBeEnabled();
 });
+
+describe('a small backlog that is only picked from at random (AI features off)', () => {
+  const hint = (isSteamConnected: boolean) =>
+    render(
+      <PickNextHint
+        backlogCount={6}
+        isSteamConnected={isSteamConnected}
+        onAddGame={jest.fn()}
+        onConnectSteam={jest.fn()}
+        randomOnly
+      />,
+    ).container;
+
+  it('asks for more games as more to pick from, not as better picks', () => {
+    const container = hint(false);
+    expect(container).toHaveTextContent(
+      /^Add a few more games to pick from, or connect Steam to bring in your whole library$/,
+    );
+    expect(container).not.toHaveTextContent('Picks get better');
+    expect(screen.getByRole('button', { name: 'Add a few more' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'connect Steam' })).toBeInTheDocument();
+  });
+
+  it('leaves Steam out once it is connected', () => {
+    expect(hint(true)).toHaveTextContent(/^Add a few more games to pick from$/);
+  });
+});

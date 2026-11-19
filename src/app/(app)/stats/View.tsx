@@ -23,12 +23,14 @@ import { HighestRated } from '@/components/stats/HighestRated';
 import { TagCompletion } from '@/components/stats/TagCompletion';
 import { PlayedALot } from '@/components/stats/PlayedALot';
 import { PlayerProfile } from '@/components/stats/PlayerProfile';
+import { useAiFeatures } from '@/hooks/useAiFeatures';
 
 export default function StatsView() {
   const { stats, loading, loadError, retry, profileReady, profileSignature, gameDialog, openGame } =
     useStatsPage();
   const libraryMeta = useCachedLibraryMeta();
   const { user, profile } = useAuth();
+  const aiOn = useAiFeatures();
   const { connect: connectSteam } = useConnectSteam();
   const isSteamConnected = profile?.steam_id != null;
   const { open: openAddGame } = useAddGame();
@@ -95,7 +97,8 @@ export default function StatsView() {
               <PlayedALot stats={stats} onEdit={openPlayedALot} />
             </div>
           )}
-          {profileReady && user && profileSignature && (
+          {/* Written by a model: not offered, or shown, with the AI features off. */}
+          {aiOn && profileReady && user && profileSignature && (
             <PlayerProfile userId={user.id} signature={profileSignature} />
           )}
         </div>

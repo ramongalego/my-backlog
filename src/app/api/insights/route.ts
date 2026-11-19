@@ -22,6 +22,7 @@ import { jsonError } from '@/lib/server/api-response';
 import { getOpenAIApiKey } from '@/lib/server/env';
 import { getSavedInsight, saveInsight } from '@/lib/server/player-insights';
 import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { AI_OFF_MESSAGE, aiFeaturesOn } from '@/lib/server/ai-features';
 
 // Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
 export const maxDuration = 60;
@@ -47,6 +48,8 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return jsonError('Unauthorized', 401);
+  // Off means nothing is sent, and what was written before isn't shown either.
+  if (!(await aiFeaturesOn(supabase, user.id))) return jsonError(AI_OFF_MESSAGE, 403);
 
   let body: unknown;
   try {

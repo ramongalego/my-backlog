@@ -31,7 +31,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${sans.variable} font-sans antialiased bg-ink-950 text-ink-100`}>
+      {/* A column the window's height at least: each page fills what the footer
+          leaves (`flex-1`), so on a short page the footer is at the bottom. */}
+      <body
+        className={`${sans.variable} flex min-h-dvh flex-col font-sans antialiased bg-ink-950 text-ink-100`}
+      >
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-accent-500 focus:text-ink-950 focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium"

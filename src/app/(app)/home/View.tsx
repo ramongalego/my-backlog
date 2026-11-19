@@ -13,6 +13,7 @@ import { SuggestionModal } from '@/components/suggest/SuggestionModal';
 import { SyncProgress } from '@/components/sync/SyncProgress';
 import { CarouselsLoadingState, HomeLoading, StatusLoadingState } from './Skeleton';
 import { useHomePage } from '@/hooks/useHomePage';
+import { useAiFeatures } from '@/hooks/useAiFeatures';
 import { useManualGameActions } from '@/hooks/useManualGameActions';
 import { useAddGame } from '@/components/games/AddGameProvider';
 import { todayIso } from '@/lib/diary/date-utils';
@@ -34,6 +35,8 @@ export default function HomeView() {
   const { auth, meta, sync, carousels, currentGame, loadError, retry } = useHomePage();
   const { user, profile, isLoading } = auth;
   const { connect: connectSteam } = useConnectSteam();
+  // Off: no questions anywhere, only random picks (the server would refuse them).
+  const aiOn = useAiFeatures();
   const manualGames = useManualGameActions(user?.id ?? null);
   const { open: openAddGame } = useAddGame();
   const { gameCount, historyCount, backlogCount, queuedGameIds } = meta;
@@ -101,7 +104,7 @@ export default function HomeView() {
   // state you're in, so say what failed rather than guess.
   if (loadError) {
     return (
-      <main id="main-content" className={`${PAGE_CONTAINER} min-h-screen pt-14 sm:pt-16`}>
+      <main id="main-content" className={`${PAGE_CONTAINER} flex-1 pt-14 sm:pt-16`}>
         <h1 className="sr-only">Home</h1>
         <LoadError what="your library" onRetry={retry} />
       </main>
@@ -109,7 +112,7 @@ export default function HomeView() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-950 flex flex-col">
+    <div className="flex-1 bg-ink-950 flex flex-col">
       {/* The top padding is the fixed header's height (h-14, sm:h-16). */}
       <main id="main-content" className="pt-14 sm:pt-16 pb-16 flex-1">
         {/* A tone above the carousels, so the band reads as the page's subject
@@ -155,7 +158,7 @@ export default function HomeView() {
                   nothingToPick ? [queue.map((q) => q.game)] : carouselRows.map((row) => row.games),
                 )}
                 backlogCount={backlogCount}
-                onPick={() => setIsSuggestionModalOpen(true)}
+                onPick={aiOn ? () => setIsSuggestionModalOpen(true) : undefined}
                 onRandom={handleRandomPick}
                 allQueued={
                   nothingToPick
@@ -172,6 +175,7 @@ export default function HomeView() {
                     isSteamConnected={isSteamConnected}
                     onAddGame={() => openAddGame()}
                     onConnectSteam={connectSteam}
+                    randomOnly={!aiOn}
                   />
                 )}
               </PickNext>
@@ -188,6 +192,7 @@ export default function HomeView() {
             onPlayNext={handlePlayNext}
             onAddGame={() => openAddGame()}
             onPickNext={() => setIsSuggestionModalOpen(true)}
+            randomOnly={!aiOn}
           />
         )}
 
@@ -219,6 +224,7 @@ export default function HomeView() {
           onPick={handleSuggestionAction}
           onPlayNow={(suggested) => handleSwitchTo(toGame(suggested))}
           mode={currentlyPlaying ? 'queue' : 'play'}
+          randomOnly={!aiOn}
           showHistoryWarning={historyCount <= 5}
         />
       )}

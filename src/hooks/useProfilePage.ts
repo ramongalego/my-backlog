@@ -24,6 +24,8 @@ export function useProfilePage() {
   const { data: playing = null } = useQuery(queries.playing(userId));
   // If it can't be read, Recent activity falls back to what the games say.
   const { data: history = [] } = useQuery(queries.history(userId));
+  // Without them a start just doesn't say what picked it.
+  const { data: picks = [] } = useQuery(queries.playedPicks(userId));
 
   // The favorites are the player's to pick: none until they do.
   const favoriteGames = useFavoriteGames(userId);
@@ -75,7 +77,7 @@ export function useProfilePage() {
     },
     gameDialog,
     openGame,
-    activity: recentActivity(games, playing, history),
+    activity: recentActivity(games, playing, history, { picks }),
     // Counted as the Games page lists them: hidden games don't count, and a
     // platform with only hidden games isn't listed.
     platforms: [...countPlatforms(games, 'all')]

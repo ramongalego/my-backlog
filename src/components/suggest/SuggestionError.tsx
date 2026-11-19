@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 interface SuggestionErrorProps {
   error: string;
   onRetry: () => void;
-  onStartOver: () => void;
+  /** Back to the questions. Left out where there are none (a random pick alone). */
+  onStartOver?: () => void;
 }
 
 export function SuggestionError({ error, onRetry, onStartOver }: SuggestionErrorProps) {
@@ -21,9 +22,11 @@ export function SuggestionError({ error, onRetry, onStartOver }: SuggestionError
         <Button onClick={onRetry} variant="secondary" className="cursor-pointer">
           Try Again
         </Button>
-        <Button onClick={onStartOver} variant="ghost" className="cursor-pointer">
-          Change answers
-        </Button>
+        {onStartOver && (
+          <Button onClick={onStartOver} variant="ghost" className="cursor-pointer">
+            Change answers
+          </Button>
+        )}
       </div>
     </div>
   );

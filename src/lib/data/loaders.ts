@@ -1,7 +1,7 @@
 // Shared by the server prefetch and the client hooks, so prefetched data has
 // exactly the shape the hooks expect.
 import { libraryPlatforms, STEAM_PLATFORM, type LibraryPlatforms } from '@/lib/games/consoles';
-import type { ActivityEvent } from '@/lib/account/activity';
+import type { ActivityEvent, PlayedPick } from '@/lib/account/activity';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import { OPEN_ENDED_MIN_MINUTES } from '@/lib/games/played-a-lot';
@@ -207,12 +207,32 @@ export async function loadRecentHistory(
 ): Promise<ActivityEvent[]> {
   const { data, error } = await supabase
     .from('game_events')
-    .select('id, game_id, kind, changes, created_at')
+    .select('id, game_id, kind, changes, created_at, updated_at')
     .eq('user_id', userId)
     .order('id', { ascending: false })
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as ActivityEvent[];
+}
+
+/** The latest picks the player pressed Play on: enough to cover the history read with them. */
+const RECENT_PICKS = 100;
+
+/** Picks the player started (Random, or Pick My Game), newest first. */
+export async function loadPlayedPicks(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = RECENT_PICKS,
+): Promise<PlayedPick[]> {
+  const { data, error } = await supabase
+    .from('game_picks')
+    .select('game_id, kind, answered_at')
+    .eq('user_id', userId)
+    .eq('outcome', 'played')
+    .order('id', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as PlayedPick[];
 }
 
 /**

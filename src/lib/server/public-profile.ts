@@ -6,6 +6,7 @@ import {
   loadCurrentlyPlaying,
   loadFavoriteGames,
   loadGamesList,
+  loadPlayedPicks,
   loadRecentHistory,
 } from '@/lib/data/loaders';
 import { HIGHLIGHTS, recentActivity } from '@/lib/account/activity';
@@ -70,15 +71,16 @@ async function readLibrary(userId: string): Promise<FromLibrary> {
   const service = tryCreateServiceClient();
   if (!service) throw new Error('Public profiles need the Supabase secret key');
 
-  const [games, picked, playing, history] = await Promise.all([
+  const [games, picked, playing, history, picks] = await Promise.all([
     loadGamesList(service, userId),
     loadFavoriteGames(service, userId),
     loadCurrentlyPlaying(service, userId),
     loadRecentHistory(service, userId, HISTORY_READ),
+    loadPlayedPicks(service, userId),
   ]);
   const platforms = countPlatforms(games, 'all');
   // Only the highlights; folded into rows as the player's own list is.
-  const activity = recentActivity(games, playing, history, { only: HIGHLIGHTS });
+  const activity = recentActivity(games, playing, history, { only: HIGHLIGHTS, picks });
 
   return {
     figures: profileFigures(games),
@@ -97,7 +99,7 @@ async function readLibrary(userId: string): Promise<FromLibrary> {
 }
 
 // The key's number goes up when what's read changes shape.
-const reusedLibrary = unstable_cache(readLibrary, ['public-profile-library-2'], {
+const reusedLibrary = unstable_cache(readLibrary, ['public-profile-library-3'], {
   revalidate: REUSE_SECONDS,
 });
 

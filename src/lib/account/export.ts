@@ -136,7 +136,7 @@ export interface AccountExport {
   /**
    * Oldest first, kept from November 2026. `changes` maps each changed value to
    * [before, after] (every before null for an "added"), hours in minutes, dates
-   * in UTC. Changes within 30 seconds are one entry, and an undone change leaves
+   * in UTC. Changes within a minute are one entry, and an undone change leaves
    * none. Read time played with `playsOf` (lib/account/history.ts).
    */
   history: { gameId: number; kind: string; changes: unknown; at: string }[];

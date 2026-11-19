@@ -13,6 +13,9 @@ interface GameEvent {
   changes: Record<string, [unknown, unknown]>;
 }
 
+/** Changes within a minute of each other are one sitting: the function alone. */
+const ONE_MINUTE = sqlFile('migrations', '20261119_history_one_minute.sql');
+
 const MIGRATIONS = [
   '20261117_game_events.sql',
   '20261117_game_events_added.sql',
@@ -178,8 +181,8 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
   const countEvents = async () =>
     (await db.query<{ count: number }>('select count(*)::int as count from game_events'))[0].count;
 
-  /** Time passes: every event so far is this much older. 31 seconds ends a sitting. */
-  const later = (seconds = 31) =>
+  /** Time passes: every event so far is this much older. 61 seconds ends a sitting. */
+  const later = (seconds = 61) =>
     db.query(
       `update game_events
        set created_at = created_at - make_interval(secs => $1),
@@ -576,7 +579,7 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
       ]);
     });
 
-    it('lasts as long as changes keep coming within 30 seconds of each other', async () => {
+    it('lasts as long as changes keep coming within a minute of each other', async () => {
       const game = await addGame({ playtime_forever: 0 });
       await write(game, 'playtime_forever = 10');
       await later(20);
@@ -587,11 +590,18 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
         { kind: 'playtime', changes: { playtime_forever: [0, 30] } },
       ]);
 
-      await later(31);
+      // Under a minute since the last one: the same sitting still.
+      await later(45);
       await write(game, 'playtime_forever = 40');
+      expect(await eventsOf(game)).toEqual([
+        { kind: 'playtime', changes: { playtime_forever: [0, 40] } },
+      ]);
+
+      await later(61);
+      await write(game, 'playtime_forever = 50');
       expect((await eventsOf(game)).map((event) => event.changes.playtime_forever)).toEqual([
-        [0, 30],
-        [30, 40],
+        [0, 40],
+        [40, 50],
       ]);
     });
 
@@ -604,6 +614,37 @@ describe.each(BUILDS)('the history, on a database %s', (_, build) => {
 
       expect(await countEvents()).toBe(0);
       expect(await statusOf(game)).toBe('playing');
+    });
+
+    it('stays a minute long once the one-minute migration is applied, twice', async () => {
+      await db.exec(ONE_MINUTE);
+      await db.exec(ONE_MINUTE);
+      const game = await addGame({ playtime_forever: 0 });
+      await write(game, 'playtime_forever = 10');
+      await later(45);
+      await write(game, 'playtime_forever = 20');
+      await later(61);
+      await write(game, 'playtime_forever = 30');
+      expect((await eventsOf(game)).map((event) => event.changes.playtime_forever)).toEqual([
+        [0, 20],
+        [20, 30],
+      ]);
+    });
+
+    it('leaves no trace of a game started and moved back to the backlog within a minute', async () => {
+      const game = await addGame({});
+      await change(game, { status: 'playing', started_at: '2026-11-19T20:00:00Z' });
+      await later(45);
+      await change(game, { status: 'backlog', started_at: null });
+
+      expect(await countEvents()).toBe(0);
+      expect(await statusOf(game)).toBe('backlog');
+
+      // Past the minute it was played and put away: both are kept.
+      await change(game, { status: 'playing', started_at: '2026-11-19T20:05:00Z' });
+      await later(61);
+      await change(game, { status: 'backlog', started_at: null });
+      expect(await countEvents()).toBe(2);
     });
 
     it('keeps what an Undo did not put back: a game stopped and started again has a new start date', async () => {

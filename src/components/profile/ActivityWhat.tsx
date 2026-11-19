@@ -6,8 +6,9 @@ import { ACTIVITY_LINE } from './activity-line';
  * the rating it came with ("Finished on PC and rated it 9/10"). Each of those
  * is only there when there is one to say, and the sentence reads without it
  * ("Finished", "Finished on PC", "Finished and rated it 9/10"). When it
- * happened is the row's to say, at its far end. Only what was done has the
- * icon and the color; the rest reads on from it.
+ * happened is the row's to say, at its far end. A start that came from a pick
+ * ends by saying which ("Started playing on PS5, picked at random"). Only what
+ * was done has the icon and the color; the rest reads on from it.
  */
 export function ActivityWhat({
   line,
@@ -23,6 +24,12 @@ export function ActivityWhat({
     // A rating given by itself is the whole line ("Rated 9/10"): not said twice.
     line.rating != null && line.kind !== 'rated' && `and rated it ${line.rating}/10`,
   ].filter(Boolean);
+  const picked =
+    line.pickedBy === 'random'
+      ? ', picked at random'
+      : line.pickedBy === 'questions'
+        ? ', picked by Pick My Game'
+        : '';
   return (
     <span>
       <span className={text}>
@@ -32,6 +39,7 @@ export function ActivityWhat({
         {what(line)}
       </span>
       {rest.length > 0 && ` ${rest.join(' ')}`}
+      {picked}
     </span>
   );
 }

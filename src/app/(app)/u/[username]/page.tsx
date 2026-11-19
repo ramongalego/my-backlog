@@ -69,6 +69,8 @@ async function OwnProfile() {
     queries.favoriteGames(userId, supabase),
     // What Recent activity is drawn from, besides the games themselves.
     queries.history(userId, supabase),
+    // Which starts came from a pick.
+    queries.playedPicks(userId, supabase),
     // For the game dialog (a queued game shows as Queue), as Games and Stats do.
     queries.queue(userId, supabase),
   ]);

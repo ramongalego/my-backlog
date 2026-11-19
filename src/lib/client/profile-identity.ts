@@ -35,6 +35,14 @@ export function saveProfilePrivacy(isPrivate: boolean): Promise<ApiResult<{ priv
   });
 }
 
+/** Whether the AI features are offered (and anything is sent to a model). */
+export function saveAiFeatures(enabled: boolean): Promise<ApiResult<{ enabled: boolean }>> {
+  return apiRequest('/api/profile/ai', json('PUT', { enabled }), {
+    failed: "Couldn't save that. Please try again.",
+    tooMany: TOO_MANY,
+  });
+}
+
 /** Already made square (see squareAvatar). */
 export function uploadAvatar(picture: Blob): Promise<ApiResult<{ avatarUrl: string }>> {
   const form = new FormData();

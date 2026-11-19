@@ -19,7 +19,7 @@ export function CrashScreen({ error, retry }: { error: unknown; retry: () => voi
     // The landmark the root layout's "Skip to main content" link goes to.
     <main
       id="main-content"
-      className="min-h-screen bg-ink-950 flex flex-col items-center justify-center text-center px-6"
+      className="flex-1 bg-ink-950 flex flex-col items-center justify-center text-center px-6"
     >
       <Gamepad2 className="w-8 h-8 text-ink-600 mb-8" aria-hidden="true" />
       <h1 className="text-2xl font-semibold tracking-tight text-ink-50 mb-2">

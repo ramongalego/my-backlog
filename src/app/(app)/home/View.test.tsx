@@ -38,9 +38,25 @@ jest.mock('@/app/(app)/home/Skeleton', () => ({
   HomeLoading: () => null,
 }));
 jest.mock('@/components/suggest/SuggestionModal', () => ({
-  SuggestionModal: ({ isOpen, mode }: { isOpen: boolean; mode: string }) =>
-    isOpen ? <div data-testid="suggestion-modal" data-mode={mode} /> : null,
+  SuggestionModal: ({
+    isOpen,
+    mode,
+    randomOnly,
+  }: {
+    isOpen: boolean;
+    mode: string;
+    randomOnly?: boolean;
+  }) =>
+    isOpen ? (
+      <div
+        data-testid="suggestion-modal"
+        data-mode={mode}
+        data-random-only={String(!!randomOnly)}
+      />
+    ) : null,
 }));
+let mockAiOn = true;
+jest.mock('@/hooks/useAiFeatures', () => ({ useAiFeatures: () => mockAiOn }));
 jest.mock('@/components/home/CurrentlyPlaying', () => ({
   CurrentlyPlaying: ({ game, reveal }: { game: GameWithImage; reveal?: boolean }) => (
     <div data-testid="currently-playing" data-reveal={reveal}>
@@ -112,6 +128,7 @@ const mockGame: GameWithImage = {
 };
 
 beforeEach(() => {
+  mockAiOn = true;
   mockUseGameLibrary.mockReturnValue({ ...baseLibrary });
 });
 
@@ -409,4 +426,40 @@ describe('HomeContent — the queue', () => {
     expect(screen.getByRole('button', { name: 'Add a game' })).toBeInTheDocument();
     expect(screen.getByText(/Queue a game from your library/)).toBeInTheDocument();
   });
+});
+
+describe('HomeContent — with the AI features turned off', () => {
+  beforeEach(() => {
+    mockAiOn = false;
+  });
+
+  it('offers a random pick alone, with no questions to answer', () => {
+    render(<HomePage />);
+    expect(screen.queryByRole('button', { name: 'Pick My Game' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick a random game' }));
+    expect(baseLibrary.currentGame.handleRandomPick).toHaveBeenCalled();
+    expect(screen.queryByTestId('suggestion-modal')).not.toBeInTheDocument();
+  });
+
+  it('picks a random game for the queue while one is playing', async () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      currentGame: { ...baseLibrary.currentGame, currentlyPlaying: mockGame },
+    });
+    render(<HomePage />);
+    expect(screen.queryByRole('button', { name: 'Pick My Next Game' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick a random game' }));
+    const picker = await screen.findByTestId('suggestion-modal');
+    expect(picker).toHaveAttribute('data-mode', 'queue');
+    expect(picker).toHaveAttribute('data-random-only', 'true');
+  });
+});
+
+it('opens the picker on its questions with the AI features on', async () => {
+  render(<HomePage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pick My Game' }));
+  expect(await screen.findByTestId('suggestion-modal')).toHaveAttribute(
+    'data-random-only',
+    'false',
+  );
 });

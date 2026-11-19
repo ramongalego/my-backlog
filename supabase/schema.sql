@@ -30,6 +30,9 @@ create table profiles (
   -- Seen by anyone with its address (/u/<username>) unless its player makes it
   -- private on Settings.
   is_private boolean not null default false,
+  -- The player turned the AI features off on Settings: the app then sends
+  -- nothing from their library to OpenAI (the routes that would refuse).
+  ai_disabled boolean not null default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -171,7 +174,7 @@ create table game_events (
   -- arriving, it is what the game started with, every "before" null.
   changes jsonb not null,
   -- When the first change of the event was made, and the last one folded
-  -- into it (changes within 30 seconds of each other are one event).
+  -- into it (changes within a minute of each other are one event).
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   -- Removing a game (or disconnecting Steam, or deleting the account) takes
@@ -728,7 +731,7 @@ grant execute on function
 --
 -- One sitting is one event. An action in the app is often several writes to
 -- a game (adding one as finished is an insert, then a status change). So a
--- change to a game within 30 seconds of its last one is folded into that
+-- change to a game within a minute of its last one is folded into that
 -- event, which holds the net change: what each value was before the first
 -- write and what it is after the last. If that comes to nothing the event
 -- goes. An arrival stays an arrival, with what the game ended up starting
@@ -923,9 +926,9 @@ begin
   if v_undoing then
     -- The change being undone was made "ago" seconds back (a day at most; an
     -- Undo that doesn't say counts as just now). Its event is the first one
-    -- touched since: the 30 seconds are the sitting it may have joined.
+    -- touched since: the minute is the sitting it may have joined.
     v_ago := coalesce(current_setting('mybacklog.undo_ago', true), '');
-    v_since := now() - make_interval(secs => (30 + case
+    v_since := now() - make_interval(secs => (60 + case
       when v_ago ~ '^[0-9]{1,9}(\.[0-9]{1,6})?$' then least(v_ago::numeric, 86400)
       else 0
     end)::double precision);
@@ -976,7 +979,7 @@ begin
     -- that come with a move are another platform's total, and folding the
     -- two would lose the time played.
     v_fold := found
-      and v_into.updated_at > now() - interval '30 seconds'
+      and v_into.updated_at > now() - interval '1 minute'
       and not (
         p_changes ? 'platform'
         and v_into.kind <> 'added'

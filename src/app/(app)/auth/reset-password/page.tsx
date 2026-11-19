@@ -23,7 +23,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
   const linkInvalid = !!error || !user;
 
   return (
-    <main id="main-content" className="min-h-screen flex items-center justify-center px-4 pt-20">
+    <main id="main-content" className="flex-1 flex items-center justify-center px-4 pt-20">
       <Panel className="w-full max-w-md sm:p-8">
         <h1 className="text-xl font-semibold tracking-tight text-ink-50 mb-6">
           Reset your password

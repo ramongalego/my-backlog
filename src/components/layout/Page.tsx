@@ -8,7 +8,7 @@ export const PAGE_CONTAINER = 'max-w-7xl mx-auto px-4 sm:px-6';
 /** Modals go in `overlay`, outside <main>. */
 export function Page({ children, overlay }: { children: ReactNode; overlay?: ReactNode }) {
   return (
-    <div className="min-h-screen bg-ink-950">
+    <div className="flex-1 bg-ink-950">
       <main id="main-content" className={`pt-20 sm:pt-24 pb-16 ${PAGE_CONTAINER}`}>
         {children}
       </main>

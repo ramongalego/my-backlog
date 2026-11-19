@@ -32,7 +32,7 @@ async function fetchAuthSession(): Promise<AuthSession> {
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'steam_id, steam_username, steam_avatar, display_name, avatar_url, username, is_private',
+      'steam_id, steam_username, steam_avatar, display_name, avatar_url, username, is_private, ai_disabled',
     )
     .eq('id', user.id)
     .single();
@@ -93,6 +93,7 @@ export function useUpdateSessionProfile() {
               avatar_url: null,
               username: null,
               is_private: null,
+              ai_disabled: null,
               ...session.profile,
               ...change,
             },

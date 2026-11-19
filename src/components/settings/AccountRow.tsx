@@ -8,7 +8,8 @@ export function AccountRow({
   action,
   wideAction,
 }: {
-  label: string;
+  /** Left out where the value is the row's own name (a setting its switch already answers). */
+  label?: string;
   value: ReactNode;
   note?: ReactNode;
   action?: ReactNode;
@@ -23,10 +24,13 @@ export function AccountRow({
         wideAction ? 'max-[359px]:flex-col max-[359px]:items-start' : ''
       }`}
     >
-      <div className="min-w-0 max-w-full">
-        <p className="text-xs text-ink-500">{label}</p>
+      <div className="min-w-0">
+        {label && <p className="text-xs text-ink-500">{label}</p>}
         {typeof value === 'string' ? (
-          <TruncatedText as="p" className="mt-0.5 truncate text-sm text-ink-100">
+          <TruncatedText
+            as="p"
+            className={`truncate text-sm text-ink-100 ${label ? 'mt-0.5' : ''}`}
+          >
             {value}
           </TruncatedText>
         ) : (

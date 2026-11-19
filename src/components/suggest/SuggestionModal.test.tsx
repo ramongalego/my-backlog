@@ -42,13 +42,20 @@ const celeste = {
   last_played_at: null,
 };
 
-function setup(mode: 'play' | 'queue') {
+function setup(mode: 'play' | 'queue', randomOnly = false) {
   const onPick = jest.fn();
   const onPlayNow = jest.fn();
   const onClose = jest.fn();
   const { unmount } = render(
     <QueryClientProvider client={new QueryClient()}>
-      <SuggestionModal isOpen onClose={onClose} onPick={onPick} onPlayNow={onPlayNow} mode={mode} />
+      <SuggestionModal
+        isOpen
+        onClose={onClose}
+        onPick={onPick}
+        onPlayNow={onPlayNow}
+        mode={mode}
+        randomOnly={randomOnly}
+      />
     </QueryClientProvider>,
   );
   return { onPick, onPlayNow, onClose, unmount };
@@ -326,5 +333,45 @@ describe('keeping the picks', () => {
     await answerQuestions();
     fireEvent.click(screen.getByRole('button', { name: 'Play now' }));
     expect(await outcomes()).toEqual([[90, 'played']]);
+  });
+});
+
+describe('with the AI features turned off (random only)', () => {
+  it('opens straight on a random pick, with no questions and nothing asked of a model', async () => {
+    const { onPick, onClose } = setup('queue', true);
+    await act(async () => {});
+
+    expect(screen.getByRole('heading', { name: 'Celeste' })).toBeInTheDocument();
+    expect(screen.getByText('Left to chance')).toBeInTheDocument();
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(findRandomBacklogGame).toHaveBeenCalledTimes(1);
+    expect(recordRandomPick).toHaveBeenCalledTimes(1);
+    expect(mockFetch).not.toHaveBeenCalledWith('/api/suggest', expect.anything());
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Add to Queue/i }));
+    });
+    expect(onPick).toHaveBeenCalledWith(celeste);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('rolls again from the game it landed on', async () => {
+    setup('queue', true);
+    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Roll again/ }));
+    });
+    expect(findRandomBacklogGame).toHaveBeenCalledTimes(2);
+  });
+
+  it('has no questions to go back to when nothing is left to pick: only trying again', async () => {
+    jest.mocked(findRandomBacklogGame).mockResolvedValue({ error: 'none' });
+    setup('queue', true);
+    await act(async () => {});
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/no backlog game left to pick/);
+    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change answers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
   });
 });

@@ -85,6 +85,7 @@ export default function SettingsView() {
           isPrivate: settings.profile.isPrivate,
           onSetPrivate: settings.profile.setPrivate,
         }}
+        ai={{ enabled: settings.ai.enabled, onSetEnabled: settings.ai.setEnabled }}
         username={settings.username}
         onChangeUsername={() => setChanging('username')}
         email={settings.email}

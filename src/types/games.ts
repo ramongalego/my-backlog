@@ -10,6 +10,8 @@ export interface Profile {
   username: string | null;
   /** Other people can't see the profile (/u/<username>). Null only until it's read. */
   is_private: boolean | null;
+  /** The AI features are turned off (Settings); null or false leaves them on. */
+  ai_disabled: boolean | null;
 }
 
 export interface Game {

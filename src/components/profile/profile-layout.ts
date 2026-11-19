@@ -22,6 +22,10 @@ export const FIGURE_STRIP = {
 };
 export const FIGURE_CELL = 'px-3 first:pl-0 last:pr-0 max-[359px]:px-2 sm:px-5 lg:px-6';
 
+/** A side panel's heading (Platforms, Ratings): its name and count over a hairline. */
+export const SIDE_PANEL_HEADING =
+  'flex items-baseline justify-between gap-3 border-b border-ink-800 pb-1.5';
+
 /** The two columns under the header: what the profile shows, then the account. */
 export const PROFILE_COLUMNS = 'grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12';
 

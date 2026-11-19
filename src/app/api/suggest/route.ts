@@ -14,6 +14,7 @@ import { suggestRequestSchema } from '@/lib/validations/suggest';
 import { AI_MODEL, OPENAI_OPTIONS, isOutOfBudget } from '@/lib/server/ai-model';
 import { MAX_PROMPT_CHARS } from '@/lib/prompt-limits';
 import { recordPick } from '@/lib/server/picks';
+import { AI_OFF_MESSAGE, aiFeaturesOn } from '@/lib/server/ai-features';
 
 // Two attempts of up to 20 seconds each (OPENAI_OPTIONS), plus the reads.
 export const maxDuration = 60;
@@ -73,6 +74,11 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return jsonError('Unauthorized', 401);
+  }
+
+  // Before anything is read for the prompt: off means nothing is sent.
+  if (!(await aiFeaturesOn(supabase, user.id))) {
+    return jsonError(AI_OFF_MESSAGE, 403);
   }
 
   // Per user, not IP, so players behind a shared NAT don't throttle each other.

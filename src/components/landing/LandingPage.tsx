@@ -22,7 +22,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-ink-950 flex flex-col">
+    <div className="flex-1 bg-ink-950 flex flex-col">
       <main id="main-content" className="pt-16 flex-1">
         <Hero onOpen={openModal} />
         <PickerDemo onSignUp={() => openModal('signup')} />

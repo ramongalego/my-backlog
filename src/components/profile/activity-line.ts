@@ -38,7 +38,11 @@ export const ACTIVITY_LINE: Record<
   paused: { icon: Pause, text: NEUTRAL, what: () => 'Paused, moved to queue' },
   unqueued: { icon: ListMinus, text: NEUTRAL, what: () => 'Taken off the queue' },
   // The rating is the line: no second star at its end.
-  rated: { icon: Star, text: NEUTRAL, what: (line) => `Rated ${line.rating}/10` },
+  rated: {
+    icon: Star,
+    text: NEUTRAL,
+    what: (line) => `${line.changed ? 'Changed rating to' : 'Rated'} ${line.rating}/10`,
+  },
   // The platform icon, as on the Games page's platform filter (not the logo's gamepad).
   moved: { icon: MonitorSmartphone, text: NEUTRAL, what: (line) => `Moved to ${line.to}` },
   favorite: { icon: Heart, text: NEUTRAL, what: () => 'Added to favorites' },

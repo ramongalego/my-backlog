@@ -16,6 +16,7 @@ const steam = {
   avatar_url: null,
   username: 'ankrath',
   is_private: false,
+  ai_disabled: false,
 };
 
 function setup(session: unknown) {
@@ -59,6 +60,7 @@ describe('useUpdateSessionProfile', () => {
       avatar_url: null,
       username: null,
       is_private: null,
+      ai_disabled: null,
     });
   });
 

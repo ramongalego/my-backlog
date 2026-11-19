@@ -38,6 +38,11 @@ jest.mock('@/lib/server/rate-limit', () => ({
   },
 }));
 jest.mock('@/lib/server/picks', () => ({ recordPick: jest.fn() }));
+let aiOn = true;
+jest.mock('@/lib/server/ai-features', () => ({
+  AI_OFF_MESSAGE: 'AI features are turned off in Settings',
+  aiFeaturesOn: async () => aiOn,
+}));
 jest.mock('openai', () =>
   jest.fn().mockImplementation(() => ({ chat: { completions: { create } } })),
 );
@@ -135,6 +140,7 @@ const suggest = (body: unknown = { mood: 'relaxed', energy: 'low', time: 'long' 
 
 beforeEach(() => {
   user = { id: 'user-1' };
+  aiOn = true;
   configured = true;
   refused = [];
   limitsChecked.length = 0;
@@ -162,6 +168,18 @@ describe('before the model is asked', () => {
   ])('refuses %s', async (_, body) => {
     expect((await suggest(body)).status).toBe(400);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a player who turned the AI features off, before anything is read or counted', async () => {
+    aiOn = false;
+    const reads = jest.mocked(fetchAllRows).mock.calls.length;
+    const res = await suggest();
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'AI features are turned off in Settings' });
+    expect(create).not.toHaveBeenCalled();
+    expect(jest.mocked(fetchAllRows).mock.calls).toHaveLength(reads);
+    expect(limitsChecked).toEqual([]);
+    expect(recordPick).not.toHaveBeenCalled();
   });
 
   it('stops a player past the per-minute limit', async () => {

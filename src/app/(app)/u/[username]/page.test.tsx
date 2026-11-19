@@ -134,6 +134,7 @@ describe('the player looking at their own', () => {
       'playing',
       'favoriteGames',
       'history',
+      'playedPicks',
       'queue',
     ]);
     expect(asked.filter((query) => query.stream).map((query) => query.queryKey[0])).toEqual([

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Play, Plus } from 'lucide-react';
+import { Dices, Play, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CoverThumb } from '@/components/games/CoverArt';
 import { PickIcon } from '@/components/suggest/PickIcon';
@@ -21,6 +21,8 @@ interface UpNextProps {
   onPlayNext: () => void;
   onAddGame: () => void;
   onPickNext: () => void;
+  /** With the AI features off there are no questions: the pick is a random one. */
+  randomOnly?: boolean;
 }
 
 /** The game that takes over when this one's finished, and picking another for the queue. */
@@ -32,6 +34,7 @@ export function UpNext({
   onPlayNext,
   onAddGame,
   onPickNext,
+  randomOnly = false,
 }: UpNextProps) {
   // The first queued game that's out; if none is, the first one, to say when it is.
   const zone = useReleaseZone();
@@ -97,8 +100,8 @@ export function UpNext({
         </Button>
       ) : (
         <Button variant="secondary" className="group cursor-pointer" onClick={onPickNext}>
-          <PickIcon />
-          <span>Pick My Next Game</span>
+          {randomOnly ? <Dices className="w-4 h-4" aria-hidden="true" /> : <PickIcon />}
+          <span>{randomOnly ? 'Pick a random game' : 'Pick My Next Game'}</span>
         </Button>
       )}
     </div>
