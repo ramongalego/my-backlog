@@ -928,3 +928,103 @@ describe('recentActivity, a rating', () => {
     expect(given.lines).toEqual([{ kind: 'rated', rating: 9 }]);
   });
 });
+
+describe("recentActivity, where the player's time zone is not known (what other people see)", () => {
+  // Noon here, so the day it was logged is the 20th wherever this runs.
+  const loggedAt = new Date(2026, 10, 20, 12).toISOString();
+  const finish = (day: string) =>
+    event(
+      7,
+      'status',
+      {
+        status: ['playing', 'finished'],
+        finished_at: [null, `${day}T00:00:00+00:00`],
+        rating: [null, 9],
+      },
+      loggedAt,
+    );
+  const finishedHades = (day: string) =>
+    game({
+      id: 7,
+      name: 'Hades',
+      status: 'finished',
+      rating: 9,
+      finished_at: `${day}T00:00:00+00:00`,
+    });
+
+  it('takes a finish dated the day before or after it was logged as logged that day: it was, in their zone', () => {
+    for (const day of ['2026-11-19', '2026-11-20', '2026-11-21']) {
+      const [entry, ...rest] = recentActivity([finishedHades(day)], null, [finish(day)], {
+        zoneKnown: false,
+      });
+      // At the moment it was logged, not as a day in the past; on their own day.
+      expect([entry.at, entry.day]).toEqual([loggedAt, day]);
+      // And said once: the game's own finish isn't listed beside it.
+      expect(rest).toEqual([]);
+    }
+  });
+
+  it('still keeps a finish from further back in the past', () => {
+    const [entry] = recentActivity([finishedHades('2026-11-17')], null, [finish('2026-11-17')], {
+      zoneKnown: false,
+    });
+    expect([entry.at, entry.day]).toEqual(['2026-11-17', '2026-11-17']);
+  });
+
+  it('goes by the exact day where the zone is known: yesterday is in the past', () => {
+    const [entry] = recentActivity([finishedHades('2026-11-19')], null, [finish('2026-11-19')]);
+    expect([entry.at, entry.day]).toEqual(['2026-11-19', '2026-11-19']);
+  });
+});
+
+describe('recentActivity, a pick and the starts around it', () => {
+  const start = (id: number, when: string) => ({
+    ...event(7, 'status', { status: ['backlog', 'playing'] }, when),
+    id,
+  });
+  const back = (id: number, when: string) => ({
+    ...event(7, 'status', { status: ['playing', 'backlog'] }, when),
+    id,
+  });
+
+  it('labels the one start it made: the same game started again by hand soon after says nothing', () => {
+    const entries = recentActivity(
+      [hades],
+      null,
+      [
+        start(903, '2026-11-17T20:01:30+00:00'),
+        back(902, '2026-11-17T20:01:10+00:00'),
+        start(901, '2026-11-17T20:00:03+00:00'),
+      ],
+      { picks: [{ game_id: 7, kind: 'random', answered_at: '2026-11-17T20:00:00+00:00' }] },
+    );
+    const lines = entries.flatMap((entry) => entry.updates ?? [entry]).map((one) => one.lines[0]);
+    expect(lines).toEqual([
+      { kind: 'started' },
+      { kind: 'backlog' },
+      { kind: 'started', pickedBy: 'random' },
+    ]);
+  });
+
+  it('says nothing of a start logged minutes after Play was pressed', () => {
+    const [entry] = recentActivity([hades], null, [start(901, '2026-11-17T20:05:00+00:00')], {
+      picks: [{ game_id: 7, kind: 'random', answered_at: '2026-11-17T20:00:00+00:00' }],
+    });
+    expect(entry.lines).toEqual([{ kind: 'started' }]);
+  });
+});
+
+describe('recentActivity, an event changed again much later (a late Undo)', () => {
+  it('stays where it was: only a change within the sitting moves when it happened', () => {
+    const added = (updated_at: string) => ({
+      ...event(7, 'added', { status: [null, 'backlog'] }, '2026-11-17T15:00:00+00:00'),
+      updated_at,
+    });
+    const [soon] = recentActivity([hades], null, [added('2026-11-17T15:00:40+00:00')]);
+    expect(soon.at).toBe('2026-11-17T15:00:40+00:00');
+
+    // An Undo from a toast that waited twenty minutes.
+    const [late] = recentActivity([hades], null, [added('2026-11-17T15:20:00+00:00')]);
+    expect(late.at).toBe('2026-11-17T15:00:00+00:00');
+  });
+});

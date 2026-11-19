@@ -74,8 +74,19 @@ export interface ActivityEvent extends HistoryEvent {
   updated_at?: string;
 }
 
-/** When an event happened: its last change, where the history says. */
-const happened = (event: ActivityEvent) => event.updated_at ?? event.created_at;
+/**
+ * The longest a sitting runs from its first change to its last. An Undo
+ * pressed later than this (a toast that waited in a background tab) is
+ * folded into the event it undoes and moves its last change to now: that
+ * isn't when the event happened.
+ */
+const SITTING_MS = 10 * 60 * 1000;
+
+/** When an event happened: its last change, where the history says and it is a sitting. */
+function happened(event: ActivityEvent): string {
+  const { created_at: first, updated_at: last } = event;
+  return last && Date.parse(last) - Date.parse(first) <= SITTING_MS ? last : first;
+}
 
 type PickKind = 'random' | 'questions';
 
@@ -154,7 +165,34 @@ const GROUPABLE = new Set<ActivityKind>([
  * How far apart Play on a pick and the start it made can be logged. They are
  * saved by two requests, a moment apart, and either can land first.
  */
-const PICKED_WITHIN_MS = 10 * 60 * 1000;
+const PICKED_WITHIN_MS = 2 * 60 * 1000;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Whether two "YYYY-MM-DD" days are the same or next to each other. */
+const withinADay = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) <= DAY_MS;
+
+/**
+ * Which start each pick made, by the event's id: the start of that game
+ * logged closest to Play being pressed. One start for a pick, so the same
+ * game started again by hand soon after says nothing of it.
+ */
+function startsFromPicks(events: ActivityEvent[], picks: PlayedPick[]): Map<number, PickKind> {
+  const starts = events.filter((event) => event.changes.status?.[1] === 'playing');
+  const made = new Map<number, PickKind>();
+  for (const pick of picks) {
+    const pressed = Date.parse(pick.answered_at);
+    const apart = (event: ActivityEvent) => Math.abs(Date.parse(happened(event)) - pressed);
+    const [start] = starts
+      .filter(
+        (event) =>
+          event.game_id === pick.game_id && !made.has(event.id) && apart(event) <= PICKED_WITHIN_MS,
+      )
+      .sort((a, b) => apart(a) - apart(b));
+    if (start) made.set(start.id, pick.kind);
+  }
+  return made;
+}
 
 /** Things done to one game this close together on one day, with nothing else between, are a run. */
 const SAME_GO_MS = 12 * 60 * 60 * 1000;
@@ -233,22 +271,23 @@ export function recentActivity(
   {
     only,
     picks = [],
+    zoneKnown = true,
   }: {
     /** Leaves out every line of another kind, as if it never happened. */
     only?: ReadonlySet<ActivityKind>;
     /** Picks the player pressed Play on, so a start can say it came from one. */
     picks?: PlayedPick[];
+    /**
+     * False where the player's time zone isn't known (a server, building what
+     * other people see): days are then worked out in another zone, a day off
+     * either way from theirs.
+     */
+    zoneKnown?: boolean;
   } = {},
 ): ActivityEntry[] {
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
 
-  // The pick a start came from: Play pressed on that game as it was logged.
-  const pickedBy = (event: ActivityEvent): PickKind | undefined =>
-    picks.find(
-      (pick) =>
-        pick.game_id === event.game_id &&
-        Math.abs(Date.parse(pick.answered_at) - Date.parse(happened(event))) <= PICKED_WITHIN_MS,
-    )?.kind;
+  const pickedBy = startsFromPicks(events, picks);
 
   const logged = events.flatMap((event): Item[] => {
     const game = shown.get(event.game_id);
@@ -257,15 +296,18 @@ export function recentActivity(
     const { day: chosen, rating, ...rest }: Told = what;
     const line: ActivityLine = rest;
     const loggedOn = toLocalIsoDate(new Date(happened(event)));
+    // Logged on the day the player gave. Where their zone isn't known, the
+    // day before or after counts too: 9pm on the 19th in New York is already
+    // the 20th here.
+    const thatDay =
+      !!chosen && (chosen === loggedOn || (!zoneKnown && withinADay(chosen, loggedOn)));
     // A finish or a drop happened on the day the player says, which can be
     // years before it was logged: that is where it sits in the list, so what
     // is in the past stays there and isn't shown as recent.
-    const dated = chosen && chosen !== loggedOn ? chosen : null;
+    const dated = chosen && !thatDay ? chosen : null;
     if (rating != null) line.rating = rating;
-    if (line.kind === 'started') {
-      const kind = pickedBy(event);
-      if (kind) line.pickedBy = kind;
-    }
+    const picked = line.kind === 'started' ? pickedBy.get(event.id) : undefined;
+    if (picked) line.pickedBy = picked;
     return [
       {
         at: dated ?? happened(event),
@@ -273,7 +315,7 @@ export function recentActivity(
         key: `event-${event.id}`,
         game,
         line,
-        day: dated ?? loggedOn,
+        day: chosen ?? loggedOn,
         rating: rating ?? null,
       },
     ];

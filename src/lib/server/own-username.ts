@@ -1,8 +1,12 @@
 import 'server-only';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 
-/** The signed-in player's own username, or null when nobody is signed in. */
-export async function ownUsername(): Promise<string | null> {
+/**
+ * The signed-in player's own username, or null when nobody is signed in. Read
+ * once in a request, whoever asks (a layout, its page, the page's metadata).
+ */
+export const ownUsername = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   // Read from the token: no round trip to Supabase Auth.
   const { data } = await supabase.auth.getClaims();
@@ -15,4 +19,4 @@ export async function ownUsername(): Promise<string | null> {
     .eq('id', userId)
     .maybeSingle<{ username: string }>();
   return own?.username ?? null;
-}
+});

@@ -34,7 +34,6 @@ export interface PublicProfile {
   /** The display name or the Steam name, when it can be shown to others; else the username. */
   name: string;
   avatar: string | null;
-  /** "January 2026", or null when that isn't known. */
   figures: ProfileFigures;
   /** Finished games at each rating, 0 to 10; null until enough are rated. */
   ratings: number[] | null;

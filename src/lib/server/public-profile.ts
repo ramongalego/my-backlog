@@ -1,7 +1,7 @@
 import 'server-only';
-import { unstable_cache } from 'next/cache';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { cache } from 'react';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
+import { reuse } from '@/lib/server/reuse';
 import {
   loadCurrentlyPlaying,
   loadFavoriteGames,
@@ -25,11 +25,14 @@ import { publicActivity, type PublicProfile } from '@/lib/account/public-profile
 const HISTORY_READ = 200;
 
 /**
- * How long what a profile's library comes to is reused. Each read takes the
- * whole library, and anyone can ask for any profile: this keeps a page being
- * hammered to one read a minute.
+ * How long what a profile's library comes to, and whether a name can be
+ * shown, are reused. Each read of a library takes all of it, and anyone can
+ * ask for any profile: this keeps a page being hammered to one read a minute,
+ * and nothing a visitor is shown is older than that.
  */
-const REUSE_SECONDS = 60;
+const REUSE_MS = 60 * 1000;
+
+const NO_KEY = 'Public profiles need the Supabase secret key';
 
 interface ProfileRow {
   id: string;
@@ -42,25 +45,39 @@ interface ProfileRow {
 }
 
 /**
- * The name the player chose, else their Steam name, when the database says it
- * can be shown to others (name_allowed); else the username. A Steam name isn't
- * picked here, so it's checked every time. Never the email.
+ * Whether the database says a name can be shown to others (name_allowed). The
+ * answer depends on the name alone, so it is reused by the name.
  */
-async function shownName(service: SupabaseClient, profile: ProfileRow): Promise<string> {
+const nameAllowed = reuse(
+  async (name: string): Promise<boolean> => {
+    const service = tryCreateServiceClient();
+    if (!service) throw new Error(NO_KEY);
+    const { data, error } = await service.rpc('name_allowed', { p_name: name });
+    if (error) throw error;
+    return data === true;
+  },
+  { ms: REUSE_MS, max: 2000 },
+);
+
+/**
+ * The name the player chose, else their Steam name, when it can be shown to
+ * others; else the username. A Steam name isn't picked here, so it's checked
+ * like any other. Never the email.
+ */
+async function shownName(profile: ProfileRow): Promise<string> {
   for (const name of [profile.display_name, profile.steam_username]) {
     const candidate = name?.trim();
     if (!candidate) continue;
-    const { data: allowed, error } = await service.rpc('name_allowed', { p_name: candidate });
-    if (error) {
+    try {
+      if (await nameAllowed(candidate)) return candidate;
+    } catch (error) {
       // Unchecked is not shown: the username is always safe.
       console.error('Checking a public name failed:', error);
       break;
     }
-    if (allowed === true) return candidate;
   }
   return profile.username;
 }
-
 type FromLibrary = Pick<
   PublicProfile,
   'figures' | 'ratings' | 'favorites' | 'platforms' | 'library' | 'activity'
@@ -69,7 +86,7 @@ type FromLibrary = Pick<
 /** What the player's library comes to: the part worth reusing for a minute. */
 async function readLibrary(userId: string): Promise<FromLibrary> {
   const service = tryCreateServiceClient();
-  if (!service) throw new Error('Public profiles need the Supabase secret key');
+  if (!service) throw new Error(NO_KEY);
 
   const [games, picked, playing, history, picks] = await Promise.all([
     loadGamesList(service, userId),
@@ -79,8 +96,13 @@ async function readLibrary(userId: string): Promise<FromLibrary> {
     loadPlayedPicks(service, userId),
   ]);
   const platforms = countPlatforms(games, 'all');
-  // Only the highlights; folded into rows as the player's own list is.
-  const activity = recentActivity(games, playing, history, { only: HIGHLIGHTS, picks });
+  // Only the highlights; folded into rows as the player's own list is. Worked
+  // out here, on a server: which day it was for the player isn't known.
+  const activity = recentActivity(games, playing, history, {
+    only: HIGHLIGHTS,
+    picks,
+    zoneKnown: false,
+  });
 
   return {
     figures: profileFigures(games),
@@ -98,28 +120,21 @@ async function readLibrary(userId: string): Promise<FromLibrary> {
   };
 }
 
-// The key's number goes up when what's read changes shape.
-const reusedLibrary = unstable_cache(readLibrary, ['public-profile-library-3'], {
-  revalidate: REUSE_SECONDS,
-});
+const reusedLibrary = reuse(readLibrary, { ms: REUSE_MS, max: 500 });
 
 /**
- * A profile as anyone may see it, or null when there's none to show: nobody
- * has that username, or its player made it private. Nothing that couldn't be a
- * username reaches the database.
- *
- * Read with the server's key, since nobody can read another player's rows.
- * The profile's own row is read afresh every time, so a profile made private,
- * renamed or given a new picture shows at once; what its library comes to is
- * reused for a minute. Only what the page shows leaves this function.
+ * The profile with that username as it may be shown, or null: nobody has it,
+ * its player made it private, or it could not be a username at all (which
+ * never reaches the database). Read afresh on every request, and once in
+ * each: a profile made private, renamed or given a new picture shows at once.
  */
-export async function getPublicProfile(typed: string): Promise<PublicProfile | null> {
+const shownRow = cache(async (typed: string): Promise<ProfileRow | null> => {
   const username = cleanUsername(typed);
   // Past this it holds nothing but letters, numbers, - and _.
   if (usernameProblem(username)) return null;
 
   const service = tryCreateServiceClient();
-  if (!service) throw new Error('Public profiles need the Supabase secret key');
+  if (!service) throw new Error(NO_KEY);
 
   const { data: profile, error } = await service
     .from('profiles')
@@ -127,12 +142,30 @@ export async function getPublicProfile(typed: string): Promise<PublicProfile | n
     .eq('username', username)
     .maybeSingle<ProfileRow>();
   if (error) throw error;
-  if (!profile || profile.is_private) return null;
+  return profile && !profile.is_private ? profile : null;
+});
 
-  const [name, fromLibrary] = await Promise.all([
-    shownName(service, profile),
-    reusedLibrary(profile.id),
-  ]);
+/**
+ * Whether there is a profile to show at that address. One read, so a page can
+ * answer "not found" before it starts on anything else; a private profile
+ * answers exactly as one nobody has.
+ */
+export async function publicProfileExists(typed: string): Promise<boolean> {
+  return (await shownRow(typed)) !== null;
+}
+
+/**
+ * A profile as anyone may see it, or null when there's none to show.
+ *
+ * Read with the server's key, since nobody can read another player's rows.
+ * The profile's own row is read afresh; what its library comes to is reused
+ * for a minute. Only what the page shows leaves this function.
+ */
+export async function getPublicProfile(typed: string): Promise<PublicProfile | null> {
+  const profile = await shownRow(typed);
+  if (!profile) return null;
+
+  const [name, fromLibrary] = await Promise.all([shownName(profile), reusedLibrary(profile.id)]);
 
   return {
     username: profile.username,

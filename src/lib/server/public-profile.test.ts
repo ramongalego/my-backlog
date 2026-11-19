@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { getPublicProfile } from '@/lib/server/public-profile';
+import { getPublicProfile, publicProfileExists } from '@/lib/server/public-profile';
 import {
   loadCurrentlyPlaying,
   loadFavoriteGames,
@@ -71,16 +71,9 @@ jest.mock('@/lib/data/loaders', () => ({
   loadRecentHistory: jest.fn(),
   loadPlayedPicks: jest.fn(),
 }));
-// The reuse of a read is Next's; here it only records that it was asked for.
-const mockReused: string[] = [];
-jest.mock('next/cache', () => ({
-  unstable_cache:
-    <A extends unknown[], R>(read: (...args: A) => Promise<R>) =>
-    (...args: A) => {
-      mockReused.push(String(args[0]));
-      return read(...args);
-    },
-}));
+// What a read comes to is reused for a minute: each test starts well past the
+// last one's, so none is handed another's.
+let clock = Date.parse('2026-11-19T12:00:00Z');
 
 const library = [
   game({
@@ -113,7 +106,7 @@ beforeEach(() => {
   refused = [];
   nameCheckError = null;
   asked.length = 0;
-  mockReused.length = 0;
+  clock += 5 * 60 * 1000;
   jest.mocked(loadGamesList).mockReset().mockResolvedValue(library);
   jest.mocked(loadFavoriteGames).mockReset().mockResolvedValue([2, 3, 1]);
   jest.mocked(loadCurrentlyPlaying).mockReset().mockResolvedValue(null);
@@ -121,11 +114,13 @@ beforeEach(() => {
   jest.mocked(loadPlayedPicks).mockReset().mockResolvedValue([]);
   jest.spyOn(console, 'error').mockImplementation(() => {});
   jest.useFakeTimers({
-    now: new Date('2026-11-19T12:00:00Z'),
+    now: new Date(clock),
     doNotFake: ['nextTick', 'setImmediate'],
   });
 });
 afterEach(() => {
+  // A test that moved the clock on leaves the next one starting after it.
+  clock = Math.max(clock, Date.now());
   jest.useRealTimers();
   jest.restoreAllMocks();
 });
@@ -301,6 +296,8 @@ describe('the name it goes by', () => {
   it('skips a name the database refuses to show: the Steam one, then the username', async () => {
     refused = ['Mist Kai'];
     expect((await getPublicProfile('mistkai'))!.name).toBe('Ankrath');
+    // What the database said of a name is reused for a minute too.
+    jest.advanceTimersByTime(61_000);
     refused = ['Mist Kai', 'Ankrath'];
     expect((await getPublicProfile('mistkai'))!.name).toBe('mistkai');
   });
@@ -344,7 +341,7 @@ describe('which profile is read', () => {
       expect(await getPublicProfile(not)).toBeNull();
     }
     expect(asked).toEqual([]);
-    expect(mockReused).toEqual([]);
+    expect(loadGamesList).not.toHaveBeenCalled();
   });
 
   it('fails, rather than saying there is no such profile, when the read fails', async () => {
@@ -355,17 +352,58 @@ describe('which profile is read', () => {
   });
 });
 
-it('reuses what the library comes to, by its account, and reads the profile itself every time', async () => {
-  await getPublicProfile('MistKai');
-  expect(mockReused).toEqual([USER_ID]);
+describe('what is reused, and for how long', () => {
+  it('reads the profile itself every time: a new name, or a profile made private, shows at once', async () => {
+    await getPublicProfile('MistKai');
+    row = { ...mistkai, display_name: 'Kai' };
+    expect((await getPublicProfile('mistkai'))!.name).toBe('Kai');
 
-  // Renamed and made private since: both show at once, whatever is being reused.
-  row = { ...mistkai, display_name: 'Kai' };
-  expect((await getPublicProfile('mistkai'))!.name).toBe('Kai');
-  expect(mockReused).toEqual([USER_ID, USER_ID]);
+    row = { ...mistkai, is_private: true };
+    expect(await getPublicProfile('mistkai')).toBeNull();
+    expect(asked.filter((one) => one.table === 'profiles')).toHaveLength(3);
+    // The library was read once for the three.
+    expect(loadGamesList).toHaveBeenCalledTimes(1);
+  });
 
-  row = { ...mistkai, is_private: true };
-  expect(await getPublicProfile('mistkai')).toBeNull();
-  expect(mockReused).toEqual([USER_ID, USER_ID]);
-  expect(asked.filter((one) => one.table === 'profiles')).toHaveLength(3);
+  it('reuses what the library comes to for a minute, and never shows anything older', async () => {
+    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(4);
+
+    // The player hides everything. Within the minute, visitors get the same read.
+    jest.mocked(loadGamesList).mockResolvedValue([]);
+    jest.advanceTimersByTime(59_000);
+    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(4);
+    expect(loadGamesList).toHaveBeenCalledTimes(1);
+
+    // Past it, the first visitor already gets the library as it is now.
+    jest.advanceTimersByTime(2_000);
+    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(0);
+
+    // However long nobody looks: three days on, still never the old read.
+    jest.mocked(loadGamesList).mockResolvedValue(library);
+    jest.advanceTimersByTime(3 * 24 * 60 * 60 * 1000);
+    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(4);
+    expect(loadGamesList).toHaveBeenCalledTimes(3);
+  });
+
+  it('asks the database about a name once a minute, not on every visit', async () => {
+    await getPublicProfile('mistkai');
+    await getPublicProfile('mistkai');
+    expect(asked.filter((one) => one.checked !== undefined)).toEqual([{ checked: 'Mist Kai' }]);
+  });
+});
+
+describe('whether there is a profile to show', () => {
+  it('is one read of the profile, and nothing of its library', async () => {
+    expect(await publicProfileExists('MistKai')).toBe(true);
+    expect(asked).toEqual([{ table: 'profiles', column: 'username', value: 'mistkai' }]);
+    expect(loadGamesList).not.toHaveBeenCalled();
+  });
+
+  it('answers the same for a private profile as for a username nobody has', async () => {
+    row = { ...mistkai, is_private: true };
+    expect(await publicProfileExists('mistkai')).toBe(false);
+    row = null;
+    expect(await publicProfileExists('nobody')).toBe(false);
+    expect(await publicProfileExists('not a username')).toBe(false);
+  });
 });

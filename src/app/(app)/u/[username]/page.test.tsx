@@ -75,9 +75,9 @@ describe('what the page is called', () => {
     expect((await generateMetadata(at('mistkai'))).title).toBe('@mistkai');
   });
 
-  it('is nothing of its own for a profile that does not exist', async () => {
+  it("is the missing page's for a profile that does not exist", async () => {
     jest.mocked(getPublicProfile).mockResolvedValue(null);
-    expect(await generateMetadata(at('nobody'))).toEqual({});
+    expect(await generateMetadata(at('nobody'))).toEqual({ title: 'Page not found' });
   });
 
   it('is Profile for the player looking at their own, private or not', async () => {

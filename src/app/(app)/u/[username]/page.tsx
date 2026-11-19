@@ -21,13 +21,12 @@ interface PageProps {
   params: Promise<{ username: string }>;
 }
 
-// cache() dedupes the lookups between generateMetadata and the page render.
-const viewer = cache(ownUsername);
+// cache() dedupes the lookup between generateMetadata and the page render.
 const load = cache(getPublicProfile);
 
 /** The signed-in player's own username when this is their address, however it was typed. */
 async function ownAddress(typed: string): Promise<string | null> {
-  const own = await viewer();
+  const own = await ownUsername();
   return own && own === cleanUsername(typed) ? own : null;
 }
 
@@ -44,7 +43,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
   const profile = await load(username);
-  if (!profile) return {};
+  // As the missing page titles itself: the layout answers with it.
+  if (!profile) return { title: 'Page not found' };
   return {
     title:
       profile.name === profile.username
@@ -94,6 +94,8 @@ export default async function ProfilePage({ params }: PageProps) {
   }
 
   const profile = await load(username);
+  // The layout has already answered for an address with no profile; this is
+  // for one made private in the moment between.
   if (!profile) notFound();
   if (username !== profile.username) redirect(publicProfilePath(profile.username));
 

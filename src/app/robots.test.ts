@@ -17,9 +17,9 @@ it('keeps search engines out of every signed-in page, Profile and Settings inclu
   );
 });
 
-it("keeps them out of players' profiles too, which are for whoever is given the link", () => {
+it("lets them read players' profiles, which say noindex themselves: blocked, that would never be seen", () => {
   const [rule] = robots().rules as { disallow: string[] }[];
-  expect(rule.disallow).toContain('/u/');
+  expect(rule.disallow.some((path) => path.startsWith('/u'))).toBe(false);
 });
 
 it('lists the public pages in the sitemap, and points robots at it', () => {
