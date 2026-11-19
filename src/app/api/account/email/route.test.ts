@@ -68,7 +68,7 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-it('checks the password, then asks Supabase to change it, with links back to the profile', async () => {
+it('checks the password, then asks Supabase to change it, with links back to Settings', async () => {
   expect(await change({ ...valid, email: ' new@example.com ' })).toEqual({
     status: 200,
     body: { email: 'player@example.com', pendingEmail: 'new@example.com' },
@@ -78,7 +78,7 @@ it('checks the password, then asks Supabase to change it, with links back to the
     {
       attributes: { email: 'new@example.com' },
       options: {
-        emailRedirectTo: `${ORIGIN}/auth/callback?flow=email-change&next=/profile`,
+        emailRedirectTo: `${ORIGIN}/auth/callback?flow=email-change&next=/settings`,
       },
     },
   ]);

@@ -36,12 +36,12 @@ it('tells the header when it opens, so the nav menu can close', () => {
   expect(onOpen).toHaveBeenCalledTimes(1);
 });
 
-it('leads to the profile, and closes on the way', () => {
-  render(<UserMenu user={user} name="Player" avatar={null} />);
+it("leads to the player's profile at its own address, and closes on the way", () => {
+  render(<UserMenu user={user} name="Player" avatar={null} profileHref="/u/player" />);
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
 
   const profile = screen.getByRole('menuitem', { name: 'Profile' });
-  expect(profile).toHaveAttribute('href', '/profile');
+  expect(profile).toHaveAttribute('href', '/u/player');
   // The first thing in the menu, so opening it lands there.
   expect(profile).toHaveFocus();
 
@@ -49,17 +49,31 @@ it('leads to the profile, and closes on the way', () => {
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });
 
-it('leads to Ko-fi in a new tab, and closes on the way', () => {
+it('leads to Settings, right under Profile, and closes on the way', () => {
   render(<UserMenu user={user} name="Player" avatar={null} />);
   fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
 
-  const support = screen.getByRole('menuitem', { name: 'Support MyBacklog' });
-  expect(support).toHaveAttribute('href', 'https://ko-fi.com/mistkai');
-  expect(support).toHaveAttribute('target', '_blank');
-  expect(support).toHaveAttribute('rel', 'noopener noreferrer');
+  const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
+  expect(items.slice(0, 2)).toEqual(['Profile', 'Settings']);
+  const settings = screen.getByRole('menuitem', { name: 'Settings' });
+  expect(settings).toHaveAttribute('href', '/settings');
 
-  fireEvent.click(support);
+  fireEvent.click(settings);
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open user menu' })).toHaveFocus();
+});
+
+it('holds the pages and actions of the account, and no link to support the app', () => {
+  render(<UserMenu user={user} name="Player" avatar={null} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+
+  // That link lives in the footer only.
+  expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+    'Profile',
+    'Settings',
+    'Report an issue',
+    'Sign out',
+  ]);
 });
 
 it('moves through its items with the arrow keys, the link included', () => {
@@ -68,7 +82,10 @@ it('moves through its items with the arrow keys, the link included', () => {
   const menu = screen.getByRole('menu');
 
   fireEvent.keyDown(menu, { key: 'ArrowDown' });
+  expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveFocus();
+  fireEvent.keyDown(menu, { key: 'ArrowDown' });
   expect(screen.getByRole('menuitem', { name: 'Refresh library' })).toHaveFocus();
+  fireEvent.keyDown(menu, { key: 'ArrowUp' });
   fireEvent.keyDown(menu, { key: 'ArrowUp' });
   expect(screen.getByRole('menuitem', { name: 'Profile' })).toHaveFocus();
   fireEvent.keyDown(menu, { key: 'End' });
@@ -166,4 +183,10 @@ it('signs out of this browser only, not every device the account is on', async (
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
   });
   expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+});
+
+it('leads to /profile, which finds the address, until the username is known', () => {
+  render(<UserMenu user={user} name="Player" avatar={null} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open user menu' }));
+  expect(screen.getByRole('menuitem', { name: 'Profile' })).toHaveAttribute('href', '/profile');
 });

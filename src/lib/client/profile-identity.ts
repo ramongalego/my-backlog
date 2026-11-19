@@ -17,6 +17,24 @@ export function saveProfileName(name: string | null): Promise<ApiResult<{ name: 
   });
 }
 
+/** A failure about the username itself (taken, not allowed) comes back with `field`. */
+export function saveUsername(
+  username: string,
+): Promise<ApiResult<{ username: string }, 'username'>> {
+  return apiRequest('/api/profile/username', json('PUT', { username }), {
+    failed: "Couldn't save your username. Please try again.",
+    tooMany: TOO_MANY,
+  });
+}
+
+/** Whether other people can see the profile. */
+export function saveProfilePrivacy(isPrivate: boolean): Promise<ApiResult<{ private: boolean }>> {
+  return apiRequest('/api/profile/privacy', json('PUT', { private: isPrivate }), {
+    failed: "Couldn't save that. Please try again.",
+    tooMany: TOO_MANY,
+  });
+}
+
 /** Already made square (see squareAvatar). */
 export function uploadAvatar(picture: Blob): Promise<ApiResult<{ avatarUrl: string }>> {
   const form = new FormData();
@@ -24,7 +42,7 @@ export function uploadAvatar(picture: Blob): Promise<ApiResult<{ avatarUrl: stri
   return apiRequest(
     '/api/profile/avatar',
     { method: 'POST', body: form },
-    { failed: "Couldn't save your picture. Please try again.", tooMany: TOO_MANY },
+    { failed: "Couldn't save your avatar. Please try again.", tooMany: TOO_MANY },
   );
 }
 
@@ -32,7 +50,7 @@ export function removeAvatar(): Promise<ApiResult<{ avatarUrl: null }>> {
   return apiRequest(
     '/api/profile/avatar',
     { method: 'DELETE' },
-    { failed: "Couldn't remove your picture. Please try again.", tooMany: TOO_MANY },
+    { failed: "Couldn't remove your avatar. Please try again.", tooMany: TOO_MANY },
   );
 }
 

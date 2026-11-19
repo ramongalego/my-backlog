@@ -14,6 +14,8 @@ const steam = {
   steam_avatar: 'https://avatars.steamstatic.com/a_full.jpg',
   display_name: null,
   avatar_url: null,
+  username: 'ankrath',
+  is_private: false,
 };
 
 function setup(session: unknown) {
@@ -55,6 +57,8 @@ describe('useUpdateSessionProfile', () => {
       steam_avatar: null,
       display_name: 'Snake',
       avatar_url: null,
+      username: null,
+      is_private: null,
     });
   });
 

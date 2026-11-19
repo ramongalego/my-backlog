@@ -7,21 +7,20 @@ jest.mock('next/image', () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));
 
-const figures = { games: 217, finished: 44, finishedThisYear: 1, hours: 1065 };
-const identity = {
-  chosenName: null,
-  accountName: 'Ankrath',
-  hasOwnPicture: false,
-  rename: jest.fn(async () => ({ ok: true as const })),
-  uploadPicture: jest.fn(async () => ({ ok: true as const })),
-  removePicture: jest.fn(async () => ({ ok: true as const })),
+const figures = { games: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null };
+const props = {
+  name: 'Ankrath',
+  username: 'ankrath',
+  avatar: null,
+  figures,
 };
-const props = { name: 'Ankrath', avatar: null, identity, memberSince: 'January 2026', figures };
 
-it('names the player as the page title, with when they joined', () => {
+it('names the player as the page title, with their username under it and nothing else', () => {
   render(<ProfileHeader {...props} />);
-  expect(screen.getByRole('heading', { level: 1, name: 'Ankrath' })).toBeInTheDocument();
-  expect(screen.getByText('Member since January 2026')).toBeInTheDocument();
+  const name = screen.getByRole('heading', { level: 1, name: 'Ankrath' });
+  expect(name.nextElementSibling).toHaveTextContent(/^@ankrath$/);
+  // When the account was made is on Settings, not here.
+  expect(screen.queryByText(/Member since/)).not.toBeInTheDocument();
 });
 
 it('shows the avatar, or the initial without one', () => {
@@ -40,11 +39,11 @@ it('shows the avatar, or the initial without one', () => {
   expect(screen.getByText('A')).toHaveAttribute('aria-hidden', 'true');
 });
 
-it('changes the name and the picture where they are, with no Edit profile button', () => {
+it('has nothing to press: the name, picture and username are changed on Settings', () => {
   render(<ProfileHeader {...props} />);
-  expect(screen.getByRole('button', { name: 'Change name' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Change picture' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  // Not a link either: on their own Profile it would lead back to it.
+  expect(screen.queryByRole('link')).not.toBeInTheDocument();
 });
 
 it('gives the library in four figures, each with its label', () => {
@@ -60,10 +59,11 @@ it('gives the library in four figures, each with its label', () => {
   expect(within(strip).getByText('Hours played')).toBeInTheDocument();
 });
 
-it('keeps its height without a join date', () => {
-  render(<ProfileHeader {...props} memberSince={null} />);
-  expect(screen.queryByText(/Member since/)).not.toBeInTheDocument();
+it('keeps its height until the username is known', () => {
+  render(<ProfileHeader {...props} username={null} />);
+  expect(screen.queryByText(/@/)).not.toBeInTheDocument();
   // The line under the name is there, empty.
   const heading = screen.getByRole('heading', { level: 1 });
-  expect(heading.parentElement?.nextElementSibling).toHaveClass('min-h-5');
+  expect(heading.nextElementSibling).toHaveClass('min-h-5');
+  expect(heading.nextElementSibling).toBeEmptyDOMElement();
 });

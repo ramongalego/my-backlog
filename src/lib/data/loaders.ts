@@ -202,13 +202,15 @@ const RECENT_HISTORY = 50;
 export async function loadRecentHistory(
   supabase: SupabaseClient,
   userId: string,
+  /** More than the Profile page reads, where most of them will be left out. */
+  limit = RECENT_HISTORY,
 ): Promise<ActivityEvent[]> {
   const { data, error } = await supabase
     .from('game_events')
     .select('id, game_id, kind, changes, created_at')
     .eq('user_id', userId)
     .order('id', { ascending: false })
-    .limit(RECENT_HISTORY);
+    .limit(limit);
   if (error) throw error;
   return (data ?? []) as ActivityEvent[];
 }

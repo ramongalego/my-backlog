@@ -120,9 +120,9 @@ const sections: LegalSection[] = [
     body: (
       <p>
         You may stop using the Service and delete your account at any time from{' '}
-        <Link href="/profile">your Profile</Link>. We may suspend or terminate an account that
-        violates these terms or puts the Service or other users at risk. Sections 3, 8, 9 and 10
-        survive termination.
+        <Link href="/settings">Settings</Link>. We may suspend or terminate an account that violates
+        these terms or puts the Service or other users at risk. Sections 3, 8, 9 and 10 survive
+        termination.
       </p>
     ),
   },

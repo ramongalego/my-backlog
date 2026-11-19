@@ -14,6 +14,7 @@ import { useLibraryMeta } from '@/hooks/useLibraryMeta';
 import { useLibraryRefresh, manualRefreshWait } from '@/hooks/useLibraryRefresh';
 import { useConnectSteam } from '@/hooks/useConnectSteam';
 import { profileAvatar, profileName } from '@/lib/account/identity';
+import { publicProfilePath } from '@/lib/account/public-profile';
 import type { AuthMode } from '@/types/auth';
 
 export function Header() {
@@ -139,6 +140,7 @@ export function Header() {
                   user={user}
                   name={name}
                   avatar={avatar}
+                  profileHref={profile?.username ? publicProfilePath(profile.username) : undefined}
                   gameCount={libraryMetaLoaded ? gameCount : undefined}
                   // Without Steam there's no library to refresh, only one to link.
                   onRefresh={profile?.steam_id ? handleRefreshLibrary : undefined}

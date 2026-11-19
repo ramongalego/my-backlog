@@ -40,6 +40,7 @@ const entry = (
     platform: 'PC',
     lines: [{ kind, minutes, to, ...(rating != null ? { rating } : {}) }],
     day: '2026-10-19',
+    at: '',
     rating: rating ?? null,
     ...rest,
   };
@@ -52,15 +53,12 @@ beforeEach(() => onOpen.mockClear());
 
 const section = () => within(screen.getByRole('region', { name: 'Recent activity' }));
 const rows = () => section().getAllByRole('listitem');
-const days = () =>
-  section()
-    .queryAllByRole('heading', { level: 3 })
-    // As it is read out: the stamp drawn beside it is hidden from that.
-    .map((heading) => heading.querySelector('.sr-only')?.textContent);
+/** When each row says it happened, at its far end; null for a row that says nothing. */
+const whens = () => rows().map((row) => row.querySelector('time')?.textContent ?? null);
 /** One line of a row, found by what it says happened: its label and what follows it. */
 const lineOf = (row: HTMLElement, label: string) => within(row).getByText(label).parentElement!;
 
-it('says what happened to each game, when, and where it was played', () => {
+it('says what happened to each game, and where it was played', () => {
   render(
     <RecentActivity
       onOpen={onOpen}
@@ -86,10 +84,11 @@ it('says what happened to each game, when, and where it was played', () => {
   );
   const [playing, finished, dropped] = rows();
   expect(playing).toHaveTextContent(/^Ocarina of Time Started playing on Switch 2$/);
-  expect(finished).toHaveTextContent(/^Fire Emblem: Fortune's Weave Finished on Switch 2 9\/10$/);
+  expect(finished).toHaveTextContent(
+    /^Fire Emblem: Fortune's Weave Finished on Switch 2 and rated it 9\/10$/,
+  );
   // A Steam game played on Steam names no platform, as on its card.
   expect(dropped).toHaveTextContent(/^Super Meat Boy Dropped$/);
-  expect(days()).toEqual(['2026-11-13', '2026-10-19', '2026-04-11'].map((day) => activityDay(day)));
 });
 
 it('colors each by its status, as everywhere else', () => {
@@ -162,7 +161,7 @@ it('opens the game from its row, to fix a date or a rating where it is seen', ()
       entries={[entry({ id: 7, name: 'Hades', rating: 9 }), entry({ id: 8, name: 'Celeste' })]}
     />,
   );
-  const hades = screen.getByRole('button', { name: /^Hades Finished 9\/10$/ });
+  const hades = screen.getByRole('button', { name: /^Hades Finished and rated it 9\/10$/ });
   fireEvent.click(hades);
   expect(onOpen).toHaveBeenCalledWith(7);
   fireEvent.click(screen.getByRole('button', { name: /^Celeste/ }));
@@ -199,11 +198,9 @@ describe('what the history adds', () => {
     [{ kind: 'note' }, 'Wrote a note'],
     [{ kind: 'played', minutes: 150 }, 'Played 2h 30m'],
     [{ kind: 'moved', to: 'Switch 2' }, 'Moved to Switch 2'],
-  ] as const)('says %o as "%s", under its day', (what, said) => {
+  ] as const)('says %o as "%s"', (what, said) => {
     render(<RecentActivity onOpen={onOpen} entries={[entry({ ...what, day: '2026-11-17' })]} />);
-    expect(rows()[0]).toHaveTextContent(`Test Game ${said}`);
-    expect(rows()[0]).not.toHaveTextContent(activityDay('2026-11-17'));
-    expect(days()).toEqual([activityDay('2026-11-17')]);
+    expect(rows()[0]).toHaveTextContent(new RegExp(`^Test Game ${said}$`));
   });
 
   it('shows the rating a game was given', () => {
@@ -292,7 +289,6 @@ describe('several things done to one game in a row', () => {
     expect(toggle()).toHaveAttribute('aria-expanded', 'false');
     expect(toggle().querySelector('[data-chip="3"]')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByRole('button', { name: /^Portal Finished/ })).not.toBeInTheDocument();
-    expect(days()).toEqual([activityDay('2026-11-17')]);
   });
 
   it('opens to each update, newest first, each its own row that opens the game', () => {
@@ -306,7 +302,7 @@ describe('several things done to one game in a row', () => {
         .getAllByRole('button')
         .map((b) => b.textContent!.replace(/\s+/g, ' ').trim()),
     ).toEqual([
-      'Portal Finished on Switch 10/10',
+      'Portal Finished on Switch and rated it 10/10',
       'Portal Played 1h 30m on Switch',
       'Portal Added to queue on Switch',
     ]);
@@ -329,7 +325,7 @@ describe('several things done to one game in a row', () => {
 });
 
 describe('one thing done to a game', () => {
-  it('draws the rating last on its line: after the label, its own day and the console', () => {
+  it('says it as one sentence: what, the console, then the rating it came with', () => {
     render(
       <RecentActivity
         onOpen={onOpen}
@@ -337,17 +333,17 @@ describe('one thing done to a game', () => {
           entry({
             source: 'manual',
             platform: 'Switch',
-            lines: [{ kind: 'dropped', on: '2026-11-10', rating: 4 }],
-            day: '2026-11-17',
+            lines: [{ kind: 'dropped', rating: 4 }],
             rating: 4,
           }),
         ]}
       />,
     );
     expect(lineOf(rows()[0], 'Dropped')).toHaveTextContent(
-      new RegExp(`^Dropped ${activityDay('2026-11-10')} on Switch 4/10$`),
+      /^Dropped on Switch and rated it 4\/10$/,
     );
-    expect(within(rows()[0]).getAllByText('4/10')).toHaveLength(1);
+    // Once, in the sentence: not again at the row's far end.
+    expect(rows()[0].textContent!.match(/4\/10/g)).toHaveLength(1);
   });
 
   it('draws no rating for a line that came without one', () => {
@@ -358,84 +354,6 @@ describe('one thing done to a game', () => {
       />,
     );
     expect(section().queryByText(/\/10/)).not.toBeInTheDocument();
-  });
-});
-
-describe('the days', () => {
-  const on = (key: string, day: string | null, overrides: Parameters<typeof entry>[0] = {}) =>
-    entry({ key, id: Number(key.replace(/\D/g, '')), name: `Game ${key}`, day, ...overrides });
-
-  it('says a day once, for all the rows of it', () => {
-    render(
-      <RecentActivity
-        onOpen={onOpen}
-        entries={[
-          on('event-3', '2026-11-17'),
-          on('event-2', '2026-11-17'),
-          on('event-1', '2026-11-16'),
-        ]}
-      />,
-    );
-    expect(days()).toEqual([activityDay('2026-11-17'), activityDay('2026-11-16')]);
-    expect(rows()).toHaveLength(3);
-    const lists = section().getAllByRole('list');
-    expect(lists.map((list) => within(list).getAllByRole('listitem').length)).toEqual([2, 1]);
-  });
-
-  it('draws the day as a stamp, its number over its month, and reads it as one date', () => {
-    render(<RecentActivity onOpen={onOpen} entries={[on('event-1', '2026-11-17')]} />);
-    const heading = section().getByRole('heading', { level: 3, name: activityDay('2026-11-17') });
-    const stamp = heading.querySelector('[aria-hidden="true"]')!;
-    expect([...stamp.children].map((part) => part.textContent)).toEqual(['17', 'Nov']);
-  });
-
-  it('says the year beside the month, on the same line, for a day in another year', () => {
-    render(<RecentActivity onOpen={onOpen} entries={[on('event-1', '2025-08-20')]} />);
-    const heading = section().getByRole('heading', { level: 3, name: 'Aug 20, 2025' });
-    expect(days()).toEqual(['Aug 20, 2025']);
-    const stamp = heading.querySelector('[aria-hidden="true"]')!;
-    expect([...stamp.children].map((part) => part.textContent)).toEqual(['20', 'Aug 2025']);
-  });
-
-  it('keeps the stamp in view from `sm` while its rows scroll past', () => {
-    render(<RecentActivity onOpen={onOpen} entries={[on('event-1', '2026-11-17')]} />);
-    const stamp = section()
-      .getByRole('heading', { level: 3 })
-      .querySelector('[aria-hidden="true"]')!;
-    expect(stamp).toHaveClass('sm:sticky', 'sm:top-20');
-    // Only from `sm`: on phones the date is above its rows, not beside them.
-    expect(stamp).not.toHaveClass('sticky');
-  });
-
-  it('says the day a game was finished or dropped when that is not the day it was logged', () => {
-    render(
-      <RecentActivity
-        onOpen={onOpen}
-        entries={[
-          entry({
-            lines: [{ kind: 'finished', on: '2026-11-10', rating: 7 }],
-            day: '2026-11-17',
-            rating: 7,
-          }),
-        ]}
-      />,
-    );
-    expect(rows()[0]).toHaveTextContent(`Test Game Finished ${activityDay('2026-11-10')} 7/10`);
-    expect(days()).toEqual([activityDay('2026-11-17')]);
-  });
-
-  it('has no day beside a row whose day is not known', () => {
-    render(<RecentActivity onOpen={onOpen} entries={[on('event-1', null, { kind: 'playing' })]} />);
-    expect(days()).toEqual([]);
-    expect(rows()).toHaveLength(1);
-  });
-
-  it('carries a day on under the same date when Show more adds to it', () => {
-    const many = Array.from({ length: 8 }, (_, i) => on(`event-${i + 1}`, '2026-11-17'));
-    render(<RecentActivity onOpen={onOpen} entries={many} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
-    expect(days()).toEqual([activityDay('2026-11-17')]);
-    expect(rows()).toHaveLength(8);
   });
 });
 
@@ -716,5 +634,154 @@ describe('the focus, when rows fold into a group', () => {
     expect(focusActivityRow(7)).toBe(true);
     expect(screen.getByRole('button', { name: 'Portal 3 updates' })).toHaveFocus();
     expect(focusActivityRow(99)).toBe(false);
+  });
+});
+
+describe('when it happened', () => {
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+  const HOUR = 3_600_000;
+  const on = (id: number, at: string, overrides: Parameters<typeof entry>[0] = {}) =>
+    entry({
+      key: `event-${id}`,
+      id,
+      name: `Game ${id}`,
+      at,
+      day: at.slice(0, 10) || null,
+      ...overrides,
+    });
+
+  it('is said at the far end of each row, after its name: how long ago within the week', () => {
+    const at = ago(2 * HOUR);
+    render(<RecentActivity onOpen={onOpen} entries={[on(1, at, { name: 'Hades', rating: 9 })]} />);
+    const time = within(rows()[0]).getByText('2h ago');
+    expect(time.tagName).toBe('TIME');
+    expect(time).toHaveAttribute('datetime', at);
+    // Part of the row's name, in the order shown: the game, when, what was done.
+    expect(
+      screen.getByRole('button', { name: /^Hades 2h ago Finished and rated it 9\/10$/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('is the day once it is over a week old, and for a row that only has a day', () => {
+    const old = ago(9 * 24 * HOUR);
+    render(<RecentActivity onOpen={onOpen} entries={[on(1, old), on(2, '2025-08-20')]} />);
+    expect(whens()).toEqual([activityDay(old.slice(0, 10)), 'Aug 20, 2025']);
+  });
+
+  it('says nothing for a row whose time is not known', () => {
+    render(<RecentActivity onOpen={onOpen} entries={[on(1, '', { kind: 'playing' })]} />);
+    expect(whens()).toEqual([null]);
+    expect(rows()[0]).toHaveTextContent(/^Game 1 Started playing$/);
+  });
+
+  it('is one list, with no day beside its rows', () => {
+    render(
+      <RecentActivity
+        onOpen={onOpen}
+        entries={[
+          on(3, '2026-11-17T20:00:00+00:00'),
+          on(2, '2026-11-17T09:00:00+00:00'),
+          on(1, '2026-11-16T09:00:00+00:00'),
+        ]}
+      />,
+    );
+    expect(section().queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
+    expect(section().getAllByRole('list')).toHaveLength(1);
+    expect(rows()).toHaveLength(3);
+  });
+
+  it('says the day of a finish the player dated, at its far end and not in its sentence', () => {
+    render(
+      <RecentActivity
+        onOpen={onOpen}
+        entries={[on(1, '2024-05-01', { name: 'Hades', rating: 8 })]}
+      />,
+    );
+    expect(whens()).toEqual(['May 1, 2024']);
+    expect(lineOf(rows()[0], 'Finished')).toHaveTextContent(/^Finished and rated it 8\/10$/);
+  });
+
+  it('keeps the comma of a date against its number', () => {
+    render(<RecentActivity onOpen={onOpen} entries={[on(1, '2025-08-20')]} />);
+    const time = rows()[0].querySelector('time')!;
+    expect(time).toHaveTextContent(/^Aug 20, 2025$/);
+    // Fixed-width digits would push it away.
+    expect(time).not.toHaveClass('tabular-nums');
+  });
+});
+
+describe("on someone else's profile, with nothing to open", () => {
+  const theirs = { main: 'PC', count: 2 };
+  const three = [
+    entry({ key: '0', id: undefined, name: 'Hades', rating: 9 }),
+    entry({
+      key: '1',
+      id: undefined,
+      name: 'Celeste',
+      kind: 'playing',
+      source: 'manual',
+      platform: 'Switch',
+    }),
+    entry({ key: '2', id: undefined, name: 'Tunic', kind: 'favorite' }),
+  ];
+
+  it('says the same rows, in the same words, as only something to read', () => {
+    render(<RecentActivity entries={three} library={theirs} />);
+    expect(rows().map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Hades Finished on PC and rated it 9/10',
+      'Celeste Started playing on Switch',
+      'Tunic Added to favorites on PC',
+    ]);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it("names platforms by the profile's library, not the visitor's own", () => {
+    // Their library is all on one platform: nothing to say.
+    render(<RecentActivity entries={three} library={{ main: 'PC', count: 1 }} />);
+    expect(rows()[0]).toHaveTextContent(/^Hades Finished and rated it 9\/10$/);
+  });
+
+  it("leads nowhere: no Diary link, which is the player's own", () => {
+    render(<RecentActivity entries={three} library={theirs} />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('still unfolds a folded row, to rows that open nothing', () => {
+    const updates = [
+      entry({ key: '0-0', id: undefined, name: 'Portal', rating: 10 }),
+      entry({ key: '0-1', id: undefined, name: 'Portal', kind: 'played', minutes: 90 }),
+      entry({ key: '0-2', id: undefined, name: 'Portal', kind: 'started' }),
+    ];
+    render(
+      <RecentActivity
+        library={theirs}
+        entries={[
+          entry({
+            key: '0',
+            id: undefined,
+            name: 'Portal',
+            lines: updates.map((u) => u.lines[0]).reverse(),
+            updates,
+          }),
+        ]}
+      />,
+    );
+    const toggle = screen.getByRole('button', { name: 'Portal 3 updates' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const list = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(list).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('still shows more, and hands the focus to the first row it added', () => {
+    const many = Array.from({ length: 8 }, (_, i) =>
+      entry({ key: String(i), id: undefined, name: `Game ${i + 1}`, kind: 'favorite' }),
+    );
+    render(<RecentActivity entries={many} library={theirs} />);
+    expect(rows()).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(rows()).toHaveLength(8);
+    expect(rows()[6].firstElementChild).toHaveFocus();
   });
 });

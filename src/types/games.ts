@@ -6,6 +6,10 @@ export interface Profile {
   display_name: string | null;
   /** The picture the player uploaded, in place of Steam's (or their initial). */
   avatar_url: string | null;
+  /** The name in the profile's address. Every profile has one; null only until it's read. */
+  username: string | null;
+  /** Other people can't see the profile (/u/<username>). Null only until it's read. */
+  is_private: boolean | null;
 }
 
 export interface Game {

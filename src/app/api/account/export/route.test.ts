@@ -59,7 +59,12 @@ beforeEach(() => {
   failing = null;
   asked.length = 0;
   tables = {
-    profiles: { steam_id: '7656', steam_username: 'Ankrath', display_name: 'mistkai' },
+    profiles: {
+      steam_id: '7656',
+      steam_username: 'Ankrath',
+      display_name: 'mistkai',
+      username: 'mist_kai',
+    },
     games: [
       {
         id: 1,
@@ -128,6 +133,7 @@ it('sends everything as a JSON file to download, never cached', async () => {
   expect(data.account).toEqual({
     email: 'player@example.com',
     name: 'mistkai',
+    username: 'mist_kai',
     memberSince: '2026-01-26T09:00:00Z',
     steam: { id: '7656', username: 'Ankrath' },
   });

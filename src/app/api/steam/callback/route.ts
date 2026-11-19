@@ -152,6 +152,17 @@ export async function GET(request: NextRequest) {
     return redirect('profile_update_failed');
   }
 
+  // A profile still on the "player" username it was given takes one from its
+  // Steam name; one the player picked, or already named, is left alone (the
+  // database decides). Linking doesn't wait on it going well.
+  if (playerSummary?.personaname) {
+    const { error: renameError } = await service.rpc('rename_given_username', {
+      p_user: user.id,
+      p_name: playerSummary.personaname,
+    });
+    if (renameError) console.error('Naming the profile after Steam failed:', renameError);
+  }
+
   try {
     await syncOwnedGames(supabase, user.id, owned.games);
   } catch (err) {

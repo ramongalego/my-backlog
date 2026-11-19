@@ -16,6 +16,9 @@ let profileUpdateError: Error | null = null;
 let signedIn = true;
 let limited = false;
 let verifications = 0;
+// Asking the database to name the profile after its Steam name, and what had happened by then.
+const renames: { name: string; args: Record<string, unknown>; after: string[] }[] = [];
+let renameError: Error | null = null;
 
 jest.mock('@/lib/steam/auth', () => ({
   isSteamAssertion: () => true,
@@ -68,6 +71,10 @@ jest.mock('@/lib/supabase/service', () => ({
         },
       }),
     }),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      renames.push({ name, args, after: [...steps] });
+      return { data: null, error: renameError };
+    },
   }),
 }));
 
@@ -88,6 +95,8 @@ beforeEach(() => {
   signedIn = true;
   limited = false;
   verifications = 0;
+  renames.length = 0;
+  renameError = null;
   jest
     .mocked(clearLibrary)
     .mockReset()
@@ -142,6 +151,31 @@ it("doesn't import the new account's games when the profile couldn't be re-point
 
   expect(await link()).toBe('https://mybacklog.test/?error=profile_update_failed');
   expect(steps).toEqual(['clear library']);
+});
+
+it('asks for the profile to be named after its Steam name, once it is linked', async () => {
+  linkedSteamId = null;
+  await link();
+  expect(renames).toEqual([
+    {
+      name: 'rename_given_username',
+      args: { p_user: 'user-1', p_name: 'Player' },
+      after: [`profile → ${NEW_STEAM_ID}`],
+    },
+  ]);
+});
+
+it('still links and imports when the profile could not be named', async () => {
+  renameError = new Error('db down');
+  expect(await link()).toBe('https://mybacklog.test/home');
+  expect(steps).toEqual(['clear library', `profile → ${NEW_STEAM_ID}`, 'import games']);
+  expect(console.error).toHaveBeenCalledWith('Naming the profile after Steam failed:', renameError);
+});
+
+it('names nothing when the profile could not be linked', async () => {
+  profileUpdateError = new Error('db down');
+  await link();
+  expect(renames).toEqual([]);
 });
 
 it('refuses a callback whose state does not match the cookie', async () => {

@@ -34,7 +34,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       supabase.auth.getUser(),
       supabase
         .from('profiles')
-        .select('steam_id, steam_username, steam_avatar, display_name, avatar_url')
+        .select(
+          'steam_id, steam_username, steam_avatar, display_name, avatar_url, username, is_private',
+        )
         .eq('id', userId)
         .maybeSingle(),
       // The header's count is prefetched here, not by pages: a query the header

@@ -6,7 +6,7 @@ import { checkPassword, emailRefusal, passwordCheckRefusal } from '@/lib/server/
 import { changeEmailBodySchema } from '@/lib/validations/auth';
 
 /** The auth callback knows this flow by its name. */
-const EMAIL_CHANGE_REDIRECT = '/auth/callback?flow=email-change&next=/profile';
+const EMAIL_CHANGE_REDIRECT = '/auth/callback?flow=email-change&next=/settings';
 
 /**
  * Guarded by the password: a new email is a way into the account through

@@ -4,8 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { ChevronDown, Heart, Loader2, RefreshCw, LogOut, Bug, UserRound } from 'lucide-react';
-import { SUPPORT_URL } from '@/lib/contact';
+import { ChevronDown, Loader2, RefreshCw, LogOut, Bug, Settings, UserRound } from 'lucide-react';
 import { SteamIcon } from '@/components/ui/SteamIcon';
 import { SupportModal } from '@/components/layout/SupportModal';
 import { manualRefreshWait } from '@/hooks/useLibraryRefresh';
@@ -19,6 +18,11 @@ interface UserMenuProps {
   name: string;
   /** The picture the profile shows, or null for the initial. */
   avatar: string | null;
+  /**
+   * The player's own profile (/u/<username>). Left out until the username is
+   * known: /profile then finds it and sends them on.
+   */
+  profileHref?: string;
   gameCount?: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -33,6 +37,7 @@ export function UserMenu({
   user,
   name,
   avatar,
+  profileHref = '/profile',
   gameCount,
   onRefresh,
   onConnectSteam,
@@ -49,6 +54,11 @@ export function UserMenu({
   const [brokenAvatar, setBrokenAvatar] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  // The player's own pages, which the header's links don't list.
+  const pages = [
+    { href: profileHref, label: 'Profile', icon: UserRound },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ];
 
   // Enabled items only: a disabled one (refresh on cooldown) can't take focus.
   const menuItems = () =>
@@ -183,23 +193,26 @@ export function UserMenu({
             )}
           </div>
 
-          <Link
-            href="/profile"
-            role="menuitem"
-            // Focus back to the menu's button: already on Profile, nothing else takes it.
-            onClick={() => closeMenu(true)}
-            // A link only follows Enter; in a menu, Space activates too.
-            onKeyDown={(e) => {
-              if (e.key === ' ') {
-                e.preventDefault();
-                e.currentTarget.click();
-              }
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
-          >
-            <UserRound className="w-4 h-4" aria-hidden="true" />
-            <span>Profile</span>
-          </Link>
+          {pages.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={label}
+              href={href}
+              role="menuitem"
+              // Focus back to the menu's button: already on that page, nothing else takes it.
+              onClick={() => closeMenu(true)}
+              // A link only follows Enter; in a menu, Space activates too.
+              onKeyDown={(e) => {
+                if (e.key === ' ') {
+                  e.preventDefault();
+                  e.currentTarget.click();
+                }
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
+            >
+              <Icon className="w-4 h-4" aria-hidden="true" />
+              <span>{label}</span>
+            </Link>
+          ))}
 
           {onRefresh && (
             <button
@@ -258,24 +271,6 @@ export function UserMenu({
             <Bug className="w-4 h-4" aria-hidden="true" />
             <span>Report an issue</span>
           </button>
-
-          <a
-            href={SUPPORT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            onKeyDown={(e) => {
-              if (e.key === ' ') {
-                e.preventDefault();
-                e.currentTarget.click();
-              }
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink-300 hover:bg-ink-800 transition-colors"
-          >
-            <Heart className="w-4 h-4" aria-hidden="true" />
-            <span>Support MyBacklog</span>
-          </a>
 
           <button
             role="menuitem"

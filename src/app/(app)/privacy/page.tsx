@@ -41,7 +41,10 @@ const sections: LegalSection[] = [
               'Steam',
               "If you connect a Steam account, your Steam ID, display name, avatar and the games Steam lists as owned by you, with your playtime in each. Steam shares your games only when the game details on your Steam profile are public. Sign-in happens on Steam's site, so we never receive your Steam password.",
             ],
-            ['Profile', 'A display name and a profile picture, if you choose to set them.'],
+            [
+              'Profile',
+              'A username, which every account is given and you can change. A display name and a profile picture, if you choose to set them. Whether you have made your profile private.',
+            ],
             ['Messages', 'Anything you send us through Report an issue or by email.'],
             [
               'Generated text',
@@ -208,6 +211,36 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: 'your-profile',
+    title: 'Your profile',
+    body: (
+      <>
+        <p>
+          Your profile has a page of its own, at mybacklog.co/u/ followed by your username. It is
+          public: anyone with the link can view it, with or without an account. We ask search
+          engines not to list profile pages.
+        </p>
+        <p>
+          A profile page shows your username, the name your profile goes by and your profile
+          picture. It shows how many games are in your library, how many you have finished, how many
+          of those were this year, your hours played and, once enough games are rated, your average
+          rating and how many games you gave each rating. It shows your favorite games with your
+          ratings of them, the platforms you play on, and recent highlights of your activity: games
+          you started, played, finished, dropped, rated or made a favorite.
+        </p>
+        <p>
+          It does not show your email address, your notes, your backlog, your queue or the rest of
+          your library. If you have connected Steam and have not chosen a display name or picture of
+          your own, the name and picture shown are the ones from your Steam profile.
+        </p>
+        <p>
+          You can make your profile private at any time in <Link href="/settings">Settings</Link>. A
+          private profile is shown to nobody but you, from the moment you switch it.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'data-retention',
     title: 'Data retention',
     body: (
@@ -233,13 +266,13 @@ const sections: LegalSection[] = [
       <>
         <p>
           You can download a copy of your data at any time. Go to{' '}
-          <Link href="/profile">your Profile</Link>, open More options and choose Export data. The
-          export is available as a JSON file containing everything, or as a CSV file of your games.
+          <Link href="/settings">Settings</Link> and choose Export data. The export is available as
+          a JSON file containing everything, or as a CSV file of your games.
         </p>
         <p>
-          You can correct your games, notes, ratings, display name and picture in the Service, and
-          change your email address or password from your Profile. You can also disconnect Steam or
-          delete your account there.
+          You can correct your games, notes and ratings in the Service, and change your display
+          name, picture, username, email address or password in Settings. You can also make your
+          profile private, disconnect Steam or delete your account there.
         </p>
         <p>
           Depending on where you live, you may have additional rights under local law. These include
@@ -295,7 +328,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      effective="November 18, 2026"
+      effective="November 19, 2026"
       intro={
         <>
           <p>

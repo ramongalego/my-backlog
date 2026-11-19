@@ -34,6 +34,7 @@ export interface ExportRows {
     email: string | null;
     createdAt: string | null;
     displayName: string | null;
+    username: string | null;
     steamId: string | null;
     steamUsername: string | null;
   };
@@ -110,6 +111,7 @@ export interface AccountExport {
   account: {
     email: string | null;
     name: string | null;
+    username: string | null;
     memberSince: string | null;
     steam: { id: string; username: string | null } | null;
   };
@@ -181,6 +183,7 @@ export function buildExport(rows: ExportRows, now = new Date()): AccountExport {
     account: {
       email: rows.account.email,
       name: rows.account.displayName,
+      username: rows.account.username,
       memberSince: rows.account.createdAt,
       steam: rows.account.steamId
         ? { id: rows.account.steamId, username: rows.account.steamUsername }

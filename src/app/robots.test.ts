@@ -1,12 +1,25 @@
 import robots from '@/app/robots';
 import sitemap from '@/app/sitemap';
 
-it('keeps search engines out of every signed-in page, Profile included', () => {
+it('keeps search engines out of every signed-in page, Profile and Settings included', () => {
   const [rule] = robots().rules as { allow: string; disallow: string[] }[];
   expect(rule.allow).toBe('/');
   expect(rule.disallow).toEqual(
-    expect.arrayContaining(['/home', '/games', '/playing-queue', '/diary', '/stats', '/profile']),
+    expect.arrayContaining([
+      '/home',
+      '/games',
+      '/playing-queue',
+      '/diary',
+      '/stats',
+      '/profile',
+      '/settings',
+    ]),
   );
+});
+
+it("keeps them out of players' profiles too, which are for whoever is given the link", () => {
+  const [rule] = robots().rules as { disallow: string[] }[];
+  expect(rule.disallow).toContain('/u/');
 });
 
 it('lists the public pages in the sitemap, and points robots at it', () => {

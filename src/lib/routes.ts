@@ -8,6 +8,7 @@ export const PROTECTED_ROUTES = [
   '/stats',
   '/playing-queue',
   '/profile',
+  '/settings',
 ];
 
 export function isProtectedPath(pathname: string): boolean {

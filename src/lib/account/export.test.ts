@@ -30,6 +30,7 @@ const rows = (over: Partial<ExportRows> = {}): ExportRows => ({
     email: 'player@example.com',
     createdAt: '2026-01-26T09:00:00Z',
     displayName: 'mistkai',
+    username: 'mist_kai',
     steamId: '7656',
     steamUsername: 'Ankrath',
   },
@@ -56,6 +57,7 @@ describe('buildExport', () => {
       account: {
         email: 'player@example.com',
         name: 'mistkai',
+        username: 'mist_kai',
         memberSince: '2026-01-26T09:00:00Z',
         steam: { id: '7656', username: 'Ankrath' },
       },

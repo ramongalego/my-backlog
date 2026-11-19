@@ -1,6 +1,7 @@
 import {
+  activityAgo,
   activityDay,
-  activityStamp,
+  HIGHLIGHTS,
   playedFor,
   RECENT_ACTIVITY,
   recentActivity,
@@ -157,6 +158,8 @@ describe('recentActivity, from the games', () => {
       platform: 'PS5',
       lines: [{ kind: 'finished', rating: 9 }],
       day: '2024-11-09',
+      // From before the history: the day is all there is.
+      at: '2024-11-09',
       rating: 9,
     });
   });
@@ -217,7 +220,7 @@ describe('recentActivity, from the history', () => {
     });
   });
 
-  it('lists a finish or a drop when it was logged, with the day the player chose and its rating', () => {
+  it('puts a finish or a drop at the day the player chose, not when it was logged', () => {
     const entries = recentActivity([hades, celeste], null, [
       event(7, 'status', {
         status: ['playing', 'finished'],
@@ -229,9 +232,10 @@ describe('recentActivity, from the history', () => {
         dropped_at: [null, '2026-11-12T00:00:00+00:00'],
       }),
     ]);
-    expect(entries.map((e) => [e.lines, e.day, e.rating])).toEqual([
-      [[{ kind: 'dropped', on: '2026-11-12' }], loggedOn, null],
-      [[{ kind: 'finished', on: '2026-11-10', rating: 9 }], loggedOn, 9],
+    // Logged on the 17th: each sits at its own day, a day with no time of day.
+    expect(entries.map((e) => [e.lines, e.day, e.at, e.rating])).toEqual([
+      [[{ kind: 'dropped' }], '2026-11-12', '2026-11-12', null],
+      [[{ kind: 'finished', rating: 9 }], '2026-11-10', '2026-11-10', 9],
     ]);
   });
 
@@ -243,7 +247,7 @@ describe('recentActivity, from the history', () => {
         rating: [null, 3],
       }),
     ]);
-    expect(entry.lines).toEqual([{ kind: 'dropped', on: '2026-11-12', rating: 3 }]);
+    expect(entry.lines).toEqual([{ kind: 'dropped', rating: 3 }]);
     expect(entry.rating).toBe(3);
   });
 
@@ -264,7 +268,7 @@ describe('recentActivity, from the history', () => {
     ]);
   });
 
-  it("doesn't say the day of a finish again when it was logged that day", () => {
+  it('keeps a finish logged on its own day at the moment it was logged', () => {
     const [entry] = recentActivity([hades], null, [
       event(7, 'status', {
         status: ['playing', 'finished'],
@@ -272,7 +276,8 @@ describe('recentActivity, from the history', () => {
       }),
     ]);
     expect(entry).toMatchObject({ lines: [{ kind: 'finished' }], day: loggedOn });
-    expect(entry.lines[0].on).toBeUndefined();
+    // A moment, not only a day: it is as recent as it was logged.
+    expect(entry.at).toContain('T');
   });
 
   it('tells a rating given, a move to another platform, and time played', () => {
@@ -369,7 +374,7 @@ describe('recentActivity, from the history', () => {
       }),
     ]);
     expect(entries.map((e) => [e.id, e.lines, e.day])).toEqual([
-      [7, [{ kind: 'finished', on: '2026-11-10', rating: 9 }], loggedOn],
+      [7, [{ kind: 'finished', rating: 9 }], '2026-11-10'],
       [8, [{ kind: 'finished' }], '2026-03-01'],
     ]);
   });
@@ -626,7 +631,7 @@ describe('recentActivity, a group of games', () => {
     expect(entries).toHaveLength(8);
   });
 
-  it('says the day a finish was given when every game shares it, and none otherwise', () => {
+  it('never groups finishes the player dated to another day: each sits at its own', () => {
     const finish = (id: number, day: string) =>
       event(
         id,
@@ -639,14 +644,14 @@ describe('recentActivity, a group of games', () => {
       null,
       [1, 2, 3, 4].map((id) => finish(id, '2026-11-10')),
     );
-    expect(same[0].lines).toEqual([{ kind: 'finished', on: '2026-11-10' }]);
+    expect(same.every((e) => !e.games)).toBe(true);
+    expect(same.map((e) => e.at)).toEqual(Array(4).fill('2026-11-10'));
 
     const mixed = recentActivity(library, null, [
       ...[1, 2, 3].map((id) => finish(id, '2026-11-10')),
       finish(4, '2026-11-11'),
     ]);
-    expect(mixed[0].lines).toEqual([{ kind: 'finished' }]);
-    expect(mixed[0].games!.map((one) => one.lines[0].on)).toEqual([
+    expect(mixed.map((e) => e.at)).toEqual([
       '2026-11-11',
       '2026-11-10',
       '2026-11-10',
@@ -701,19 +706,6 @@ describe('activityDay', () => {
   });
 });
 
-describe('activityStamp', () => {
-  const now = new Date(2026, 10, 15);
-
-  it('is the day of the month and the month, with no year for this year', () => {
-    expect(activityStamp('2026-10-09', now)).toEqual({ day: '9', month: 'Oct', year: null });
-  });
-
-  it('gives the year by itself for a day in another year, the month still only the month', () => {
-    expect(activityStamp('2025-08-20', now)).toEqual({ day: '20', month: 'Aug', year: '2025' });
-    expect(activityStamp('2027-01-02', now)).toEqual({ day: '2', month: 'Jan', year: '2027' });
-  });
-});
-
 describe('playedFor', () => {
   it.each([
     [45, '45m'],
@@ -722,5 +714,128 @@ describe('playedFor', () => {
     [1500, '25h'],
   ])('writes %i minutes as %s', (minutes, said) => {
     expect(playedFor(minutes)).toBe(said);
+  });
+});
+
+describe('recentActivity, for other people (the highlights)', () => {
+  const feed = (games: Parameters<typeof recentActivity>[0], events: ActivityEvent[]) =>
+    recentActivity(games, null, events, { only: HIGHLIGHTS });
+
+  it('keeps what was played, finished, dropped, rated and made a favorite', () => {
+    const playingNow = game({ id: 9, name: 'Tunic', status: 'playing' });
+    const entries = feed(
+      [hades, celeste, playingNow],
+      [
+        event(7, 'status', { status: ['playing', 'finished'], rating: [null, 9] }, at(9)),
+        event(8, 'status', { status: ['playing', 'dropped'] }, at(10)),
+        event(7, 'edit', { rating: [9, 10] }, at(11, 18)),
+        event(8, 'favorite', { favorite: [false, true] }, at(12, 18)),
+        event(9, 'status', { status: ['backlog', 'playing'] }, at(13, 18)),
+        event(9, 'playtime', { playtime_forever: [0, 90] }, at(14, 19)),
+      ],
+    );
+    expect(entries.map((e) => [e.name, kinds(e)])).toEqual([
+      ['Tunic', ['played']],
+      ['Tunic', ['playing']],
+      ['Celeste', ['favorite']],
+      ['Hades', ['rated']],
+      ['Celeste', ['dropped']],
+      ['Hades', ['finished']],
+    ]);
+  });
+
+  it("leaves out the housekeeping, as if it never happened: it doesn't part a game's rows either", () => {
+    const entries = feed(
+      [hades, celeste],
+      [
+        event(7, 'status', { status: ['backlog', 'playing'] }, at(9)),
+        event(7, 'playtime', { playtime_forever: [0, 90] }, at(10)),
+        // Between Hades's lines, and gone: they are still one run, one row.
+        event(8, 'added', { status: [null, 'backlog'] }, at(10)),
+        event(8, 'queue', { queued: [false, true] }, at(10)),
+        event(8, 'queue', { queued: [true, false] }, at(10)),
+        event(8, 'status', { status: ['backlog', 'wont_play'] }, at(10)),
+        event(8, 'edit', { platform: ['PC', 'Switch'] }, at(10)),
+        event(8, 'favorite', { favorite: [true, false] }, at(10)),
+        event(8, 'note', { noted: [false, true] }, at(10)),
+        event(7, 'status', { status: ['playing', 'finished'] }, at(11)),
+      ],
+    );
+    expect(entries.map((e) => [e.name, kinds(e)])).toEqual([
+      ['Hades', ['started', 'played', 'finished']],
+    ]);
+  });
+
+  it('keeps what is in the past in the past: a finish dated two years back sits under what was done since', () => {
+    const entries = feed(
+      [hades, celeste],
+      [
+        event(8, 'favorite', { favorite: [false, true] }, at(9)),
+        // Logged later the same day, about a finish in 2024.
+        event(
+          7,
+          'status',
+          {
+            status: ['backlog', 'finished'],
+            finished_at: [null, '2024-05-01T00:00:00+00:00'],
+            rating: [null, 8],
+          },
+          at(12),
+        ),
+      ],
+    );
+    expect(entries.map((e) => [e.name, kinds(e), e.at])).toEqual([
+      ['Celeste', ['favorite'], at(9)],
+      ['Hades', ['finished'], '2024-05-01'],
+    ]);
+  });
+
+  it('says when each row happened, for "2h ago"', () => {
+    const entries = feed(
+      [hades, finished(1, '2025-08-20')],
+      [event(7, 'status', { status: ['backlog', 'playing'] }, at(9))],
+    );
+    // A moment from the history; a day for a finish from before it.
+    expect(entries.map((e) => e.at)).toEqual([at(9), '2025-08-20']);
+  });
+});
+
+describe('activityAgo', () => {
+  const now = new Date('2026-11-19T12:00:00Z');
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
+  const MINUTE = 60_000;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+
+  it.each([
+    [20_000, 'Just now'],
+    [MINUTE, '1m ago'],
+    [59 * MINUTE, '59m ago'],
+    [HOUR, '1h ago'],
+    [23 * HOUR + 59 * MINUTE, '23h ago'],
+    [DAY, '1d ago'],
+    [6 * DAY + 23 * HOUR, '6d ago'],
+  ])('says %i ms ago as "%s"', (ms, said) => {
+    expect(activityAgo(ago(ms), now)).toBe(said);
+  });
+
+  it('says the day once it is a week old, with the year for another year', () => {
+    expect(activityAgo('2026-11-10T20:00:00+00:00', now)).toBe('Nov 10');
+    expect(activityAgo('2025-08-20T20:00:00+00:00', now)).toBe('Aug 20, 2025');
+  });
+
+  it('says a day alone as today or so many days ago within the week, then as the day it was', () => {
+    expect(activityAgo('2026-11-19', now)).toBe('Today');
+    expect(activityAgo('2026-11-18', now)).toBe('1d ago');
+    expect(activityAgo('2026-11-13', now)).toBe('6d ago');
+    expect(activityAgo('2026-11-12', now)).toBe('Nov 12');
+    expect(activityAgo('2022-08-20', now)).toBe('Aug 20, 2022');
+    // A day still to come is said as it is.
+    expect(activityAgo('2026-11-25', now)).toBe('Nov 25');
+  });
+
+  it('says nothing when nothing says when', () => {
+    expect(activityAgo('', now)).toBe('');
+    expect(activityAgo('not a date at all', now)).toBe('');
   });
 });

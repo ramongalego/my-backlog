@@ -1,27 +1,16 @@
-import { PrefetchedQueries } from '@/components/layout/PrefetchedQueries';
-import { prefetchForUser } from '@/lib/data/prefetch';
-import { queries } from '@/lib/data/queries';
-import ProfileView from './View';
+import { redirect } from 'next/navigation';
+import { publicProfilePath } from '@/lib/account/public-profile';
+import { ownUsername } from '@/lib/server/own-username';
 
+/**
+ * A player's profile has one address, /u/<username>, which shows them their own
+ * with everything on it. This one only knows who is asking: for a link that
+ * can't know the username (an old bookmark, the menu before the session loads).
+ * No loading.tsx, so it answers with a redirect rather than a page.
+ */
 export default async function ProfilePage() {
-  // The profile's figures, favorites and activity all come from the Games list.
-  const state = await prefetchForUser((supabase, userId) => [
-    // Grows with the library: stream it rather than hold the page for it.
-    { ...queries.gamesList(userId, supabase), stream: true },
-    queries.playing(userId, supabase),
-    queries.favoriteGames(userId, supabase),
-    // What Recent activity is drawn from, besides the games themselves.
-    queries.history(userId, supabase),
-    // For the game dialog (a queued game shows as Queue), as Games and Stats do.
-    queries.queue(userId, supabase),
-    // Whether the Account panel offers Change or Set password.
-    queries.hasPassword(userId, supabase),
-  ]);
-
-  return (
-    <>
-      <PrefetchedQueries state={state} />
-      <ProfileView />
-    </>
-  );
+  const username = await ownUsername();
+  // Signed-out visitors are turned away before this (a protected route), and
+  // every profile has a username: Home is only for a profile that can't be read.
+  redirect(username ? publicProfilePath(username) : '/home');
 }

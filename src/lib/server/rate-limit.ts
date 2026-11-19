@@ -189,6 +189,9 @@ export const RATE_LIMITS = {
   // Each try checks the current password: this stops guessing it at an
   // unlocked computer.
   accountPassword: { limit: 5, windowMs: 15 * 60 * 1000 },
+  // Each try says whether a username is taken: a few tries find a free one,
+  // and this stops a script from listing them or taking them in turn.
+  usernameChange: { limit: 20, windowMs: 60 * 60 * 1000 },
   // Each one is stored.
   avatarUpload: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Each one sends confirmation emails.

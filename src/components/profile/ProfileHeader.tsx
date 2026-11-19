@@ -1,90 +1,50 @@
-'use client';
-
+import type { ReactNode } from 'react';
 import type { ProfileFigures } from '@/lib/account/figures';
-import { ProfileAvatar } from './ProfileAvatar';
-import { ProfileName } from './ProfileName';
-import { FIGURE_CELL, FIGURE_STRIP, PROFILE_HEADER } from './profile-layout';
-import type { ApiResult } from '@/lib/client/request';
+import { ProfileFigureStrip } from './ProfileFigureStrip';
+import { ProfilePicture } from './ProfilePicture';
+import { PROFILE_BYLINE, PROFILE_HEADER } from './profile-layout';
 
-type Result = ApiResult;
-
-// `short` is the label on the narrowest phones (320px), where four figures
-// leave each about 56px.
-const FIGURES: { key: keyof ProfileFigures; label: string; short?: string }[] = [
-  { key: 'games', label: 'Games' },
-  { key: 'finished', label: 'Finished' },
-  { key: 'finishedThisYear', label: 'This year' },
-  { key: 'hours', label: 'Hours played', short: 'Hours' },
-];
-
-/** The figures are one strip parted by hairlines, not a row of tiles. */
+/**
+ * Who the profile is: the same header on the player's own Profile and on the
+ * page other people see. Nothing here is changed in place: the name, the
+ * picture and the username are changed on Settings, which is where `action`
+ * leads on the player's own.
+ */
 export function ProfileHeader({
   name,
+  username,
   avatar,
-  identity,
-  memberSince,
   figures,
+  action,
 }: {
   name: string;
+  /** Null until the profile is read: the line waits for it. */
+  username: string | null;
   avatar: string | null;
-  identity: {
-    chosenName: string | null;
-    accountName: string;
-    hasOwnPicture: boolean;
-    rename: (name: string | null) => Promise<Result>;
-    uploadPicture: (file: File) => Promise<Result>;
-    removePicture: () => Promise<Result>;
-  };
-  memberSince: string | null;
   figures: ProfileFigures;
+  /** Beside the name: Edit profile, on the player's own Profile only. */
+  action?: ReactNode;
 }) {
   return (
     <div className={PROFILE_HEADER}>
       <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-        <ProfileAvatar
-          src={avatar}
-          name={name}
-          hasOwnPicture={identity.hasOwnPicture}
-          onUpload={identity.uploadPicture}
-          onRemove={identity.removePicture}
-        />
+        <div className="shrink-0">
+          {/* Keyed by the picture: a new one gets its own chance to load. */}
+          <ProfilePicture key={avatar} src={avatar} name={name} />
+        </div>
         {/* From `lg` it takes its own width but can still give way to the figures. */}
         <div className="min-w-0 flex-1 lg:flex-initial">
-          <ProfileName
-            name={name}
-            fallback={identity.accountName}
-            chosen={identity.chosenName}
-            onSave={identity.rename}
-            under={
-              // Rendered (empty) without a date, so the header keeps its height.
-              <p className="mt-1 min-h-5 text-sm text-ink-400">
-                {memberSince && `Member since ${memberSince}`}
-              </p>
-            }
-          />
+          {/* Wraps below `lg`, as names do; beside the figures it's cut instead. */}
+          <h1 className="min-w-0 text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-ink-50 [overflow-wrap:anywhere] lg:truncate">
+            {name}
+          </h1>
+          {/* Rendered (empty) until it is known, so the header keeps its height. */}
+          <p className={PROFILE_BYLINE}>{username && `@${username}`}</p>
         </div>
+        {action}
       </div>
 
-      <dl className={`${FIGURE_STRIP} divide-x divide-ink-800`}>
-        {FIGURES.map(({ key, label, short }) => (
-          // The figure reads first, its label under it.
-          <div key={key} className={`flex min-w-0 flex-col-reverse ${FIGURE_CELL}`}>
-            <dt className="mt-0.5 truncate text-xs text-ink-500">
-              {short ? (
-                <>
-                  <span className="min-[360px]:hidden">{short}</span>
-                  <span className="max-[359px]:hidden">{label}</span>
-                </>
-              ) : (
-                label
-              )}
-            </dt>
-            <dd className="text-xl sm:text-2xl font-semibold tracking-tight text-ink-50">
-              {figures[key].toLocaleString('en-US')}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <ProfileFigureStrip figures={figures} />
     </div>
   );
 }

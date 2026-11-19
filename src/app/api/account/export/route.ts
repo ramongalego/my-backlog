@@ -58,10 +58,11 @@ export async function GET(request: NextRequest) {
         steam_id: string | null;
         steam_username: string | null;
         display_name: string | null;
+        username: string | null;
       }>(
         supabase
           .from('profiles')
-          .select('steam_id, steam_username, display_name')
+          .select('steam_id, steam_username, display_name, username')
           .eq('id', user.id)
           .maybeSingle(),
       ),
@@ -130,6 +131,7 @@ export async function GET(request: NextRequest) {
         email: user.email ?? null,
         createdAt: user.created_at ?? null,
         displayName: profile?.display_name ?? null,
+        username: profile?.username ?? null,
         steamId: profile?.steam_id ?? null,
         steamUsername: profile?.steam_username ?? null,
       },

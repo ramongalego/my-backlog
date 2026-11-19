@@ -25,14 +25,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { COVER_ASPECT, CoverArt } from '@/components/games/CoverArt';
 import { Rating } from '@/components/games/Rating';
 import { ProfileSection } from './ProfileSection';
-import { FAVORITE_GRID, FAVORITE_SLOTS } from './profile-layout';
+import { FAVORITE_ART_SIZES, FAVORITE_GRID, FAVORITE_SLOTS } from './profile-layout';
 import { sameFavorites, type FavoriteGame } from '@/lib/account/favorites';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 
-const ART_SIZES = '(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px';
-
 function FavoriteArt({ game }: { game: FavoriteGame }) {
-  return <CoverArt src={game.header_image} alt="" sizes={ART_SIZES} interactive />;
+  return <CoverArt src={game.header_image} alt="" sizes={FAVORITE_ART_SIZES} interactive />;
 }
 
 /** What a screen reader is told about a favorite, once, for the whole row. */

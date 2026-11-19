@@ -32,8 +32,6 @@ export interface ActivityLine {
   to?: string;
   /** The rating that came with it: a finish, a drop, or a rating given by itself. */
   rating?: number;
-  /** "YYYY-MM-DD" the player chose for a finish or a drop, when it isn't the day it was logged. */
-  on?: string;
 }
 
 /** One thing done to a game, or a group of them: one row of the list. */
@@ -49,6 +47,8 @@ export interface ActivityEntry {
   lines: ActivityLine[];
   /** "YYYY-MM-DD" the latest line was logged, which the list groups by; null when unknown. */
   day: string | null;
+  /** When the latest line was logged: a moment, a day (from before the history), or '' when nothing says. */
+  at: string;
   /** Your rating, where one of them is about it: a finish, a drop, a rating. */
   rating: number | null;
   /**
@@ -92,6 +92,22 @@ const GROUP_MORE_THAN = 3;
 
 /** More than this many things done to one game in a row are one row, which unfolds. */
 const SAME_GAME_MORE_THAN = 2;
+
+/**
+ * What a profile shows to other people: what was played, finished, dropped,
+ * rated and made a favorite. The rest is housekeeping (the backlog, the queue,
+ * Won't Play, a move to a console, a favorite taken off, a note), which stays
+ * the player's own.
+ */
+export const HIGHLIGHTS: ReadonlySet<ActivityKind> = new Set<ActivityKind>([
+  'playing',
+  'started',
+  'finished',
+  'dropped',
+  'rated',
+  'played',
+  'favorite',
+]);
 
 /**
  * Time played, a move and a rating each say something of their own, and only
@@ -182,6 +198,12 @@ export function recentActivity(
   games: GameItem[],
   playing: PlayingGame | null,
   events: ActivityEvent[] = [],
+  {
+    only,
+  }: {
+    /** Leaves out every line of another kind, as if it never happened. */
+    only?: ReadonlySet<ActivityKind>;
+  } = {},
 ): ActivityEntry[] {
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
 
@@ -192,16 +214,19 @@ export function recentActivity(
     const { day: chosen, rating, ...rest }: Told = what;
     const line: ActivityLine = rest;
     const loggedOn = toLocalIsoDate(new Date(event.created_at));
-    if (chosen && chosen !== loggedOn) line.on = chosen;
+    // A finish or a drop happened on the day the player says, which can be
+    // years before it was logged: that is where it sits in the list, so what
+    // is in the past stays there and isn't shown as recent.
+    const dated = chosen && chosen !== loggedOn ? chosen : null;
     if (rating != null) line.rating = rating;
     return [
       {
-        at: event.created_at,
+        at: dated ?? event.created_at,
         order: event.id,
         key: `event-${event.id}`,
         game,
         line,
-        day: loggedOn,
+        day: dated ?? loggedOn,
         rating: rating ?? null,
       },
     ];
@@ -221,7 +246,7 @@ export function recentActivity(
   // What the games themselves say, where the history doesn't: a game being
   // played since before it began, and what was finished or dropped before it.
   const alreadyTold = new Set(
-    logged.map((item) => `${item.game.id} ${item.line.kind} ${item.line.on ?? item.day}`),
+    logged.map((item) => `${item.game.id} ${item.line.kind} ${item.day}`),
   );
   const before = [...shown.values()].flatMap((game): Item[] => {
     const from = (line: ActivityLine, at: string, day: string | null, rating: number | null) => [
@@ -246,9 +271,9 @@ export function recentActivity(
     );
   });
 
-  const items: Item[] = [...logged, ...before].sort(
-    (a, b) => b.at.localeCompare(a.at) || b.order - a.order || b.game.id - a.game.id,
-  );
+  const items: Item[] = [...logged, ...before]
+    .filter((item) => !only || only.has(item.line.kind))
+    .sort((a, b) => b.at.localeCompare(a.at) || b.order - a.order || b.game.id - a.game.id);
 
   const runs: Item[][] = [];
   for (const item of items) {
@@ -277,6 +302,7 @@ export function recentActivity(
       key: item.key,
       lines: [item.line],
       day: item.day,
+      at: item.at,
       rating: item.rating,
     }));
     if (updates.length > SAME_GAME_MORE_THAN) {
@@ -286,6 +312,7 @@ export function recentActivity(
         key: `updates-${updates.at(-1)!.key}`,
         lines: updates.map((one) => one.lines[0]).reverse(),
         day: updates[0].day,
+        at: updates[0].at,
         rating: updates.find((one) => one.rating !== null)?.rating ?? null,
         updates,
       };
@@ -312,16 +339,12 @@ export function recentActivity(
     const group = made.slice(i, end).map((one) => one.entry);
     if (group.length > GROUP_MORE_THAN) {
       const [first] = group;
-      // A finish or a drop says its own day when every game shares it.
-      const on = group.every((one) => one.lines[0].on === first.lines[0].on)
-        ? first.lines[0].on
-        : undefined;
       entries.push({
         ...first,
         key: `bulk-${group.at(-1)!.key}`,
         name: `${group.length} games`,
         // What was done to all of them; each game keeps its own rating.
-        lines: [{ kind: first.lines[0].kind, ...(on ? { on } : {}) }],
+        lines: [{ kind: first.lines[0].kind }],
         rating: null,
         games: group,
       });
@@ -347,21 +370,35 @@ export function activityDay(day: string, now = new Date()): string {
   });
 }
 
-/** The stamp beside the list's rows; `year` only for a day in another year. */
-export function activityStamp(
-  day: string,
-  now = new Date(),
-): { day: string; month: string; year: string | null } {
-  const date = new Date(
-    Number(day.slice(0, 4)),
-    Number(day.slice(5, 7)) - 1,
-    Number(day.slice(8, 10)),
-  );
-  return {
-    day: String(date.getDate()),
-    month: date.toLocaleDateString('en-US', { month: 'short' }),
-    year: date.getFullYear() === now.getFullYear() ? null : String(date.getFullYear()),
-  };
+/**
+ * When something happened, for the far end of its row: "Just now", "12m ago",
+ * "5h ago", "3d ago" within the week, then the day it was ("Nov 10"). A day
+ * alone (a finish or a drop the player dated, or one from before the history)
+ * is "Today" or so many days ago within the week; '' when nothing says when.
+ */
+export function activityAgo(at: string, now = new Date()): string {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(at)) return '';
+  const day = activityDay(at.slice(0, 10), now);
+  if (!at.includes('T')) {
+    // Whole days between the two dates, whatever the clocks did in between.
+    const then = Date.UTC(
+      Number(at.slice(0, 4)),
+      Number(at.slice(5, 7)) - 1,
+      Number(at.slice(8, 10)),
+    );
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysAgo = Math.round((today - then) / 86_400_000);
+    if (daysAgo === 0) return 'Today';
+    return daysAgo > 0 && daysAgo < 7 ? `${daysAgo}d ago` : day;
+  }
+  const minutes = Math.floor((now.getTime() - Date.parse(at)) / 60_000);
+  if (Number.isNaN(minutes)) return '';
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days < 7 ? `${days}d ago` : day;
 }
 
 /** "45m", "2h" or "2h 30m". */
