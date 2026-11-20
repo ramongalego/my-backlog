@@ -15,7 +15,7 @@ Next.js 16 (App Router, Turbopack, React Compiler), React 19, TypeScript, Tailwi
 
 ## Deploying
 
-- `main` is staging. Every push to it builds a Vercel preview at `my-backlog-git-main-ramongcs-projects.vercel.app`, behind Vercel's login. Its errors reach Sentry as `preview`, which never alerts.
+- `main` is staging. Every push to it builds a Vercel preview at `staging.mybacklog.co`, behind Vercel's login. Its errors reach Sentry as `preview`, which never alerts.
 - The live site, `mybacklog.co`, serves the `prod` branch (`www.mybacklog.co` and `my-backlog-chi.vercel.app` redirect to it). Deploying is `npm run deploy` (`git push origin main main:prod`): it pushes `main` and moves `prod` to the same commit, fast-forward only. Vercel builds it, and puts it live only once CI's `verify` check has passed on that commit (Deployment Checks in Vercel's settings), so a commit CI never ran on can't go live.
 - Every deploy that goes live becomes a GitHub Release named for the day (`v2026.11.18`, then `v2026.11.18.2`), with the commit titles since the last release as its notes (`.github/workflows/release.yml`, run by Vercel's report that the production deployment succeeded). So a commit title is a line of the release notes: write it as what changed for the player, or for the app.
 - "Commit and push" puts a change on staging, not on the live site; say which of the two happened.
