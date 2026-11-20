@@ -252,6 +252,8 @@ function startsBefore(finish: ActivityEvent, events: ActivityEvent[]): ActivityE
 
 /** What a game is now, which its history is read back from. */
 interface GameNow {
+  /** "steam": its hours are Steam's, which counts them as they are played. */
+  source: string;
   playtime_forever: number;
   last_played_at: string | null;
 }
@@ -274,12 +276,58 @@ function before(
   return first ? first.changes[field][0] : now;
 }
 
+/** Whether any time played was logged from one event of a game to another, both included. */
+function playedBetween(
+  first: ActivityEvent,
+  last: ActivityEvent,
+  events: ActivityEvent[],
+): boolean {
+  return events.some((one) => {
+    if (one.game_id !== first.game_id || one.id < first.id || one.id > last.id) return false;
+    const hours = one.changes.playtime_forever;
+    return !!hours && (typeof hours[1] !== 'number' || hours[1] > Number(hours[0] ?? 0));
+  });
+}
+
+const dayOf = (event: ActivityEvent) => toLocalIsoDate(new Date(happened(event)));
+
+/**
+ * Where a game was started before `start` and put down again: where the first
+ * of those times began. Null where one of them can't be passed over: only a
+ * false start is, begun and put down on the same day with no time played
+ * logged (a mis-click, a change of mind). Another, or one put down that the
+ * history doesn't see begin, means it was played before.
+ */
+function firstOfFalseStarts(start: ActivityEvent, events: ActivityEvent[]): ActivityEvent | null {
+  const earlier = events
+    .filter((one) => one.game_id === start.game_id && one.id < start.id && one.changes.status)
+    .sort((a, b) => a.id - b.id);
+  let first = start;
+  let begun: ActivityEvent | null = null;
+  for (const event of earlier) {
+    const [was, now] = event.changes.status;
+    if (was === 'playing') {
+      const falseStart =
+        begun && dayOf(begun) === dayOf(event) && !playedBetween(begun, event, events);
+      if (!falseStart) return null;
+      if (first === start) first = begun!;
+      begun = null;
+    }
+    if (now === 'playing') begun = event;
+  }
+  return begun ? null : first;
+}
+
 /**
  * The start of a finish where how long it took can be told for certain: the
  * game was started, played and finished, with nothing between (no pause, no
- * stop, no drop), and it had never been played before that start (no hours on
- * it, and no last-played date, which a stop or any time played would have
- * stamped). Null for anything else: played some, put down and finished months
+ * stop, no drop), and it had never been played before that start. For a Steam
+ * game that is its hours: Steam counts them as it is played, so none at the
+ * start means none before it. For any other, whose hours are often only
+ * entered at the finish, it is the history too: no time before it apart from
+ * a false start (started and put down the same day with no time logged), and
+ * no hours or last-played date before that (a stop, or time played, stamps
+ * one). Null for anything else: played some, put down and finished months
  * later doesn't say how long it took, whichever start it is counted from.
  * Shared by Recent activity and the summary a finish opens.
  */
@@ -292,15 +340,13 @@ export function cleanStartOf(
     .filter((one) => one.game_id === finish.game_id && one.id < finish.id && one.changes.status)
     .sort((a, b) => b.id - a.id);
   if (!start || start.changes.status[1] !== 'playing') return null;
-  // Played before, as far as the history goes back: paused, stopped or dropped.
-  const playedBefore = events.some(
-    (one) =>
-      one.game_id === finish.game_id && one.id < start.id && one.changes.status?.[0] === 'playing',
-  );
-  if (playedBefore) return null;
   const hours = before('playtime_forever', game.playtime_forever, start, events);
   if ((hours ?? 0) !== 0) return null;
-  return before('last_played_at', game.last_played_at, start, events) == null ? start : null;
+  if (game.source === 'steam') return start;
+  const first = firstOfFalseStarts(start, events);
+  if (!first) return null;
+  if ((before('playtime_forever', game.playtime_forever, first, events) ?? 0) !== 0) return null;
+  return before('last_played_at', game.last_played_at, first, events) == null ? start : null;
 }
 
 /** Things done to one game this close together on one day, with nothing else between, are a run. */

@@ -1124,10 +1124,13 @@ describe('recentActivity, how long a finish took', () => {
 });
 
 describe('recentActivity, the days a finish took', () => {
+  // On a console, where hours are often only entered at the finish, unless told otherwise.
   const hadesDone = (also: Partial<Parameters<typeof game>[0]> = {}) =>
     game({
       id: 7,
       name: 'Hades',
+      source: 'manual',
+      platform: 'Switch',
       status: 'finished',
       finished_at: '2026-11-17T00:00:00+00:00',
       ...also,
@@ -1205,6 +1208,64 @@ describe('recentActivity, the days a finish took', () => {
       status(1, 'backlog', 'playing', at(12, 1)),
     ]);
     expect(afterDrop?.days).toBeUndefined();
+  });
+
+  it('passes over a false start: started and put down the same day, with no time played', () => {
+    const line = finishLine([
+      finish(4),
+      status(3, 'backlog', 'playing', at(12, 10)),
+      // Put down two hours later: the stop stamps a last-played date.
+      status(2, 'playing', 'backlog', at(14, 3), {
+        queued: [false, true],
+        last_played_at: [null, '2026-11-03T14:00:00+00:00'],
+      }),
+      status(1, 'backlog', 'playing', at(12, 3)),
+    ]);
+    // From the start it was played from.
+    expect(line?.days).toBe(7);
+  });
+
+  it("doesn't pass over an earlier start with time played in it, or put down another day", () => {
+    const played = finishLine([
+      finish(5),
+      status(4, 'backlog', 'playing', at(12, 10)),
+      status(3, 'playing', 'backlog', at(16, 3)),
+      { ...event(7, 'playtime', { playtime_forever: [0, 120] }, at(14, 3)), id: 2 },
+      status(1, 'backlog', 'playing', at(12, 3)),
+    ]);
+    expect(played?.days).toBeUndefined();
+    const nextDay = finishLine([
+      finish(4),
+      status(3, 'backlog', 'playing', at(12, 10)),
+      status(2, 'playing', 'backlog', at(9, 4)),
+      status(1, 'backlog', 'playing', at(22, 3)),
+    ]);
+    expect(nextDay?.days).toBeUndefined();
+  });
+
+  it("goes by a Steam game's hours, which Steam counts as it is played", () => {
+    const steam = hadesDone({ source: 'steam', platform: 'PC' });
+    // Started and put down days apart with no hours: it wasn't played. From the last start.
+    const unplayed = finishLine(
+      [
+        finish(4, { playtime_forever: [0, 900] }),
+        status(3, 'backlog', 'playing', at(12, 10)),
+        status(2, 'playing', 'backlog', at(12, 3), {
+          queued: [false, true],
+          last_played_at: [null, '2026-11-03T12:00:00+00:00'],
+        }),
+        status(1, 'backlog', 'playing', at(12, 1)),
+      ],
+      [],
+      { ...steam, playtime_forever: 900 },
+    );
+    expect(unplayed?.days).toBe(7);
+    // Hours on it at the start: played before.
+    const played = finishLine([finish(2), status(1, 'backlog', 'playing', at(12, 10))], [], {
+      ...steam,
+      playtime_forever: 600,
+    });
+    expect(played?.days).toBeUndefined();
   });
 
   it("isn't said for a game finished without being started, or a start the history doesn't reach", () => {

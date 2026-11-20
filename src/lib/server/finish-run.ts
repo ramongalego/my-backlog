@@ -19,7 +19,7 @@ export async function cleanRunStartedAt(
   const [game, history] = await Promise.all([
     supabase
       .from('games')
-      .select('playtime_forever, last_played_at')
+      .select('source, playtime_forever, last_played_at')
       .eq('user_id', userId)
       .eq('id', gameId)
       .maybeSingle(),
