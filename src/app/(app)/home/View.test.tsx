@@ -346,6 +346,17 @@ describe('HomeContent — nothing left to pick', () => {
     expect(screen.getByRole('button', { name: 'Go to your queue' })).toBeInTheDocument();
     expect(screen.getByText(/already in your queue/)).toBeInTheDocument();
   });
+
+  it('says the picks leave queued games out when only some are queued', () => {
+    mockUseGameLibrary.mockReturnValue({
+      ...baseLibrary,
+      meta: { ...baseLibrary.meta, backlogCount: 20, queuedGameIds: new Set([2]) },
+    });
+    render(<HomePage />);
+
+    expect(screen.getByRole('button', { name: 'Random' })).toBeInTheDocument();
+    expect(screen.getByText(/Games in your queue are left out/)).toBeInTheDocument();
+  });
 });
 
 describe('HomeContent — a small backlog', () => {

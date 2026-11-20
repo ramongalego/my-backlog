@@ -59,3 +59,34 @@ describe('PickNext with the AI features turned off', () => {
     expect(onRandom).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('PickNext with games in the queue', () => {
+  it('says both picks leave the queue out', () => {
+    render(
+      <PickNext
+        covers={['a']}
+        backlogCount={12}
+        onPick={jest.fn()}
+        onRandom={jest.fn()}
+        someQueued
+      />,
+    );
+    expect(
+      screen.getByText(/Or leave it to chance\. Games in your queue are left out\.$/),
+    ).toBeInTheDocument();
+  });
+
+  it('says a random pick leaves the queue out, with the AI features off', () => {
+    render(<PickNext covers={['a']} backlogCount={12} onRandom={jest.fn()} someQueued />);
+    expect(
+      screen.getByText(
+        'Leave it to chance: MyBacklog picks one from your backlog at random, leaving out your queue',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("doesn't mention the queue when nothing is in it", () => {
+    render(<PickNext covers={['a']} backlogCount={12} onPick={jest.fn()} onRandom={jest.fn()} />);
+    expect(screen.queryByText(/queue/)).not.toBeInTheDocument();
+  });
+});

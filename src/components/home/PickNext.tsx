@@ -32,6 +32,8 @@ interface PickNextProps {
   onRandom: () => void;
   /** Every backlog game is queued, and both picks leave queued games out. */
   allQueued?: { onOpenQueue: () => void; onAddGame: () => void };
+  /** Some games are queued: the copy says the picks leave them out. */
+  someQueued?: boolean;
   /** Shown under the buttons, e.g. the nudge to connect Steam. */
   children?: React.ReactNode;
 }
@@ -43,6 +45,7 @@ export function PickNext({
   onPick,
   onRandom,
   allQueued,
+  someQueued = false,
   children,
 }: PickNextProps) {
   return (
@@ -101,6 +104,7 @@ export function PickNext({
           <>
             <p className="mt-3 text-ink-300 leading-relaxed">
               Leave it to chance: MyBacklog picks one from your backlog at random
+              {someQueued && ', leaving out your queue'}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <Button onClick={onRandom} size="lg" className="cursor-pointer">
@@ -114,6 +118,7 @@ export function PickNext({
             <p className="mt-3 text-ink-300 leading-relaxed">
               Say how you want to feel, how much energy you have and how long you can play, and
               MyBacklog picks one from your backlog for tonight. Or leave it to chance.
+              {someQueued && ' Games in your queue are left out.'}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <Button size="lg" className="group cursor-pointer" onClick={onPick}>

@@ -168,6 +168,7 @@ export default function HomeView() {
                       }
                     : undefined
                 }
+                someQueued={queuedGameIds.size > 0}
               >
                 {!nothingToPick && (
                   <PickNextHint
