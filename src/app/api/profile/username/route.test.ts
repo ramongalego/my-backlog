@@ -9,15 +9,29 @@ let user: { id: string } | null = { id: 'user-1' };
 let answer: unknown = 'ok';
 let rpcError: { message: string } | null = null;
 const claims: { name: string; args: Record<string, unknown> }[] = [];
+/** Tries counted by the database's limiter, by key: shared by every server instance. */
+const counted = new Map<string, number>();
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }),
 }));
 jest.mock('@/lib/supabase/service', () => ({
   tryCreateServiceClient: () => ({
-    rpc: async (name: string, args: Record<string, unknown>) => {
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name === 'consume_rate_limit') {
+        const key = args.p_key as string;
+        const limit = args.p_limit as number;
+        const used = (counted.get(key) ?? 0) + 1;
+        counted.set(key, used);
+        const data = {
+          allowed: used <= limit,
+          remaining: Math.max(0, limit - used),
+          reset_at: new Date(Date.now() + 60_000).toISOString(),
+        };
+        return { single: async () => ({ data, error: null }) };
+      }
       claims.push({ name, args });
-      return { data: rpcError ? null : answer, error: rpcError };
+      return Promise.resolve({ data: rpcError ? null : answer, error: rpcError });
     },
   }),
 }));
@@ -105,4 +119,6 @@ it('stops a script trying one username after another', async () => {
   for (let i = 0; i < limit; i++) expect((await save({ username: `name${i}` })).status).toBe(409);
   expect((await save({ username: 'onemore' })).status).toBe(429);
   expect(claims).toHaveLength(limit);
+  // Counted in the database, under the player's own key.
+  expect(counted.get(`username:${user!.id}`)).toBe(limit + 1);
 });

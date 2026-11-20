@@ -13,8 +13,10 @@ const shareSchema = z.object({ gameId: gameIdSchema });
 
 /**
  * Everything on the page is read here from the library and the browser only
- * says which game, or anyone signed in could publish any text and picture on
- * this site.
+ * says which game, so a request can't name its own text or picture. A player
+ * can still write their own games' rows (a game added by hand is named by
+ * them), so the name is theirs to choose, up to the column's length; the
+ * picture is held to the hosts the app draws from (safeShareImage).
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

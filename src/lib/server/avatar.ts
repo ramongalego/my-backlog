@@ -1,4 +1,5 @@
 import 'server-only';
+import { createHash, randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** The storage bucket profile pictures go in (see the 20261116 migration). */
@@ -83,8 +84,18 @@ export function readImage(
   return { type, ...size };
 }
 
+/**
+ * The player's folder in the bucket. Its name is in the picture's address,
+ * which anyone who sees the profile can read, so it is made from the account
+ * id (to find the folder again) without giving it away: an id is random, so
+ * its hash can't be worked back to it.
+ */
+export function avatarFolder(userId: string): string {
+  return createHash('sha256').update(`avatars:${userId}`).digest('hex').slice(0, 32);
+}
+
 export function newAvatarPath(userId: string, type: AvatarType): string {
-  return `${userId}/${crypto.randomUUID()}.${EXTENSION[type]}`;
+  return `${avatarFolder(userId)}/${randomUUID()}.${EXTENSION[type]}`;
 }
 
 /**
@@ -98,13 +109,14 @@ export async function deleteAvatars(
   keep?: string,
 ): Promise<void> {
   const pictures = service.storage.from(AVATAR_BUCKET);
+  const folder = avatarFolder(userId);
   // A folder holds one picture, or a few after a failure: far under the limit.
-  const { data: files, error: listError } = await pictures.list(userId, { limit: 1000 });
+  const { data: files, error: listError } = await pictures.list(folder, { limit: 1000 });
   if (listError) {
     console.error('Listing profile pictures failed:', listError);
     return;
   }
-  const paths = (files ?? []).map((file) => `${userId}/${file.name}`).filter((p) => p !== keep);
+  const paths = (files ?? []).map((file) => `${folder}/${file.name}`).filter((p) => p !== keep);
   if (paths.length === 0) return;
   const { error } = await pictures.remove(paths);
   if (error) console.error('Deleting profile pictures failed:', error);

@@ -236,9 +236,12 @@ const sections: LegalSection[] = [
           of those, and how many of them each day.
         </p>
         <p>
-          It does not show your email address, your notes, the games in your backlog, your queue or
-          the rest of your library. If you have connected Steam and have not chosen a display name
-          or picture of your own, the name and picture shown are the ones from your Steam profile.
+          It does not show your email address or your notes, and it does not list your backlog, your
+          queue or the rest of your library. A game from them appears only as one of your favorites
+          or in your recent activity: a game you started or played stays there after you put it back
+          in your backlog or your queue. If you have connected Steam and have not chosen a display
+          name or picture of your own, the name and picture shown are the ones from your Steam
+          profile.
         </p>
         <p>
           You can make your profile private at any time in <Link href="/settings">Settings</Link>. A

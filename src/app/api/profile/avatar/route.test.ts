@@ -3,8 +3,11 @@
  */
 import type { NextRequest } from 'next/server';
 import { DELETE, POST } from '@/app/api/profile/avatar/route';
+import { avatarFolder } from '@/lib/server/avatar';
 
 const BASE = 'https://abc.supabase.co/storage/v1/object/public/avatars/';
+/** The player's folder: not named by the account id, which the address would publish. */
+const folder = () => avatarFolder(user!.id);
 let user: { id: string } | null = { id: 'user-1' };
 let limited = false;
 /** The files already in the player's folder. */
@@ -96,7 +99,7 @@ it("stores the picture in the player's folder and puts it on the profile", async
   const res = await upload(new Blob([WEBP], { type: 'image/webp' }));
   expect(res.status).toBe(200);
   expect(uploads).toHaveLength(1);
-  expect(uploads[0].path).toMatch(new RegExp(`^${user!.id}/[0-9a-f-]{36}\\.webp$`));
+  expect(uploads[0].path).toMatch(new RegExp(`^${folder()}/[0-9a-f-]{36}\\.webp$`));
   expect(uploads[0].options).toMatchObject({ contentType: 'image/webp', upsert: false });
   expect(res.body).toEqual({ avatarUrl: `${BASE}${uploads[0].path}` });
   expect(profileUpdates[0].avatar_url).toBe(res.body.avatarUrl);
@@ -107,7 +110,7 @@ it("stores the picture in the player's folder and puts it on the profile", async
 it('deletes whatever else is in the folder: the picture it replaces, and any left behind', async () => {
   stored = ['old.webp', 'orphan.webp'];
   await upload(new Blob([WEBP], { type: 'image/webp' }));
-  expect(removed).toEqual([[`${user!.id}/old.webp`, `${user!.id}/orphan.webp`]]);
+  expect(removed).toEqual([[`${folder()}/old.webp`, `${folder()}/orphan.webp`]]);
 });
 
 it('goes by the bytes, not by what the upload says it is', async () => {
@@ -185,7 +188,7 @@ describe('removing it', () => {
     const res = await DELETE();
     expect(res.status).toBe(200);
     expect(profileUpdates[0].avatar_url).toBeNull();
-    expect(removed).toEqual([[`${user!.id}/mine.webp`]]);
+    expect(removed).toEqual([[`${folder()}/mine.webp`]]);
   });
 
   it('refuses a signed-out request', async () => {

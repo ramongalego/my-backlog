@@ -192,6 +192,9 @@ export const RATE_LIMITS = {
   // Each try says whether a username is taken: a few tries find a free one,
   // and this stops a script from listing them or taking them in turn.
   usernameChange: { limit: 20, windowMs: 60 * 60 * 1000 },
+  // Per IP: profile pages (/u/<username>), which anyone can open. Far more
+  // than reading them takes, prefetches included; it only stops a script.
+  profileView: { limit: 120, windowMs: 60 * 1000 },
   // Each one is stored.
   avatarUpload: { limit: 10, windowMs: 60 * 60 * 1000 },
   // Each one sends confirmation emails.

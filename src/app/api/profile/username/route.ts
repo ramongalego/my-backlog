@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { tryCreateServiceClient } from '@/lib/supabase/service';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { checkSharedRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { usernameSchema } from '@/lib/validations/profile';
 
@@ -22,7 +22,9 @@ export async function PUT(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return jsonError('Unauthorized', 401);
 
-  const limit = checkRateLimit(`username:${user.id}`, RATE_LIMITS.usernameChange);
+  // Counted across every server instance: each try says whether a username
+  // is taken, a private profile's too.
+  const limit = await checkSharedRateLimit(`username:${user.id}`, RATE_LIMITS.usernameChange);
   if (!limit.success) return rateLimited(limit);
 
   let body: unknown;

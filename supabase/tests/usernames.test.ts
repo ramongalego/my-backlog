@@ -8,6 +8,8 @@ import { clearDatabase, createDatabase, createUser, sqlFile, type TestDatabase }
 // up by the migration (run twice, as it may be).
 
 const MIGRATION = sqlFile('migrations', '20261119_usernames.sql');
+/** Lookalikes of reserved words refused, and a longer number on "player". */
+const GUARDS = sqlFile('migrations', '20261120_username_guards.sql');
 
 /** A database from before usernames. */
 async function createDatabaseWithoutUsernames(): Promise<TestDatabase> {
@@ -36,6 +38,8 @@ const BUILDS: [string, () => Promise<TestDatabase>][] = [
       const db = await createDatabaseWithoutUsernames();
       await db.exec(MIGRATION);
       await db.exec(MIGRATION);
+      await db.exec(GUARDS);
+      await db.exec(GUARDS);
       return db;
     },
   ],
@@ -104,8 +108,42 @@ describe.each(BUILDS)('usernames, on a database %s', (_, build) => {
       `insert into auth.users (email) values ('jane.doe@example.com') returning id`,
     );
     const profile = await profileOf(user.id);
-    expect(profile.username).toMatch(/^player\d{4}$/);
+    // Nine digits: an address nobody finds by trying them in turn.
+    expect(profile.username).toMatch(/^player\d{9}$/);
     expect(profile.username_auto).toBe(true);
+  });
+
+  it.each([
+    'mybacklog-support',
+    'mybacklog_team',
+    'the_mybacklog',
+    'my-backlog-fan',
+    'admin_',
+    '_admin',
+    'admin1',
+    'official-support',
+    'officialsupport',
+    'the_real_mod',
+    'support-team-2',
+    'help_',
+  ])('refuses %s, which would pass for the app or its staff', async (lookalike) => {
+    const player = await createUser(db);
+    expect([lookalike, await claim(player, lookalike)]).toEqual([lookalike, 'reserved']);
+  });
+
+  it.each(['modern_gamer', 'teamwork', 'helper', 'admiral', 'mod_fan', 'backlogger', 'real-ramon'])(
+    'allows %s, which only shares letters with a reserved word',
+    async (innocent) => {
+      const player = await createUser(db);
+      expect([innocent, await claim(player, innocent)]).toEqual([innocent, 'ok']);
+    },
+  );
+
+  it("doesn't name a profile after a Steam name that would pass for staff", async () => {
+    const [row] = await db.query<{ username: string | null }>(
+      `select public.username_from('MyBacklog Support') as username`,
+    );
+    expect(row.username).toBeNull();
   });
 
   it('gives every account a username of its own', async () => {
@@ -338,11 +376,11 @@ describe.each(BUILDS)('usernames, on a database %s', (_, build) => {
     expect(await usernameFrom('N1gger Slayer')).toBeNull();
     expect(await usernameFrom('Nazi')).toBeNull();
     expect((await profileOf(await createNamed({ steam: 'xX H1tler Xx' }))).username).toMatch(
-      /^player\d{4}$/,
+      /^player\d{9}$/,
     );
     const player = await createUser(db);
     expect(await renameGiven(player, 'faggot')).toBeNull();
-    expect((await profileOf(player)).username).toMatch(/^player\d{4}$/);
+    expect((await profileOf(player)).username).toMatch(/^player\d{9}$/);
   });
 
   it('lets a player keep the one they have, even a word reserved since', async () => {

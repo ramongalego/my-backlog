@@ -4,6 +4,7 @@
 import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/account/delete/route';
 import { accountHasPassword, checkPassword } from '@/lib/server/account';
+import { avatarFolder } from '@/lib/server/avatar';
 
 let user: { id: string; email?: string } | null = { id: 'user-1', email: 'player@example.com' };
 let limited = false;
@@ -88,7 +89,8 @@ it('deletes the account, then its pictures, then clears the session', async () =
   stored = [{ name: 'a.webp' }, { name: 'b.webp' }];
   expect(await remove({ password: 'My-pass1' })).toEqual({ status: 200, body: { ok: true } });
   expect(checkPassword).toHaveBeenCalledWith('player@example.com', 'My-pass1');
-  expect(removed).toEqual([['user-1/a.webp', 'user-1/b.webp']]);
+  const folder = avatarFolder('user-1');
+  expect(removed).toEqual([[`${folder}/a.webp`, `${folder}/b.webp`]]);
   // The account first: a failure after it can't leave a profile pointing at a
   // deleted picture.
   expect(calls).toEqual(['deleteUser:user-1', 'removePictures', 'signOut']);

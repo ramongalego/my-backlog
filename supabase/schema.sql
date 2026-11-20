@@ -422,16 +422,23 @@ create trigger on_auth_user_created
 -- would publish part of it), and the player's to change through the app's API.
 
 -- Names no profile can take: the app's own words, and ones that would pass
--- for its staff. Checked when a username is given or picked, not by a
--- constraint: a word added here later must not stop a profile that already
--- has it from being saved.
+-- for its staff, whether spelled exactly or dressed up ("mybacklog-support",
+-- "admin_", "official_mod1"). Checked when a username is given or picked, not
+-- by a constraint: a word added here later must not stop a profile that
+-- already has it from being saved.
 create or replace function public.username_reserved(p_username text)
 returns boolean
 language sql
 immutable
 set search_path = ''
 as $$
-  select p_username = any (array[
+  select
+    -- The app's name anywhere in it, however it is joined up.
+    replace(replace(p_username, '-', ''), '_', '') like '%mybacklog%'
+    -- Made of nothing but staff words, joined up or apart, with numbers or not.
+    or regexp_replace(p_username, '[-_0-9]+', '', 'g')
+      ~ '^(the|real)*(admin|administrator|mod|moderator|staff|support|help|official|team|owner|system|security)+$'
+    or p_username = any (array[
     'admin', 'administrator', 'mod', 'moderator', 'staff', 'support', 'help',
     'official', 'team', 'owner', 'system', 'root', 'security', 'abuse',
     'mybacklog', 'my-backlog', 'my_backlog', 'backlog',
@@ -578,6 +585,9 @@ $$;
 
 -- A username nobody has: the name's own when it's free, the name and a
 -- number when it's taken, "player" and a number when the name gives none.
+-- That number is nine digits: a profile can be seen by anyone with its
+-- address, so the address of a player who never picked a name can't be one
+-- of a few thousand to try in turn.
 create or replace function public.free_username(p_name text)
 returns text
 language plpgsql
@@ -596,7 +606,7 @@ begin
     and not exists (select 1 from public.profiles where username = base) then
     return base;
   end if;
-  digits := case when base is null then 4 else 2 end;
+  digits := case when base is null then 9 else 2 end;
   base := coalesce(base, 'player');
   for attempt in 1..200 loop
     candidate := left(base, 20 - digits)

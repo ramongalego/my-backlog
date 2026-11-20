@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { deleteAvatars, newAvatarPath, readImage } from '@/lib/server/avatar';
+import { avatarFolder, deleteAvatars, newAvatarPath, readImage } from '@/lib/server/avatar';
 
 const bytes = (...values: (number | string | number[])[]) =>
   new Uint8Array(
@@ -116,11 +116,24 @@ describe('readImage', () => {
   });
 });
 
+const FOLDER = avatarFolder('user-1');
+
 it("stores each new picture under a name of its own in the player's folder", () => {
   const first = newAvatarPath('user-1', 'image/webp');
-  expect(first).toMatch(/^user-1\/[0-9a-f-]{36}\.webp$/);
+  expect(first).toMatch(new RegExp(`^${FOLDER}/[0-9a-f-]{36}\.webp$`));
   expect(newAvatarPath('user-1', 'image/jpeg')).toMatch(/\.jpg$/);
   expect(newAvatarPath('user-1', 'image/webp')).not.toBe(first);
+});
+
+it("names the folder without the account id, which the picture's address would publish", () => {
+  const id = '28f2ff71-0000-4000-8000-123456789abc';
+  const folder = avatarFolder(id);
+  expect(folder).toMatch(/^[0-9a-f]{32}$/);
+  expect(newAvatarPath(id, 'image/png')).not.toContain(id);
+  expect(folder).not.toContain(id.slice(0, 8));
+  // The same player's folder every time, and nobody else's.
+  expect(avatarFolder(id)).toBe(folder);
+  expect(avatarFolder('28f2ff71-0000-4000-8000-123456789abd')).not.toBe(folder);
 });
 
 describe('deleteAvatars', () => {
@@ -153,10 +166,10 @@ describe('deleteAvatars', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it("deletes everything in the player's own folder but the picture to keep", async () => {
-    await deleteAvatars(service, 'user-1', 'user-1/new.webp');
+    await deleteAvatars(service, 'user-1', `${FOLDER}/new.webp`);
     // By the folder: a picture two uploads at once left behind goes too.
-    expect(listed[0][0]).toBe('user-1');
-    expect(removed).toEqual([['user-1/old.webp', 'user-1/left-behind.webp']]);
+    expect(listed[0][0]).toBe(FOLDER);
+    expect(removed).toEqual([[`${FOLDER}/old.webp`, `${FOLDER}/left-behind.webp`]]);
   });
 
   it('deletes all of them when there is none to keep', async () => {
@@ -166,7 +179,7 @@ describe('deleteAvatars', () => {
 
   it('asks for nothing to be deleted when only the kept picture is there', async () => {
     stored = [{ name: 'new.webp' }];
-    await deleteAvatars(service, 'user-1', 'user-1/new.webp');
+    await deleteAvatars(service, 'user-1', `${FOLDER}/new.webp`);
     expect(removed).toEqual([]);
   });
 

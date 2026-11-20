@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
 import { isProtectedPath } from '@/lib/routes';
+import { checkRateLimit, getClientIp, ipRateLimitKey, RATE_LIMITS } from '@/lib/server/rate-limit';
 
 const publicOnlyRoutes = ['/'];
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -28,6 +29,23 @@ export async function proxy(request: NextRequest) {
   // so skip the auth round trip here for them.
   if (request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.next();
+  }
+
+  // A profile is read for anyone who has its address, with the server's own
+  // key: one visitor can't go through addresses, or the same one, without end.
+  // Counted in memory (no round trip on every page), so per server instance.
+  if (request.nextUrl.pathname.startsWith('/u/')) {
+    const limit = checkRateLimit(
+      `profile-view:${ipRateLimitKey(getClientIp(request))}`,
+      RATE_LIMITS.profileView,
+    );
+    if (!limit.success) {
+      const seconds = Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000));
+      return new NextResponse('Too many requests. Try again in a minute.', {
+        status: 429,
+        headers: { 'Retry-After': String(seconds) },
+      });
+    }
   }
 
   let supabaseResponse = NextResponse.next({
