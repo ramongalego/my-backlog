@@ -1,3 +1,5 @@
+import type { ErrorEvent } from '@sentry/nextjs';
+import { readableConsoleEvent } from '@/lib/sentry/console-event';
 import { scrubEvent } from '@/lib/sentry/scrub';
 
 /**
@@ -47,5 +49,5 @@ export const sentryOptions = {
   sendDefaultPii: false,
   ignoreErrors: IGNORED_ERRORS,
   denyUrls: EXTENSION_URLS,
-  beforeSend: scrubEvent,
+  beforeSend: (event: ErrorEvent) => readableConsoleEvent(scrubEvent(event)),
 };
