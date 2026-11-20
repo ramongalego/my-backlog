@@ -10,8 +10,11 @@ export const MIN_RATED_FOR_AVERAGE = 5;
 
 /** The figures in the profile's header. */
 export interface ProfileFigures {
-  /** Games in the library, as the Games page counts them: everything but hidden. */
-  games: number;
+  /**
+   * Games still to play, as the Games page's Backlog filter counts them (the
+   * one being played too): the figure that goes down as games are finished.
+   */
+  backlog: number;
   finished: number;
   /** Finished this calendar year. */
   finishedThisYear: number;
@@ -30,7 +33,7 @@ export function profileFigures(games: GameItem[], now = new Date()): ProfileFigu
   const minutes = countedInStats(games).reduce((sum, game) => sum + game.playtime_forever, 0);
   const ratings = finished.flatMap((game) => (game.rating == null ? [] : [game.rating]));
   return {
-    games: games.filter((game) => game.status !== 'hidden').length,
+    backlog: games.filter((game) => game.status === 'backlog' || game.status === 'playing').length,
     finished: finished.length,
     finishedThisYear: finished.filter((game) => game.finished_at?.slice(0, 4) === year).length,
     hours: Math.round(minutes / 60),

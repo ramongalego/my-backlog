@@ -5,6 +5,7 @@ import { jsonError, rateLimited } from '@/lib/server/api-response';
 import { gameStatusSchema } from '@/lib/validations/games';
 import { applyStatusChange, promoteNextFromQueue } from '@/lib/server/apply-status';
 import { fetchCompletionCounts } from '@/lib/server/completion-counts';
+import { cleanRunStartedAt } from '@/lib/server/finish-run';
 
 const completeSchema = gameStatusSchema.extend({
   status: gameStatusSchema.shape.status.extract(['finished', 'dropped']),
@@ -46,16 +47,22 @@ export async function POST(request: NextRequest) {
 
   // The finish/drop is saved; the follow-ups are best-effort, so a failed
   // promote doesn't report the whole action as failed.
-  const [counts, promoted] = await Promise.allSettled([
+  const [counts, promoted, startedAt] = await Promise.allSettled([
     fetchCompletionCounts(supabase, user.id),
     promoteNextFromQueue(supabase, user.id),
+    parsed.data.status === 'finished'
+      ? cleanRunStartedAt(supabase, user.id, parsed.data.gameId)
+      : Promise.resolve(null),
   ]);
   if (counts.status === 'rejected') console.error(counts.reason);
   if (promoted.status === 'rejected') console.error(promoted.reason);
+  if (startedAt.status === 'rejected') console.error(startedAt.reason);
 
   return NextResponse.json({
     counts: counts.status === 'fulfilled' ? counts.value : { gamesFinished: 0, totalGames: 0 },
     promoted: promoted.status === 'fulfilled' ? promoted.value : null,
     promoteFailed: promoted.status === 'rejected',
+    // For "over 12 days": only for a clean run from start to finish.
+    startedAt: startedAt.status === 'fulfilled' ? startedAt.value : null,
   });
 }

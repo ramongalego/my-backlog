@@ -13,7 +13,10 @@ export interface GameSummaryData {
   totalGames: number;
   nextGame: string | null;
   nextGameImage?: string | null;
-  /** For how long it took. */
+  /**
+   * For how long it took: the day it was started, only where that can be told
+   * for certain (a clean run from start to finish, see cleanStartOf).
+   */
   startedAt?: string | null;
   /** The finish date chosen (YYYY-MM-DD). */
   finishedAt?: string | null;
@@ -35,6 +38,7 @@ export function buildCompletionSummary({
   counts,
   rating,
   finishedAt,
+  startedAt = null,
 }: {
   finishedGame: GameWithImage;
   promoted: GameWithImage | null;
@@ -42,6 +46,8 @@ export function buildCompletionSummary({
   rating: number | null;
   /** The finish date chosen (YYYY-MM-DD), which can be in the past. */
   finishedAt: string;
+  /** As the server tells it, or null until it has (see GameSummaryData). */
+  startedAt?: string | null;
 }): GameSummaryData {
   const hours = (finishedGame.main_story_hours ?? 0) > 0 ? finishedGame.main_story_hours : null;
 
@@ -56,7 +62,7 @@ export function buildCompletionSummary({
     totalGames: counts.totalGames,
     nextGame: promoted?.name ?? null,
     nextGameImage: promoted?.header_image ?? null,
-    startedAt: finishedGame.started_at ?? null,
+    startedAt,
     finishedAt,
     finishedThisYear: counts.finishedThisYear ?? null,
   };

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Check } from 'lucide-react';
 import { Figure, Lead } from '@/components/ui/Lead';
+import { playedOver } from '@/lib/games/played-over';
 import { STATUS_STYLE } from '@/lib/games/status-style';
 import { CoverThumb } from './CoverArt';
 import { Rating } from './Rating';
@@ -20,23 +21,10 @@ const hours = (h: number) => `${h} hour${h === 1 ? '' : 's'}`;
 /** A figure and its unit stay on one line ("25.5 hours", never "25.5 / hours"). */
 const whole = (figure: string) => <span className="whitespace-nowrap">{figure}</span>;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function ordinal(n: number): string {
   const tens = n % 100;
   const suffix = tens >= 11 && tens <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
   return `${n}${suffix}`;
-}
-
-/** Null for a same-day finish, which is more often catching up on an old game than one sitting. */
-function playedOver(startedAt: string, finishedAt: string): string | null {
-  const days = Math.floor((Date.parse(finishedAt) - Date.parse(startedAt.slice(0, 10))) / DAY_MS);
-  if (Number.isNaN(days) || days < 1) return null;
-  if (days < 14) return `${days + 1} days`;
-  if (days < 60) return `${Math.round(days / 7)} weeks`;
-  if (days < 365) return `${Math.round(days / 30)} months`;
-  const years = Math.round(days / 365);
-  return years === 1 ? 'a year' : `${years} years`;
 }
 
 /** Only for a finish dated this year, so a backdated one doesn't claim a place it doesn't have. */

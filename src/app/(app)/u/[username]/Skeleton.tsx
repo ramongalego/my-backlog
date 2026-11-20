@@ -5,6 +5,7 @@ import {
   ACTIVITY_LIST,
   ACTIVITY_PAGE,
   ACTIVITY_ROW,
+  ACTIVITY_THUMB,
   AVATAR_SIZE,
   FAVORITE_GRID,
   FAVORITE_SLOTS,
@@ -31,7 +32,7 @@ function ActivityRows() {
     <>
       {Array.from({ length: ACTIVITY_PAGE }, (_, i) => (
         <div key={i} className={ACTIVITY_ROW}>
-          <Skeleton className={`w-16 sm:w-28 ${COVER_ASPECT} shrink-0 rounded-md`} />
+          <Skeleton className={`${ACTIVITY_THUMB} ${COVER_ASPECT} shrink-0 rounded-md`} />
           <div className="min-w-0 flex-1">
             <div className="flex h-6 items-center">
               <Skeleton className="h-5 w-2/5" />

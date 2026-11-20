@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { ProfileFigureStrip } from '@/components/profile/ProfileFigureStrip';
 
-const figures = { games: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null };
+const figures = { backlog: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null };
 
 const read = () =>
   screen
@@ -11,7 +11,7 @@ const read = () =>
 it('is four figures until enough games are rated for an average', () => {
   const { container } = render(<ProfileFigureStrip figures={figures} />);
   expect(read()).toEqual([
-    ['Games', '217'],
+    ['Backlog', '217'],
     ['Finished', '44'],
     ['This year', '1'],
     // Both labels are in the markup: the short one is shown on the narrowest phones.

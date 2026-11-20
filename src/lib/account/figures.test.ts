@@ -3,17 +3,19 @@ import { libraryGame as game } from './test-games';
 
 const now = new Date(2026, 10, 15);
 
-it('counts the library as the Games page does: everything but hidden games', () => {
+it("counts the backlog as the Games page's Backlog filter does: the game being played too", () => {
   const figures = profileFigures(
     [
       game({ id: 1 }),
       game({ id: 2, status: 'playing' }),
       game({ id: 3, status: 'wont_play' }),
       game({ id: 4, status: 'hidden' }),
+      game({ id: 5, status: 'finished' }),
+      game({ id: 6, status: 'dropped' }),
     ],
     now,
   );
-  expect(figures.games).toBe(3);
+  expect(figures.backlog).toBe(2);
 });
 
 it('counts finished games, and the ones finished this calendar year', () => {
@@ -51,7 +53,7 @@ it("totals the hours as Stats does: without hidden and won't-play games", () => 
 
 it('is all zeros for an empty library', () => {
   expect(profileFigures([], now)).toEqual({
-    games: 0,
+    backlog: 0,
     finished: 0,
     finishedThisYear: 0,
     hours: 0,

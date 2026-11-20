@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { ChevronDown, History } from 'lucide-react';
 import { platformToSay, type LibraryPlatforms } from '@/lib/games/consoles';
 import { useLibraryPlatforms } from '@/hooks/useLibraryMeta';
+import { toLocalIsoDate } from '@/lib/diary/date-utils';
+import { daysApart } from '@/lib/games/played-over';
 import type { PublicActivity } from '@/lib/account/public-profile';
 import { NEUTRAL } from './activity-line';
 import { ActivityRowContent, ActivityRowLine } from './ActivityRowContent';
 import { ActivityWhat } from './ActivityWhat';
+import { FinishStats } from './FinishStats';
 import { ProfileSection } from './ProfileSection';
-import { ACTIVITY_LIST, ACTIVITY_PAGE, ACTIVITY_ROW } from './profile-layout';
+import { ACTIVITY_LIST, ACTIVITY_PAGE, ACTIVITY_ROW, FINISH_ROW } from './profile-layout';
 
 const SECTION_ID = 'profile-activity';
 const LIST_ID = 'profile-activity-list';
@@ -38,6 +41,19 @@ const useRowsLibrary = (sent: LibraryPlatforms | undefined) => {
   return sent ?? own;
 };
 
+/**
+ * How long a finish stands out for. Past it, it is part of the record, and a
+ * list of finishes from years back doesn't all shine at once.
+ */
+const FINISH_STANDS_OUT_DAYS = 30;
+
+/** By when it happened (see activityAgo): a day, or a moment, read as its day here. */
+function recently(at: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(at)) return false;
+  const day = at.includes('T') ? toLocalIsoDate(new Date(at)) : at;
+  return daysApart(day, toLocalIsoDate(new Date())) <= FINISH_STANDS_OUT_DAYS;
+}
+
 /** A row is one button, the whole of it: it lights up under the pointer. */
 const ROW_BUTTON = `${ACTIVITY_ROW} group -mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 text-left transition-colors hover:bg-ink-800/50`;
 
@@ -50,17 +66,24 @@ function Row({
   library,
   onOpen,
   rowRef,
+  inGroup = false,
 }: {
   entry: Entry;
   library?: LibraryPlatforms;
   onOpen?: (gameId: number) => void;
   rowRef?: (row: HTMLElement | null) => void;
+  /** One of a group's rows, unfolded under it. */
+  inGroup?: boolean;
 }) {
   const [line] = entry.lines;
   // A move says where to: the platform isn't said twice.
   const rowsLibrary = useRowsLibrary(library);
   const platform = line.kind === 'moved' ? null : platformToSay(entry, rowsLibrary);
   const gameId = entry.id;
+  // A finish has what there is to say about it under it, and a recent one
+  // stands out: in a group it is one line like the rest.
+  const finish = line.kind === 'finished' && !inGroup;
+  const wash = finish && recently(entry.at) ? FINISH_ROW : '';
   const content = (
     <ActivityRowContent
       name={entry.name}
@@ -69,8 +92,20 @@ function Row({
       interactive={!!onOpen}
     >
       <ActivityRowLine>
-        <ActivityWhat line={line} platform={platform} />
+        <ActivityWhat line={finish ? { kind: line.kind } : line} platform={platform} />
       </ActivityRowLine>
+      {line.paused && (
+        <>
+          {' '}
+          <ActivityRowLine>Paused {line.paused} for it</ActivityRowLine>
+        </>
+      )}
+      {finish && (
+        <>
+          {' '}
+          <FinishStats line={line} />
+        </>
+      )}
     </ActivityRowContent>
   );
   return (
@@ -81,13 +116,13 @@ function Row({
           type="button"
           data-games={gameId}
           onClick={() => onOpen(gameId)}
-          className={ROW_BUTTON}
+          className={`${ROW_BUTTON} ${wash}`}
         >
           {content}
         </button>
       ) : (
         // Not a control, but Show more can still hand it the focus.
-        <div ref={rowRef} tabIndex={-1} className={`${ACTIVITY_ROW} outline-none`}>
+        <div ref={rowRef} tabIndex={-1} className={`${ACTIVITY_ROW} outline-none ${wash}`}>
           {content}
         </div>
       )}
@@ -163,7 +198,9 @@ function GroupRow({
       </button>
       <ul id={listId} hidden={!open} className="divide-y divide-ink-800/40 pl-6 sm:pl-10">
         {open &&
-          members.map((one) => <Row key={one.key} entry={one} library={library} onOpen={onOpen} />)}
+          members.map((one) => (
+            <Row key={one.key} entry={one} library={library} onOpen={onOpen} inGroup />
+          ))}
       </ul>
     </li>
   );

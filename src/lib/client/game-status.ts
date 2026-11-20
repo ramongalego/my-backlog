@@ -105,6 +105,8 @@ interface CompleteGameResult {
   counts: CompletionCounts;
   promoted: GameWithImage | null;
   promoteFailed: boolean;
+  /** When it was started, only for a clean run from start to finish (see cleanStartOf). */
+  startedAt?: string | null;
 }
 
 /**

@@ -35,7 +35,7 @@ const mistkai: PublicProfile = {
   username: 'mistkai',
   name: 'Mist Kai',
   avatar: null,
-  figures: { games: 4, finished: 2, finishedThisYear: 1, hours: 33, avgRating: null },
+  figures: { backlog: 4, finished: 2, finishedThisYear: 1, hours: 33, avgRating: null },
   ratings: null,
   favorites: [],
   platforms: [],

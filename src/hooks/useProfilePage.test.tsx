@@ -116,7 +116,7 @@ it('draws everything from the library', () => {
     { id: 5, started_at: '2026-11-13T12:00:00Z' },
   );
 
-  expect(profile.figures).toMatchObject({ games: 6, finished: 4 });
+  expect(profile.figures).toMatchObject({ backlog: 2, finished: 4 });
   // Four rated games have no shape to show yet.
   expect(profile.ratings).toBeNull();
   // Nothing is a favorite until the player picks it, however it's rated.
@@ -232,7 +232,7 @@ it('is an empty profile, not an error, for an empty library', () => {
   expect(open([])).toMatchObject({
     loading: false,
     loadError: false,
-    figures: { games: 0, finished: 0, finishedThisYear: 0, hours: 0 },
+    figures: { backlog: 0, finished: 0, finishedThisYear: 0, hours: 0 },
     favorites: [],
     activity: [],
     platforms: [],

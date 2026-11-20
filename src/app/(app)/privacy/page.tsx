@@ -226,12 +226,13 @@ const sections: LegalSection[] = [
         </p>
         <p>
           A profile page shows your username, the name your profile goes by and your profile
-          picture. It shows how many games are in your library, how many you have finished, how many
+          picture. It shows how many games are in your backlog, how many you have finished, how many
           of those were this year, your hours played and, once enough games are rated, your average
           rating and how many games you gave each rating. It shows your favorite games with your
           ratings of them, the platforms you play on, and recent highlights of your activity: games
-          you started, played, finished, dropped, rated or made a favorite, and whether a game you
-          started was picked by Pick My Game or Random.
+          you started, played, finished, dropped, rated or made a favorite, your hours in a game you
+          played, how long a game you finished took, which game you paused to start another, and
+          whether a game you started was picked by Pick My Game or Random.
         </p>
         <p>
           It does not show your email address, your notes, your backlog, your queue or the rest of

@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import { POST } from '@/app/api/games/complete/route';
 import { applyStatusChange, promoteNextFromQueue } from '@/lib/server/apply-status';
 import { fetchCompletionCounts } from '@/lib/server/completion-counts';
+import { cleanRunStartedAt } from '@/lib/server/finish-run';
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
@@ -16,6 +17,7 @@ jest.mock('@/lib/server/apply-status', () => ({
   promoteNextFromQueue: jest.fn(),
 }));
 jest.mock('@/lib/server/completion-counts', () => ({ fetchCompletionCounts: jest.fn() }));
+jest.mock('@/lib/server/finish-run', () => ({ cleanRunStartedAt: jest.fn() }));
 
 const post = async (body: unknown) => {
   const res = await POST(
@@ -32,6 +34,7 @@ beforeEach(() => {
   jest.mocked(applyStatusChange).mockResolvedValue({ ok: true, paused: [] });
   jest.mocked(fetchCompletionCounts).mockResolvedValue({ gamesFinished: 7, totalGames: 120 });
   jest.mocked(promoteNextFromQueue).mockResolvedValue(null);
+  jest.mocked(cleanRunStartedAt).mockReset().mockResolvedValue(null);
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => jest.restoreAllMocks());
@@ -46,6 +49,7 @@ it('saves the finish, then returns the summary counts and the next game together
     playtime_forever: 0,
   };
   jest.mocked(promoteNextFromQueue).mockResolvedValue(next);
+  jest.mocked(cleanRunStartedAt).mockResolvedValue('2026-10-13T19:00:00+00:00');
 
   const { status, body } = await post({
     gameId: 1,
@@ -64,7 +68,20 @@ it('saves the finish, then returns the summary counts and the next game together
     counts: { gamesFinished: 7, totalGames: 120 },
     promoted: next,
     promoteFailed: false,
+    // When it was started, for how long it took.
+    startedAt: '2026-10-13T19:00:00+00:00',
   });
+});
+
+it('says no start for a drop, and none when it could not be told', async () => {
+  const dropped = await post({ gameId: 1, status: 'dropped' });
+  expect(dropped.body.startedAt).toBeNull();
+  expect(cleanRunStartedAt).not.toHaveBeenCalled();
+
+  jest.mocked(cleanRunStartedAt).mockRejectedValue(new Error('boom'));
+  const finished = await post({ gameId: 1, status: 'finished' });
+  expect(finished.status).toBe(200);
+  expect(finished.body.startedAt).toBeNull();
 });
 
 it('still succeeds when the next game could not be started', async () => {

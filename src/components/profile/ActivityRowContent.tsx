@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { CoverThumb } from '@/components/games/CoverArt';
 import { TruncatedText } from '@/components/ui/TruncatedText';
 import { activityAgo } from '@/lib/account/activity';
+import { ACTIVITY_THUMB } from './profile-layout';
 
 /**
  * What every activity row is made of, in the player's own list and in the feed
@@ -37,7 +38,7 @@ export function ActivityRowContent({
   const ago = activityAgo(at, now);
   return (
     <>
-      <CoverThumb src={art} alt="" interactive={interactive}>
+      <CoverThumb src={art} alt="" interactive={interactive} className={ACTIVITY_THUMB}>
         {count != null && (
           // The count is said in the row's text, so the chip is drawn, not read.
           <span

@@ -1,13 +1,14 @@
-import type { ActivityLine } from '@/lib/account/activity';
+import { playedFor, type ActivityLine } from '@/lib/account/activity';
 import { ACTIVITY_LINE } from './activity-line';
 
 /**
- * One thing done to a game, in one sentence: what, where it was played, and
- * the rating it came with ("Finished on PC and rated it 9/10"). Each of those
- * is only there when there is one to say, and the sentence reads without it
- * ("Finished", "Finished on PC", "Finished and rated it 9/10"). When it
- * happened is the row's to say, at its far end. A start that came from a pick
- * ends by saying which ("Started playing on PS5, picked at random"). Only what
+ * One thing done to a game, in one sentence: what, how long a finish took,
+ * the rating it came with, and last, in brackets, where it was played, the
+ * least of it ("Finished in 42h and rated it 9/10 (PC)"). Each is only there
+ * when there is one to say, and the sentence reads without it ("Finished",
+ * "Finished (PC)", "Finished and rated it 9/10"). A start that came from a
+ * pick says which before the platform ("Started playing, picked at random
+ * (PS5)"). When it happened is the row's to say, at its far end. Only what
  * was done has the icon and the color; the rest reads on from it.
  */
 export function ActivityWhat({
@@ -20,9 +21,12 @@ export function ActivityWhat({
 }) {
   const { icon: Icon, text, what } = ACTIVITY_LINE[line.kind];
   const rest = [
-    platform && `on ${platform}`,
+    line.kind === 'finished' && line.minutes && `in ${playedFor(line.minutes)}`,
     // A rating given by itself is the whole line ("Rated 9/10"): not said twice.
-    line.rating != null && line.kind !== 'rated' && `and rated it ${line.rating}/10`,
+    line.rating != null &&
+      line.kind !== 'rated' &&
+      line.kind !== 'rerated' &&
+      `and rated it ${line.rating}/10`,
   ].filter(Boolean);
   const picked =
     line.pickedBy === 'random'
@@ -40,6 +44,7 @@ export function ActivityWhat({
       </span>
       {rest.length > 0 && ` ${rest.join(' ')}`}
       {picked}
+      {platform && ` (${platform})`}
     </span>
   );
 }

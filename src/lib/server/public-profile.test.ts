@@ -131,7 +131,7 @@ it('is what a profile shows: the name, picture, figures, favorites and platforms
     name: 'Mist Kai',
     avatar: 'https://avatars.steamstatic.com/a_full.jpg',
     // The hidden game counts for nothing.
-    figures: { games: 4, finished: 2, finishedThisYear: 1, hours: 33, avgRating: null },
+    figures: { backlog: 2, finished: 2, finishedThisYear: 1, hours: 33, avgRating: null },
     // Two rated games have no shape to show.
     ratings: null,
     // In the order picked, without the hidden one.
@@ -154,7 +154,8 @@ it('is what a profile shows: the name, picture, figures, favorites and platforms
         source: 'steam',
         platform: 'PC',
         at: '2026-03-20',
-        lines: [{ kind: 'finished', rating: 9 }],
+        // From before the history: the hours the game has now (1230 minutes).
+        lines: [{ kind: 'finished', rating: 9, minutes: 1230 }],
       },
       {
         key: '1',
@@ -163,7 +164,7 @@ it('is what a profile shows: the name, picture, figures, favorites and platforms
         source: 'steam',
         platform: 'Switch',
         at: '2025-08-20',
-        lines: [{ kind: 'finished', rating: 10 }],
+        lines: [{ kind: 'finished', rating: 10, minutes: 600 }],
       },
     ],
   });
@@ -366,22 +367,22 @@ describe('what is reused, and for how long', () => {
   });
 
   it('reuses what the library comes to for a minute, and never shows anything older', async () => {
-    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(4);
+    expect((await getPublicProfile('mistkai'))!.figures.backlog).toBe(2);
 
     // The player hides everything. Within the minute, visitors get the same read.
     jest.mocked(loadGamesList).mockResolvedValue([]);
     jest.advanceTimersByTime(59_000);
-    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(4);
+    expect((await getPublicProfile('mistkai'))!.figures.backlog).toBe(2);
     expect(loadGamesList).toHaveBeenCalledTimes(1);
 
     // Past it, the first visitor already gets the library as it is now.
     jest.advanceTimersByTime(2_000);
-    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(0);
+    expect((await getPublicProfile('mistkai'))!.figures.backlog).toBe(0);
 
     // However long nobody looks: three days on, still never the old read.
     jest.mocked(loadGamesList).mockResolvedValue(library);
     jest.advanceTimersByTime(3 * 24 * 60 * 60 * 1000);
-    expect((await getPublicProfile('mistkai'))!.figures.games).toBe(4);
+    expect((await getPublicProfile('mistkai'))!.figures.backlog).toBe(2);
     expect(loadGamesList).toHaveBeenCalledTimes(3);
   });
 

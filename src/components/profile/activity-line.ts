@@ -18,6 +18,9 @@ import { playedFor, type ActivityKind, type ActivityLine } from '@/lib/account/a
 // activity and on the feed others see. No 'use client': the feed is drawn on
 // the server.
 
+/** A total to the hour ("130h", not "130h 23m"), or its minutes under one. */
+const wholeHours = (minutes: number) => (minutes < 60 ? minutes : Math.floor(minutes / 60) * 60);
+
 // A status keeps its color, as everywhere else; everything else stays neutral.
 export const NEUTRAL = 'text-ink-300';
 
@@ -38,19 +41,22 @@ export const ACTIVITY_LINE: Record<
   paused: { icon: Pause, text: NEUTRAL, what: () => 'Paused, moved to queue' },
   unqueued: { icon: ListMinus, text: NEUTRAL, what: () => 'Taken off the queue' },
   // The rating is the line: no second star at its end.
-  rated: {
+  rated: { icon: Star, text: NEUTRAL, what: (line) => `Rated ${line.rating}/10` },
+  rerated: {
     icon: Star,
     text: NEUTRAL,
-    what: (line) => `${line.changed ? 'Changed rating to' : 'Rated'} ${line.rating}/10`,
+    what: (line) => `Changed rating from ${line.from}/10 to ${line.rating}/10`,
   },
   // The platform icon, as on the Games page's platform filter (not the logo's gamepad).
   moved: { icon: MonitorSmartphone, text: NEUTRAL, what: (line) => `Moved to ${line.to}` },
   favorite: { icon: Heart, text: NEUTRAL, what: () => 'Added to favorites' },
   unfavorite: { icon: HeartOff, text: NEUTRAL, what: () => 'Removed from favorites' },
   note: { icon: PenLine, text: NEUTRAL, what: () => 'Wrote a note' },
+  // Where it is now, as an episode number says it: "Played 4h, 12h total".
   played: {
     icon: Clock,
     text: NEUTRAL,
-    what: (line) => `Played ${playedFor(line.minutes ?? 0)}`,
+    what: (line) =>
+      `Played ${playedFor(line.minutes ?? 0)}${line.total ? `, ${playedFor(wholeHours(line.total))} total` : ''}`,
   },
 };

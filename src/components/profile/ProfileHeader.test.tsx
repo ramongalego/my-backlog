@@ -7,7 +7,7 @@ jest.mock('next/image', () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));
 
-const figures = { games: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null };
+const figures = { backlog: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null };
 const props = {
   name: 'Ankrath',
   username: 'ankrath',
@@ -53,7 +53,7 @@ it('gives the library in four figures, each with its label', () => {
     .getAllByRole('definition')
     .map((figure) => figure.textContent);
   expect(read).toEqual(['217', '44', '1', '1,065']);
-  expect(within(strip).getByText('Games')).toBeInTheDocument();
+  expect(within(strip).getByText('Backlog')).toBeInTheDocument();
   expect(within(strip).getByText('Finished')).toBeInTheDocument();
   expect(within(strip).getByText('This year')).toBeInTheDocument();
   expect(within(strip).getByText('Hours played')).toBeInTheDocument();

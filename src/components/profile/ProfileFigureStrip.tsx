@@ -16,7 +16,7 @@ const count = (value: number) => value.toLocaleString('en-US');
  */
 function figuresOf(figures: ProfileFigures): Figure[] {
   return [
-    { label: 'Games', value: count(figures.games) },
+    { label: 'Backlog', value: count(figures.backlog) },
     { label: 'Finished', value: count(figures.finished) },
     { label: 'This year', value: count(figures.finishedThisYear) },
     { label: 'Hours played', short: 'Hours', value: count(figures.hours) },

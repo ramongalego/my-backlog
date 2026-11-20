@@ -1,5 +1,6 @@
 import type { GameItem } from '@/lib/data/loaders';
 import { toLocalIsoDate } from '@/lib/diary/date-utils';
+import { daysApart } from '@/lib/games/played-over';
 import { playsOf, type HistoryEvent } from './history';
 
 // The Profile page's activity list. It reads game_events for everything since
@@ -17,6 +18,7 @@ export type ActivityKind =
   | 'backlog'
   | 'wont_play'
   | 'rated'
+  | 'rerated'
   | 'moved'
   | 'favorite'
   | 'unfavorite'
@@ -26,16 +28,28 @@ export type ActivityKind =
 export interface ActivityLine {
   /** `playing` is the start of the game being played now; `started`, of one that isn't any more. */
   kind: ActivityKind;
-  /** The time played, in minutes, for `played`. */
+  /** In minutes: the time played, for `played`; for `finished`, the hours it took. */
   minutes?: number;
+  /** For `played`, in minutes: the game's hours after it, where it was played before. */
+  total?: number;
   /** Where the game went, for `moved`. */
   to?: string;
   /** The rating that came with it: a finish, a drop, or a rating given by itself. */
   rating?: number;
-  /** A start that came from a pick: Random, or Pick My Game's questions. */
+  /** For `rerated`: the rating it replaced. */
+  from?: number;
+  /**
+   * A start that came from a pick: Random, or Pick My Game's questions. For a
+   * finish, the start it was played from.
+   */
   pickedBy?: PickKind;
-  /** For `rated`: the game had a rating already, which this one replaced. */
-  changed?: true;
+  /** For `finished`: whole days from the day it was started to the day it was finished. */
+  days?: number;
+  /**
+   * For a start, where the list leaves out pauses (someone else's profile): the
+   * game it put on the queue to be played.
+   */
+  paused?: string;
 }
 
 /** One thing done to a game, or a group of them: one row of the list. */
@@ -83,7 +97,7 @@ export interface ActivityEvent extends HistoryEvent {
 const SITTING_MS = 10 * 60 * 1000;
 
 /** When an event happened: its last change, where the history says and it is a sitting. */
-function happened(event: ActivityEvent): string {
+export function happened(event: ActivityEvent): string {
   const { created_at: first, updated_at: last } = event;
   return last && Date.parse(last) - Date.parse(first) <= SITTING_MS ? last : first;
 }
@@ -127,17 +141,19 @@ const GROUP_MORE_THAN = 3;
 const SAME_GAME_MORE_THAN = 2;
 
 /**
- * What a profile shows to other people: what was played, finished, dropped,
- * rated and made a favorite. The rest is housekeeping (the backlog, the queue,
- * Won't Play, a move to a console, a favorite taken off, a note), which stays
- * the player's own.
+ * What a profile shows to other people: what someone following the player
+ * would have something to say about. What was played, finished, dropped, a
+ * rating changed, and a favorite. A first rating goes with its finish or drop,
+ * and the rest is housekeeping (the backlog, the queue, Won't Play, a move to
+ * a console, a favorite taken off, a note), which stays the player's own. A
+ * pause is said on the start it made way for.
  */
 export const HIGHLIGHTS: ReadonlySet<ActivityKind> = new Set<ActivityKind>([
   'playing',
   'started',
   'finished',
   'dropped',
-  'rated',
+  'rerated',
   'played',
   'favorite',
 ]);
@@ -194,6 +210,140 @@ function startsFromPicks(events: ActivityEvent[], picks: PlayedPick[]): Map<numb
   return made;
 }
 
+/**
+ * How far apart a start and the pause of the game it took over from can be
+ * logged. One request saves both, so they are logged together.
+ */
+const PAUSED_WITHIN_MS = 60 * 1000;
+
+/**
+ * Which game each start paused, by the start's id: another game moved from
+ * playing to the queue as it was logged. A game hidden or gone since is left
+ * unsaid.
+ */
+function pausesForStarts(
+  events: ActivityEvent[],
+  shown: Map<number, GameItem>,
+): Map<number, string> {
+  const pauses = events.filter(
+    (event) =>
+      event.changes.status?.[0] === 'playing' &&
+      event.changes.status?.[1] === 'backlog' &&
+      event.changes.queued?.[1] === true,
+  );
+  const made = new Map<number, string>();
+  for (const start of events) {
+    if (start.changes.status?.[1] !== 'playing') continue;
+    const at = Date.parse(happened(start));
+    const pause = pauses.find(
+      (one) =>
+        one.game_id !== start.game_id &&
+        Math.abs(Date.parse(happened(one)) - at) <= PAUSED_WITHIN_MS,
+    );
+    const game = pause && shown.get(pause.game_id);
+    if (game) made.set(start.id, game.name);
+  }
+  return made;
+}
+
+/**
+ * The game's hours when an event of it was logged: its hours now, less every
+ * change to them logged since. The history is read newest first, so every
+ * event after one that was read was read too. Null when that can't be told (a
+ * total that went to or from nothing since) or comes to no time at all.
+ */
+function minutesThen(game: GameItem, event: ActivityEvent, events: ActivityEvent[]): number | null {
+  let minutes = game.playtime_forever;
+  for (const later of events) {
+    if (later.game_id !== event.game_id || later.id <= event.id) continue;
+    const hours = later.changes.playtime_forever;
+    if (!hours) continue;
+    const [before, after] = hours;
+    if (typeof before !== 'number' || typeof after !== 'number') return null;
+    minutes -= after - before;
+  }
+  return minutes > 0 ? minutes : null;
+}
+
+/**
+ * The starts a finish was played from, newest first: the game's last start
+ * before it, and, where it was paused for another game and picked up again,
+ * each start before the pause. The last of them is when it was first started.
+ * Empty when the history doesn't go back that far, or the game was finished
+ * without being played (moved straight from the backlog).
+ */
+function startsBefore(finish: ActivityEvent, events: ActivityEvent[]): ActivityEvent[] {
+  const earlier = events
+    .filter((event) => event.game_id === finish.game_id && event.id < finish.id)
+    .sort((a, b) => b.id - a.id);
+  const starts: ActivityEvent[] = [];
+  for (const event of earlier) {
+    const status = event.changes.status;
+    if (!status) continue;
+    if (status[1] === 'playing') {
+      starts.push(event);
+      continue;
+    }
+    const paused =
+      status[0] === 'playing' && status[1] === 'backlog' && event.changes.queued?.[1] === true;
+    if (!paused) break;
+  }
+  return starts;
+}
+
+/** What a game is now, which its history is read back from. */
+interface GameNow {
+  playtime_forever: number;
+  last_played_at: string | null;
+}
+
+/**
+ * What a field of a game held just before an event: the value the first
+ * change to it, logged at or after the event, changed from, or the value now
+ * where nothing has changed it since. Every event of the game since `event`
+ * must be in `events`.
+ */
+function before(
+  field: 'playtime_forever' | 'last_played_at',
+  now: unknown,
+  event: ActivityEvent,
+  events: ActivityEvent[],
+): unknown {
+  const first = events
+    .filter((one) => one.game_id === event.game_id && one.id >= event.id && field in one.changes)
+    .sort((a, b) => a.id - b.id)[0];
+  return first ? first.changes[field][0] : now;
+}
+
+/**
+ * The start of a finish where how long it took can be told for certain: the
+ * game was started, played and finished, with nothing between (no pause, no
+ * stop, no drop), and it had never been played before that start (no hours on
+ * it, and no last-played date, which a stop or any time played would have
+ * stamped). Null for anything else: played some, put down and finished months
+ * later doesn't say how long it took, whichever start it is counted from.
+ * Shared by Recent activity and the summary a finish opens.
+ */
+export function cleanStartOf(
+  finish: ActivityEvent,
+  events: ActivityEvent[],
+  game: GameNow,
+): ActivityEvent | null {
+  const [start] = events
+    .filter((one) => one.game_id === finish.game_id && one.id < finish.id && one.changes.status)
+    .sort((a, b) => b.id - a.id);
+  if (!start || start.changes.status[1] !== 'playing') return null;
+  // Played before, as far as the history goes back: paused, stopped or dropped.
+  const playedBefore = events.some(
+    (one) =>
+      one.game_id === finish.game_id && one.id < start.id && one.changes.status?.[0] === 'playing',
+  );
+  if (playedBefore) return null;
+  const hours = before('playtime_forever', game.playtime_forever, start, events);
+  if ((hours ?? 0) !== 0) return null;
+  return before('last_played_at', game.last_played_at, start, events) == null ? start : null;
+}
+
 /** Things done to one game this close together on one day, with nothing else between, are a run. */
 const SAME_GO_MS = 12 * 60 * 60 * 1000;
 
@@ -231,8 +381,9 @@ function told(event: ActivityEvent): Told | null {
     }
   }
   if (rating !== null) {
-    return typeof changes.rating[0] === 'number'
-      ? { kind: 'rated', rating, changed: true }
+    const was = changes.rating[0];
+    return typeof was === 'number'
+      ? { kind: 'rerated', rating, from: was }
       : { kind: 'rated', rating };
   }
   if (typeof now('platform') === 'string') return { kind: 'moved', to: now('platform') as string };
@@ -240,7 +391,12 @@ function told(event: ActivityEvent): Told | null {
   if ('favorite' in changes) return { kind: now('favorite') === true ? 'favorite' : 'unfavorite' };
   if (now('noted') === true) return { kind: 'note' };
   const [play] = playsOf([event]);
-  return play ? { kind: 'played', minutes: play.minutes } : null;
+  if (!play) return null;
+  // The hours it came to, said only where it was played before: a first go is its own total.
+  const total = changes.playtime_forever[1] as number;
+  return total > play.minutes
+    ? { kind: 'played', minutes: play.minutes, total }
+    : { kind: 'played', minutes: play.minutes };
 }
 
 /** Newest first, with time played in a row added up into one. */
@@ -249,9 +405,12 @@ function updatesOf(newestFirst: Item[]): Item[] {
   for (const item of [...newestFirst].reverse()) {
     const last = updates.at(-1);
     if (item.line.kind === 'played' && last?.line.kind === 'played') {
-      // The newer one's day and moment, the older one's key.
+      // The newer one's day, moment and total, the older one's key.
       const minutes = (last.line.minutes ?? 0) + (item.line.minutes ?? 0);
-      updates[updates.length - 1] = { ...item, key: last.key, line: { ...last.line, minutes } };
+      const line: ActivityLine = { ...last.line, minutes };
+      if (item.line.total && item.line.total > minutes) line.total = item.line.total;
+      else delete line.total;
+      updates[updates.length - 1] = { ...item, key: last.key, line };
     } else {
       updates.push(item);
     }
@@ -288,6 +447,8 @@ export function recentActivity(
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
 
   const pickedBy = startsFromPicks(events, picks);
+  // Where pauses are left out, a start says the one it made: "Paused Elden Ring for it".
+  const pausedFor = only && !only.has('paused') ? pausesForStarts(events, shown) : new Map();
 
   const logged = events.flatMap((event): Item[] => {
     const game = shown.get(event.game_id);
@@ -308,6 +469,25 @@ export function recentActivity(
     if (rating != null) line.rating = rating;
     const picked = line.kind === 'started' ? pickedBy.get(event.id) : undefined;
     if (picked) line.pickedBy = picked;
+    const paused = line.kind === 'started' ? pausedFor.get(event.id) : undefined;
+    if (paused) line.paused = paused;
+    // How long it took: its hours as it was finished, not since (played on
+    // after, or finished again).
+    const took = line.kind === 'finished' ? minutesThen(game, event, events) : null;
+    if (took) line.minutes = took;
+    if (line.kind === 'finished') {
+      // Only where it can be told for certain (see cleanStartOf).
+      const start = cleanStartOf(event, events, game);
+      if (start) {
+        const days = daysApart(toLocalIsoDate(new Date(happened(start))), chosen ?? loggedOn);
+        if (days >= 0) line.days = days;
+      }
+      // Picked up again from a pick is picked as much as a first start from one.
+      const from = startsBefore(event, events)
+        .map((one) => pickedBy.get(one.id))
+        .find(Boolean);
+      if (from) line.pickedBy = from;
+    }
     return [
       {
         at: dated ?? happened(event),
@@ -352,8 +532,14 @@ export function recentActivity(
       game.status === 'finished' ? 'finished' : game.status === 'dropped' ? 'dropped' : null;
     const day = savedDay(kind === 'finished' ? game.finished_at : kind && game.dropped_at);
     if (!kind || !day || alreadyTold.has(`${game.id} ${kind} ${day}`)) return [];
+    // From before the history: its hours now are all there is to go by.
+    const took = kind === 'finished' && game.playtime_forever > 0 ? game.playtime_forever : null;
     return from(
-      { kind, ...(game.rating != null ? { rating: game.rating } : {}) },
+      {
+        kind,
+        ...(game.rating != null ? { rating: game.rating } : {}),
+        ...(took ? { minutes: took } : {}),
+      },
       day,
       day,
       game.rating,

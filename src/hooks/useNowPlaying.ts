@@ -10,6 +10,7 @@ import { queries } from '@/lib/data/queries';
 import { completeGame, updateGameStatus } from '@/lib/client/game-status';
 import { buildCompletionSummary, type GameSummaryData } from '@/lib/games/completion';
 import { queryKeys } from '@/lib/query-keys';
+import { toLocalIsoDate } from '@/lib/diary/date-utils';
 import { sinceNow, UNDO_MS } from '@/lib/undo';
 import { nextPlayable } from '@/lib/games/release-date';
 import {
@@ -148,7 +149,10 @@ export function useNowPlaying(userId: string | null) {
     // apart (`promoteFailed`).
     mutationFn: ({ game, status, date, notes, rating }: CompleteInput) =>
       completeGame(game.id, status, { date, notes, rating }),
-    onSuccess: ({ counts, promoted, promoteFailed }, { game, status, date, notes, rating }) => {
+    onSuccess: (
+      { counts, promoted, promoteFailed, startedAt },
+      { game, status, date, notes, rating },
+    ) => {
       if (promoteFailed) toast.error("Couldn't start the next game from your queue");
       gamesList.patch(
         statusChangeFrom({ gameId: game.id, status, date, notes, rating }),
@@ -165,6 +169,8 @@ export function useNowPlaying(userId: string | null) {
           counts,
           rating,
           finishedAt: date,
+          // The day in the player's own time zone, as the finish date is.
+          startedAt: startedAt ? toLocalIsoDate(new Date(startedAt)) : null,
         });
         setGameSummary((open) => open && summary);
       }

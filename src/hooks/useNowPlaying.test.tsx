@@ -304,6 +304,8 @@ it('opens the summary as soon as a game is saved as finished, before the server 
     totalGames: 192,
     nextGame: 'Final Fantasy Resonance',
     rating: 8,
+    // How long it took waits for the server, which reads the history.
+    startedAt: null,
   });
 
   await act(async () =>
@@ -311,10 +313,16 @@ it('opens the summary as soon as a game is saved as finished, before the server 
       counts: { gamesFinished: 42, totalGames: 193 },
       promoted: { ...playing, id: 2, name: 'Final Fantasy Resonance' },
       promoteFailed: false,
+      // Noon UTC: the same day wherever this runs.
+      startedAt: '2026-10-16T12:00:00+00:00',
     }),
   );
   await waitFor(() =>
-    expect(result.current.gameSummary).toMatchObject({ gamesFinished: 42, totalGames: 193 }),
+    expect(result.current.gameSummary).toMatchObject({
+      gamesFinished: 42,
+      totalGames: 193,
+      startedAt: '2026-10-16',
+    }),
   );
 });
 

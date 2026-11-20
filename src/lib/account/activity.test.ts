@@ -9,6 +9,7 @@ import {
   type ActivityEvent,
   type PlayedPick,
 } from '@/lib/account/activity';
+import type { GameItem } from '@/lib/data/loaders';
 import { toLocalIsoDate } from '@/lib/diary/date-utils';
 import { libraryGame as game } from './test-games';
 
@@ -290,7 +291,7 @@ describe('recentActivity, from the history', () => {
     expect(entries.map((e) => [e.lines, e.rating])).toEqual([
       [[{ kind: 'rated', rating: 8 }], 8],
       [[{ kind: 'moved', to: 'Switch' }], null],
-      [[{ kind: 'played', minutes: 150 }], null],
+      [[{ kind: 'played', minutes: 150, total: 450 }], null],
     ]);
   });
 
@@ -475,7 +476,7 @@ describe('recentActivity, several things about one game', () => {
       event(7, 'playtime', { playtime_forever: [150, 180] }, at(14)),
     ]);
     expect(entries[0].updates!.map((one) => one.lines[0])).toEqual([
-      { kind: 'played', minutes: 30 },
+      { kind: 'played', minutes: 30, total: 180 },
       { kind: 'rated', rating: 8 },
       { kind: 'played', minutes: 150 },
     ]);
@@ -487,7 +488,7 @@ describe('recentActivity, several things about one game', () => {
       event(7, 'edit', { rating: [10, 8] }, at(11)),
     ]);
     expect(entries.map((e) => [kinds(e).join(), e.rating])).toEqual([
-      ['rated', 8],
+      ['rerated', 8],
       ['finished', 10],
     ]);
     expect(entries[1].lines[0].rating).toBe(10);
@@ -722,7 +723,7 @@ describe('recentActivity, for other people (the highlights)', () => {
   const feed = (games: Parameters<typeof recentActivity>[0], events: ActivityEvent[]) =>
     recentActivity(games, null, events, { only: HIGHLIGHTS });
 
-  it('keeps what was played, finished, dropped, rated and made a favorite', () => {
+  it('keeps what was played, finished, dropped, a rating changed and a favorite', () => {
     const playingNow = game({ id: 9, name: 'Tunic', status: 'playing' });
     const entries = feed(
       [hades, celeste, playingNow],
@@ -739,7 +740,7 @@ describe('recentActivity, for other people (the highlights)', () => {
       ['Tunic', ['played']],
       ['Tunic', ['playing']],
       ['Celeste', ['favorite']],
-      ['Hades', ['rated']],
+      ['Hades', ['rerated']],
       ['Celeste', ['dropped']],
       ['Hades', ['finished']],
     ]);
@@ -924,7 +925,7 @@ describe('recentActivity, a rating', () => {
       event(7, 'edit', { rating: [null, 9] }, at(20)),
       event(8, 'edit', { rating: [6, 8] }, at(21)),
     ]);
-    expect(changed.lines).toEqual([{ kind: 'rated', rating: 8, changed: true }]);
+    expect(changed.lines).toEqual([{ kind: 'rerated', rating: 8, from: 6 }]);
     expect(given.lines).toEqual([{ kind: 'rated', rating: 9 }]);
   });
 });
@@ -1026,5 +1027,269 @@ describe('recentActivity, an event changed again much later (a late Undo)', () =
     // An Undo from a toast that waited twenty minutes.
     const [late] = recentActivity([hades], null, [added('2026-11-17T15:20:00+00:00')]);
     expect(late.at).toBe('2026-11-17T15:00:00+00:00');
+  });
+});
+
+describe('recentActivity, how long a finish took', () => {
+  const finishedAt = (minutes: number) =>
+    game({
+      id: 7,
+      name: 'Hades',
+      status: 'finished',
+      rating: 9,
+      playtime_forever: minutes,
+      finished_at: '2026-11-17T00:00:00+00:00',
+    });
+  const finish = (id: number, hour: number, also: ActivityEvent['changes'] = {}) => ({
+    ...event(
+      7,
+      'status',
+      {
+        status: ['playing', 'finished'],
+        finished_at: [null, '2026-11-17T00:00:00+00:00'],
+        ...also,
+      },
+      at(hour),
+    ),
+    id,
+  });
+  const played = (id: number, hour: number, from: number, to: number) => ({
+    ...event(7, 'playtime', { playtime_forever: [from, to] }, at(hour)),
+    id,
+  });
+  const finishLine = (entries: ActivityEntry[]) =>
+    entries
+      .flatMap((entry) => entry.updates ?? [entry])
+      .flatMap((entry) => entry.lines)
+      .find((line) => line.kind === 'finished');
+
+  it('is the hours the game had as it was finished, those entered with the finish included', () => {
+    const entries = recentActivity([finishedAt(2520)], null, [
+      finish(2, 20, { playtime_forever: [2400, 2520] }),
+    ]);
+    // No rating came with this finish: only the hours.
+    expect(finishLine(entries)).toEqual({ kind: 'finished', minutes: 2520 });
+  });
+
+  it('leaves out what was played after it: the post-game, or playing it again', () => {
+    const entries = recentActivity([finishedAt(3000)], null, [
+      played(4, 23, 2700, 3000),
+      played(3, 22, 2520, 2700),
+      finish(2, 20),
+    ]);
+    expect(finishLine(entries)?.minutes).toBe(2520);
+  });
+
+  it('goes by the hours the game has now for a finish from before the history', () => {
+    const [entry] = recentActivity([finishedAt(2520)], null, []);
+    expect(entry.lines).toEqual([{ kind: 'finished', rating: 9, minutes: 2520 }]);
+  });
+
+  it("says nothing of hours where there are none, or where they can't be told", () => {
+    expect(
+      finishLine(recentActivity([finishedAt(0)], null, [finish(2, 20)]))?.minutes,
+    ).toBeUndefined();
+    expect(finishLine(recentActivity([finishedAt(0)], null, []))?.minutes).toBeUndefined();
+    // A total that went to nothing since: what it was at the finish is lost.
+    const lost = recentActivity([finishedAt(600)], null, [
+      { ...event(7, 'edit', { playtime_forever: [2520, null] }, at(22)), id: 3 },
+      finish(2, 20),
+    ]);
+    expect(finishLine(lost)?.minutes).toBeUndefined();
+  });
+
+  it('only says it of a finish: a drop says nothing of hours', () => {
+    const dropped = game({
+      id: 7,
+      name: 'Hades',
+      status: 'dropped',
+      playtime_forever: 600,
+      dropped_at: '2026-11-17T00:00:00+00:00',
+    });
+    const [entry] = recentActivity([dropped], null, [
+      {
+        ...event(
+          7,
+          'status',
+          { status: ['playing', 'dropped'], dropped_at: [null, '2026-11-17T00:00:00+00:00'] },
+          at(20),
+        ),
+        id: 2,
+      },
+    ]);
+    expect(entry.lines).toEqual([{ kind: 'dropped' }]);
+  });
+});
+
+describe('recentActivity, the days a finish took', () => {
+  const hadesDone = (also: Partial<Parameters<typeof game>[0]> = {}) =>
+    game({
+      id: 7,
+      name: 'Hades',
+      status: 'finished',
+      finished_at: '2026-11-17T00:00:00+00:00',
+      ...also,
+    });
+  const status = (id: number, from: string, to: string, when: string, also = {}) => ({
+    ...event(7, 'status', { status: [from, to], ...also }, when),
+    id,
+  });
+  const finish = (id: number, also = {}) =>
+    status(id, 'playing', 'finished', at(20), {
+      finished_at: [null, '2026-11-17T00:00:00+00:00'],
+      ...also,
+    });
+  const finishLine = (
+    events: ActivityEvent[],
+    picks: PlayedPick[] = [],
+    hades: GameItem = hadesDone(),
+  ) =>
+    recentActivity([hades], null, events, { picks })
+      .flatMap((entry) => entry.updates ?? [entry])
+      .flatMap((entry) => entry.lines)
+      .find((line) => line.kind === 'finished');
+
+  it('is the whole days from the day it was started to the day it was finished', () => {
+    expect(finishLine([finish(2), status(1, 'backlog', 'playing', at(12, 6))])?.days).toBe(11);
+  });
+
+  it('is said for time played between the start and the finish', () => {
+    const line = finishLine(
+      [
+        // A finish stamps the last-played date.
+        finish(4, {
+          playtime_forever: [600, 900],
+          last_played_at: [null, '2026-11-17T00:00:00+00:00'],
+        }),
+        { ...event(7, 'playtime', { playtime_forever: [0, 600] }, at(12, 9)), id: 3 },
+        status(1, 'backlog', 'playing', at(12, 6)),
+      ],
+      [],
+      hadesDone({ playtime_forever: 900, last_played_at: '2026-11-17T00:00:00+00:00' }),
+    );
+    expect(line).toMatchObject({ days: 11, minutes: 900 });
+  });
+
+  it("isn't said where it was paused for another game and picked up again", () => {
+    const line = finishLine([
+      finish(4),
+      status(3, 'backlog', 'playing', at(12, 10)),
+      status(2, 'playing', 'backlog', at(12, 3), { queued: [false, true] }),
+      status(1, 'backlog', 'playing', at(12, 1)),
+    ]);
+    expect(line?.days).toBeUndefined();
+  });
+
+  it("isn't said where it was played before the start: 30 hours, put down, and finished months later", () => {
+    // Played before the history: its hours were already on it at the start.
+    const hoursBefore = finishLine(
+      [finish(2), status(1, 'backlog', 'playing', at(12, 15))],
+      [],
+      hadesDone({ playtime_forever: 1800 }),
+    );
+    expect(hoursBefore?.days).toBeUndefined();
+    // Put down with no hours entered: the stop stamped a last-played date.
+    const stoppedBefore = finishLine(
+      [finish(4, { playtime_forever: [0, 1860] }), status(3, 'backlog', 'playing', at(12, 16))],
+      [],
+      hadesDone({ playtime_forever: 1860, last_played_at: '2026-08-01T00:00:00+00:00' }),
+    );
+    expect(stoppedBefore?.days).toBeUndefined();
+    // Started, dropped, started again and finished.
+    const afterDrop = finishLine([
+      finish(4),
+      status(3, 'dropped', 'playing', at(12, 10)),
+      status(2, 'playing', 'dropped', at(12, 3)),
+      status(1, 'backlog', 'playing', at(12, 1)),
+    ]);
+    expect(afterDrop?.days).toBeUndefined();
+  });
+
+  it("isn't said for a game finished without being started, or a start the history doesn't reach", () => {
+    expect(finishLine([finish(1, { status: ['backlog', 'finished'] })])?.days).toBeUndefined();
+    expect(finishLine([finish(2)])?.days).toBeUndefined();
+  });
+
+  it('says a pick started it, where its start came from one', () => {
+    const line = finishLine(
+      [finish(2), status(1, 'backlog', 'playing', at(12, 6))],
+      [{ game_id: 7, kind: 'random', answered_at: '2026-11-06T12:00:30+00:00' }],
+    );
+    expect(line).toEqual({ kind: 'finished', days: 11, pickedBy: 'random' });
+  });
+
+  it('says a pick started it where the game was picked up again from one, after a pause', () => {
+    const line = finishLine(
+      [
+        finish(4),
+        status(3, 'backlog', 'playing', at(12, 10)),
+        status(2, 'playing', 'backlog', at(12, 3), { queued: [false, true] }),
+        status(1, 'backlog', 'playing', at(12, 1)),
+      ],
+      [{ game_id: 7, kind: 'questions', answered_at: '2026-11-10T12:00:30+00:00' }],
+    );
+    expect(line).toEqual({ kind: 'finished', pickedBy: 'questions' });
+  });
+});
+
+describe('recentActivity, what someone following the player sees', () => {
+  const feed = (games: Parameters<typeof recentActivity>[0], events: ActivityEvent[]) =>
+    recentActivity(games, null, events, { only: HIGHLIGHTS });
+  const tunic = game({ id: 9, name: 'Tunic' });
+
+  it('leaves out a first rating given by itself: it goes with a finish or a drop', () => {
+    expect(feed([hades], [event(7, 'edit', { rating: [null, 9] }, at(20))])).toEqual([]);
+  });
+
+  it('says the hours a game came to after time played, where it was played before', () => {
+    const [entry] = feed([tunic], [event(9, 'playtime', { playtime_forever: [480, 720] }, at(20))]);
+    expect(entry.lines).toEqual([{ kind: 'played', minutes: 240, total: 720 }]);
+    // A first go is its own total: nothing more to say.
+    const [first] = feed([tunic], [event(9, 'playtime', { playtime_forever: [0, 90] }, at(20))]);
+    expect(first.lines).toEqual([{ kind: 'played', minutes: 90 }]);
+  });
+
+  it('adds up time played in a row, with the total it came to last', () => {
+    const [entry] = feed(
+      [tunic],
+      [
+        event(9, 'playtime', { playtime_forever: [600, 720] }, at(21)),
+        event(9, 'playtime', { playtime_forever: [480, 600] }, at(20)),
+      ],
+    );
+    expect(entry.lines).toEqual([{ kind: 'played', minutes: 240, total: 720 }]);
+  });
+
+  it('says on a start which game it paused, as the pause itself is left out', () => {
+    const entries = feed(
+      [hades, tunic],
+      [
+        event(9, 'status', { status: ['backlog', 'playing'] }, '2026-11-17T20:00:01+00:00'),
+        event(7, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(20)),
+      ],
+    );
+    expect(entries.map((e) => [e.name, e.lines])).toEqual([
+      ['Tunic', [{ kind: 'started', paused: 'Hades' }]],
+    ]);
+  });
+
+  it("says no pause that wasn't one: a game moved to the backlog, or a pause much earlier", () => {
+    const entries = feed(
+      [hades, celeste, tunic],
+      [
+        event(9, 'status', { status: ['backlog', 'playing'] }, at(20)),
+        event(7, 'status', { status: ['playing', 'backlog'], queued: [false, false] }, at(20)),
+        event(8, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(18)),
+      ],
+    );
+    expect(entries.map((e) => e.lines)).toEqual([[{ kind: 'started' }]]);
+  });
+
+  it("leaves the pause to its own row on the player's own list", () => {
+    const entries = recentActivity([hades, tunic], null, [
+      event(9, 'status', { status: ['backlog', 'playing'] }, '2026-11-17T20:00:01+00:00'),
+      event(7, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(20)),
+    ]);
+    expect(entries.map((e) => e.lines)).toEqual([[{ kind: 'started' }], [{ kind: 'paused' }]]);
   });
 });

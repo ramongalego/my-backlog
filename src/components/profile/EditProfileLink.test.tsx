@@ -6,7 +6,7 @@ const header = {
   name: 'Ankrath',
   username: 'ankrath',
   avatar: null,
-  figures: { games: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null },
+  figures: { backlog: 217, finished: 44, finishedThisYear: 1, hours: 1065, avgRating: null },
 };
 
 it('leads to Settings, where the profile is changed', () => {

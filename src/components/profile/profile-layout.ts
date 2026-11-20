@@ -41,3 +41,11 @@ export const ACTIVITY_PAGE = 6;
 
 export const ACTIVITY_LIST = 'divide-y divide-ink-800/70 border-y border-ink-800/70';
 export const ACTIVITY_ROW = 'flex items-center gap-3 sm:gap-4 py-2.5';
+/** A row's art: a little larger from `lg`, where there's room beside the text. */
+export const ACTIVITY_THUMB = 'w-16 sm:w-28 lg:w-32';
+/**
+ * A recent finish, the one row that stands out: washed in the finished green
+ * from its art's side, fading out before the text.
+ */
+export const FINISH_ROW =
+  '-mx-2 w-[calc(100%+1rem)] rounded-lg bg-linear-to-r from-emerald-500/12 via-emerald-500/4 to-transparent px-2';
