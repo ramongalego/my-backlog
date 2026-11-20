@@ -232,12 +232,13 @@ const sections: LegalSection[] = [
           ratings of them, the platforms you play on, and recent highlights of your activity: games
           you started, played, finished, dropped, rated or made a favorite, your hours in a game you
           played, how long a game you finished took, which game you paused to start another, and
-          whether a game you started was picked by Pick My Game or Random.
+          whether a game you started was picked by Pick My Game or Random. It also shows the days in
+          the last six months on which you did any of those, and how many of them each day.
         </p>
         <p>
-          It does not show your email address, your notes, your backlog, your queue or the rest of
-          your library. If you have connected Steam and have not chosen a display name or picture of
-          your own, the name and picture shown are the ones from your Steam profile.
+          It does not show your email address, your notes, the games in your backlog, your queue or
+          the rest of your library. If you have connected Steam and have not chosen a display name
+          or picture of your own, the name and picture shown are the ones from your Steam profile.
         </p>
         <p>
           You can make your profile private at any time in <Link href="/settings">Settings</Link>. A

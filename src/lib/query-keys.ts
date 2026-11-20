@@ -14,6 +14,8 @@ export const queryKeys = {
     manual: (userId: string) => [...queryKeys.games.all, 'manual', userId] as const,
     // Under games: a change to a game is a new event.
     history: (userId: string) => [...queryKeys.games.all, 'history', userId] as const,
+    // Under games: a change to a game is a new event, and a day's count.
+    activityDays: (userId: string) => [...queryKeys.games.all, 'activity-days', userId] as const,
     // Under games: a pick is started by a change to a game.
     playedPicks: (userId: string) => [...queryKeys.games.all, 'played-picks', userId] as const,
     openEndedCategories: (userId: string) =>

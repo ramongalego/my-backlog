@@ -5,7 +5,7 @@ import { queries } from '@/lib/data/queries';
 import { useAuth } from '@/hooks/useAuth';
 import { profileAvatar, profileName } from '@/lib/account/identity';
 import { profileFigures, ratingSpread } from '@/lib/account/figures';
-import { recentActivity } from '@/lib/account/activity';
+import { activityByDay, recentActivity } from '@/lib/account/activity';
 import { countPlatforms } from '@/lib/games/library-filter';
 import { pickedFavorites, toggleFavorite } from '@/lib/account/favorites';
 import { useFavoriteGames } from './useFavoriteGames';
@@ -26,6 +26,8 @@ export function useProfilePage() {
   const { data: history = [] } = useQuery(queries.history(userId));
   // Without them a start just doesn't say what picked it.
   const { data: picks = [] } = useQuery(queries.playedPicks(userId));
+  // Activity history: without it, the panel just isn't there.
+  const { data: activityEvents } = useQuery(queries.activityHistory(userId));
 
   // The favorites are the player's to pick: none until they do.
   const favoriteGames = useFavoriteGames(userId);
@@ -78,6 +80,8 @@ export function useProfilePage() {
     gameDialog,
     openGame,
     activity: recentActivity(games, playing, history, { picks }),
+    /** Things done each day, for Activity history; null until read. */
+    activityDays: activityEvents ? activityByDay(games, activityEvents) : null,
     // Counted as the Games page lists them: hidden games don't count, and a
     // platform with only hidden games isn't listed.
     platforms: [...countPlatforms(games, 'all')]

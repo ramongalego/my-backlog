@@ -7,9 +7,11 @@ import {
   loadFavoriteGames,
   loadGamesList,
   loadPlayedPicks,
+  loadHistorySince,
   loadRecentHistory,
 } from '@/lib/data/loaders';
 import { libraryGame as game } from '@/lib/account/test-games';
+import { activityFrom } from '@/lib/account/activity';
 
 const USER_ID = '28f2ff71-0000-4000-8000-000000000001';
 
@@ -70,6 +72,7 @@ jest.mock('@/lib/data/loaders', () => ({
   loadCurrentlyPlaying: jest.fn(),
   loadRecentHistory: jest.fn(),
   loadPlayedPicks: jest.fn(),
+  loadHistorySince: jest.fn(),
 }));
 // What a read comes to is reused for a minute: each test starts well past the
 // last one's, so none is handed another's.
@@ -112,6 +115,7 @@ beforeEach(() => {
   jest.mocked(loadCurrentlyPlaying).mockReset().mockResolvedValue(null);
   jest.mocked(loadRecentHistory).mockReset().mockResolvedValue([]);
   jest.mocked(loadPlayedPicks).mockReset().mockResolvedValue([]);
+  jest.mocked(loadHistorySince).mockReset().mockResolvedValue([]);
   jest.spyOn(console, 'error').mockImplementation(() => {});
   jest.useFakeTimers({
     now: new Date(clock),
@@ -167,8 +171,12 @@ it('is what a profile shows: the name, picture, figures, favorites and platforms
         lines: [{ kind: 'finished', rating: 10, minutes: 600 }],
       },
     ],
+    // Nothing logged in Activity history's weeks.
+    activityDays: {},
   });
   expect(loadGamesList).toHaveBeenCalledWith(expect.anything(), USER_ID);
+  // From the Sunday that starts its weeks.
+  expect(loadHistorySince).toHaveBeenCalledWith(expect.anything(), USER_ID, activityFrom());
   expect(loadFavoriteGames).toHaveBeenCalledWith(expect.anything(), USER_ID);
 });
 
@@ -181,6 +189,7 @@ it('holds nothing private: no account id, no notes, no hidden game, and not the 
   expect(Object.keys((await getPublicProfile('mistkai'))!).sort()).toEqual(
     [
       'activity',
+      'activityDays',
       'avatar',
       'favorites',
       'figures',

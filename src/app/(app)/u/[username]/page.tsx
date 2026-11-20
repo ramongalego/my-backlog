@@ -7,6 +7,8 @@ import { PlaysOn } from '@/components/profile/PlaysOn';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { PublicFavorites } from '@/components/profile/PublicFavorites';
 import { RatingSpread } from '@/components/profile/RatingSpread';
+import { ActivityHistory } from '@/components/profile/ActivityHistory';
+import { toLocalIsoDate } from '@/lib/diary/date-utils';
 import { RecentActivity } from '@/components/profile/RecentActivity';
 import { PROFILE_COLUMNS } from '@/components/profile/profile-layout';
 import { publicProfilePath } from '@/lib/account/public-profile';
@@ -71,6 +73,8 @@ async function OwnProfile() {
     queries.history(userId, supabase),
     // Which starts came from a pick.
     queries.playedPicks(userId, supabase),
+    // Activity history's weeks.
+    queries.activityHistory(userId, supabase),
     // For the game dialog (a queued game shows as Queue), as Games and Stats do.
     queries.queue(userId, supabase),
   ]);
@@ -119,6 +123,8 @@ export default async function ProfilePage({ params }: PageProps) {
           {/* Not links: the Games page they'd lead to is the visitor's own library. */}
           <PlaysOn platforms={profile.platforms} linked={false} />
           <RatingSpread counts={profile.ratings} />
+          {/* Drawn here only: the server's day, as its days were counted. */}
+          <ActivityHistory days={profile.activityDays} today={toLocalIsoDate(new Date())} />
         </aside>
       </div>
     </Page>

@@ -41,6 +41,7 @@ const mistkai: PublicProfile = {
   platforms: [],
   library: { main: null, count: 0 },
   activity: [],
+  activityDays: {},
 };
 
 const at = (username: string) => ({ params: Promise.resolve({ username }) });
@@ -135,6 +136,7 @@ describe('the player looking at their own', () => {
       'favoriteGames',
       'history',
       'playedPicks',
+      'activityHistory',
       'queue',
     ]);
     expect(asked.filter((query) => query.stream).map((query) => query.queryKey[0])).toEqual([

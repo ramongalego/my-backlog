@@ -1,4 +1,6 @@
 import {
+  activityByDay,
+  activityFrom,
   activityAgo,
   activityDay,
   HIGHLIGHTS,
@@ -1291,5 +1293,36 @@ describe('recentActivity, what someone following the player sees', () => {
       event(7, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(20)),
     ]);
     expect(entries.map((e) => e.lines)).toEqual([[{ kind: 'started' }], [{ kind: 'paused' }]]);
+  });
+});
+
+describe('Activity history', () => {
+  it("starts on the Sunday 25 weeks before this week's", () => {
+    // Friday, Nov 20, 2026: this week began Sunday, Nov 15.
+    expect(activityFrom(new Date(2026, 10, 20, 15))).toBe('2026-05-24');
+    // A Sunday is its own week's first day.
+    expect(activityFrom(new Date(2026, 10, 15, 9))).toBe('2026-05-24');
+  });
+
+  it('counts what other people would see, each on the day it was logged', () => {
+    const tunic = game({ id: 9, name: 'Tunic' });
+    const hidden = game({ id: 10, name: 'Hidden', status: 'hidden' });
+    const noon = (day: number) => new Date(2026, 10, day, 12).toISOString();
+    const days = activityByDay(
+      [hades, celeste, tunic, hidden],
+      [
+        event(7, 'status', { status: ['backlog', 'playing'] }, noon(18)),
+        event(7, 'playtime', { playtime_forever: [0, 90] }, noon(18)),
+        event(8, 'edit', { rating: [6, 8] }, noon(18)),
+        event(9, 'favorite', { favorite: [false, true] }, noon(19)),
+        // Housekeeping, a first rating, and a hidden game: not counted.
+        event(8, 'queue', { queued: [false, true] }, noon(19)),
+        event(9, 'edit', { rating: [null, 9] }, noon(20)),
+        event(10, 'status', { status: ['backlog', 'playing'] }, noon(20)),
+        // A game no longer in the library.
+        event(99, 'status', { status: ['backlog', 'playing'] }, noon(20)),
+      ],
+    );
+    expect(days).toEqual({ '2026-11-18': 3, '2026-11-19': 1 });
   });
 });

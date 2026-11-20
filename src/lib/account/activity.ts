@@ -631,6 +631,38 @@ export function recentActivity(
   return entries.slice(0, RECENT_ACTIVITY);
 }
 
+/** How far back Activity history goes: about six months, in whole weeks. */
+export const ACTIVITY_WEEKS = 26;
+
+/**
+ * The first day Activity history shows, "YYYY-MM-DD": the Sunday that starts
+ * its first week, the week of `today` being its last.
+ */
+export function activityFrom(today = new Date()): string {
+  const first = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  first.setDate(first.getDate() - first.getDay() - (ACTIVITY_WEEKS - 1) * 7);
+  return toLocalIsoDate(first);
+}
+
+/**
+ * How many things the player did each day, by "YYYY-MM-DD": the same things
+ * other people see on Recent activity (HIGHLIGHTS), each counted on the day it
+ * was logged. Hidden games, and games no longer in the library, aren't counted.
+ * Days with nothing done aren't in it.
+ */
+export function activityByDay(games: GameItem[], events: ActivityEvent[]): Record<string, number> {
+  const shown = new Set(games.filter((game) => game.status !== 'hidden').map((game) => game.id));
+  const days: Record<string, number> = {};
+  for (const event of events) {
+    if (!shown.has(event.game_id)) continue;
+    const what = told(event);
+    if (!what || !HIGHLIGHTS.has(what.kind)) continue;
+    const day = toLocalIsoDate(new Date(happened(event)));
+    days[day] = (days[day] ?? 0) + 1;
+  }
+  return days;
+}
+
 /** "Oct 9", or "Oct 9, 2025" for a day in another year. */
 export function activityDay(day: string, now = new Date()): string {
   const date = new Date(

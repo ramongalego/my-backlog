@@ -12,12 +12,15 @@ import { FavoritesUnavailable } from '@/components/profile/FavoritesUnavailable'
 import { focusActivityRow, RecentActivity } from '@/components/profile/RecentActivity';
 import { PlaysOn } from '@/components/profile/PlaysOn';
 import { RatingSpread } from '@/components/profile/RatingSpread';
+import { ActivityHistory } from '@/components/profile/ActivityHistory';
+import { useLocalToday } from '@/hooks/useLocalToday';
 import { useProfilePage } from '@/hooks/useProfilePage';
 import { PROFILE_COLUMNS } from '@/components/profile/profile-layout';
 import { ProfilePageSkeleton } from './Skeleton';
 
 export default function ProfileView() {
   const profile = useProfilePage();
+  const today = useLocalToday();
   const [choosingFavorites, setChoosingFavorites] = useState(false);
   const favoritesRow = useRef<FavoriteGamesHandle>(null);
   // Which section a game's dialog was opened from. If the change it saves
@@ -104,6 +107,10 @@ export default function ProfileView() {
         <aside className="min-w-0 space-y-6">
           <PlaysOn platforms={profile.platforms} />
           <RatingSpread counts={profile.ratings} />
+          {/* By the player's own day, once the browser knows it. */}
+          {today && profile.activityDays && (
+            <ActivityHistory days={profile.activityDays} today={today} />
+          )}
         </aside>
       </div>
     </Page>

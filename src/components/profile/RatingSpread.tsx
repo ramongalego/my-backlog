@@ -1,4 +1,5 @@
 import { Panel } from '@/components/ui/Panel';
+import { HOVER_TIP_TARGET, HoverTip } from './HoverTip';
 import { SidePanelHeading } from './SidePanelHeading';
 
 /** The tallest bar, in pixels. */
@@ -37,14 +38,21 @@ export function RatingSpread({
         {counts.map((count, rating) => (
           <div
             key={rating}
-            title={
-              count > 0 ? `${rating}/10: ${count} ${count === 1 ? 'game' : 'games'}` : undefined
-            }
+            data-rating={rating}
             // The amber of Stats' rating bars and of the rating star. A rating
             // nobody was given keeps its place as a mark on the line.
-            className={`flex-1 rounded-sm transition-colors ${count > 0 ? 'bg-amber-400/80 hover:bg-amber-400' : 'bg-ink-800'}`}
+            className={`flex-1 rounded-sm transition-colors ${count > 0 ? `${HOVER_TIP_TARGET} bg-amber-400/80 hover:bg-amber-400` : 'bg-ink-800'}`}
             style={{ height: count > 0 ? Math.max((count / most) * BAR_HEIGHT, 4) : 2 }}
-          />
+          >
+            {count > 0 && (
+              <HoverTip
+                title={`${rating}/10`}
+                detail={`${count} ${count === 1 ? 'game' : 'games'}`}
+                // The two ends of the scale keep theirs inside the panel.
+                align={rating < 2 ? 'start' : rating > 8 ? 'end' : 'center'}
+              />
+            )}
+          </div>
         ))}
       </div>
       <div

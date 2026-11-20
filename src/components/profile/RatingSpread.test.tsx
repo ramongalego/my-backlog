@@ -32,8 +32,12 @@ it('says how many games it is drawn from, and the two ends of the scale', () => 
   expect(screen.getByText('22').parentElement).toHaveClass('border-b', 'border-ink-800');
   expect(screen.getByText('0')).toBeInTheDocument();
   expect(screen.getByText('10')).toBeInTheDocument();
-  // No number on any bar: only the shape.
-  expect(screen.getByRole('img')).toHaveTextContent('');
+  // No number on any bar: only the shape. What a bar says is in its tip, hidden until hovered.
+  for (const bar of bars()) {
+    const tip = bar.firstElementChild;
+    expect(bar.childElementCount).toBe(tip ? 1 : 0);
+    if (tip) expect(tip).toHaveClass('hidden');
+  }
 });
 
 it('says in words what the bars show, naming only the ratings given', () => {
@@ -46,11 +50,18 @@ it('says in words what the bars show, naming only the ratings given', () => {
   expect(screen.getByText('10').parentElement).toHaveAttribute('aria-hidden', 'true');
 });
 
-it('names a bar on hover, with its games', () => {
+it('names a bar on hover, with its games, in a tip of its own shown at once', () => {
   render(<RatingSpread counts={counts} />);
-  expect(bars()[9]).toHaveAttribute('title', '9/10: 9 games');
-  expect(bars()[4]).toHaveAttribute('title', '4/10: 1 game');
-  expect(bars()[0]).not.toHaveAttribute('title');
+  expect(bars()[9]).toHaveTextContent(/^9\/109 games$/);
+  expect(bars()[4]).toHaveTextContent(/^4\/101 game$/);
+  // Shown by hovering the bar, and only drawn: the chart's name says it.
+  const tip = bars()[9].firstElementChild!;
+  expect(bars()[9]).toHaveClass('group/tip');
+  expect(tip).toHaveClass('hidden', 'group-hover/tip:block');
+  expect(tip).toHaveAttribute('aria-hidden', 'true');
+  // A rating nobody was given says nothing, and the browser's tooltip is gone.
+  expect(bars()[0]).toBeEmptyDOMElement();
+  expect(bars()[9]).not.toHaveAttribute('title');
 });
 
 it('draws nothing until enough games are rated', () => {

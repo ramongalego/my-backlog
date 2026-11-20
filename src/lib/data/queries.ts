@@ -4,6 +4,7 @@ import { queryOptions, skipToken } from '@tanstack/react-query';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { queryKeys } from '@/lib/query-keys';
+import { activityFrom } from '@/lib/account/activity';
 import {
   loadCarouselPools,
   loadCurrentlyPlaying,
@@ -17,6 +18,7 @@ import {
   loadQueue,
   loadPlayedPicks,
   loadRecentHistory,
+  loadHistorySince,
   loadSavedInsights,
   type CarouselPools,
 } from './loaders';
@@ -74,6 +76,17 @@ export const queries = {
       queryKey: queryKeys.games.history(userId ?? ''),
       queryFn: load(userId, supabase, loadRecentHistory),
       staleTime: 30 * 1000,
+    }),
+
+  /**
+   * What Activity history counts: everything logged in its weeks. Not keyed by
+   * the day it starts from, which the server and the browser can see differently.
+   */
+  activityHistory: (userId: string | null, supabase?: SupabaseClient) =>
+    queryOptions({
+      queryKey: queryKeys.games.activityDays(userId ?? ''),
+      queryFn: load(userId, supabase, (client, id) => loadHistorySince(client, id, activityFrom())),
+      staleTime: MINUTE,
     }),
 
   /** Read with the history: a start says whether a pick made it. */

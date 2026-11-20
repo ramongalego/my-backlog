@@ -8,8 +8,9 @@ import {
   loadGamesList,
   loadPlayedPicks,
   loadRecentHistory,
+  loadHistorySince,
 } from '@/lib/data/loaders';
-import { HIGHLIGHTS, recentActivity } from '@/lib/account/activity';
+import { activityByDay, activityFrom, HIGHLIGHTS, recentActivity } from '@/lib/account/activity';
 import { pickedFavorites } from '@/lib/account/favorites';
 import { profileFigures, ratingSpread } from '@/lib/account/figures';
 import { profileAvatar } from '@/lib/account/identity';
@@ -80,7 +81,7 @@ async function shownName(profile: ProfileRow): Promise<string> {
 }
 type FromLibrary = Pick<
   PublicProfile,
-  'figures' | 'ratings' | 'favorites' | 'platforms' | 'library' | 'activity'
+  'figures' | 'ratings' | 'favorites' | 'platforms' | 'library' | 'activity' | 'activityDays'
 >;
 
 /** What the player's library comes to: the part worth reusing for a minute. */
@@ -88,12 +89,13 @@ async function readLibrary(userId: string): Promise<FromLibrary> {
   const service = tryCreateServiceClient();
   if (!service) throw new Error(NO_KEY);
 
-  const [games, picked, playing, history, picks] = await Promise.all([
+  const [games, picked, playing, history, picks, weeks] = await Promise.all([
     loadGamesList(service, userId),
     loadFavoriteGames(service, userId),
     loadCurrentlyPlaying(service, userId),
     loadRecentHistory(service, userId, HISTORY_READ),
     loadPlayedPicks(service, userId),
+    loadHistorySince(service, userId, activityFrom()),
   ]);
   const platforms = countPlatforms(games, 'all');
   // Only the highlights; folded into rows as the player's own list is. Worked
@@ -117,6 +119,8 @@ async function readLibrary(userId: string): Promise<FromLibrary> {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
     library: libraryPlatforms(platforms),
     activity: publicActivity(activity),
+    // Days in this server's time zone, as the page that draws them goes by.
+    activityDays: activityByDay(games, weeks),
   };
 }
 

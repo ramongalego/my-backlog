@@ -45,6 +45,8 @@ export interface PublicProfile {
   library: LibraryPlatforms;
   /** The highlights of what the player did, newest first (HIGHLIGHTS in ./activity). */
   activity: PublicActivity[];
+  /** How many of them each day, by "YYYY-MM-DD", for Activity history (activityByDay). */
+  activityDays: Record<string, number>;
 }
 
 /** The page's address for a username. */

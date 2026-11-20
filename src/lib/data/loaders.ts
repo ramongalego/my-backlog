@@ -215,6 +215,28 @@ export async function loadRecentHistory(
   return (data ?? []) as ActivityEvent[];
 }
 
+/**
+ * Everything logged since a day ("YYYY-MM-DD"), oldest first, and a day more:
+ * where it began in the player's time zone isn't known here. For Activity
+ * history, which counts them by day and shows only its own.
+ */
+export async function loadHistorySince(
+  supabase: SupabaseClient,
+  userId: string,
+  since: string,
+): Promise<ActivityEvent[]> {
+  const dayEarlier = new Date(Date.parse(since) - 24 * 60 * 60 * 1000).toISOString();
+  return fetchAllRows<ActivityEvent>((from, to) =>
+    supabase
+      .from('game_events')
+      .select('id, game_id, kind, changes, created_at, updated_at')
+      .eq('user_id', userId)
+      .gte('created_at', dayEarlier)
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
+}
+
 /** The latest picks the player pressed Play on: enough to cover the history read with them. */
 const RECENT_PICKS = 100;
 

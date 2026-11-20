@@ -12,17 +12,22 @@ export function SidePanelHeading({
   className = 'mb-4',
 }: {
   children: string;
-  /** Only looked at: what's under the heading says it to a screen reader. */
-  count: number;
+  /**
+   * Only looked at: what's under the heading says it to a screen reader. Left
+   * out where a count wouldn't say anything (Activity, whose start isn't drawn).
+   */
+  count?: number;
   /** The room under the line. */
   className?: string;
 }) {
   return (
     <div className={`${SIDE_PANEL_HEADING} ${className}`}>
       <SectionLabel>{children}</SectionLabel>
-      <span className="text-xs tabular-nums text-ink-500" aria-hidden="true">
-        {count}
-      </span>
+      {count != null && (
+        <span className="text-xs tabular-nums text-ink-500" aria-hidden="true">
+          {count}
+        </span>
+      )}
     </div>
   );
 }
