@@ -45,6 +45,12 @@ export interface ActivityLine {
   pickedBy?: PickKind;
   /** For `finished`: whole days from the day it was started to the day it was finished. */
   days?: number;
+  /**
+   * For `finished`: the game isn't finished any more (moved back since, by
+   * mistake or to play it again). The row stays, as a plain "Finished" with no
+   * rating or figures, the way the start of a game no longer played is plain.
+   */
+  undone?: true;
 }
 
 /** One thing done to a game, or a group of them: one row of the list. */
@@ -319,6 +325,35 @@ function firstOfFalseStarts(start: ActivityEvent, events: ActivityEvent[]): Acti
 }
 
 /**
+ * The starts that came to nothing, by their event's id: a game started and
+ * put back the same day (in the backlog, or marked Won't Play) with no time
+ * played logged. A mis-click, or a change of mind. Paused for another game
+ * isn't one: it waits on the queue to be picked up again.
+ */
+function falseStarts(events: ActivityEvent[]): Set<number> {
+  const byGame = new Map<number, ActivityEvent[]>();
+  for (const event of events) {
+    if (!event.changes.status) continue;
+    byGame.set(event.game_id, [...(byGame.get(event.game_id) ?? []), event]);
+  }
+  const found = new Set<number>();
+  for (const changes of byGame.values()) {
+    changes.sort((a, b) => a.id - b.id);
+    changes.forEach((start, index) => {
+      const next = changes[index + 1];
+      if (!next || start.changes.status[1] !== 'playing') return;
+      const [from, to] = next.changes.status;
+      const paused = to === 'backlog' && next.changes.queued?.[1] === true;
+      const putBack = from === 'playing' && !paused && (to === 'backlog' || to === 'wont_play');
+      if (putBack && dayOf(start) === dayOf(next) && !playedBetween(start, next, events)) {
+        found.add(start.id);
+      }
+    });
+  }
+  return found;
+}
+
+/**
  * The start of a finish where how long it took can be told for certain: the
  * game was started, played and finished, with nothing between (no pause, no
  * stop, no drop), and it had never been played before that start. For a Steam
@@ -437,7 +472,11 @@ export function recentActivity(
     picks = [],
     zoneKnown = true,
   }: {
-    /** Leaves out every line of another kind, as if it never happened. */
+    /**
+     * Leaves out every line of another kind, as if it never happened: what
+     * other people are shown. A start that came to nothing (falseStarts) is
+     * left out with them, since the putting back that explains it is.
+     */
     only?: ReadonlySet<ActivityKind>;
     /** Picks the player pressed Play on, so a start can say it came from one. */
     picks?: PlayedPick[];
@@ -452,11 +491,12 @@ export function recentActivity(
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
 
   const pickedBy = startsFromPicks(events, picks);
+  const cameToNothing = only ? falseStarts(events) : null;
 
   const logged = events.flatMap((event): Item[] => {
     const game = shown.get(event.game_id);
     const what = game && told(event);
-    if (!game || !what) return [];
+    if (!game || !what || cameToNothing?.has(event.id)) return [];
     const { day: chosen, rating, ...rest }: Told = what;
     const line: ActivityLine = rest;
     const loggedOn = toLocalIsoDate(new Date(happened(event)));
@@ -469,14 +509,18 @@ export function recentActivity(
     // years before it was logged: that is where it sits in the list, so what
     // is in the past stays there and isn't shown as recent.
     const dated = chosen && !thatDay ? chosen : null;
-    if (rating != null) line.rating = rating;
+    // What the game is now, as a start goes by (`playing` or `started`).
+    const undone = line.kind === 'finished' && game.status !== 'finished';
+    if (undone) line.undone = true;
+    else if (rating != null) line.rating = rating;
     const picked = line.kind === 'started' ? pickedBy.get(event.id) : undefined;
     if (picked) line.pickedBy = picked;
     // How long it took: its hours as it was finished, not since (played on
     // after, or finished again).
-    const took = line.kind === 'finished' ? minutesThen(game, event, events) : null;
+    const finish = line.kind === 'finished' && !undone;
+    const took = finish ? minutesThen(game, event, events) : null;
     if (took) line.minutes = took;
-    if (line.kind === 'finished') {
+    if (finish) {
       // Only where it can be told for certain (see cleanStartOf).
       const start = cleanStartOf(event, events, game);
       if (start) {
@@ -497,7 +541,7 @@ export function recentActivity(
         game,
         line,
         day: chosen ?? loggedOn,
-        rating: rating ?? null,
+        rating: undone ? null : (rating ?? null),
       },
     ];
   });
@@ -647,15 +691,17 @@ export function activityFrom(today = new Date()): string {
 
 /**
  * How many things the player did each day, by "YYYY-MM-DD": the same things
- * other people see on Recent activity (HIGHLIGHTS), each counted on the day it
- * was logged. Hidden games, and games no longer in the library, aren't counted.
- * Days with nothing done aren't in it.
+ * other people see on Recent activity (HIGHLIGHTS, without the starts that
+ * came to nothing), each counted on the day it was logged. Hidden games, and
+ * games no longer in the library, aren't counted. Days with nothing done
+ * aren't in it.
  */
 export function activityByDay(games: GameItem[], events: ActivityEvent[]): Record<string, number> {
   const shown = new Set(games.filter((game) => game.status !== 'hidden').map((game) => game.id));
   const days: Record<string, number> = {};
+  const cameToNothing = falseStarts(events);
   for (const event of events) {
-    if (!shown.has(event.game_id)) continue;
+    if (!shown.has(event.game_id) || cameToNothing.has(event.id)) continue;
     const what = told(event);
     if (!what || !HIGHLIGHTS.has(what.kind)) continue;
     const day = toLocalIsoDate(new Date(happened(event)));

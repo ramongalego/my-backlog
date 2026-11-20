@@ -852,4 +852,26 @@ describe('a recent finish', () => {
     expect(recent.firstElementChild!.className).toContain('from-emerald-500');
     expect(older.firstElementChild!.className).not.toContain('from-emerald-500');
   });
+
+  it('is a plain row once its game is no longer finished: no wash, no green, no figures', () => {
+    render(
+      <RecentActivity
+        entries={[
+          entry({ rating: 9, minutes: 600 }, daysAgo(1)),
+          { ...entry({ undone: true }, daysAgo(2)), key: 'undone', name: 'Celeste' },
+        ]}
+      />,
+    );
+    const [stands, undone] = rows();
+    expect(stands.firstElementChild!.className).toContain('from-emerald-500');
+    expect(within(stands).getByText('Finished')).toHaveClass('text-emerald-400');
+    expect(within(stands).getByText('Played for')).toBeInTheDocument();
+
+    expect(undone.firstElementChild!.className).not.toContain('from-emerald-500');
+    expect(within(undone).getByText('Finished')).toHaveClass('text-ink-300');
+    expect(within(undone).getByText('Finished')).not.toHaveClass('text-emerald-400');
+    // The one line that says what happened, with no line of figures under it.
+    expect(stands.querySelectorAll('[data-line]')).toHaveLength(2);
+    expect(undone.querySelectorAll('[data-line]')).toHaveLength(1);
+  });
 });

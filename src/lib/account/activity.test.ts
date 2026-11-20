@@ -46,6 +46,8 @@ const at = (hour: number, day = 17) =>
   `2026-11-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00+00:00`;
 const hades = game({ id: 7, name: 'Hades' });
 const celeste = game({ id: 8, name: 'Celeste' });
+/** Hades once finished: a finish in the history is still what the game is. */
+const hadesDone = game({ id: 7, name: 'Hades', status: 'finished' });
 
 describe('recentActivity, from the games', () => {
   it('lists what was finished and dropped, newest first', () => {
@@ -225,7 +227,7 @@ describe('recentActivity, from the history', () => {
   });
 
   it('puts a finish or a drop at the day the player chose, not when it was logged', () => {
-    const entries = recentActivity([hades, celeste], null, [
+    const entries = recentActivity([hadesDone, celeste], null, [
       event(7, 'status', {
         status: ['playing', 'finished'],
         finished_at: [null, '2026-11-10T00:00:00+00:00'],
@@ -390,6 +392,147 @@ describe('recentActivity, from the history', () => {
   });
 });
 
+describe('recentActivity, a finish of a game that is not finished any more', () => {
+  const finish = (hour: number) =>
+    event(
+      7,
+      'status',
+      {
+        status: ['playing', 'finished'],
+        finished_at: [null, '2026-11-17T00:00:00+00:00'],
+        rating: [null, 9],
+        playtime_forever: [0, 600],
+      },
+      at(hour),
+    );
+  const start = (hour: number) => event(7, 'status', { status: ['backlog', 'playing'] }, at(hour));
+  const movedBack = (hour: number) =>
+    event(7, 'status', { status: ['finished', 'backlog'], rating: [9, null] }, at(hour));
+
+  it('stays in the list as a plain finish: no rating, hours, days or pick', () => {
+    const events = [movedBack(15), finish(12), start(10)];
+    const picks: PlayedPick[] = [{ game_id: 7, kind: 'random', answered_at: at(10) }];
+    const backlogged = game({ id: 7, name: 'Hades', status: 'backlog', playtime_forever: 600 });
+    const entries = recentActivity([backlogged], null, events, { picks });
+    const lines = entries.flatMap((entry) => entry.updates ?? [entry]).map((e) => e.lines[0]);
+    expect(lines.map((line) => line.kind)).toEqual(['backlog', 'finished', 'started']);
+    expect(lines[1]).toEqual({ kind: 'finished', undone: true });
+    expect(entries.every((entry) => entry.rating === null)).toBe(true);
+  });
+
+  it('says all of it while the game is still finished', () => {
+    const [entry] = recentActivity(
+      [game({ id: 7, name: 'Hades', status: 'finished', playtime_forever: 600 })],
+      null,
+      [finish(12)],
+    );
+    expect(entry.lines[0]).toEqual({ kind: 'finished', rating: 9, minutes: 600 });
+    expect(entry.rating).toBe(9);
+  });
+
+  it('is plain for other people too, where the move back is not shown', () => {
+    const entries = recentActivity(
+      [game({ id: 7, name: 'Hades', status: 'backlog' })],
+      null,
+      [movedBack(15), finish(12)],
+      { only: HIGHLIGHTS, zoneKnown: false },
+    );
+    expect(entries.map((entry) => entry.lines)).toEqual([[{ kind: 'finished', undone: true }]]);
+  });
+
+  it('is a finish again once the game is', () => {
+    const again = event(
+      7,
+      'status',
+      { status: ['playing', 'finished'], finished_at: [null, '2026-11-17T00:00:00+00:00'] },
+      at(20),
+    );
+    const entries = recentActivity([game({ id: 7, name: 'Hades', status: 'finished' })], null, [
+      again,
+      start(18),
+      movedBack(15),
+      finish(12),
+    ]);
+    const lines = entries.flatMap((entry) => entry.updates ?? [entry]).map((e) => e.lines[0]);
+    expect(lines.filter((line) => line.kind === 'finished').every((line) => !line.undone)).toBe(
+      true,
+    );
+  });
+});
+
+describe('a start that came to nothing', () => {
+  const playing = game({ id: 7, name: 'Hades', status: 'playing' });
+  const start = (hour: number, day?: number) =>
+    event(7, 'status', { status: ['backlog', 'playing'] }, at(hour, day));
+  const back = (hour: number, day?: number) =>
+    event(7, 'status', { status: ['playing', 'backlog'] }, at(hour, day));
+  /** As the history is read: newest first. */
+  const forOthers = (games: GameItem[], oldestFirst: ActivityEvent[]) =>
+    recentActivity(games, null, [...oldestFirst].reverse(), {
+      only: HIGHLIGHTS,
+      zoneKnown: false,
+    }).flatMap(kinds);
+
+  it('is not shown to other people: started, put back the same day, no time played', () => {
+    expect(forOthers([hades], [start(10), back(11)])).toEqual([]);
+  });
+
+  it('leaves the start that stuck: one row, not the same one twice', () => {
+    expect(forOthers([playing], [start(10), back(11), start(12)])).toEqual(['playing']);
+  });
+
+  it("is still in the player's own list, with the putting back that explains it", () => {
+    const own = recentActivity([hades], null, [start(10), back(11)].reverse()).flatMap(kinds);
+    expect(own).toEqual(['backlog', 'started']);
+  });
+
+  it("is a game marked Won't Play the same day too", () => {
+    // Made in the order they happened: an event's id is its place in time.
+    const events = [start(10), event(7, 'status', { status: ['playing', 'wont_play'] }, at(11))];
+    expect(forOthers([hades], events)).toEqual([]);
+  });
+
+  it('is not one with time played before it was put back', () => {
+    const events = [
+      start(10),
+      event(7, 'playtime', { playtime_forever: [0, 90] }, at(11)),
+      back(12),
+    ];
+    expect(forOthers([hades], events)).toEqual(['played', 'started']);
+  });
+
+  it('is not one put back on another day', () => {
+    expect(forOthers([hades], [start(10, 17), back(10, 18)])).toEqual(['started']);
+  });
+
+  it('is not one paused for another game, which waits on the queue', () => {
+    const events = [
+      start(10),
+      event(7, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(11)),
+    ];
+    expect(forOthers([hades], events)).toEqual(['started']);
+  });
+
+  it('is not one that was finished or dropped the same day', () => {
+    const events = [
+      start(10),
+      event(
+        7,
+        'status',
+        { status: ['playing', 'finished'], finished_at: [null, '2026-11-17T00:00:00+00:00'] },
+        at(11),
+      ),
+    ];
+    expect(forOthers([hadesDone], events)).toEqual(['finished', 'started']);
+  });
+
+  it("doesn't light its day on Activity history, for the player or anyone", () => {
+    expect(activityByDay([hades], [start(10), back(11)])).toEqual({});
+    const day = toLocalIsoDate(new Date(at(12)));
+    expect(activityByDay([playing], [start(10), back(11), start(12)])).toEqual({ [day]: 1 });
+  });
+});
+
 describe('recentActivity, several things about one game', () => {
   const queued = (hour: number, day?: number) =>
     event(7, 'queue', { queued: [false, true] }, at(hour, day));
@@ -417,7 +560,7 @@ describe('recentActivity, several things about one game', () => {
   });
 
   it('is one row for more than two, its updates newest first, with the latest day and rating', () => {
-    const entries = recentActivity([hades], null, [done(15), started(11), queued(9)]);
+    const entries = recentActivity([hadesDone], null, [done(15), started(11), queued(9)]);
     expect(entries).toHaveLength(1);
     const [group] = entries;
     expect(group).toMatchObject({
@@ -485,7 +628,7 @@ describe('recentActivity, several things about one game', () => {
   });
 
   it('gives each row the rating it came with', () => {
-    const entries = recentActivity([hades], null, [
+    const entries = recentActivity([hadesDone], null, [
       done(9),
       event(7, 'edit', { rating: [10, 8] }, at(11)),
     ]);

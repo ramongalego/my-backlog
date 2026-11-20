@@ -1,5 +1,5 @@
 import { playedFor, type ActivityLine } from '@/lib/account/activity';
-import { ACTIVITY_LINE } from './activity-line';
+import { ACTIVITY_LINE, NEUTRAL } from './activity-line';
 
 /**
  * One thing done to a game, in one sentence: what, how long a finish took,
@@ -12,7 +12,9 @@ import { ACTIVITY_LINE } from './activity-line';
  * from it.
  */
 export function ActivityWhat({ line }: { line: ActivityLine }) {
-  const { icon: Icon, text, what } = ACTIVITY_LINE[line.kind];
+  const { icon: Icon, text: color, what } = ACTIVITY_LINE[line.kind];
+  // A finish of a game that isn't finished any more: said, without its green.
+  const text = line.undone ? NEUTRAL : color;
   const rest = [
     line.kind === 'finished' && line.minutes && `in ${playedFor(line.minutes)}`,
     // A rating given by itself is the whole line ("Rated 9/10"): not said twice.

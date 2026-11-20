@@ -81,8 +81,9 @@ function Row({
   const platform = line.kind === 'moved' ? null : platformToSay(entry, rowsLibrary);
   const gameId = entry.id;
   // A finish has what there is to say about it under it, and a recent one
-  // stands out: in a group it is one line like the rest.
-  const finish = line.kind === 'finished' && !inGroup;
+  // stands out: in a group it is one line like the rest, and so is one of a
+  // game that isn't finished any more.
+  const finish = line.kind === 'finished' && !inGroup && !line.undone;
   const wash = finish && recently(entry.at) ? FINISH_ROW : '';
   const content = (
     <ActivityRowContent
