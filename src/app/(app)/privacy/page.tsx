@@ -231,9 +231,9 @@ const sections: LegalSection[] = [
           rating and how many games you gave each rating. It shows your favorite games with your
           ratings of them, the platforms you play on, and recent highlights of your activity: games
           you started, played, finished, dropped, rated or made a favorite, your hours in a game you
-          played, how long a game you finished took, which game you paused to start another, and
-          whether a game you started was picked by Pick My Game or Random. It also shows the days in
-          the last six months on which you did any of those, and how many of them each day.
+          played, how long a game you finished took, and whether a game you started was picked by
+          Pick My Game or Random. It also shows the days in the last six months on which you did any
+          of those, and how many of them each day.
         </p>
         <p>
           It does not show your email address, your notes, the games in your backlog, your queue or

@@ -17,11 +17,14 @@ export function ActivityRowContent({
   at,
   count,
   interactive = false,
+  platform,
   afterName,
   now,
   children,
 }: {
   name: string;
+  /** Where it was played, beside the name; left out where the row doesn't say one. */
+  platform?: string | null;
   art: string | null;
   /** A moment, a day, or '' when nothing says when (see activityAgo). */
   at: string;
@@ -50,10 +53,26 @@ export function ActivityRowContent({
       </CoverThumb>
       <span className="block min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-3">
-          <span className="flex min-w-0 items-center gap-1">
-            <TruncatedText className="block min-w-0 font-medium text-ink-100 transition-colors group-hover:text-ink-50 lg:truncate">
-              {name}
-            </TruncatedText>
+          <span className="flex min-w-0 items-baseline gap-1">
+            {/* Where the name wraps, the platform follows its last word; from
+                lg, where the name is cut to one line, it sits beside it, never cut. */}
+            <span className="min-w-0 lg:flex lg:items-baseline">
+              <TruncatedText className="font-medium text-ink-100 transition-colors group-hover:text-ink-50 lg:block lg:min-w-0 lg:truncate">
+                {name}
+              </TruncatedText>
+              {platform && (
+                // Where it was played, beside what was played: the least of
+                // the row, so smaller and quieter than the name. Joined to the
+                // name's last word by a space that doesn't break, so it never
+                // wraps onto a line of its own.
+                <>
+                  {' '}
+                  <span className="ml-0.5 text-xs whitespace-nowrap text-ink-500 lg:ml-1 lg:shrink-0">
+                    {platform}
+                  </span>
+                </>
+              )}
+            </span>
             {afterName}
           </span>{' '}
           {ago && (

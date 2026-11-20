@@ -84,9 +84,9 @@ it('says what happened to each game, and where it was played', () => {
     />,
   );
   const [playing, finished, dropped] = rows();
-  expect(playing).toHaveTextContent(/^Ocarina of Time Started playing \(Switch 2\)$/);
+  expect(playing).toHaveTextContent(/^Ocarina of Time Switch 2 Started playing$/);
   expect(finished).toHaveTextContent(
-    /^Fire Emblem: Fortune's Weave Finished \(Switch 2\) Rated 9\/10$/,
+    /^Fire Emblem: Fortune's Weave Switch 2 Finished Rated 9\/10$/,
   );
   // A Steam game played on Steam names no platform, as on its card.
   expect(dropped).toHaveTextContent(/^Super Meat Boy Dropped$/);
@@ -303,16 +303,16 @@ describe('several things done to one game in a row', () => {
         .getAllByRole('button')
         .map((b) => b.textContent!.replace(/\s+/g, ' ').trim()),
     ).toEqual([
-      'Portal Finished and rated it 10/10 (Switch)',
-      'Portal Played 1h 30m (Switch)',
-      'Portal Added to queue (Switch)',
+      'Portal Switch Finished and rated it 10/10',
+      'Portal Switch Played 1h 30m',
+      'Portal Switch Added to queue',
     ]);
 
-    fireEvent.click(within(list).getByRole('button', { name: /^Portal Played/ }));
+    fireEvent.click(within(list).getByRole('button', { name: /^Portal Switch Played/ }));
     expect(onOpen).toHaveBeenCalledWith(7);
 
     fireEvent.click(toggle());
-    expect(screen.queryByRole('button', { name: /^Portal Played/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Portal Switch Played/ })).not.toBeInTheDocument();
   });
 
   it('counts as one of the six rows', () => {
@@ -326,7 +326,7 @@ describe('several things done to one game in a row', () => {
 });
 
 describe('one thing done to a game', () => {
-  it('says it as one sentence: what, the rating it came with, then the console', () => {
+  it('says it as one sentence, what and the rating it came with, with the console beside the name', () => {
     render(
       <RecentActivity
         onOpen={onOpen}
@@ -340,9 +340,8 @@ describe('one thing done to a game', () => {
         ]}
       />,
     );
-    expect(lineOf(rows()[0], 'Dropped')).toHaveTextContent(
-      /^Dropped and rated it 4\/10 \(Switch\)$/,
-    );
+    expect(lineOf(rows()[0], 'Dropped')).toHaveTextContent(/^Dropped and rated it 4\/10$/);
+    expect(rows()[0]).toHaveTextContent(/ Switch .*Dropped and rated it 4\/10$/);
     // Once, in the sentence: not again at the row's far end.
     expect(rows()[0].textContent!.match(/4\/10/g)).toHaveLength(1);
   });
@@ -547,16 +546,16 @@ describe('where each game is played, by what the library is on', () => {
     mockLibrary = { main: 'PC', count: 2 };
     render(<RecentActivity onOpen={onOpen} entries={games()} />);
     const [pc, ps5] = rows();
-    expect(pc).toHaveTextContent(/^Super Meat Boy Dropped \(PC\)$/);
-    expect(ps5).toHaveTextContent(/^Astro Bot Dropped \(PS5\)$/);
+    expect(pc).toHaveTextContent(/^Super Meat Boy PC Dropped$/);
+    expect(ps5).toHaveTextContent(/^Astro Bot PS5 Dropped$/);
   });
 
   it('says it the same whichever platform most of the library is on', () => {
     mockLibrary = { main: 'PS5', count: 2 };
     render(<RecentActivity onOpen={onOpen} entries={games()} />);
     const [pc, ps5] = rows();
-    expect(pc).toHaveTextContent(/^Super Meat Boy Dropped \(PC\)$/);
-    expect(ps5).toHaveTextContent(/^Astro Bot Dropped \(PS5\)$/);
+    expect(pc).toHaveTextContent(/^Super Meat Boy PC Dropped$/);
+    expect(ps5).toHaveTextContent(/^Astro Bot PS5 Dropped$/);
   });
 
   it('says nothing in a library all on one platform', () => {
@@ -574,7 +573,7 @@ describe('where each game is played, by what the library is on', () => {
     render(<RecentActivity onOpen={onOpen} entries={games()} />);
     const [pc, ps5] = rows();
     expect(pc).toHaveTextContent(/^Super Meat Boy Dropped$/);
-    expect(ps5).toHaveTextContent(/^Astro Bot Dropped \(PS5\)$/);
+    expect(ps5).toHaveTextContent(/^Astro Bot PS5 Dropped$/);
   });
 
   it("still doesn't say it twice for a game moved there", () => {
@@ -729,9 +728,9 @@ describe("on someone else's profile, with nothing to open", () => {
   it('says the same rows, in the same words, as only something to read', () => {
     render(<RecentActivity entries={three} library={theirs} />);
     expect(rows().map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'Hades Finished (PC) Rated 9/10',
-      'Celeste Started playing (Switch)',
-      'Tunic Added to favorites (PC)',
+      'Hades PC Finished Rated 9/10',
+      'Celeste Switch Started playing',
+      'Tunic PC Added to favorites',
     ]);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
@@ -821,7 +820,7 @@ describe('a finish', () => {
   });
 });
 
-describe('a recent finish, and a start that paused a game', () => {
+describe('a recent finish', () => {
   const entry = (line: Record<string, unknown>, day: string) => ({
     key: 'event-' + day,
     id: 1,
@@ -852,14 +851,5 @@ describe('a recent finish, and a start that paused a game', () => {
     const [recent, older] = rows();
     expect(recent.firstElementChild!.className).toContain('from-emerald-500');
     expect(older.firstElementChild!.className).not.toContain('from-emerald-500');
-  });
-
-  it('says the game a start paused on a line of its own', () => {
-    render(
-      <RecentActivity
-        entries={[{ ...entry({}, daysAgo(1)), lines: [{ kind: 'started', paused: 'Elden Ring' }] }]}
-      />,
-    );
-    expect(rows()[0]).toHaveTextContent(/^Hades .* Started playing Paused Elden Ring for it$/);
   });
 });

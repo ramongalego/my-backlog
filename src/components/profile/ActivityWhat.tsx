@@ -3,22 +3,15 @@ import { ACTIVITY_LINE } from './activity-line';
 
 /**
  * One thing done to a game, in one sentence: what, how long a finish took,
- * the rating it came with, and last, in brackets, where it was played, the
- * least of it ("Finished in 42h and rated it 9/10 (PC)"). Each is only there
- * when there is one to say, and the sentence reads without it ("Finished",
- * "Finished (PC)", "Finished and rated it 9/10"). A start that came from a
- * pick says which before the platform ("Started playing, picked at random
- * (PS5)"). When it happened is the row's to say, at its far end. Only what
- * was done has the icon and the color; the rest reads on from it.
+ * and the rating it came with ("Finished in 42h and rated it 9/10"). Each is
+ * only there when there is one to say, and the sentence reads without it
+ * ("Finished", "Finished and rated it 9/10"). A start that came from a pick
+ * ends by saying which ("Started playing, picked at random"). Where it was
+ * played is said beside the game's name, and when it happened at the row's
+ * far end. Only what was done has the icon and the color; the rest reads on
+ * from it.
  */
-export function ActivityWhat({
-  line,
-  platform,
-}: {
-  line: ActivityLine;
-  /** Left out where a line doesn't name one. */
-  platform?: string | null;
-}) {
+export function ActivityWhat({ line }: { line: ActivityLine }) {
   const { icon: Icon, text, what } = ACTIVITY_LINE[line.kind];
   const rest = [
     line.kind === 'finished' && line.minutes && `in ${playedFor(line.minutes)}`,
@@ -44,7 +37,6 @@ export function ActivityWhat({
       </span>
       {rest.length > 0 && ` ${rest.join(' ')}`}
       {picked}
-      {platform && ` (${platform})`}
     </span>
   );
 }

@@ -1262,7 +1262,7 @@ describe('recentActivity, what someone following the player sees', () => {
     expect(entry.lines).toEqual([{ kind: 'played', minutes: 240, total: 720 }]);
   });
 
-  it('says on a start which game it paused, as the pause itself is left out', () => {
+  it('leaves out a pause, and the start it made way for says nothing of it', () => {
     const entries = feed(
       [hades, tunic],
       [
@@ -1270,21 +1270,7 @@ describe('recentActivity, what someone following the player sees', () => {
         event(7, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(20)),
       ],
     );
-    expect(entries.map((e) => [e.name, e.lines])).toEqual([
-      ['Tunic', [{ kind: 'started', paused: 'Hades' }]],
-    ]);
-  });
-
-  it("says no pause that wasn't one: a game moved to the backlog, or a pause much earlier", () => {
-    const entries = feed(
-      [hades, celeste, tunic],
-      [
-        event(9, 'status', { status: ['backlog', 'playing'] }, at(20)),
-        event(7, 'status', { status: ['playing', 'backlog'], queued: [false, false] }, at(20)),
-        event(8, 'status', { status: ['playing', 'backlog'], queued: [false, true] }, at(18)),
-      ],
-    );
-    expect(entries.map((e) => e.lines)).toEqual([[{ kind: 'started' }]]);
+    expect(entries.map((e) => [e.name, e.lines])).toEqual([['Tunic', [{ kind: 'started' }]]]);
   });
 
   it("leaves the pause to its own row on the player's own list", () => {

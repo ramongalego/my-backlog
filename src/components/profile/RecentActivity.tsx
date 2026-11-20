@@ -90,16 +90,11 @@ function Row({
       art={entry.header_image}
       at={entry.at}
       interactive={!!onOpen}
+      platform={platform}
     >
       <ActivityRowLine>
-        <ActivityWhat line={finish ? { kind: line.kind } : line} platform={platform} />
+        <ActivityWhat line={finish ? { kind: line.kind } : line} />
       </ActivityRowLine>
-      {line.paused && (
-        <>
-          {' '}
-          <ActivityRowLine>Paused {line.paused} for it</ActivityRowLine>
-        </>
-      )}
       {finish && (
         <>
           {' '}
@@ -174,7 +169,7 @@ function GroupRow({
           interactive
           afterName={
             <ChevronDown
-              className={`h-4 w-4 shrink-0 text-ink-400 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+              className={`h-4 w-4 shrink-0 self-center text-ink-400 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
               aria-hidden="true"
             />
           }

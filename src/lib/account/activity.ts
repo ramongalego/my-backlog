@@ -45,11 +45,6 @@ export interface ActivityLine {
   pickedBy?: PickKind;
   /** For `finished`: whole days from the day it was started to the day it was finished. */
   days?: number;
-  /**
-   * For a start, where the list leaves out pauses (someone else's profile): the
-   * game it put on the queue to be played.
-   */
-  paused?: string;
 }
 
 /** One thing done to a game, or a group of them: one row of the list. */
@@ -145,8 +140,8 @@ const SAME_GAME_MORE_THAN = 2;
  * would have something to say about. What was played, finished, dropped, a
  * rating changed, and a favorite. A first rating goes with its finish or drop,
  * and the rest is housekeeping (the backlog, the queue, Won't Play, a move to
- * a console, a favorite taken off, a note), which stays the player's own. A
- * pause is said on the start it made way for.
+ * a console, a favorite taken off, a note, a pause), which stays the player's
+ * own.
  */
 export const HIGHLIGHTS: ReadonlySet<ActivityKind> = new Set<ActivityKind>([
   'playing',
@@ -206,42 +201,6 @@ function startsFromPicks(events: ActivityEvent[], picks: PlayedPick[]): Map<numb
       )
       .sort((a, b) => apart(a) - apart(b));
     if (start) made.set(start.id, pick.kind);
-  }
-  return made;
-}
-
-/**
- * How far apart a start and the pause of the game it took over from can be
- * logged. One request saves both, so they are logged together.
- */
-const PAUSED_WITHIN_MS = 60 * 1000;
-
-/**
- * Which game each start paused, by the start's id: another game moved from
- * playing to the queue as it was logged. A game hidden or gone since is left
- * unsaid.
- */
-function pausesForStarts(
-  events: ActivityEvent[],
-  shown: Map<number, GameItem>,
-): Map<number, string> {
-  const pauses = events.filter(
-    (event) =>
-      event.changes.status?.[0] === 'playing' &&
-      event.changes.status?.[1] === 'backlog' &&
-      event.changes.queued?.[1] === true,
-  );
-  const made = new Map<number, string>();
-  for (const start of events) {
-    if (start.changes.status?.[1] !== 'playing') continue;
-    const at = Date.parse(happened(start));
-    const pause = pauses.find(
-      (one) =>
-        one.game_id !== start.game_id &&
-        Math.abs(Date.parse(happened(one)) - at) <= PAUSED_WITHIN_MS,
-    );
-    const game = pause && shown.get(pause.game_id);
-    if (game) made.set(start.id, game.name);
   }
   return made;
 }
@@ -447,8 +406,6 @@ export function recentActivity(
   const shown = new Map(games.filter((game) => game.status !== 'hidden').map((g) => [g.id, g]));
 
   const pickedBy = startsFromPicks(events, picks);
-  // Where pauses are left out, a start says the one it made: "Paused Elden Ring for it".
-  const pausedFor = only && !only.has('paused') ? pausesForStarts(events, shown) : new Map();
 
   const logged = events.flatMap((event): Item[] => {
     const game = shown.get(event.game_id);
@@ -469,8 +426,6 @@ export function recentActivity(
     if (rating != null) line.rating = rating;
     const picked = line.kind === 'started' ? pickedBy.get(event.id) : undefined;
     if (picked) line.pickedBy = picked;
-    const paused = line.kind === 'started' ? pausedFor.get(event.id) : undefined;
-    if (paused) line.paused = paused;
     // How long it took: its hours as it was finished, not since (played on
     // after, or finished again).
     const took = line.kind === 'finished' ? minutesThen(game, event, events) : null;
